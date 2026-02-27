@@ -1,0 +1,192 @@
+<div class="admin-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>ISIMM Admin</h2>
+      <p>Gestion Administrative</p>
+    </div>
+
+    <nav>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a routerLink="/admin" class="nav-link active" routerLinkActive="active">
+            <span class="nav-icon">📊</span>
+            <span>Tableau de bord</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon">💳</span>
+            <span>Gestion Paiements</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon">📄</span>
+            <span>Avis de Concours</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon">👥</span>
+            <span>Candidats</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon">📈</span>
+            <span>Statistiques</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="top-bar">
+      <h1 class="page-title">Gestion des Utilisateurs</h1>
+      <div class="user-badge">
+        <div class="admin-avatar">
+          {{ currentUser?.username?.substring(0, 2).toUpperCase() || 'SA' }}
+        </div>
+        <div>
+          <div class="user-name">{{ currentUser?.email || 'Service Admin' }}</div>
+          <div class="user-role">Administrateur</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon blue">👥</div>
+          <div class="stat-label">Total Utilisateurs</div>
+        </div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-footer">↗ Total des inscrits</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon green">🎓</div>
+          <div class="stat-label">Candidats</div>
+        </div>
+        <div class="stat-value">{{ stats.candidats }}</div>
+        <div class="stat-footer">
+          {{ ((stats.candidats / stats.total) * 100).toFixed(0) }}% du total
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon orange">👔</div>
+          <div class="stat-label">Commission</div>
+        </div>
+        <div class="stat-value">{{ stats.commission }}</div>
+        <div class="stat-footer">
+          {{ ((stats.commission / stats.total) * 100).toFixed(0) }}% du total
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon red">⚙️</div>
+          <div class="stat-label">Administrateurs</div>
+        </div>
+        <div class="stat-value">{{ stats.admins }}</div>
+        <div class="stat-footer">
+          {{ ((stats.admins / stats.total) * 100).toFixed(0) }}% du total
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="users-section">
+      <div class="section-header">
+        <h2 class="section-title">Liste des utilisateurs</h2>
+        <button class="btn-primary" (click)="logout()">Se déconnecter</button>
+      </div>
+
+      <div class="table-controls">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="🔍 Rechercher par nom, email, CIN..."
+        />
+        <select class="filter-select">
+          <option value="">Tous les rôles</option>
+          <option value="candidat">Candidats</option>
+          <option value="commission">Commission</option>
+          <option value="admin">Administrateurs</option>
+        </select>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="isLoading" class="loading">
+        <div class="loading-spinner"></div>
+        <p>Chargement des utilisateurs...</p>
+      </div>
+
+      <!-- Table -->
+      <div *ngIf="!isLoading && users.length > 0" class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Utilisateur</th>
+              <th>Email</th>
+              <th>Rôle</th>
+              <th>CIN</th>
+              <th>Téléphone</th>
+              <th>Inscription</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of users">
+              <td>
+                <div class="user-cell">
+                  <div class="table-avatar">{{ getInitials(user.first_name, user.last_name) }}</div>
+                  <div>
+                    <div class="user-fullname">{{ user.first_name }} {{ user.last_name }}</div>
+                    <div class="user-username">@{{ user.username }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ user.email }}</td>
+              <td>
+                <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+                  {{ user.role }}
+                </span>
+              </td>
+              <td>{{ user.cin || '-' }}</td>
+              <td>{{ user.telephone || '-' }}</td>
+              <td>{{ user.created_at | date: 'dd/MM/yyyy' }}</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn-icon btn-view" title="Voir">👁️</button>
+                  <button class="btn-icon btn-edit" title="Modifier">✏️</button>
+                  <button
+                    class="btn-icon btn-delete"
+                    (click)="deleteUser(user.id)"
+                    title="Supprimer"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && users.length === 0" class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>Aucun utilisateur trouvé</h3>
+        <p>Commencez par ajouter des utilisateurs au système</p>
+      </div>
+    </div>
+  </main>
+</div>

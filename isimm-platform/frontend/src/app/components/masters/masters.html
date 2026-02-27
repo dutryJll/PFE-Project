@@ -1,0 +1,96 @@
+<div class="masters-page">
+  <!-- Header -->
+  <div class="page-header">
+    <h1>Nos Formations</h1>
+    <p>Découvrez nos programmes d'excellence</p>
+  </div>
+
+  <!-- Masters de Recherche -->
+  <section class="masters-section">
+    <h2 class="section-title">
+      <span class="icon">🎓</span>
+      Masters de Recherche
+    </h2>
+    <div class="masters-grid">
+      <div class="master-card" *ngFor="let master of mastersRecherche">
+        <div class="master-image" [style.background-image]="'url(' + master.image + ')'">
+          <div class="master-badge">Recherche</div>
+        </div>
+        <div class="master-content">
+          <h3>{{ master.titre }}</h3>
+          <p class="master-description">{{ master.description }}</p>
+
+          <div class="master-info">
+            <div class="info-item">
+              <span class="info-label">⏱️ Durée</span>
+              <span class="info-value">{{ master.duree }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">📚 Prérequis</span>
+              <span class="info-value">{{ master.prerequis }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">💼 Débouchés</span>
+              <span class="info-value">{{ master.debouches }}</span>
+            </div>
+          </div>
+
+          <a
+            [routerLink]="['/candidature']"
+            [queryParams]="{ type: 'master', id: master.id }"
+            class="btn-candidater"
+          >
+            Candidater maintenant →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Masters Professionnels -->
+  <section class="masters-section">
+    <h2 class="section-title">
+      <span class="icon">💼</span>
+      Masters Professionnels
+    </h2>
+    <div class="masters-grid">
+      <div class="master-card" *ngFor="let master of mastersProfessionnels">
+        <div class="master-image" [style.background-image]="'url(' + master.image + ')'">
+          <div class="master-badge pro">Professionnel</div>
+        </div>
+        <div class="master-content">
+          <h3>{{ master.titre }}</h3>
+          <p class="master-description">{{ master.description }}</p>
+
+          <div class="master-info">
+            <div class="info-item">
+              <span class="info-label">⏱️ Durée</span>
+              <span class="info-value">{{ master.duree }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">📚 Prérequis</span>
+              <span class="info-value">{{ master.prerequis }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">💼 Débouchés</span>
+              <span class="info-value">{{ master.debouches }}</span>
+            </div>
+          </div>
+
+          <a
+            [routerLink]="['/candidature']"
+            [queryParams]="{ type: 'master', id: master.id }"
+            class="btn-candidater"
+          >
+            Candidater maintenant →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Retour -->
+  <div class="back-link">
+    <a [routerLink]="['/']">← Retour à l'accueil</a>
+  </div>
+</div>

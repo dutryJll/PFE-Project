@@ -1,0 +1,332 @@
+.candidature-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 100px 2rem 50px;
+}
+
+.candidature-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-header {
+  background: white;
+  padding: 3rem;
+  border-radius: 20px 20px 0 0;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.form-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  color: #003d5b;
+  margin-bottom: 1rem;
+}
+
+.form-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.alert {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+.alert-error {
+  background: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+.candidature-form {
+  background: white;
+  padding: 0 3rem 3rem;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.form-section {
+  margin-bottom: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.form-section:first-child {
+  border-top: none;
+  padding-top: 2rem;
+}
+
+.form-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  color: #003d5b;
+  margin-bottom: 1.5rem;
+}
+
+.info-text {
+  color: #666;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #003d5b;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+  padding: 0.9rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #ff8c42;
+  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+}
+
+.form-group small {
+  color: #999;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+.voeux-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.specialites-radio {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.radio-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.radio-card input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+}
+
+.radio-content {
+  padding: 2rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 15px;
+  transition: all 0.3s;
+  text-align: center;
+  background: #f9f9f9;
+}
+
+.radio-card input[type='radio']:checked + .radio-content {
+  border-color: #ff8c42;
+  background: #fff5f0;
+  box-shadow: 0 5px 20px rgba(255, 140, 66, 0.2);
+}
+
+.radio-content h3 {
+  color: #003d5b;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.password-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.radio-option:hover {
+  border-color: #ff8c42;
+  background: #fff5f0;
+}
+
+.radio-option input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.radio-option span {
+  font-size: 1rem;
+  color: #333;
+}
+
+.password-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.auto-password-info {
+  background: #e8f5e9;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #a5d6a7;
+  margin-top: 1rem;
+}
+
+.auto-password-info p {
+  margin: 0;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+}
+
+.checkbox-container input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-container span {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.checkbox-container a {
+  color: #ff8c42;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff8c42, #e85d04);
+  color: white;
+  box-shadow: 0 5px 20px rgba(255, 140, 66, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(255, 140, 66, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #333;
+  border: 2px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+.login-link {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 15px;
+  margin-top: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+}
+
+.login-link p {
+  margin: 0;
+  color: #666;
+}
+
+.login-link a {
+  color: #ff8c42;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .candidature-page {
+    padding: 80px 1rem 30px;
+  }
+
+  .form-header,
+  .candidature-form {
+    padding: 2rem 1.5rem;
+  }
+
+  .form-header h1 {
+    font-size: 2rem;
+  }
+
+  .form-grid,
+  .password-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+}

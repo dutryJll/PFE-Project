@@ -1,0 +1,288 @@
+<!-- Header avec Logo ISIMM -->
+<header class="header">
+  <nav class="navbar">
+    <!-- Logo ISIMM à gauche -->
+    <div class="logo-container">
+      <img src="assets/images/ISIMM_LOGO.png" />
+      <div class="logo-text">
+        <span class="main-title">ISIMM Admissions</span>
+        <span class="subtitle">Plateforme Officielle</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <ul class="nav-links">
+      <li><a href="#accueil">Accueil</a></li>
+      <li><a href="#masters">Formation</a></li>
+      <li><a href="#processus">Processus</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+
+    <!-- Bouton connexion -->
+    <a routerLink="/login" class="btn-connexion">Se connecter</a>
+  </nav>
+</header>
+
+<!-- Hero Section ORIGINAL -->
+<section class="hero" id="accueil">
+  <div class="hero-content">
+    <h1>
+      Bienvenue sur la plateforme d'admission
+      <span>ISIMM</span>
+    </h1>
+    <p>
+      Candidatez en ligne aux Masters et au Cycle d'Ingénieur de l'Institut Supérieur d'Informatique
+      et de Mathématiques de Monastir
+    </p>
+    <div class="cta-buttons">
+      <a [routerLink]="['/candidature']" class="btn-primary">Candidater maintenant</a>
+      <a [routerLink]="['/masters']" class="btn-secondary">Découvrir les formations</a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section ORIGINAL -->
+<section class="stats-section">
+  <div class="stats-grid">
+    <div class="stat-item">
+      <h3>100%</h3>
+      <p>Processus dématérialisé</p>
+    </div>
+    <div class="stat-item">
+      <h3>24/7</h3>
+      <p>Accès à votre dossier</p>
+    </div>
+    <div class="stat-item">
+      <h3>IA</h3>
+      <p>Vérification intelligente</p>
+    </div>
+    <div class="stat-item">
+      <h3>✓</h3>
+      <p>Processus sécurisé</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================
+     FORMATIONS SECTION AMÉLIORÉE (NOUVELLES CARTES)
+     ======================================== -->
+<section class="formations-section" id="masters">
+  <div class="concours-container">
+    <h2 class="section-title">Nos Formations d'Excellence</h2>
+    <p class="section-subtitle">
+      Choisissez parmi nos programmes de formation reconnus nationalement et internationalement
+    </p>
+
+    <div class="formations-grid">
+      <!-- Masters de Recherche -->
+      <div class="formation-card research">
+        <div class="card-icon-container">
+          <div class="icon-circle research-bg">
+            <i class="fas fa-flask"></i>
+          </div>
+          <div class="card-badge research-badge">Recherche</div>
+        </div>
+
+        <h3 class="card-title">Masters de Recherche</h3>
+        <p class="card-description">
+          Programmes orientés recherche scientifique et innovation technologique
+        </p>
+
+        <ul class="card-features">
+          <li>
+            <span class="feature-icon research-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Master en Génie Logiciel</span>
+          </li>
+          <li>
+            <span class="feature-icon research-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Master en Microélectronique</span>
+          </li>
+        </ul>
+
+        <button class="btn-card research-btn" [routerLink]="['/masters']">
+          <span>Explorer</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- Masters Professionnels -->
+      <div class="formation-card professional">
+        <div class="card-icon-container">
+          <div class="icon-circle professional-bg">
+            <i class="fas fa-briefcase"></i>
+          </div>
+          <div class="card-badge professional-badge">Professionnel</div>
+        </div>
+
+        <h3 class="card-title">Masters Professionnels</h3>
+        <p class="card-description">
+          Formations pratiques pour une insertion professionnelle immédiate
+        </p>
+
+        <ul class="card-features">
+          <li>
+            <span class="feature-icon professional-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Master en Data Science</span>
+          </li>
+          <li>
+            <span class="feature-icon professional-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Master Ingénierie Instrumentation</span>
+          </li>
+          <li>
+            <span class="feature-icon professional-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Master Génie Logiciel</span>
+          </li>
+        </ul>
+
+        <button class="btn-card professional-btn" [routerLink]="['/masters']">
+          <span>Explorer</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- Cycle Ingénieur -->
+      <div class="formation-card engineer">
+        <div class="card-icon-container">
+          <div class="icon-circle engineer-bg">
+            <i class="fas fa-graduation-cap"></i>
+          </div>
+          <div class="card-badge engineer-badge featured">
+            <i class="fas fa-star"></i>
+            Ingénieur
+          </div>
+        </div>
+
+        <h3 class="card-title">Cycle Ingénieur</h3>
+        <p class="card-description">
+          Formation d'ingénieur en 3 ans avec 3 spécialités d'excellence
+        </p>
+
+        <ul class="card-features">
+          <li>
+            <span class="feature-icon engineer-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Génie Informatique</span>
+          </li>
+          <li>
+            <span class="feature-icon engineer-icon">
+              <i class="fas fa-check"></i>
+            </span>
+            <span>Génie Électrique</span>
+          </li>
+        </ul>
+
+        <button class="btn-card engineer-btn" [routerLink]="['/concours-ingenieur']">
+          <span>Explorer</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Processus Section ORIGINAL -->
+<section class="etapes-section" id="processus">
+  <div class="concours-container">
+    <h2 class="section-title">Le processus d'admission</h2>
+    <p class="section-subtitle">Un parcours simple et transparent en 7 étapes</p>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-number">1</div>
+        <div class="timeline-content">
+          <h4>Préinscription en ligne</h4>
+          <p>Créez votre compte et remplissez votre formulaire de candidature avec vos vœux.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">2</div>
+        <div class="timeline-content">
+          <h4>Présélection</h4>
+          <p>Calcul automatique de votre score selon les critères officiels.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">3</div>
+        <div class="timeline-content">
+          <h4>Dépôt du dossier</h4>
+          <p>Téléchargez vos documents justificatifs (relevés, diplômes, CIN...).</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">4</div>
+        <div class="timeline-content">
+          <h4>Vérification intelligente</h4>
+          <p>Notre système OCR vérifie automatiquement l'authenticité de vos documents.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">5</div>
+        <div class="timeline-content">
+          <h4>Publication des résultats</h4>
+          <p>Consultez votre statut : Admis, Liste d'attente ou Refusé.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">6</div>
+        <div class="timeline-content">
+          <h4>Paiement des frais</h4>
+          <p>Les candidats admis règlent leurs frais d'inscription via inscription.tn.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-number">7</div>
+        <div class="timeline-content">
+          <h4>Confirmation d'inscription</h4>
+          <p>Validation finale et bienvenue à l'ISIMM !</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer ORIGINAL -->
+<footer class="footer" id="contact">
+  <div class="footer-content">
+    <div class="footer-section">
+      <h3>ISIMM</h3>
+      <p>Institut Supérieur d'Informatique et de Mathématiques de Monastir</p>
+    </div>
+    <div class="footer-section">
+      <h3>Liens Rapides</h3>
+      <ul>
+        <li><a href="#">Calendrier des concours</a></li>
+        <li><a href="#">FAQ</a></li>
+        <li><a href="#">Documents requis</a></li>
+        <li><a routerLink="/login">Connexion</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>Contact</h3>
+      <ul>
+        <li>📧 admissions@isimm.tn</li>
+        <li>📞 +216 73 500 274</li>
+        <li>📍 Avenue de la Corniche, Monastir 5000</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 ISIMM - Tous droits réservés</p>
+  </div>
+</footer>
