@@ -1,0 +1,30 @@
+<div class="deposer-documents">
+  <h2>Déposer mes documents</h2>
+
+  <div>
+    <label>CIN</label>
+    <input type="file" (change)="onFileSelected($event, 'cin')" />
+  </div>
+
+  <div>
+    <label>Relevés de notes</label>
+    <input type="file" (change)="onFileSelected($event, 'releves')" />
+  </div>
+
+  <div>
+    <label>Diplôme</label>
+    <input type="file" (change)="onFileSelected($event, 'diplome')" />
+  </div>
+
+  <div>
+    <label>CV</label>
+    <input type="file" (change)="onFileSelected($event, 'cv')" />
+  </div>
+
+  <div>
+    <label>Photo</label>
+    <input type="file" (change)="onFileSelected($event, 'photo')" />
+  </div>
+
+  <button (click)="soumettre()">Soumettre tous les documents</button>
+</div>

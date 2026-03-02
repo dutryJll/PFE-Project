@@ -2,7 +2,7 @@
   <!-- Header -->
   <div class="page-header">
     <h1>Nos Formations</h1>
-    <p>Découvrez nos programmes d'excellence</p>
+    <p>Découvrez nos programmes de Masters et notre Cycle d'Ingénieur</p>
   </div>
 
   <!-- Masters de Recherche -->
@@ -11,11 +11,14 @@
       <span class="icon">🎓</span>
       Masters de Recherche
     </h2>
+
     <div class="masters-grid">
       <div class="master-card" *ngFor="let master of mastersRecherche">
-        <div class="master-image" [style.background-image]="'url(' + master.image + ')'">
-          <div class="master-badge">Recherche</div>
+        <!-- Fond coloré au lieu d'image -->
+        <div class="master-header recherche">
+          <div class="master-badge recherche">Recherche</div>
         </div>
+
         <div class="master-content">
           <h3>{{ master.titre }}</h3>
           <p class="master-description">{{ master.description }}</p>
@@ -35,11 +38,7 @@
             </div>
           </div>
 
-          <a
-            [routerLink]="['/candidature']"
-            [queryParams]="{ type: 'master', id: master.id }"
-            class="btn-candidater"
-          >
+          <a [routerLink]="['/choisir-candidature']" class="btn-candidater">
             Candidater maintenant →
           </a>
         </div>
@@ -53,11 +52,14 @@
       <span class="icon">💼</span>
       Masters Professionnels
     </h2>
+
     <div class="masters-grid">
       <div class="master-card" *ngFor="let master of mastersProfessionnels">
-        <div class="master-image" [style.background-image]="'url(' + master.image + ')'">
-          <div class="master-badge pro">Professionnel</div>
+        <!-- Fond coloré au lieu d'image -->
+        <div class="master-header professionnel">
+          <div class="master-badge professionnel">Professionnel</div>
         </div>
+
         <div class="master-content">
           <h3>{{ master.titre }}</h3>
           <p class="master-description">{{ master.description }}</p>
@@ -77,11 +79,51 @@
             </div>
           </div>
 
-          <a
-            [routerLink]="['/candidature']"
-            [queryParams]="{ type: 'master', id: master.id }"
-            class="btn-candidater"
-          >
+          <a [routerLink]="['/choisir-candidature']" class="btn-candidater">
+            Candidater maintenant →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ✅ NOUVELLE SECTION : CYCLE INGÉNIEUR -->
+  <section class="masters-section ingenieur-section">
+    <h2 class="section-title">
+      <span class="icon">🔧</span>
+      Cycle d'Ingénieur
+    </h2>
+
+    <div class="masters-grid">
+      <div class="master-card ingenieur-card" *ngFor="let ingenieur of cycleIngenieur">
+        <!-- Fond coloré orange pour Ingénieur -->
+        <div class="master-header ingenieur">
+          <div class="master-badge ingenieur">
+            <i class="fas fa-star"></i>
+            Ingénieur
+          </div>
+        </div>
+
+        <div class="master-content">
+          <h3>{{ ingenieur.titre }}</h3>
+          <p class="master-description">{{ ingenieur.description }}</p>
+
+          <div class="master-info">
+            <div class="info-item">
+              <span class="info-label">⏱️ Durée</span>
+              <span class="info-value">{{ ingenieur.duree }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">📚 Prérequis</span>
+              <span class="info-value">{{ ingenieur.prerequis }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">🎓 Spécialités</span>
+              <span class="info-value">{{ ingenieur.specialites }}</span>
+            </div>
+          </div>
+
+          <a [routerLink]="['/choisir-candidature']" class="btn-candidater ingenieur">
             Candidater maintenant →
           </a>
         </div>

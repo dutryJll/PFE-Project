@@ -1,14 +1,7 @@
 from django.urls import path
-from .views import (
-    CreateCandidatureView, 
-    CandidatureListView, 
-    CandidatureDetailView,
-    MesCandidaturesView
-)
+from . import views
 
 urlpatterns = [
-    path('create/', CreateCandidatureView.as_view(), name='create-candidature'),
-    path('list/', CandidatureListView.as_view(), name='list-candidatures'),
-    path('mes-candidatures/', MesCandidaturesView.as_view(), name='mes-candidatures'),
-    path('<int:pk>/', CandidatureDetailView.as_view(), name='detail-candidature'),
+    path('create/', views.create_candidature, name='create_candidature'),
+    path('mes-candidatures/', views.mes_candidatures, name='mes_candidatures'),
 ]

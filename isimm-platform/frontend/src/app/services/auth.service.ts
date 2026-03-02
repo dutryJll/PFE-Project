@@ -114,4 +114,12 @@ export class AuthService {
       }),
     );
   }
+
+  /**
+   * Vérifie le mot de passe d'un utilisateur sans effectuer de login complet.
+   * Retourne un observable qui réussit si le mot de passe est correct.
+   */
+  verifyPassword(email: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/verify-password/`, { email, password });
+  }
 }

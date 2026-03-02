@@ -1,33 +1,46 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import {
+  FormsModule,
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+
+interface Master {
+  id: string;
+  nom: string;
+}
+
+interface Specialite {
+  id: string;
+  nom: string;
+}
 
 @Component({
   selector: 'app-candidature-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   templateUrl: './candidature-form.component.html',
-  styleUrl: './candidature-form.component.css',
+  styleUrls: ['./candidature-form.component.css'],
 })
 export class CandidatureFormComponent implements OnInit {
   typeCandidature: string = 'master';
-  masterSelectionne: number | null = null;
-  specialiteSelectionnee: string = '';
 
   formData = {
     prenom: '',
     nom: '',
     dateNaissance: '',
+    cin: '',
     email: '',
     telephone: '',
-    cin: '',
-    moyenneBac: '',
-    moyenneL1: '',
-    moyenneL2: '',
-    moyenneL3: '',
+    moyenneBac: null as number | null,
+    moyenneL1: null as number | null,
+    moyenneL2: null as number | null,
+    moyenneL3: null as number | null,
     voeu1: '',
     voeu2: '',
     voeu3: '',
@@ -37,185 +50,207 @@ export class CandidatureFormComponent implements OnInit {
     confirmPassword: '',
   };
 
-  mastersDisponibles = [
-    { id: 1, nom: 'Master de recherche en génie logiciel' },
-    { id: 2, nom: 'Master de recherche en Microélectronique et Instrumentation' },
-    { id: 3, nom: 'Licence IIC - Parcours: Réseaux et IOT (RIOT)' },
-    { id: 4, nom: 'Master professionnel : Data Science' },
-    { id: 5, nom: 'Master professionnel : Ingénierie en Instrumentation Industrielle' },
-    { id: 6, nom: 'Master professionnel en génie logiciel' },
-  ];
+  candidatureForm!: FormGroup;
 
-  specialitesIngenieur = [
-    { id: 'informatique', nom: 'Génie Informatique' },
-    { id: 'electrique', nom: 'Génie Électrique' },
-    { id: 'mecanique', nom: 'Génie Mécanique' },
-  ];
-
+  accepteCGU = false;
   isLoading = false;
   errorMessage = '';
-  accepteCGU = false;
+
+  // Listes de choix - données hardcodées
+  mastersList: Master[] = [
+    { id: '1', nom: 'Master de recherche en génie logiciel' },
+    { id: '2', nom: 'Master de recherche en Microélectronique et Instrumentation' },
+    { id: '3', nom: 'Master Professionnel en Data Science' },
+    { id: '4', nom: 'Master Professionnel en Ingénierie Instrumentation' },
+    { id: '5', nom: 'Master Professionnel en Génie Logiciel' },
+  ];
+
+  specialitesIngenieur: Specialite[] = [
+    { id: '1', nom: 'Génie Informatique' },
+    { id: '2', nom: 'Génie Électrique' },
+    { id: '3', nom: 'Génie Mécanique' },
+  ];
 
   constructor(
+    private authService: AuthService,
     public router: Router,
     private route: ActivatedRoute,
-    private http: HttpClient,
+    private fb: FormBuilder,
   ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
+    // Récupérer le type depuis l'URL
     this.route.queryParams.subscribe((params) => {
-      this.typeCandidature = params['type'] || 'master';
-      this.masterSelectionne = params['id'] ? parseInt(params['id']) : null;
-      this.specialiteSelectionnee = params['specialite'] || '';
-
-      if (this.masterSelectionne) {
-        this.formData.voeu1 = this.masterSelectionne.toString();
+      if (params['type']) {
+        this.typeCandidature = params['type']; // 'master' ou 'ingenieur'
+        console.log('🎯 Type reçu:', this.typeCandidature);
       }
+    });
 
-      if (this.specialiteSelectionnee) {
-        this.formData.specialite = this.specialiteSelectionnee;
-      }
+    // Initialiser le formulaire
+    this.candidatureForm = this.fb.group({
+      prenom: [''],
+      nom: [''],
+      dateNaissance: [''],
+      cin: [''],
+      email: [''],
+      telephone: [''],
+      moyenneBac: [null],
+      moyenneL1: [null],
+      moyenneL2: [null],
+      moyenneL3: [null],
+      voeu1: [''],
+      voeu2: [''],
+      voeu3: [''],
+      specialite: [''],
+      type_candidature: [this.typeCandidature, Validators.required],
+    });
+
+    this.updateValidations();
+  }
+
+  // Mettre à jour les validations selon le type de candidature
+  updateValidations(): void {
+    if (!this.candidatureForm) return;
+    const voeu1 = this.candidatureForm.get('voeu1');
+    const specialite = this.candidatureForm.get('specialite');
+
+    if (this.typeCandidature === 'master') {
+      voeu1?.setValidators([Validators.required]);
+      specialite?.clearValidators();
+    } else if (this.typeCandidature === 'ingenieur') {
+      specialite?.setValidators([Validators.required]);
+      voeu1?.clearValidators();
+      this.candidatureForm.patchValue({ voeu2: '', voeu3: '' });
+    }
+
+    voeu1?.updateValueAndValidity();
+    specialite?.updateValueAndValidity();
+  }
+
+  getMastersForVoeu(voeuNumber: number): Master[] {
+    // Filtre les masters déjà sélectionnés dans les autres vœux
+    const selectedVoeux = [this.formData.voeu1, this.formData.voeu2, this.formData.voeu3];
+
+    return this.mastersList.filter((master) => {
+      // Inclure le master déjà sélectionné pour ce vœu
+      const selectedForThisVoeu =
+        voeuNumber === 1
+          ? this.formData.voeu1
+          : voeuNumber === 2
+            ? this.formData.voeu2
+            : this.formData.voeu3;
+
+      return master.id === selectedForThisVoeu || !selectedVoeux.includes(master.id);
     });
   }
 
-  onSubmit() {
-    console.log('📤 Soumission du formulaire');
+  // Soumission du formulaire
+  onSubmit(): void {
+    this.errorMessage = '';
 
-    if (!this.validateForm()) {
+    // Validation de base
+    if (!this.formData.prenom || !this.formData.nom || !this.formData.email || !this.formData.cin) {
+      this.errorMessage = 'Veuillez remplir tous les champs obligatoires';
+      return;
+    }
+
+    // Validation du mot de passe si mode manuel
+    if (this.formData.passwordMode === 'manual') {
+      if (!this.formData.password || !this.formData.confirmPassword) {
+        this.errorMessage = 'Veuillez entrer et confirmer votre mot de passe';
+        return;
+      }
+      if (this.formData.password.length < 8) {
+        this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractères';
+        return;
+      }
+      if (this.formData.password !== this.formData.confirmPassword) {
+        this.errorMessage = 'Les mots de passe ne correspondent pas';
+        return;
+      }
+    }
+
+    // Validation des vœux/spécialité
+    if (this.typeCandidature === 'master' && !this.formData.voeu1) {
+      this.errorMessage = 'Veuillez sélectionner au moins un vœu de master';
+      return;
+    }
+
+    if (this.typeCandidature === 'ingenieur' && !this.formData.specialite) {
+      this.errorMessage = 'Veuillez sélectionner une spécialité';
       return;
     }
 
     if (!this.accepteCGU) {
-      this.errorMessage = "Vous devez accepter les conditions générales d'utilisation";
+      this.errorMessage = 'Veuillez accepter les conditions générales';
       return;
     }
 
     this.isLoading = true;
-    this.errorMessage = '';
 
-    let finalPassword = this.formData.password;
-    if (this.formData.passwordMode === 'auto') {
-      finalPassword = this.generatePassword();
-    }
-
+    // Préparer les données
     const candidatureData = {
       first_name: this.formData.prenom,
       last_name: this.formData.nom,
-      email: this.formData.email,
-      password: finalPassword,
       cin: this.formData.cin,
-      telephone: this.formData.telephone,
       date_naissance: this.formData.dateNaissance,
-      moyenne_bac: parseFloat(this.formData.moyenneBac),
-      moyenne_l1: this.formData.moyenneL1 ? parseFloat(this.formData.moyenneL1) : null,
-      moyenne_l2: this.formData.moyenneL2 ? parseFloat(this.formData.moyenneL2) : null,
-      moyenne_l3: this.formData.moyenneL3 ? parseFloat(this.formData.moyenneL3) : null,
+      email: this.formData.email,
+      telephone: this.formData.telephone,
       type_candidature: this.typeCandidature,
+
+      // Vœux (pour Masters) OU Spécialité (pour Ingénieur)
       voeux:
         this.typeCandidature === 'master'
           ? [this.formData.voeu1, this.formData.voeu2, this.formData.voeu3].filter((v) => v)
           : null,
+
       specialite: this.typeCandidature === 'ingenieur' ? this.formData.specialite : null,
+
+      // Mot de passe
+      password:
+        this.formData.passwordMode === 'manual' ? this.formData.password : this.generatePassword(),
     };
 
-    console.log('📦 Données à envoyer:', candidatureData);
+    console.log('📤 Données envoyées:', candidatureData);
 
-    this.http.post('http://localhost:8003/api/candidatures/create/', candidatureData).subscribe({
+    this.authService.register(candidatureData).subscribe({
       next: (response: any) => {
-        console.log('✅ Inscription réussie:', response);
-        this.isLoading = false;
-
+        console.log('✅ Candidature créée:', response);
         alert(
-          `✅ Compte créé avec succès !\n\n` +
-            `📧 Identifiant : ${this.formData.email}\n` +
-            `🔑 Mot de passe : ${finalPassword}\n\n` +
-            `Un email de confirmation a été envoyé à votre adresse.`,
+          `Candidature soumise avec succès !\n\nVotre mot de passe : ${candidatureData.password}\n\nNotez-le bien, vous en aurez besoin pour vous connecter.`,
         );
 
-        this.router.navigate(['/login']);
+        localStorage.setItem('access_token', response.token);
+        localStorage.setItem('current_user', JSON.stringify(response.user));
+
+        this.router.navigate(['/candidat/dashboard']);
+        this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Erreur inscription:', error);
         this.isLoading = false;
 
-        if (error.error && error.error.email) {
-          this.errorMessage = 'Cet email est déjà utilisé';
-        } else if (error.error && error.error.cin) {
-          this.errorMessage = 'Ce CIN est déjà utilisé';
-        } else {
-          this.errorMessage = "Erreur lors de l'inscription. Veuillez réessayer.";
+        let errorMessage = 'Erreur lors de la candidature.';
+        if (error.error?.error) {
+          errorMessage = error.error.error;
         }
+        if (error.error?.details) {
+          errorMessage += '\n\nDétails : ' + JSON.stringify(error.error.details, null, 2);
+        }
+
+        this.errorMessage = errorMessage;
       },
     });
   }
 
-  validateForm(): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.formData.email)) {
-      this.errorMessage = 'Email invalide';
-      return false;
-    }
-
-    if (this.formData.cin.length !== 8 || !/^\d+$/.test(this.formData.cin)) {
-      this.errorMessage = 'Le CIN doit contenir exactement 8 chiffres';
-      return false;
-    }
-
-    if (this.formData.telephone && !/^[+\d\s]+$/.test(this.formData.telephone)) {
-      this.errorMessage = 'Numéro de téléphone invalide';
-      return false;
-    }
-
-    const moyenne = parseFloat(this.formData.moyenneBac);
-    if (isNaN(moyenne) || moyenne < 0 || moyenne > 20) {
-      this.errorMessage = 'La moyenne doit être entre 0 et 20';
-      return false;
-    }
-
-    if (this.typeCandidature === 'master' && !this.formData.voeu1) {
-      this.errorMessage = 'Vous devez choisir au moins un vœu';
-      return false;
-    }
-
-    if (this.typeCandidature === 'ingenieur' && !this.formData.specialite) {
-      this.errorMessage = 'Vous devez choisir une spécialité';
-      return false;
-    }
-
-    if (this.formData.passwordMode === 'manual') {
-      if (this.formData.password.length < 8) {
-        this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractères';
-        return false;
-      }
-      if (this.formData.password !== this.formData.confirmPassword) {
-        this.errorMessage = 'Les mots de passe ne correspondent pas';
-        return false;
-      }
-    }
-
-    return true;
-  }
-
+  // Générer un mot de passe aléatoire
   generatePassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$%';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let password = '';
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
-  }
-
-  getMastersForVoeu(voeuNumber: number): any[] {
-    const selectedVoeux = [this.formData.voeu1, this.formData.voeu2, this.formData.voeu3];
-    return this.mastersDisponibles.filter((master) => {
-      const masterId = master.id.toString();
-      if (voeuNumber === 1) {
-        return !selectedVoeux.slice(1).includes(masterId);
-      } else if (voeuNumber === 2) {
-        return masterId !== selectedVoeux[0] && masterId !== selectedVoeux[2];
-      } else {
-        return !selectedVoeux.slice(0, 2).includes(masterId);
-      }
-    });
   }
 }

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ConcoursIngenieurComponent } from './concours-ingenieur.component.nent';
+import { ConcoursIngenieurComponent } from './concours-ingenieur.component';
 
 describe('ConcoursIngenieurComponent', () => {
   let component: ConcoursIngenieurComponent;

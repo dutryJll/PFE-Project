@@ -1,113 +1,118 @@
-from rest_framework import generics, status
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from .models import Candidature, Document
-from .serializers import CandidatureSerializer, DocumentSerializer
+from .models import Candidature
 import requests
 
-class CreateCandidatureView(APIView):
-    """Créer un compte dans auth-service ET une candidature"""
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        print("📥 Réception données candidature:", request.data)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_candidature(request):
+    """
+    Créer une candidature et un compte utilisateur automatiquement
+    """
+    try:
+        data = request.data
+        print('📥 Données reçues:', data)
         
-        # 1. Créer le compte dans auth-service
-        auth_data = {
-            'email': request.data.get('email'),
-            'username': request.data.get('email'),
-            'password': request.data.get('password'),
-            'role': 'candidat',
-            'first_name': request.data.get('first_name'),
-            'last_name': request.data.get('last_name'),
+        # Vérifier les champs obligatoires
+        required_fields = ['first_name', 'last_name', 'cin', 'email', 'telephone', 'type_candidature']
+        missing_fields = [field for field in required_fields if field not in data or not data[field]]
+        
+        if missing_fields:
+            return Response({
+                'error': 'Champs obligatoires manquants',
+                'details': {'missing_fields': missing_fields}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Vérifier si le CIN existe déjà
+        if Candidature.objects.filter(cin=data['cin']).exists():
+            return Response({
+                'error': 'Une candidature avec ce CIN existe déjà'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Créer le compte utilisateur via auth-service
+        auth_service_url = 'http://127.0.0.1:8001/api/auth/register/'
+        
+        user_data = {
+            'username': data['email'],
+            'email': data['email'],
+            'password': data.get('password', 'TempPassword123!'),
+            'first_name': data['first_name'],
+            'last_name': data['last_name'],
+            'role': 'candidat'
         }
         
+        print(f'📤 Envoi vers {auth_service_url}')
+        
         try:
-            # Appel à auth-service
             auth_response = requests.post(
-                'http://localhost:8001/api/auth/register/',
-                json=auth_data,
-                timeout=10
+                auth_service_url,
+                json=user_data,
+                headers={'Content-Type': 'application/json'},
+                timeout=5
             )
+            
+            print(f'📬 Réponse: {auth_response.status_code}')
             
             if auth_response.status_code != 201:
-                return Response(
-                    {'error': 'Erreur lors de la création du compte', 'details': auth_response.json()},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            auth_user = auth_response.json()
-            print("✅ Compte créé dans auth-service:", auth_user)
-            
-            # 2. Créer la candidature
-            candidature_data = {
-                'auth_user_id': auth_user['user']['id'],
-                'email': request.data.get('email'),
-                'first_name': request.data.get('first_name'),
-                'last_name': request.data.get('last_name'),
-                'cin': request.data.get('cin'),
-                'telephone': request.data.get('telephone'),
-                'date_naissance': request.data.get('date_naissance'),
-                'moyenne_l1': request.data.get('moyenne_l1'),
-                'moyenne_l2': request.data.get('moyenne_l2'),
-                'moyenne_l3': request.data.get('moyenne_l3'),
-                'moyenne_bac': request.data.get('moyenne_bac'),
-                'type_candidature': request.data.get('type_candidature'),
-                'voeux': request.data.get('voeux'),
-                'specialite': request.data.get('specialite'),
-            }
-            
-            serializer = CandidatureSerializer(data=candidature_data)
-            if serializer.is_valid():
-                candidature = serializer.save()
-                print("✅ Candidature créée:", candidature)
-                
                 return Response({
-                    'message': 'Compte et candidature créés avec succès',
-                    'candidature': serializer.data,
-                    'auth': auth_user
-                }, status=status.HTTP_201_CREATED)
-            else:
-                print("❌ Erreur candidature:", serializer.errors)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                
+                    'error': 'Erreur création compte',
+                    'details': auth_response.json() if auth_response.text else {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user_info = auth_response.json()
+            
         except requests.exceptions.RequestException as e:
-            print("❌ Erreur connexion auth-service:", str(e))
-            return Response(
-                {'error': 'Impossible de contacter le service d\'authentification'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-
-
-class CandidatureListView(generics.ListAPIView):
-    """Liste toutes les candidatures d'un utilisateur"""
-    serializer_class = CandidatureSerializer
-    permission_classes = [AllowAny]
-    
-    def get_queryset(self):
-        email = self.request.query_params.get('email')
-        if email:
-            return Candidature.objects.filter(email=email)
-        return Candidature.objects.all()
-
-
-class CandidatureDetailView(generics.RetrieveAPIView):
-    """Détail d'une candidature"""
-    queryset = Candidature.objects.all()
-    serializer_class = CandidatureSerializer
-    permission_classes = [AllowAny]
-
-
-class MesCandidaturesView(APIView):
-    """Récupérer toutes les candidatures d'un candidat"""
-    permission_classes = [AllowAny]
-    
-    def get(self, request):
-        email = request.query_params.get('email')
-        if not email:
-            return Response({'error': 'Email requis'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'error': 'Service auth non disponible',
+                'details': str(e)
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         
-        candidatures = Candidature.objects.filter(email=email)
-        serializer = CandidatureSerializer(candidatures, many=True)
-        return Response(serializer.data)
+        # Créer la candidature
+        candidature = Candidature.objects.create(
+            user_id=user_info['user']['id'],
+            cin=data['cin'],
+            telephone=data['telephone'],
+            date_naissance=data.get('date_naissance'),
+            adresse=data.get('adresse'),
+            ville=data.get('ville'),
+            code_postal=data.get('code_postal'),
+            type_candidature=data['type_candidature'],
+            voeux=data.get('voeux'),
+            specialite=data.get('specialite'),
+            statut='en_cours'
+        )
+        
+        print(f'✅ Candidature créée: {candidature.id}')
+        
+        return Response({
+            'message': 'Candidature créée avec succès',
+            'candidature_id': candidature.id,
+            'user': user_info['user'],
+            'token': user_info.get('access'),
+            'password': user_data['password']
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        print(f'❌ Erreur:', str(e))
+        import traceback
+        traceback.print_exc()
+        
+        return Response({
+            'error': 'Erreur création candidature',
+            'details': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mes_candidatures(request):
+    """
+    Récupérer les candidatures de l'utilisateur connecté
+    """
+    from .serializers import CandidatureSerializer
+    
+    candidatures = Candidature.objects.filter(user_id=request.user.id)
+    serializer = CandidatureSerializer(candidatures, many=True)
+    return Response(serializer.data)

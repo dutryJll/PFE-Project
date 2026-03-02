@@ -1,0 +1,249 @@
+.choix-candidature-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.page-header {
+  background: linear-gradient(135deg, #003d5b 0%, #00587a 100%);
+  color: white;
+  padding: 120px 2rem 80px;
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3.5rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+  color: #d3d6db;
+}
+
+.page-header p {
+  font-size: 1.3rem;
+  opacity: 0.9;
+}
+
+.choix-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+}
+
+.choix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 4rem;
+  margin-bottom: 4rem;
+}
+
+.choix-card {
+  background: white;
+  border-radius: 30px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid transparent;
+}
+
+.choix-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: scaleX(0);
+  transition: transform 0.4s;
+}
+
+.choix-card:hover {
+  transform: translateY(-15px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
+}
+
+.choix-card:hover::before {
+  transform: scaleX(1);
+}
+
+.choix-card.master:hover {
+  border-color: #667eea;
+}
+
+.choix-card.ingenieur:hover {
+  border-color: #e85d04;
+}
+
+.card-icon {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+  color: white;
+  margin-bottom: 2rem;
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+  transition: all 0.4s;
+}
+
+.choix-card.ingenieur .card-icon {
+  background: linear-gradient(135deg, #e85d04, #f59e0b);
+  box-shadow: 0 15px 40px rgba(232, 93, 4, 0.3);
+}
+
+.choix-card:hover .card-icon {
+  transform: scale(1.1) rotate(10deg);
+}
+
+.badge-featured {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  background: linear-gradient(135deg, #e85d04, #f59e0b);
+  color: white;
+  padding: 0.6rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 25px rgba(232, 93, 4, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.choix-card h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+}
+
+.card-description {
+  font-size: 1.1rem;
+  color: #64748b;
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+.features-list {
+  list-style: none;
+  margin-bottom: 2.5rem;
+}
+
+.features-list li {
+  padding: 1rem 0;
+  font-size: 1.05rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.features-list li:last-child {
+  border-bottom: none;
+}
+
+.features-list i {
+  color: #10b981;
+  font-size: 1.2rem;
+}
+
+.card-footer {
+  margin-top: auto;
+}
+
+.btn-choisir {
+  width: 100%;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  transition: all 0.3s;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.btn-choisir.featured {
+  background: linear-gradient(135deg, #e85d04, #f59e0b);
+  box-shadow: 0 10px 30px rgba(232, 93, 4, 0.3);
+}
+
+.btn-choisir:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+}
+
+.btn-choisir.featured:hover {
+  box-shadow: 0 15px 40px rgba(232, 93, 4, 0.4);
+}
+
+.btn-choisir i {
+  transition: transform 0.3s;
+}
+
+.btn-choisir:hover i {
+  transform: translateX(5px);
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.back-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #003d5b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s;
+}
+
+.back-link a:hover {
+  color: #e85d04;
+  transform: translateX(-5px);
+}
+
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .choix-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .choix-card h2 {
+    font-size: 1.8rem;
+  }
+}

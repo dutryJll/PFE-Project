@@ -1,12 +1,28 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.css',
+  styleUrls: ['./home.component.css'],
 })
-export class HomeComponent {}
+export class HomeComponent {
+  constructor(private router: Router) {}
+
+  goToChoix(event?: Event) {
+    if (event) {
+      event.preventDefault();
+    }
+    this.router.navigate(['/choisir-candidature']);
+  }
+
+  goToMasters(event?: Event) {
+    if (event) {
+      event.preventDefault();
+    }
+    this.router.navigate(['/masters']);
+  }
+}

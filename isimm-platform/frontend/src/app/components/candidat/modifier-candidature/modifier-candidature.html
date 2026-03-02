@@ -1,0 +1,11 @@
+<div class="modifier-candidature">
+  <h2>Modifier ma candidature</h2>
+
+  <div *ngFor="let voeu of voeux; let i = index">
+    <input [(ngModel)]="voeux[i]" placeholder="Vœu {{ i + 1 }}" />
+    <button (click)="supprimerVoeu(i)">Supprimer</button>
+  </div>
+
+  <button (click)="ajouterVoeu()">Ajouter un vœu</button>
+  <button (click)="sauvegarder()">Sauvegarder</button>
+</div>

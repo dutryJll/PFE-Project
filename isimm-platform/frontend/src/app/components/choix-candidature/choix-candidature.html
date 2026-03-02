@@ -1,0 +1,76 @@
+<div class="choix-candidature-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="container">
+      <h1>Choisissez votre type de candidature</h1>
+      <p>Sélectionnez le programme qui correspond à votre profil</p>
+    </div>
+  </div>
+
+  <!-- Choix des candidatures -->
+  <div class="choix-container">
+    <div class="choix-grid">
+      <!-- CANDIDATURE MASTER -->
+      <div class="choix-card master" (click)="choisirType('master')">
+        <div class="card-icon">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <h2>Candidater à un Master</h2>
+        <p class="card-description">
+          Masters de recherche et professionnels en informatique, mathématiques et microélectronique
+        </p>
+
+        <ul class="features-list">
+          <li><i class="fas fa-check"></i> 6 Masters disponibles</li>
+          <li><i class="fas fa-check"></i> Recherche et Professionnel</li>
+          <li><i class="fas fa-check"></i> Choix de 3 vœux</li>
+          <li><i class="fas fa-check"></i> Durée : 2 ans</li>
+        </ul>
+
+        <div class="card-footer">
+          <button type="button" class="btn-choisir" (click)="choisirType('master')">
+            <span>Choisir Master</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- CANDIDATURE CYCLE INGÉNIEUR -->
+      <div class="choix-card ingenieur" (click)="choisirType('ingenieur')">
+        <div class="card-icon">
+          <i class="fas fa-cogs"></i>
+        </div>
+        <div class="badge-featured">
+          <i class="fas fa-star"></i>
+          Cycle d'Excellence
+        </div>
+        <h2>Candidater au Cycle Ingénieur</h2>
+        <p class="card-description">
+          Formation d'ingénieur en 3 ans avec 3 spécialités d'excellence
+        </p>
+
+        <ul class="features-list">
+          <li><i class="fas fa-check"></i> 3 Spécialités disponibles</li>
+          <li><i class="fas fa-check"></i> Génie Informatique</li>
+          <li><i class="fas fa-check"></i> Génie Électrique</li>
+          <li><i class="fas fa-check"></i> Durée : 3 ans</li>
+        </ul>
+
+        <div class="card-footer">
+          <button type="button" class="btn-choisir featured" (click)="choisirType('ingenieur')">
+            <span>Choisir Ingénieur</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Retour -->
+    <div class="back-link">
+      <a [routerLink]="['/']">
+        <i class="fas fa-arrow-left"></i>
+        Retour à l'accueil
+      </a>
+    </div>
+  </div>
+</div>

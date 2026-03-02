@@ -1,0 +1,352 @@
+<div class="dashboard-candidat">
+  <!-- Header Dashboard -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ currentUser?.first_name?.charAt(0) || 'C' }}
+        </div>
+        <div class="user-details">
+          <h2>Bienvenue, {{ currentUser?.first_name }} {{ currentUser?.last_name }}</h2>
+          <p class="user-email">{{ currentUser?.email }}</p>
+          <span class="badge-candidat">Candidat</span>
+        </div>
+      </div>
+      <button class="btn-logout" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        Déconnexion
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="dashboard-nav">
+    <button
+      class="nav-tab"
+      [class.active]="activeTab === 'overview'"
+      (click)="activeTab = 'overview'"
+    >
+      <i class="fas fa-home"></i>
+      Vue d'ensemble
+    </button>
+    <button
+      class="nav-tab"
+      [class.active]="activeTab === 'candidature'"
+      (click)="activeTab = 'candidature'"
+    >
+      <i class="fas fa-file-alt"></i>
+      Ma Candidature
+    </button>
+    <button
+      class="nav-tab"
+      [class.active]="activeTab === 'dossier'"
+      (click)="activeTab = 'dossier'"
+    >
+      <i class="fas fa-folder-open"></i>
+      Mon Dossier
+    </button>
+  </div>
+
+  <!-- Contenu selon l'onglet actif -->
+  <div class="dashboard-content">
+    <!-- VUE D'ENSEMBLE -->
+    <div *ngIf="activeTab === 'overview'" class="tab-content">
+      <h3 class="section-title">Tableau de bord</h3>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="stat-details">
+            <h4>Statut de candidature</h4>
+            <p class="stat-value">{{ candidature?.statut || 'En cours' }}</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)">
+            <i class="fas fa-trophy"></i>
+          </div>
+          <div class="stat-details">
+            <h4>Score</h4>
+            <p class="stat-value">{{ candidature?.score || '--' }}/20</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">
+            <i class="fas fa-list-ol"></i>
+          </div>
+          <div class="stat-details">
+            <h4>Classement</h4>
+            <p class="stat-value">{{ candidature?.classement || '--' }}</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a, #fee140)">
+            <i class="fas fa-folder"></i>
+          </div>
+          <div class="stat-details">
+            <h4>Documents</h4>
+            <p class="stat-value">{{ documentsCount || 0 }}/5</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions rapides -->
+      <div class="quick-actions">
+        <h4>Actions rapides</h4>
+        <div class="actions-grid">
+          <button class="action-btn" (click)="activeTab = 'candidature'">
+            <i class="fas fa-eye"></i>
+            Consulter ma candidature
+          </button>
+          <button class="action-btn" (click)="activeTab = 'dossier'">
+            <i class="fas fa-upload"></i>
+            Déposer mes documents
+          </button>
+          <button class="action-btn" [routerLink]="['/candidat/candidature/modifier']">
+            <i class="fas fa-edit"></i>
+            Modifier ma candidature
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MA CANDIDATURE -->
+    <div *ngIf="activeTab === 'candidature'" class="tab-content">
+      <h3 class="section-title">Consulter ma candidature</h3>
+
+      <div *ngIf="candidature" class="candidature-details">
+        <!-- Informations générales -->
+        <div class="info-card">
+          <h4><i class="fas fa-info-circle"></i> Informations générales</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Type de candidature :</span>
+              <span class="value">{{ candidature.type_candidature }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Date de soumission :</span>
+              <span class="value">{{ candidature.date_soumission | date: 'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Statut :</span>
+              <span class="badge" [ngClass]="getStatutClass(candidature.statut)">
+                {{ candidature.statut }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="info-card">
+          <h4><i class="fas fa-chart-line"></i> Mes résultats</h4>
+          <div class="results-grid">
+            <div class="result-item">
+              <div class="result-label">Score calculé</div>
+              <div class="result-value score">{{ candidature.score || '--' }}/20</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Classement</div>
+              <div class="result-value rank">{{ candidature.classement || '--' }}</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Moyenne générale</div>
+              <div class="result-value">{{ candidature.moyenne_generale || '--' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vœux (pour Masters) -->
+        <div class="info-card" *ngIf="candidature.type_candidature === 'master'">
+          <h4><i class="fas fa-list"></i> Mes vœux</h4>
+          <ul class="voeux-list">
+            <li *ngFor="let voeu of candidature.voeux; let i = index">
+              <span class="voeu-number">Vœu {{ i + 1 }}</span>
+              <span class="voeu-name">{{ voeu }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Spécialité (pour Ingénieur) -->
+        <div class="info-card" *ngIf="candidature.type_candidature === 'ingenieur'">
+          <h4><i class="fas fa-graduation-cap"></i> Spécialité choisie</h4>
+          <p class="specialite">{{ candidature.specialite }}</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions-buttons">
+          <button class="btn-primary" [routerLink]="['/candidat/candidature/modifier']">
+            <i class="fas fa-edit"></i>
+            Modifier ma candidature
+          </button>
+          <button class="btn-secondary" (click)="imprimerCandidature()">
+            <i class="fas fa-print"></i>
+            Imprimer
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="!candidature" class="no-candidature">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Aucune candidature trouvée</p>
+        <button class="btn-primary" [routerLink]="['/choisir-candidature']">
+          Créer une candidature
+        </button>
+      </div>
+    </div>
+
+    <!-- MON DOSSIER -->
+    <div *ngIf="activeTab === 'dossier'" class="tab-content">
+      <h3 class="section-title">Mon dossier de candidature</h3>
+
+      <!-- Vérification identité -->
+      <div *ngIf="!isDossierUnlocked" class="verification-box">
+        <div class="lock-icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <h4>Vérification d'identité requise</h4>
+        <p>
+          Pour accéder à votre dossier et déposer vos documents, veuillez confirmer votre mot de
+          passe.
+        </p>
+
+        <form (ngSubmit)="verifyIdentity()" class="verify-form">
+          <div class="form-group">
+            <label>Mot de passe</label>
+            <input
+              type="password"
+              [(ngModel)]="verificationPassword"
+              name="password"
+              placeholder="Entrez votre mot de passe"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-unlock"></i>
+            Déverrouiller mon dossier
+          </button>
+        </form>
+
+        <p class="error-message" *ngIf="verificationError">{{ verificationError }}</p>
+      </div>
+
+      <!-- Documents (après vérification) -->
+      <div *ngIf="isDossierUnlocked" class="documents-section">
+        <div class="documents-header">
+          <h4>Documents requis (5)</h4>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="(documentsCount / 5) * 100"></div>
+          </div>
+          <p>{{ documentsCount }}/5 documents déposés</p>
+        </div>
+
+        <div class="documents-list">
+          <!-- CIN -->
+          <div class="document-item" [class.uploaded]="hasDocument('cin')">
+            <div class="doc-icon">
+              <i class="fas fa-id-card"></i>
+            </div>
+            <div class="doc-info">
+              <h5>Carte d'identité nationale (CIN)</h5>
+              <p *ngIf="!hasDocument('cin')" class="doc-status pending">Non déposé</p>
+              <p *ngIf="hasDocument('cin')" class="doc-status uploaded">
+                Déposé le {{ getDocumentDate('cin') }}
+              </p>
+            </div>
+            <div class="doc-actions">
+              <button class="btn-upload" *ngIf="!hasDocument('cin')">
+                <i class="fas fa-upload"></i>
+                Déposer
+              </button>
+              <button class="btn-view" *ngIf="hasDocument('cin')">
+                <i class="fas fa-eye"></i>
+                Voir
+              </button>
+            </div>
+          </div>
+
+          <!-- Relevés notes -->
+          <div class="document-item" [class.uploaded]="hasDocument('releves')">
+            <div class="doc-icon">
+              <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="doc-info">
+              <h5>Relevés de notes (L1, L2, L3)</h5>
+              <p *ngIf="!hasDocument('releves')" class="doc-status pending">Non déposé</p>
+              <p *ngIf="hasDocument('releves')" class="doc-status uploaded">Déposé</p>
+            </div>
+            <div class="doc-actions">
+              <button class="btn-upload" *ngIf="!hasDocument('releves')">
+                <i class="fas fa-upload"></i>
+                Déposer
+              </button>
+            </div>
+          </div>
+
+          <!-- Diplôme -->
+          <div class="document-item" [class.uploaded]="hasDocument('diplome')">
+            <div class="doc-icon">
+              <i class="fas fa-certificate"></i>
+            </div>
+            <div class="doc-info">
+              <h5>Diplôme de Licence</h5>
+              <p *ngIf="!hasDocument('diplome')" class="doc-status pending">Non déposé</p>
+              <p *ngIf="hasDocument('diplome')" class="doc-status uploaded">Déposé</p>
+            </div>
+            <div class="doc-actions">
+              <button class="btn-upload">
+                <i class="fas fa-upload"></i>
+                Déposer
+              </button>
+            </div>
+          </div>
+
+          <!-- CV -->
+          <div class="document-item" [class.uploaded]="hasDocument('cv')">
+            <div class="doc-icon">
+              <i class="fas fa-file-pdf"></i>
+            </div>
+            <div class="doc-info">
+              <h5>Curriculum Vitae (CV)</h5>
+              <p *ngIf="!hasDocument('cv')" class="doc-status pending">Non déposé</p>
+              <p *ngIf="hasDocument('cv')" class="doc-status uploaded">Déposé</p>
+            </div>
+            <div class="doc-actions">
+              <button class="btn-upload">
+                <i class="fas fa-upload"></i>
+                Déposer
+              </button>
+            </div>
+          </div>
+
+          <!-- Photo -->
+          <div class="document-item" [class.uploaded]="hasDocument('photo')">
+            <div class="doc-icon">
+              <i class="fas fa-image"></i>
+            </div>
+            <div class="doc-info">
+              <h5>Photo d'identité</h5>
+              <p *ngIf="!hasDocument('photo')" class="doc-status pending">Non déposée</p>
+              <p *ngIf="hasDocument('photo')" class="doc-status uploaded">Déposée</p>
+            </div>
+            <div class="doc-actions">
+              <button class="btn-upload">
+                <i class="fas fa-upload"></i>
+                Déposer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary btn-large" [routerLink]="['/candidat/dossier/deposer']">
+          <i class="fas fa-cloud-upload-alt"></i>
+          Déposer mes documents
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

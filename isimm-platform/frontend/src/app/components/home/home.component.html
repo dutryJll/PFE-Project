@@ -3,7 +3,7 @@
   <nav class="navbar">
     <!-- Logo ISIMM à gauche -->
     <div class="logo-container">
-      <img src="assets/images/ISIMM_LOGO.png" />
+      <img src="/ISIMM_LOGO.png" />
       <div class="logo-text">
         <span class="main-title">ISIMM Admissions</span>
         <span class="subtitle">Plateforme Officielle</span>
@@ -12,9 +12,24 @@
 
     <!-- Navigation -->
     <ul class="nav-links">
-      <li><a href="#accueil">Accueil</a></li>
-      <li><a href="#masters">Formation</a></li>
-      <li><a href="#processus">Processus</a></li>
+      <li>
+        <a
+          routerLink="/"
+          class="nav-link"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Accueil</a
+        >
+      </li>
+      <li>
+        <a
+          routerLink="/masters"
+          class="nav-link"
+          routerLinkActive="active"
+          (click)="goToMasters($event)"
+          >Formation</a
+        >
+      </li>
       <li><a href="#contact">Contact</a></li>
     </ul>
 
@@ -23,7 +38,7 @@
   </nav>
 </header>
 
-<!-- Hero Section ORIGINAL -->
+<!-- Hero Section MODIFIÉ -->
 <section class="hero" id="accueil">
   <div class="hero-content">
     <h1>
@@ -35,8 +50,9 @@
       et de Mathématiques de Monastir
     </p>
     <div class="cta-buttons">
-      <a [routerLink]="['/candidature']" class="btn-primary">Candidater maintenant</a>
-      <a [routerLink]="['/masters']" class="btn-secondary">Découvrir les formations</a>
+      <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
+      <a [routerLink]="['/choisir-candidature']" class="btn-primary"> Candidater maintenant </a>
+      <a [routerLink]="['/masters']" class="btn-secondary"> Découvrir les formations </a>
     </div>
   </div>
 </section>
@@ -63,9 +79,7 @@
   </div>
 </section>
 
-<!-- ========================================
-     FORMATIONS SECTION AMÉLIORÉE (NOUVELLES CARTES)
-     ======================================== -->
+<!-- FORMATIONS SECTION MODIFIÉE -->
 <section class="formations-section" id="masters">
   <div class="concours-container">
     <h2 class="section-title">Nos Formations d'Excellence</h2>
@@ -103,6 +117,7 @@
           </li>
         </ul>
 
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
         <button class="btn-card research-btn" [routerLink]="['/masters']">
           <span>Explorer</span>
           <i class="fas fa-arrow-right"></i>
@@ -144,6 +159,7 @@
           </li>
         </ul>
 
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
         <button class="btn-card professional-btn" [routerLink]="['/masters']">
           <span>Explorer</span>
           <i class="fas fa-arrow-right"></i>
@@ -164,7 +180,7 @@
 
         <h3 class="card-title">Cycle Ingénieur</h3>
         <p class="card-description">
-          Formation d'ingénieur en 3 ans avec 3 spécialités d'excellence
+          Formation d'ingénieur en 3 ans avec 2 spécialités d'excellence
         </p>
 
         <ul class="card-features">
@@ -182,6 +198,7 @@
           </li>
         </ul>
 
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /concours-ingenieur -->
         <button class="btn-card engineer-btn" [routerLink]="['/concours-ingenieur']">
           <span>Explorer</span>
           <i class="fas fa-arrow-right"></i>
