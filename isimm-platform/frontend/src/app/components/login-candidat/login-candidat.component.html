@@ -1,0 +1,49 @@
+<div class="login-candidat-page">
+  <button class="btn-back" (click)="goBack()">← Retour</button>
+
+  <div class="login-card">
+    <h2>Espace Candidat</h2>
+    <p class="subtitle">Connectez-vous à votre compte</p>
+
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      {{ errorMessage }}
+    </div>
+
+    <form (ngSubmit)="onLogin()">
+      <div class="form-group">
+        <label>Email</label>
+        <input
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="votre.email@example.com"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="••••••••"
+          required
+        />
+      </div>
+
+      <a routerLink="/forgot-password" class="forgot-link">Mot de passe oublié ?</a>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        {{ isLoading ? 'Connexion...' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <div class="no-account">
+      <p>Vous n'avez pas encore postulé ?</p>
+      <button class="btn-postuler" (click)="goToPostulation()">
+        Postuler à un Master / Cycle Ingénieur
+      </button>
+    </div>
+  </div>
+</div>

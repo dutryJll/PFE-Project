@@ -7,39 +7,27 @@
 
     <h2 class="register-title">Créer un compte</h2>
 
-    <!-- Messages -->
+    <!-- Message d'erreur -->
     <div *ngIf="errorMessage" class="alert alert-danger">
       {{ errorMessage }}
     </div>
 
+    <!-- Message de succès -->
     <div *ngIf="successMessage" class="alert alert-success">
       {{ successMessage }}
     </div>
 
     <!-- Formulaire d'inscription -->
-    <form (ngSubmit)="onRegister()">
-      <!-- Rôle -->
-      <div class="form-group">
-        <label class="form-label">Type de compte</label>
-        <select class="form-control" [(ngModel)]="formData.role" name="role">
-          <option value="candidat">🎓 Candidat</option>
-          <option value="commission">👥 Membre Commission</option>
-          <option value="admin">⚙️ Administrateur</option>
-          <option value="directeur">🏛️ Directeur</option>
-          <option value="secretaire_general">📋 Secrétaire Général</option>
-        </select>
-      </div>
-
-      <!-- Nom et Prénom -->
+    <form (ngSubmit)="onRegister()" *ngIf="!successMessage">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Prénom</label>
           <input
             type="text"
             class="form-control"
-            [(ngModel)]="formData.first_name"
+            [(ngModel)]="userData.first_name"
             name="first_name"
-            placeholder="Ahmed"
+            placeholder="Prénom"
             required
           />
         </div>
@@ -49,65 +37,67 @@
           <input
             type="text"
             class="form-control"
-            [(ngModel)]="formData.last_name"
+            [(ngModel)]="userData.last_name"
             name="last_name"
-            placeholder="Ben Ali"
+            placeholder="Nom"
             required
           />
         </div>
       </div>
 
-      <!-- Email -->
       <div class="form-group">
         <label class="form-label">Email</label>
         <input
           type="email"
           class="form-control"
-          [(ngModel)]="formData.email"
+          [(ngModel)]="userData.email"
           name="email"
-          placeholder="ahmed.benali@example.com"
+          placeholder="votre.email@example.com"
           required
         />
       </div>
 
-      <!-- Nom d'utilisateur -->
       <div class="form-group">
         <label class="form-label">Nom d'utilisateur</label>
         <input
           type="text"
           class="form-control"
-          [(ngModel)]="formData.username"
+          [(ngModel)]="userData.username"
           name="username"
-          placeholder="ahmedbenali"
+          placeholder="nom_utilisateur"
           required
         />
       </div>
 
-      <!-- Mot de passe -->
       <div class="form-group">
         <label class="form-label">Mot de passe</label>
         <input
           type="password"
           class="form-control"
-          [(ngModel)]="formData.password"
+          [(ngModel)]="userData.password"
           name="password"
           placeholder="••••••••"
           required
         />
-        <small class="form-text">Au moins 8 caractères</small>
       </div>
 
-      <!-- Confirmation mot de passe -->
       <div class="form-group">
         <label class="form-label">Confirmer le mot de passe</label>
         <input
           type="password"
           class="form-control"
-          [(ngModel)]="formData.password2"
+          [(ngModel)]="userData.password2"
           name="password2"
           placeholder="••••••••"
           required
         />
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" required />
+          <span>J'accepte les <a href="#">conditions d'utilisation</a></span>
+        </label>
       </div>
 
       <button type="submit" class="btn btn-primary btn-block" [disabled]="isLoading">

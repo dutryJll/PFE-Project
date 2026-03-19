@@ -1,0 +1,54 @@
+<div class="login-admin-page">
+  <button class="btn-back" (click)="goBack()">← Retour</button>
+
+  <div class="login-card">
+    <div class="header-icon">⚙️</div>
+    <h2>Espace Administration</h2>
+    <p class="subtitle">Accès réservé aux administrateurs</p>
+
+    <div class="warning-box">
+      <i class="fas fa-shield-alt"></i>
+      <p>Accès sécurisé et surveillé</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      {{ errorMessage }}
+    </div>
+
+    <form (ngSubmit)="onLogin()">
+      <div class="form-group">
+        <label>Email administrateur</label>
+        <input
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="admin@isimm.tn"
+          required
+          autocomplete="username"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="••••••••"
+          required
+          autocomplete="current-password"
+        />
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        <i class="fas fa-lock"></i>
+        {{ isLoading ? 'Vérification...' : "Accéder à l'administration" }}
+      </button>
+    </form>
+
+    <div class="security-note">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>Toute tentative d'accès non autorisée sera enregistrée</p>
+    </div>
+  </div>
+</div>

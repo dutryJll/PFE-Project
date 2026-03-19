@@ -50,15 +50,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'candidature_service.wsgi.application'
 
-
-  # DATABASES - UTILISER SQLITE (pas d'erreur Unicode)
+# DATABASES - UTILISER SQLITE (pas d'erreur Unicode)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -89,4 +87,30 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-}
+}  # ✅ ACCOLADE FERMANTE AJOUTÉE
+
+# ========================================
+# CONFIGURATION EMAIL
+# ========================================
+
+# Pour développement (affiche emails dans la console)
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
+
+# Pour production (décommenter et configurer)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'votre-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'votre-mot-de-passe-app'
+# DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'votre-email@gmail.com'  # ✅ REMPLACER PAR VOTRE EMAIL
+EMAIL_HOST_PASSWORD = 'abcd efgh ijkl mnop'  # ✅ REMPLACER PAR APP PASSWORD
+DEFAULT_FROM_EMAIL = 'ISIMM Admission <votre-email@gmail.com>'
+EMAIL_SUBJECT_PREFIX = '[ISIMM] '
+FRONTEND_URL = 'http://localhost:4200'

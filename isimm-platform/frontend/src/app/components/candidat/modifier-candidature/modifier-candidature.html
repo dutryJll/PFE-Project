@@ -1,11 +1,109 @@
-<div class="modifier-candidature">
-  <h2>Modifier ma candidature</h2>
-
-  <div *ngFor="let voeu of voeux; let i = index">
-    <input [(ngModel)]="voeux[i]" placeholder="Vœu {{ i + 1 }}" />
-    <button (click)="supprimerVoeu(i)">Supprimer</button>
+<div class="modifier-candidature-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/candidat/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Modifier ma candidature</h1>
+        <p>Ajoutez ou supprimez vos vœux jusqu'à la date limite</p>
+      </div>
+    </div>
   </div>
 
-  <button (click)="ajouterVoeu()">Ajouter un vœu</button>
-  <button (click)="sauvegarder()">Sauvegarder</button>
+  <!-- Contenu -->
+  <div class="content-container">
+    <!-- Informations candidature -->
+    <div class="info-card">
+      <div class="info-header">
+        <i class="fas fa-info-circle"></i>
+        <h3>Informations de votre candidature</h3>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Type</span>
+          <span class="value">{{
+            candidature?.type_candidature === 'master' ? 'Master' : 'Cycle Ingénieur'
+          }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Date de soumission</span>
+          <span class="value">{{ candidature?.date_soumission | date: 'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Statut</span>
+          <span [class]="'badge ' + getStatutClass(candidature?.statut)">
+            {{ candidature?.statut }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire de modification -->
+    <div class="form-card">
+      <!-- Pour Masters -->
+      <div *ngIf="candidature?.type_candidature === 'master'">
+        <h3 class="form-title">
+          <i class="fas fa-list-ol"></i>
+          Mes vœux ({{ voeux.length }}/3)
+        </h3>
+
+        <div class="voeux-list">
+          <div class="voeu-item" *ngFor="let voeu of voeux; let i = index">
+            <div class="voeu-number">{{ i + 1 }}</div>
+            <select [(ngModel)]="voeux[i]" class="voeu-select">
+              <option value="">-- Sélectionnez un master --</option>
+              <option *ngFor="let master of mastersList" [value]="master">
+                {{ master }}
+              </option>
+            </select>
+            <button class="btn-delete" (click)="supprimerVoeu(i)" *ngIf="voeux.length > 1">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn-add-voeu" (click)="ajouterVoeu()" *ngIf="voeux.length < 3">
+          <i class="fas fa-plus"></i>
+          Ajouter un vœu
+        </button>
+      </div>
+
+      <!-- Pour Ingénieur -->
+      <div *ngIf="candidature?.type_candidature === 'ingenieur'">
+        <h3 class="form-title">
+          <i class="fas fa-cog"></i>
+          Ma spécialité
+        </h3>
+
+        <select [(ngModel)]="specialite" class="specialite-select">
+          <option value="">-- Sélectionnez une spécialité --</option>
+          <option value="Génie Informatique">Génie Informatique</option>
+          <option value="Génie Électrique">Génie Électrique</option>
+        </select>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="actions">
+        <button class="btn-cancel" [routerLink]="['/candidat/dashboard']">
+          <i class="fas fa-times"></i>
+          Annuler
+        </button>
+        <button class="btn-save" (click)="sauvegarder()">
+          <i class="fas fa-save"></i>
+          Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+
+    <!-- Avertissement -->
+    <div class="warning-card">
+      <i class="fas fa-exclamation-triangle"></i>
+      <div>
+        <strong>Attention :</strong>
+        <p>Vous ne pourrez plus modifier vos vœux après la date limite de candidature.</p>
+      </div>
+    </div>
+  </div>
 </div>

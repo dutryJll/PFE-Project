@@ -1,154 +1,133 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { UserService } from '../../services/user.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
-  selector: 'app-profile',
+  selector: 'app-profil',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './profile.component.html',
-  styleUrl: './profile.component.css',
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="profil-container">
+      <h2>Mon Profil</h2>
+
+      <form (ngSubmit)="onSave()">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" [(ngModel)]="user.email" name="email" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" [(ngModel)]="user.first_name" name="first_name" />
+        </div>
+
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" [(ngModel)]="user.last_name" name="last_name" />
+        </div>
+
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" [(ngModel)]="user.phone" name="phone" />
+        </div>
+
+        <div class="form-group">
+          <label>Adresse</label>
+          <textarea [(ngModel)]="user.address" name="address"></textarea>
+        </div>
+
+        <button type="submit" [disabled]="isLoading">
+          {{ isLoading ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+
+        <p *ngIf="successMessage" class="success">{{ successMessage }}</p>
+        <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
+      </form>
+    </div>
+  `,
+  styles: [
+    `
+      .profil-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      button {
+        padding: 0.75rem 2rem;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #ccc;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    `,
+  ],
 })
-export class ProfileComponent implements OnInit {
-  // Utilisateur actuel
-  currentUser: any = null;
-
-  // Données du profil avec TOUTES les propriétés initialisées
-  profile = {
-    first_name: '',
-    last_name: '',
-    cin: '',
-    telephone: '',
-    date_naissance: '',
-    email: '',
-    adresse: '',
-    ville: '',
-    code_postal: '',
-  };
-
-  // Données pour changement de mot de passe
-  passwordData = {
-    old_password: '',
-    new_password: '',
-    confirm_password: '',
-  };
-
-  // État de l'interface
-  activeTab = 'info';
+export class ProfilComponent implements OnInit {
+  user: any = {};
   isLoading = false;
   successMessage = '';
   errorMessage = '';
 
   constructor(
     private authService: AuthService,
-    private userService: UserService,
-    private router: Router,
+    private http: HttpClient,
   ) {}
 
-  ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
-    console.log('👤 Utilisateur actuel:', this.currentUser);
-
-    if (this.currentUser && this.currentUser.email) {
-      this.loadProfile();
-    }
+  ngOnInit() {
+    this.user = this.authService.getCurrentUser();
   }
 
-  loadProfile(): void {
-    const email = this.currentUser.email;
-    this.isLoading = true;
-
-    this.userService.getProfile(email).subscribe({
-      next: (data) => {
-        console.log('✅ Profil chargé:', data);
-        this.profile = {
-          first_name: data.first_name || '',
-          last_name: data.last_name || '',
-          cin: data.cin || '',
-          telephone: data.telephone || '',
-          date_naissance: data.date_naissance || '',
-          email: data.email || '',
-          adresse: data.adresse || '',
-          ville: data.ville || '',
-          code_postal: data.code_postal || '',
-        };
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('❌ Erreur chargement profil:', error);
-        this.errorMessage = 'Impossible de charger le profil';
-        this.isLoading = false;
-      },
-    });
-  }
-
-  onSubmit(): void {
+  onSave() {
     this.isLoading = true;
     this.successMessage = '';
     this.errorMessage = '';
 
-    console.log('📝 Mise à jour profil:', this.profile);
+    const token = this.authService.getAccessToken();
 
-    this.userService.updateProfile(this.profile).subscribe({
-      next: (data) => {
-        console.log('✅ Profil mis à jour:', data);
-        this.successMessage = '✅ Profil mis à jour avec succès !';
-        this.isLoading = false;
-
-        // Masquer le message après 3 secondes
-        setTimeout(() => {
-          this.successMessage = '';
-        }, 3000);
-      },
-      error: (error) => {
-        console.error('❌ Erreur mise à jour:', error);
-        this.errorMessage = '❌ Erreur lors de la mise à jour du profil';
-        this.isLoading = false;
-      },
-    });
-  }
-
-  changePassword(): void {
-    // Vérification des mots de passe
-    if (this.passwordData.new_password !== this.passwordData.confirm_password) {
-      this.errorMessage = '❌ Les mots de passe ne correspondent pas';
-      return;
-    }
-
-    if (this.passwordData.new_password.length < 8) {
-      this.errorMessage = '❌ Le mot de passe doit contenir au moins 8 caractères';
-      return;
-    }
-
-    console.log('🔐 Changement de mot de passe');
-
-    // TODO: Implémenter l'appel API pour changer le mot de passe
-    this.successMessage = '✅ Mot de passe changé avec succès !';
-
-    // Réinitialiser le formulaire
-    this.passwordData = {
-      old_password: '',
-      new_password: '',
-      confirm_password: '',
-    };
-
-    // Masquer le message après 3 secondes
-    setTimeout(() => {
-      this.successMessage = '';
-    }, 3000);
-  }
-
-  getRoleLabel(role: string): string {
-    const labels: { [key: string]: string } = {
-      admin: 'Administrateur',
-      candidat: 'Candidat',
-      commission: 'Commission',
-      directeur: 'Directeur',
-      secretaire_general: 'Secrétaire Général',
-    };
-    return labels[role] || role;
+    this.http
+      .put('http://localhost:8001/api/auth/profile/update/', this.user, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.isLoading = false;
+          this.successMessage = 'Profil mis à jour !';
+          localStorage.setItem('current_user', JSON.stringify(response.user));
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.errorMessage = 'Erreur lors de la mise à jour';
+        },
+      });
   }
 }

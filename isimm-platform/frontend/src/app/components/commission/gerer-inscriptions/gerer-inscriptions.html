@@ -1,0 +1,468 @@
+<div class="gerer-inscriptions-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/commission/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Gérer les Inscriptions</h1>
+        <p>Consulter et gérer les candidats inscrits</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+          <h3>Total Inscrits</h3>
+          <p class="stat-value">{{ inscrits.length }}</p>
+          <small>Cette session</small>
+        </div>
+      </div>
+
+      <div class="stat-card masters">
+        <div class="stat-icon">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="stat-content">
+          <h3>Masters</h3>
+          <p class="stat-value">{{ countByType('master') }}</p>
+          <small>Inscrits</small>
+        </div>
+      </div>
+
+      <div class="stat-card ingenieurs">
+        <div class="stat-icon">
+          <i class="fas fa-cogs"></i>
+        </div>
+        <div class="stat-content">
+          <h3>Cycle Ingénieur</h3>
+          <p class="stat-value">{{ countByType('ingenieur') }}</p>
+          <small>Inscrits</small>
+        </div>
+      </div>
+
+      <div class="stat-card confirme">
+        <div class="stat-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+          <h3>Confirmés</h3>
+          <p class="stat-value">{{ countByStatut('confirme') }}</p>
+          <small>Inscription confirmée</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions bar -->
+  <div class="actions-bar">
+    <div class="actions-content">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="recherche"
+          (input)="filtrerInscrits()"
+          placeholder="Rechercher par nom, CIN, email..."
+        />
+      </div>
+
+      <select [(ngModel)]="filtreType" (change)="filtrerInscrits()">
+        <option value="">Tous les types</option>
+        <option value="master">Masters</option>
+        <option value="ingenieur">Cycle Ingénieur</option>
+      </select>
+
+      <select [(ngModel)]="filtreMaster" (change)="filtrerInscrits()">
+        <option value="">Tous les masters</option>
+        <option *ngFor="let master of masters" [value]="master.id">{{ master.nom }}</option>
+      </select>
+
+      <select [(ngModel)]="filtreStatut" (change)="filtrerInscrits()">
+        <option value="">Tous les statuts</option>
+        <option value="en_attente">En attente</option>
+        <option value="confirme">Confirmé</option>
+        <option value="annule">Annulé</option>
+      </select>
+
+      <div class="action-buttons">
+        <button class="btn-action btn-add" (click)="ouvrirModalAjouter()">
+          <i class="fas fa-user-plus"></i>
+          Ajouter inscription
+        </button>
+        <button class="btn-action btn-export" (click)="exporterExcel()">
+          <i class="fas fa-file-excel"></i>
+          Exporter Excel
+        </button>
+        <button class="btn-action btn-pdf" (click)="exporterPDF()">
+          <i class="fas fa-file-pdf"></i>
+          Exporter PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table des inscrits -->
+  <div class="content-container">
+    <div class="table-wrapper">
+      <table class="inscrits-table">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" (change)="toggleSelectAll($event)" />
+            </th>
+            <th>Candidat</th>
+            <th>CIN</th>
+            <th>Type</th>
+            <th>Master / Spécialité</th>
+            <th>Score</th>
+            <th>Rang</th>
+            <th>Date inscription</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let inscrit of inscritsFiltres" [class.selected]="inscrit.selected">
+            <td>
+              <input type="checkbox" [(ngModel)]="inscrit.selected" />
+            </td>
+            <td>
+              <div class="candidat-cell">
+                <div class="avatar">
+                  {{ inscrit.prenom?.charAt(0) }}{{ inscrit.nom?.charAt(0) }}
+                </div>
+                <div>
+                  <strong>{{ inscrit.prenom }} {{ inscrit.nom }}</strong>
+                  <small>{{ inscrit.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ inscrit.cin }}</td>
+            <td>
+              <span
+                class="badge"
+                [class.badge-master]="inscrit.type === 'master'"
+                [class.badge-ingenieur]="inscrit.type === 'ingenieur'"
+              >
+                {{ inscrit.type === 'master' ? 'Master' : 'Ingénieur' }}
+              </span>
+            </td>
+            <td>
+              <div class="formation-cell">
+                <span *ngIf="inscrit.type === 'master'">{{ inscrit.master_nom }}</span>
+                <span *ngIf="inscrit.type === 'ingenieur'">{{ inscrit.specialite }}</span>
+              </div>
+            </td>
+            <td>
+              <span
+                class="score-badge"
+                [class.excellent]="inscrit.score >= 16"
+                [class.bien]="inscrit.score >= 14 && inscrit.score < 16"
+                [class.passable]="inscrit.score < 14"
+              >
+                {{ inscrit.score }}/20
+              </span>
+            </td>
+            <td>
+              <span class="rang-badge" [class.top]="inscrit.rang <= 10"> #{{ inscrit.rang }} </span>
+            </td>
+            <td>{{ inscrit.date_inscription | date: 'dd/MM/yyyy' }}</td>
+            <td>
+              <span class="statut-badge" [class]="'statut-' + inscrit.statut">
+                <i
+                  class="fas"
+                  [class.fa-clock]="inscrit.statut === 'en_attente'"
+                  [class.fa-check]="inscrit.statut === 'confirme'"
+                  [class.fa-times]="inscrit.statut === 'annule'"
+                ></i>
+                {{ getStatutLabel(inscrit.statut) }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button
+                  class="btn-icon btn-view"
+                  (click)="voirDetails(inscrit)"
+                  title="Voir détails"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-icon btn-edit" (click)="editerInscrit(inscrit)" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button
+                  class="btn-icon btn-delete"
+                  (click)="supprimerInscrit(inscrit)"
+                  title="Supprimer"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Message si vide -->
+      <div *ngIf="inscritsFiltres.length === 0" class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h3>Aucun inscrit</h3>
+        <p>
+          {{
+            recherche || filtreType || filtreMaster || filtreStatut
+              ? 'Aucun inscrit ne correspond à vos filtres'
+              : 'Aucun candidat inscrit pour le moment'
+          }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions groupées -->
+    <div class="bulk-actions" *ngIf="hasSelection()">
+      <div class="bulk-info">
+        <i class="fas fa-check-square"></i>
+        <span>{{ countSelected() }} élément(s) sélectionné(s)</span>
+      </div>
+      <div class="bulk-buttons">
+        <button class="btn-bulk btn-confirm" (click)="confirmerSelection()">
+          <i class="fas fa-check"></i>
+          Confirmer
+        </button>
+        <button class="btn-bulk btn-cancel" (click)="annulerSelection()">
+          <i class="fas fa-times"></i>
+          Annuler
+        </button>
+        <button class="btn-bulk btn-email" (click)="envoyerEmailSelection()">
+          <i class="fas fa-envelope"></i>
+          Envoyer email
+        </button>
+        <button class="btn-bulk btn-delete" (click)="supprimerSelection()">
+          <i class="fas fa-trash"></i>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajouter Inscription -->
+<div class="modal-overlay" *ngIf="showModalAjouter" (click)="fermerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-user-plus"></i>
+        Ajouter une inscription
+      </h3>
+      <button class="btn-close" (click)="fermerModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prénom <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="nouveauInscrit.prenom"
+              name="prenom"
+              placeholder="Prénom"
+            />
+          </div>
+          <div class="form-group">
+            <label>Nom <span class="required">*</span></label>
+            <input type="text" [(ngModel)]="nouveauInscrit.nom" name="nom" placeholder="Nom" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>CIN <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="nouveauInscrit.cin"
+              name="cin"
+              placeholder="12345678"
+              maxlength="8"
+            />
+          </div>
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input
+              type="email"
+              [(ngModel)]="nouveauInscrit.email"
+              name="email"
+              placeholder="email@example.com"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Type de candidature <span class="required">*</span></label>
+          <select [(ngModel)]="nouveauInscrit.type" name="type" (change)="onTypeChange()">
+            <option value="">-- Sélectionner --</option>
+            <option value="master">Master</option>
+            <option value="ingenieur">Cycle Ingénieur</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="nouveauInscrit.type === 'master'">
+          <label>Master <span class="required">*</span></label>
+          <select [(ngModel)]="nouveauInscrit.master_id" name="master">
+            <option value="">-- Sélectionner un master --</option>
+            <option *ngFor="let master of masters" [value]="master.id">{{ master.nom }}</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="nouveauInscrit.type === 'ingenieur'">
+          <label>Spécialité <span class="required">*</span></label>
+          <select [(ngModel)]="nouveauInscrit.specialite" name="specialite">
+            <option value="">-- Sélectionner une spécialité --</option>
+            <option value="Génie Informatique">Génie Informatique</option>
+            <option value="Génie Électrique">Génie Électrique</option>
+            <option value="Génie Mécanique">Génie Mécanique</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Score <span class="required">*</span></label>
+            <input
+              type="number"
+              [(ngModel)]="nouveauInscrit.score"
+              name="score"
+              min="0"
+              max="20"
+              step="0.01"
+              placeholder="15.50"
+            />
+          </div>
+          <div class="form-group">
+            <label>Rang</label>
+            <input
+              type="number"
+              [(ngModel)]="nouveauInscrit.rang"
+              name="rang"
+              min="1"
+              placeholder="1"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Statut</label>
+          <select [(ngModel)]="nouveauInscrit.statut" name="statut">
+            <option value="en_attente">En attente</option>
+            <option value="confirme">Confirmé</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="fermerModal()">Annuler</button>
+      <button class="btn-confirm" (click)="ajouterInscrit()" [disabled]="!isFormValid()">
+        <i class="fas fa-save"></i>
+        Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Détails -->
+<div class="modal-overlay" *ngIf="showModalDetails" (click)="fermerModal()">
+  <div class="modal-content large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-user"></i>
+        Détails de l'inscription
+      </h3>
+      <button class="btn-close" (click)="fermerModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body" *ngIf="inscritSelectionne">
+      <div class="details-grid">
+        <div class="detail-section">
+          <h4><i class="fas fa-user"></i> Informations personnelles</h4>
+          <div class="detail-item">
+            <span class="label">Nom complet</span>
+            <span class="value">{{ inscritSelectionne.prenom }} {{ inscritSelectionne.nom }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">CIN</span>
+            <span class="value">{{ inscritSelectionne.cin }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Email</span>
+            <span class="value">{{ inscritSelectionne.email }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Téléphone</span>
+            <span class="value">{{ inscritSelectionne.telephone || 'Non renseigné' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4><i class="fas fa-graduation-cap"></i> Formation</h4>
+          <div class="detail-item">
+            <span class="label">Type</span>
+            <span class="value">{{
+              inscritSelectionne.type === 'master' ? 'Master' : 'Cycle Ingénieur'
+            }}</span>
+          </div>
+          <div class="detail-item" *ngIf="inscritSelectionne.type === 'master'">
+            <span class="label">Master</span>
+            <span class="value">{{ inscritSelectionne.master_nom }}</span>
+          </div>
+          <div class="detail-item" *ngIf="inscritSelectionne.type === 'ingenieur'">
+            <span class="label">Spécialité</span>
+            <span class="value">{{ inscritSelectionne.specialite }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Score</span>
+            <span class="value score">{{ inscritSelectionne.score }}/20</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Rang</span>
+            <span class="value rank">#{{ inscritSelectionne.rang }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4><i class="fas fa-calendar"></i> Inscription</h4>
+          <div class="detail-item">
+            <span class="label">Date d'inscription</span>
+            <span class="value">{{
+              inscritSelectionne.date_inscription | date: 'dd/MM/yyyy à HH:mm'
+            }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Statut</span>
+            <span class="value">{{ getStatutLabel(inscritSelectionne.statut) }}</span>
+          </div>
+          <div class="detail-item" *ngIf="inscritSelectionne.date_confirmation">
+            <span class="label">Date de confirmation</span>
+            <span class="value">{{
+              inscritSelectionne.date_confirmation | date: 'dd/MM/yyyy'
+            }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="fermerModal()">Fermer</button>
+      <button class="btn-confirm" (click)="editerInscrit(inscritSelectionne!)">
+        <i class="fas fa-edit"></i>
+        Modifier
+      </button>
+    </div>
+  </div>
+</div>

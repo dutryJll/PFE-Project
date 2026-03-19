@@ -1,0 +1,694 @@
+<div class="dashboard-commission">
+  <!-- ✅ MENU LATÉRAL -->
+  <aside class="sidebar">
+    <div class="logo-section">
+      <div class="logo-icon">👨‍🏫</div>
+      <h2>ISIMM</h2>
+      <p class="user-role">{{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'dashboard'"
+        (click)="switchView('dashboard')"
+      >
+        <i class="fas fa-home"></i>
+        <span>Tableau de bord</span>
+      </a>
+
+      <a class="nav-item" [class.active]="currentView === 'profil'" (click)="switchView('profil')">
+        <i class="fas fa-user"></i>
+        <span>Mon Profil</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'specialites'"
+        (click)="switchView('specialites')"
+      >
+        <i class="fas fa-book"></i>
+        <span>Mes Spécialités</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'candidatures'"
+        (click)="switchView('candidatures')"
+      >
+        <i class="fas fa-file-alt"></i>
+        <span>Candidatures</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'valider-dossier'"
+        (click)="switchView('valider-dossier')"
+      >
+        <i class="fas fa-check-circle"></i>
+        <span>Valider Dossiers</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'dossiers'"
+        (click)="switchView('dossiers')"
+      >
+        <i class="fas fa-folder-open"></i>
+        <span>Tous les dossiers</span>
+      </a>
+
+      <div class="nav-section-title" *ngIf="isResponsable">RESPONSABLE</div>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'ocr'"
+        (click)="switchView('ocr')"
+      >
+        <i class="fas fa-robot"></i>
+        <span>Analyser avec OCR</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'reclamations'"
+        (click)="switchView('reclamations')"
+      >
+        <i class="fas fa-exclamation-circle"></i>
+        <span>Traiter Réclamations</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'inscriptions'"
+        (click)="switchView('inscriptions')"
+      >
+        <i class="fas fa-user-plus"></i>
+        <span>Gérer Inscriptions</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'listes'"
+        (click)="switchView('listes')"
+      >
+        <i class="fas fa-list-alt"></i>
+        <span>Gestion Listes</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'statistiques'"
+        (click)="switchView('statistiques')"
+      >
+        <i class="fas fa-chart-bar"></i>
+        <span>Statistiques</span>
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <a class="nav-item logout" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Déconnexion</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <p>{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
+      <small>{{ currentUser?.email }}</small>
+    </div>
+  </aside>
+
+  <!-- ✅ CONTENU PRINCIPAL -->
+  <main class="main-content">
+    <header class="content-header">
+      <h1>{{ getViewTitle() }}</h1>
+      <div class="header-actions">
+        <span class="date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
+      </div>
+    </header>
+
+    <!-- ✅ TABLEAU DE BORD -->
+    <div *ngIf="currentView === 'dashboard'" class="view-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ specialites.length }}</h3>
+            <p>Spécialités</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ candidatures.length }}</h3>
+            <p>Candidatures</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ nbDossiersDeposes }}</h3>
+            <p>Dossiers déposés</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7)">
+            <i class="fas fa-list-alt"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ listes.length }}</h3>
+            <p>Listes</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activités récentes -->
+      <div class="section-card">
+        <h2>📊 Activités récentes</h2>
+        <p>Dernières actions sur vos spécialités</p>
+      </div>
+    </div>
+
+    <!-- ✅ PROFIL -->
+    <div *ngIf="currentView === 'profil'" class="view-content">
+      <div class="section-card">
+        <h2>📋 Informations personnelles</h2>
+        <form (ngSubmit)="updateProfile()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" [(ngModel)]="profileData.first_name" name="first_name" required />
+            </div>
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" [(ngModel)]="profileData.last_name" name="last_name" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [value]="profileData.email" readonly class="readonly" />
+            <small>L'email ne peut pas être modifié</small>
+          </div>
+
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" [(ngModel)]="profileData.phone" name="phone" />
+          </div>
+
+          <button type="submit" class="btn-primary">💾 Enregistrer les modifications</button>
+        </form>
+      </div>
+
+      <div class="section-card">
+        <h2>🔐 Modifier le mot de passe</h2>
+        <form (ngSubmit)="changePassword()">
+          <div class="form-group">
+            <label>Mot de passe actuel *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.current_password"
+              name="current_password"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau mot de passe *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.new_password"
+              name="new_password"
+              required
+            />
+            <small>Au moins 8 caractères</small>
+          </div>
+
+          <div class="form-group">
+            <label>Confirmer le nouveau mot de passe *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.confirm_password"
+              name="confirm_password"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-warning">🔑 Changer le mot de passe</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ✅ MES SPÉCIALITÉS -->
+    <div *ngIf="currentView === 'specialites'" class="view-content">
+      <div class="section-card">
+        <div class="specialites-header">
+          <h2>📚 Mes Spécialités</h2>
+          <div class="filter-tabs">
+            <button
+              class="filter-tab"
+              [class.active]="filtreSpecialite === 'actuel'"
+              (click)="filtreSpecialite = 'actuel'"
+            >
+              Actuel
+            </button>
+            <button
+              class="filter-tab"
+              [class.active]="filtreSpecialite === 'ancien'"
+              (click)="filtreSpecialite = 'ancien'"
+            >
+              Ancien
+            </button>
+          </div>
+        </div>
+
+        <div class="specialites-grid">
+          <div class="specialite-card" *ngFor="let spec of getSpecialitesFiltrees()">
+            <div class="specialite-header">
+              <h3>{{ spec.nom }}</h3>
+              <span class="specialite-badge" [class]="spec.statut">{{ spec.statut }}</span>
+            </div>
+            <div class="specialite-stats">
+              <div class="stat-item">
+                <i class="fas fa-file-alt"></i>
+                <span>{{ spec.nb_candidatures }} candidatures</span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-folder-open"></i>
+                <span>{{ spec.nb_dossiers }} dossiers déposés</span>
+              </div>
+            </div>
+            <button class="btn-primary" (click)="consulterSpecialite(spec)">
+              <i class="fas fa-eye"></i> Consulter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ CANDIDATURES -->
+    <div *ngIf="currentView === 'candidatures'" class="view-content">
+      <div class="section-card">
+        <div class="candidatures-header">
+          <h2>📋 Gestion des candidatures</h2>
+        </div>
+
+        <div class="filters-bar">
+          <select class="filter-select" [(ngModel)]="filtreStatut">
+            <option value="">Tous les statuts</option>
+            <option value="en_attente">En attente</option>
+            <option value="accepte">Accepté</option>
+            <option value="rejete">Rejeté</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>Candidat</th>
+                <th>Spécialité</th>
+                <th>Score</th>
+                <th>Dossier</th>
+                <th>Statut</th>
+                <th>Avis</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let candidature of getCandidaturesFiltrees()">
+                <td>
+                  <strong>{{ candidature.candidat_nom }}</strong>
+                </td>
+                <td>{{ candidature.specialite }}</td>
+                <td>
+                  <strong class="score-highlight">{{ candidature.score }}</strong>
+                </td>
+                <td>
+                  <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
+                    {{ candidature.dossier_depose ? '✅ Déposé' : '❌ Non déposé' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
+                    {{ candidature.statut }}
+                  </span>
+                </td>
+                <td>
+                  <span class="avis-preview" *ngIf="candidature.avis">{{ candidature.avis }}</span>
+                  <span class="no-avis" *ngIf="!candidature.avis">Aucun avis</span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirDossier(candidature)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn-action" (click)="ouvrirModalAvis(candidature)">
+                    <i class="fas fa-comment"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ VALIDER DOSSIERS -->
+    <div *ngIf="currentView === 'valider-dossier'" class="view-content">
+      <div class="section-card">
+        <h2>✅ Validation des dossiers</h2>
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>Candidat</th>
+                <th>Spécialité</th>
+                <th>Date dépôt</th>
+                <th>Statut validation</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let candidature of candidaturesAvecDossier">
+                <td>
+                  <strong>{{ candidature.candidat_nom }}</strong>
+                </td>
+                <td>{{ candidature.specialite }}</td>
+                <td>{{ currentDate | date: 'dd/MM/yyyy' }}</td>
+                <td>
+                  <span class="statut-badge badge-en_attente">En attente</span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirDossier(candidature)">
+                    <i class="fas fa-eye"></i> Voir
+                  </button>
+                  <button class="btn-action" style="background: #d1fae5; color: #065f46">
+                    <i class="fas fa-check"></i> Valider
+                  </button>
+                  <button class="btn-action" style="background: #fee2e2; color: #991b1b">
+                    <i class="fas fa-times"></i> Rejeter
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ TOUS LES DOSSIERS -->
+    <div *ngIf="currentView === 'dossiers'" class="view-content">
+      <div class="section-card">
+        <h2>📁 Tous les dossiers</h2>
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>Candidat</th>
+                <th>Spécialité</th>
+                <th>Score</th>
+                <th>Dossier</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let candidature of candidatures">
+                <td>
+                  <strong>{{ candidature.candidat_nom }}</strong>
+                </td>
+                <td>{{ candidature.specialite }}</td>
+                <td>
+                  <strong class="score-highlight">{{ candidature.score }}</strong>
+                </td>
+                <td>
+                  <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
+                    {{ candidature.dossier_depose ? '✅ Déposé' : '❌ Non déposé' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirDossier(candidature)">
+                    <i class="fas fa-eye"></i> Consulter
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ OCR (RESPONSABLE) -->
+    <div *ngIf="currentView === 'ocr' && isResponsable" class="view-content">
+      <div class="section-card">
+        <div class="section-header">
+          <h2>🤖 Analyser les documents avec OCR</h2>
+          <button class="btn-primary" (click)="ouvrirModalOCR()">
+            <i class="fas fa-plus"></i> Nouvelle analyse
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>Candidat</th>
+                <th>Fichier</th>
+                <th>Date upload</th>
+                <th>Statut OCR</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let dossier of dossiersOCR">
+                <td>
+                  <strong>{{ dossier.candidat_nom }}</strong>
+                </td>
+                <td>{{ dossier.fichier }}</td>
+                <td>{{ dossier.date_upload | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>
+                  <span class="statut-badge" [ngClass]="'badge-' + dossier.statut_ocr">
+                    {{ dossier.statut_ocr }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirResultatsOCR(dossier)">
+                    <i class="fas fa-eye"></i> Résultats
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ RÉCLAMATIONS (RESPONSABLE) -->
+    <div *ngIf="currentView === 'reclamations' && isResponsable" class="view-content">
+      <div class="section-card">
+        <h2>📢 Traiter les réclamations</h2>
+        <div class="reclamations-list">
+          <div class="reclamation-card" *ngFor="let reclamation of reclamations">
+            <div class="reclamation-header">
+              <h4>{{ reclamation.objet }}</h4>
+              <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
+                {{ reclamation.statut }}
+              </span>
+            </div>
+            <div class="reclamation-body">
+              <p><strong>Candidat :</strong> {{ reclamation.candidat_nom }}</p>
+              <p><strong>Date :</strong> {{ reclamation.date | date: 'dd/MM/yyyy' }}</p>
+              <p><strong>Motif :</strong> {{ reclamation.motif }}</p>
+              <p *ngIf="reclamation.reponse">
+                <strong>Réponse :</strong> {{ reclamation.reponse }}
+              </p>
+            </div>
+            <div class="reclamation-actions" *ngIf="reclamation.statut !== 'traitee'">
+              <button class="btn-primary" (click)="traiterReclamation(reclamation)">
+                <i class="fas fa-reply"></i> Répondre
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ INSCRIPTIONS (RESPONSABLE) -->
+    <div *ngIf="currentView === 'inscriptions' && isResponsable" class="view-content">
+      <div class="section-card">
+        <h2>📝 Gérer les inscriptions</h2>
+        <p>Fonctionnalité à implémenter - Gestion des inscriptions aux masters</p>
+      </div>
+    </div>
+
+    <!-- ✅ LISTES (RESPONSABLE) -->
+    <div *ngIf="currentView === 'listes' && isResponsable" class="view-content">
+      <div class="section-card">
+        <div class="listes-header">
+          <h2>📋 Gestion des listes</h2>
+          <div class="listes-actions">
+            <button class="btn-primary" (click)="nouvelleListe('preselection')">
+              <i class="fas fa-plus"></i> Nouvelle présélection
+            </button>
+            <button class="btn-primary" (click)="nouvelleListe('selection')">
+              <i class="fas fa-plus"></i> Nouvelle sélection
+            </button>
+          </div>
+        </div>
+
+        <div class="listes-tabs">
+          <button
+            class="liste-tab"
+            [class.active]="typeListe === 'preselection'"
+            (click)="typeListe = 'preselection'"
+          >
+            Présélection
+          </button>
+          <button
+            class="liste-tab"
+            [class.active]="typeListe === 'selection'"
+            (click)="typeListe = 'selection'"
+          >
+            Sélection
+          </button>
+        </div>
+
+        <div class="listes-grid">
+          <div class="liste-card" *ngFor="let liste of getListesByType()">
+            <div class="liste-header">
+              <h3>{{ liste.nom }}</h3>
+              <span class="liste-badge" [class.active]="liste.statut === 'active'">
+                {{ liste.statut }}
+              </span>
+            </div>
+            <div class="liste-info">
+              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
+              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
+              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
+            </div>
+            <div class="liste-actions">
+              <button class="btn-action voir" (click)="modifierListe(liste)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-action" (click)="exporterListe(liste)">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="btn-action archived" (click)="archiverListe(liste)">
+                <i class="fas fa-archive"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ STATISTIQUES (RESPONSABLE) -->
+    <div *ngIf="currentView === 'statistiques' && isResponsable" class="view-content">
+      <div class="section-card">
+        <h2>📊 Statistiques détaillées</h2>
+        <p>Graphiques et analyses à implémenter</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ✅ MODAL AVIS -->
+  <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>💬 Donner un avis</h2>
+        <button class="btn-close" (click)="fermerModalAvis()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="candidat-info">
+          <h3>{{ candidatureSelectionnee?.candidat_nom }}</h3>
+          <p><strong>Spécialité :</strong> {{ candidatureSelectionnee?.specialite }}</p>
+          <p><strong>Score :</strong> {{ candidatureSelectionnee?.score }}</p>
+        </div>
+
+        <form (ngSubmit)="enregistrerAvis()">
+          <div class="form-group">
+            <label>Votre avis *</label>
+            <textarea
+              [(ngModel)]="avisText"
+              name="avis"
+              rows="4"
+              required
+              placeholder="Saisissez votre avis..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Recommandation *</label>
+            <select [(ngModel)]="avisRecommandation" name="recommandation" required>
+              <option value="favorable">Favorable</option>
+              <option value="defavorable">Défavorable</option>
+              <option value="reserve">Réservé</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="fermerModalAvis()">Annuler</button>
+            <button type="submit" class="btn-primary">
+              <i class="fas fa-save"></i> Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL OCR -->
+  <div *ngIf="showModalOCR" class="modal-overlay" (click)="fermerModalOCR()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>🤖 Analyser un document avec OCR</h2>
+        <button class="btn-close" (click)="fermerModalOCR()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Sélectionner un fichier (PDF ou Image)</label>
+          <input type="file" accept=".pdf,image/*" (change)="onFileOCRSelected($event)" />
+        </div>
+
+        <div class="file-info" *ngIf="fichierOCR">
+          <i class="fas fa-file-pdf file-icon"></i>
+          <div class="file-details">
+            <strong>{{ fichierOCR.name }}</strong>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fermerModalOCR()">Annuler</button>
+          <button
+            type="button"
+            class="btn-primary"
+            (click)="lancerAnalyseOCR()"
+            [disabled]="!fichierOCR"
+          >
+            <i class="fas fa-robot"></i> Lancer l'analyse
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -139,62 +139,6 @@
         </div>
       </div>
 
-      <div class="form-section" *ngIf="typeCandidature === 'master'">
-        <h2>📚 Choix de Masters (3 vœux maximum)</h2>
-        <p class="info-text">Classez vos choix par ordre de préférence</p>
-
-        <div class="voeux-container">
-          <div class="form-group">
-            <label>Vœu 1 (Priorité 1) *</label>
-            <select [(ngModel)]="formData.voeu1" name="voeu1" required>
-              <option value="">-- Sélectionnez un Master --</option>
-              <option *ngFor="let master of getMastersForVoeu(1)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Vœu 2 (Priorité 2)</label>
-            <select [(ngModel)]="formData.voeu2" name="voeu2">
-              <option value="">-- Sélectionnez un Master --</option>
-              <option *ngFor="let master of getMastersForVoeu(2)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Vœu 3 (Priorité 3)</label>
-            <select [(ngModel)]="formData.voeu3" name="voeu3">
-              <option value="">-- Sélectionnez un Master --</option>
-              <option *ngFor="let master of getMastersForVoeu(3)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-section" *ngIf="typeCandidature === 'ingenieur'">
-        <h2>🎓 Choix de spécialité</h2>
-
-        <div class="specialites-radio">
-          <label class="radio-card" *ngFor="let spec of specialitesIngenieur">
-            <input
-              type="radio"
-              [(ngModel)]="formData.specialite"
-              name="specialite"
-              [value]="spec.id"
-              required
-            />
-            <div class="radio-content">
-              <h3>{{ spec.nom }}</h3>
-            </div>
-          </label>
-        </div>
-      </div>
-
       <div class="form-section">
         <h2>🔐 Création de votre mot de passe</h2>
 

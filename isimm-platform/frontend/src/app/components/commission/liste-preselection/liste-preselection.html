@@ -1,0 +1,254 @@
+<div class="liste-preselection-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/commission/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Liste de Présélection</h1>
+        <p>Consulter et donner votre avis sur les candidats présélectionnés</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informations liste -->
+  <div class="info-banner">
+    <div class="banner-content">
+      <div class="info-item">
+        <i class="fas fa-calendar"></i>
+        <div>
+          <span class="info-label">Session</span>
+          <span class="info-value">2026 - Master & Cycle Ingénieur</span>
+        </div>
+      </div>
+      <div class="info-item">
+        <i class="fas fa-users"></i>
+        <div>
+          <span class="info-label">Total présélectionnés</span>
+          <span class="info-value">{{ candidats.length }} candidats</span>
+        </div>
+      </div>
+      <div class="info-item">
+        <i class="fas fa-chart-line"></i>
+        <div>
+          <span class="info-label">Score moyen</span>
+          <span class="info-value">{{ calculateAverage() }}/20</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="stats-grid">
+    <div class="stat-card masters">
+      <div class="stat-icon">
+        <i class="fas fa-graduation-cap"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Masters</h3>
+        <p class="stat-number">{{ countByType('master') }}</p>
+        <small>Candidats</small>
+      </div>
+    </div>
+
+    <div class="stat-card ingenieurs">
+      <div class="stat-icon">
+        <i class="fas fa-cogs"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Cycle Ingénieur</h3>
+        <p class="stat-number">{{ countByType('ingenieur') }}</p>
+        <small>Candidats</small>
+      </div>
+    </div>
+
+    <div class="stat-card avis-positifs">
+      <div class="stat-icon">
+        <i class="fas fa-thumbs-up"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Avis Favorables</h3>
+        <p class="stat-number">{{ countAvis('favorable') }}</p>
+        <small>Membres commission</small>
+      </div>
+    </div>
+
+    <div class="stat-card avis-negatifs">
+      <div class="stat-icon">
+        <i class="fas fa-thumbs-down"></i>
+      </div>
+      <div class="stat-content">
+        <h3>Avis Défavorables</h3>
+        <p class="stat-number">{{ countAvis('defavorable') }}</p>
+        <small>Membres commission</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions-bar">
+    <div class="filters-group">
+      <select [(ngModel)]="filtreType" (change)="appliquerFiltres()">
+        <option value="">Tous les types</option>
+        <option value="master">Masters uniquement</option>
+        <option value="ingenieur">Ingénieurs uniquement</option>
+      </select>
+
+      <select [(ngModel)]="filtreAvis" (change)="appliquerFiltres()">
+        <option value="">Tous les avis</option>
+        <option value="favorable">Favorables</option>
+        <option value="defavorable">Défavorables</option>
+        <option value="neutre">Neutres</option>
+      </select>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-action btn-export">
+        <i class="fas fa-file-excel"></i>
+        Exporter Excel
+      </button>
+      <button class="btn-action btn-print">
+        <i class="fas fa-print"></i>
+        Imprimer Liste
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste des candidats -->
+  <div class="content-container">
+    <div class="candidats-grid">
+      <div class="candidat-card" *ngFor="let candidat of candidatsFiltres; let i = index">
+        <!-- Classement -->
+        <div class="classement-badge" [class.top3]="i < 3">
+          <span class="classement-number">#{{ i + 1 }}</span>
+        </div>
+
+        <!-- Info candidat -->
+        <div class="candidat-header">
+          <div class="candidat-avatar">
+            {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
+          </div>
+          <div class="candidat-info">
+            <h3>{{ candidat.first_name }} {{ candidat.last_name }}</h3>
+            <p class="candidat-email">{{ candidat.email }}</p>
+            <p class="candidat-cin">CIN: {{ candidat.cin }}</p>
+          </div>
+          <div
+            class="score-badge"
+            [class.score-high]="candidat.score >= 16"
+            [class.score-medium]="candidat.score >= 14 && candidat.score < 16"
+            [class.score-low]="candidat.score < 14"
+          >
+            <span class="score-value">{{ candidat.score }}</span>
+            <span class="score-label">/20</span>
+          </div>
+        </div>
+
+        <!-- Détails -->
+        <div class="candidat-details">
+          <div class="detail-row">
+            <span class="detail-label">
+              <i class="fas fa-graduation-cap"></i>
+              Type
+            </span>
+            <span
+              class="badge"
+              [class.badge-master]="candidat.type === 'master'"
+              [class.badge-ingenieur]="candidat.type === 'ingenieur'"
+            >
+              {{ candidat.type === 'master' ? 'Master' : 'Cycle Ingénieur' }}
+            </span>
+          </div>
+
+          <div class="detail-row" *ngIf="candidat.type === 'master'">
+            <span class="detail-label">
+              <i class="fas fa-list"></i>
+              Vœux
+            </span>
+            <div class="voeux-list">
+              <span class="voeu-item" *ngFor="let voeu of candidat.voeux">{{ voeu }}</span>
+            </div>
+          </div>
+
+          <div class="detail-row" *ngIf="candidat.type === 'ingenieur'">
+            <span class="detail-label">
+              <i class="fas fa-cog"></i>
+              Spécialité
+            </span>
+            <span>{{ candidat.specialite }}</span>
+          </div>
+        </div>
+
+        <!-- Avis commission -->
+        <div class="avis-section">
+          <h4>
+            <i class="fas fa-comments"></i>
+            Donner votre avis
+          </h4>
+
+          <div class="avis-buttons">
+            <button
+              class="btn-avis btn-favorable"
+              [class.active]="candidat.monAvis === 'favorable'"
+              (click)="donnerAvis(candidat, 'favorable')"
+            >
+              <i class="fas fa-thumbs-up"></i>
+              Favorable
+            </button>
+            <button
+              class="btn-avis btn-neutre"
+              [class.active]="candidat.monAvis === 'neutre'"
+              (click)="donnerAvis(candidat, 'neutre')"
+            >
+              <i class="fas fa-minus"></i>
+              Neutre
+            </button>
+            <button
+              class="btn-avis btn-defavorable"
+              [class.active]="candidat.monAvis === 'defavorable'"
+              (click)="donnerAvis(candidat, 'defavorable')"
+            >
+              <i class="fas fa-thumbs-down"></i>
+              Défavorable
+            </button>
+          </div>
+
+          <textarea
+            *ngIf="candidat.monAvis"
+            class="commentaire-input"
+            [(ngModel)]="candidat.commentaire"
+            placeholder="Commentaire (optionnel)..."
+            rows="3"
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="candidat-actions">
+          <button class="btn-card btn-view" (click)="voirDossier(candidat.id)">
+            <i class="fas fa-folder-open"></i>
+            Voir Dossier
+          </button>
+          <button class="btn-card btn-details" (click)="voirDetails(candidat.id)">
+            <i class="fas fa-info-circle"></i>
+            Détails
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message si vide -->
+    <div *ngIf="candidatsFiltres.length === 0" class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <p>Aucun candidat présélectionné</p>
+    </div>
+  </div>
+
+  <!-- Bouton sauvegarder -->
+  <div class="save-section" *ngIf="hasAvisChanged()">
+    <button class="btn-save-avis" (click)="sauvegarderAvis()">
+      <i class="fas fa-save"></i>
+      Sauvegarder mes avis
+    </button>
+  </div>
+</div>

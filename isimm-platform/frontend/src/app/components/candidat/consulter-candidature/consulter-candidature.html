@@ -1,11 +1,16 @@
-<div class="consulter-candidature">
-  <h2>Ma Candidature</h2>
+<div class="candidatures-page">
+  <h1>Mes Candidatures</h1>
 
-  <div *ngIf="candidature" class="candidature-details">
-    <p><strong>Type :</strong> {{ candidature.type_candidature }}</p>
-    <p><strong>Statut :</strong> {{ candidature.statut }}</p>
-    <p><strong>Score :</strong> {{ candidature.score }}/20</p>
+  <div class="candidatures-list" *ngIf="candidaturesFiltrees.length > 0">
+    <div *ngFor="let candidature of candidaturesFiltrees" class="candidature-card">
+      <h3>{{ candidature.first_name }} {{ candidature.last_name }}</h3>
+      <p><strong>Type:</strong> {{ candidature.type_candidature }}</p>
+      <p><strong>Statut:</strong> {{ candidature.statut }}</p>
+      <p><strong>Score:</strong> {{ candidature.score || '--' }}/20</p>
+    </div>
   </div>
 
-  <button [routerLink]="['/candidat/dashboard']">Retour au dashboard</button>
+  <div *ngIf="candidaturesFiltrees.length === 0" class="empty">
+    <p>Aucune candidature</p>
+  </div>
 </div>

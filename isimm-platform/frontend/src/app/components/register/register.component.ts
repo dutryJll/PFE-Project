@@ -12,11 +12,11 @@ import { AuthService } from '../../services/auth.service';
   styleUrl: './register.component.css',
 })
 export class RegisterComponent {
-  formData = {
-    email: '',
-    username: '',
+  userData = {
     first_name: '',
     last_name: '',
+    email: '',
+    username: '',
     password: '',
     password2: '',
     role: 'candidat',
@@ -29,54 +29,66 @@ export class RegisterComponent {
   constructor(
     private authService: AuthService,
     private router: Router,
-  ) {}
+  ) {
+    console.log('🔵 RegisterComponent initialized');
+  }
 
   onRegister() {
+    console.log('🔵 onRegister appelé');
+    console.log('📝 UserData:', this.userData);
+
     // Validation
     if (
-      !this.formData.email ||
-      !this.formData.username ||
-      !this.formData.first_name ||
-      !this.formData.last_name ||
-      !this.formData.password ||
-      !this.formData.password2
+      !this.userData.first_name ||
+      !this.userData.last_name ||
+      !this.userData.email ||
+      !this.userData.username ||
+      !this.userData.password ||
+      !this.userData.password2
     ) {
       this.errorMessage = 'Veuillez remplir tous les champs';
       return;
     }
 
-    if (this.formData.password !== this.formData.password2) {
+    if (this.userData.password !== this.userData.password2) {
       this.errorMessage = 'Les mots de passe ne correspondent pas';
       return;
     }
 
-    if (this.formData.password.length < 8) {
+    if (this.userData.password.length < 8) {
       this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractères';
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    this.authService.register(this.formData).subscribe({
+    this.authService.register(this.userData).subscribe({
       next: (response) => {
-        console.log('Inscription réussie', response);
-        this.successMessage = 'Inscription réussie ! Redirection vers la connexion...';
+        console.log('✅ Inscription réussie:', response);
+        this.isLoading = false;
+        this.successMessage =
+          '✅ Compte créé avec succès ! Vérifiez votre email pour activer votre compte.';
 
+        // Rediriger vers login après 3 secondes
         setTimeout(() => {
           this.router.navigate(['/login']);
-        }, 2000);
+        }, 3000);
       },
       error: (error) => {
+        console.error('❌ Erreur inscription:', error);
         this.isLoading = false;
+
         if (error.error?.email) {
           this.errorMessage = 'Cet email est déjà utilisé';
         } else if (error.error?.username) {
-          this.errorMessage = "Ce nom d'utilisateur est déjà utilisé";
+          this.errorMessage = "Ce nom d'utilisateur est déjà pris";
+        } else if (error.error?.password) {
+          this.errorMessage = error.error.password[0];
         } else {
           this.errorMessage = "Une erreur est survenue lors de l'inscription";
         }
-        console.error("Erreur d'inscription", error);
       },
     });
   }

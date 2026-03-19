@@ -1,103 +1,53 @@
-<div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <h1>ISIMM</h1>
-      <p>Plateforme d'Admission</p>
-    </div>
-
-    <h2 class="login-title">Connexion</h2>
-
-    <!-- Message d'erreur -->
-    <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
-    </div>
-
-    <!-- Sélection du rôle -->
-    <div class="role-selector">
-      <label class="role-option">
-        <input type="radio" name="role" value="candidat" [(ngModel)]="selectedRole" />
-        <span class="role-card">
-          <span class="role-icon">🎓</span>
-          <span class="role-label">Candidat</span>
-        </span>
-      </label>
-
-      <label class="role-option">
-        <input type="radio" name="role" value="commission" [(ngModel)]="selectedRole" />
-        <span class="role-card">
-          <span class="role-icon">👥</span>
-          <span class="role-label">Commission</span>
-        </span>
-      </label>
-
-      <label class="role-option">
-        <input type="radio" name="role" value="admin" [(ngModel)]="selectedRole" />
-        <span class="role-card">
-          <span class="role-icon">⚙️</span>
-          <span class="role-label">Admin</span>
-        </span>
-      </label>
-
-      <label class="role-option">
-        <input type="radio" name="role" value="directeur" [(ngModel)]="selectedRole" />
-        <span class="role-card">
-          <span class="role-icon">🏛️</span>
-          <span class="role-label">Directeur</span>
-        </span>
-      </label>
-
-      <label class="role-option">
-        <input type="radio" name="role" value="secretaire_general" [(ngModel)]="selectedRole" />
-        <span class="role-card">
-          <span class="role-icon">📋</span>
-          <span class="role-label">Secrétaire</span>
-        </span>
-      </label>
-    </div>
-
-    <!-- Formulaire de connexion -->
-    <form (ngSubmit)="onLogin()">
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input
-          type="email"
-          class="form-control"
-          [(ngModel)]="email"
-          name="email"
-          placeholder="votre.email@example.com"
-          required
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Mot de passe</label>
-        <input
-          type="password"
-          class="form-control"
-          [(ngModel)]="password"
-          name="password"
-          placeholder="••••••••"
-          required
-        />
-      </div>
-
-      <div class="form-options">
-        <label class="checkbox-label">
-          <input type="checkbox" />
-          <span>Se souvenir de moi</span>
-        </label>
-        <a routerLink="/forgot-password" class="forgot-link">Mot de passe oublié ?</a>
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-block" [disabled]="isLoading">
-        <span *ngIf="!isLoading">Se connecter</span>
-        <span *ngIf="isLoading">Connexion en cours...</span>
+<div class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <!-- ✅ BOUTON RETOUR ACCUEIL -->
+      <button class="btn-retour-accueil" (click)="retourAccueil()">
+        <i class="fas fa-arrow-left"></i>
+        Retour à l'accueil
       </button>
-    </form>
+      <!-- Header avec logos -->
+      <header class="login-header">
+        <img
+          src="https://via.placeholder.com/150x60/667eea/ffffff?text=ISIMM"
+          alt="ISIMM"
+          class="logo-isimm"
+        />
+        <img
+          src="https://via.placeholder.com/150x60/764ba2/ffffff?text=Université"
+          alt="Université"
+          class="logo-universite"
+        />
+      </header>
 
-    <div class="signup-box">
-      <p>Vous n'avez pas de compte ?</p>
-      <a routerLink="/register" class="signup-link">Créer un compte</a>
+      <!-- Contenu principal -->
+      <div class="login-content">
+        <h1 class="main-title">Plateforme d'Admission ISIMM</h1>
+        <p class="subtitle">Sélectionnez votre espace</p>
+
+        <!-- 3 Grands boutons -->
+        <div class="espaces-container">
+          <button class="espace-btn candidat" (click)="goToEspace('candidat')">
+            <div class="espace-icon">🎓</div>
+            <div class="espace-title">Espace Candidat</div>
+          </button>
+
+          <button class="espace-btn commission" (click)="goToEspace('commission')">
+            <div class="espace-icon">👥</div>
+            <div class="espace-title">Espace Commission</div>
+          </button>
+
+          <button class="espace-btn admin" (click)="goToEspace('admin')">
+            <div class="espace-icon">⚙️</div>
+            <div class="espace-title">Espace Administration</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="login-footer">
+        <p>© 2026 ISIMM - Tous droits réservés</p>
+      </footer>
     </div>
   </div>
 </div>

@@ -4,6 +4,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .models import Candidature
 import requests
+from django.contrib.auth.hashers import make_password, check_password
+#from .models import User
+from .serializers import UserSerializer, UserUpdateSerializer
+import uuid
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -116,3 +120,64 @@ def mes_candidatures(request):
     candidatures = Candidature.objects.filter(user_id=request.user.id)
     serializer = CandidatureSerializer(candidatures, many=True)
     return Response(serializer.data)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Mettre à jour le profil utilisateur"""
+    user = request.user
+    serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'user': serializer.data})
+    
+    return Response(serializer.errors, status=400)
+
+
+# ✅ NOUVELLE FONCTION ICI
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_member_credentials(request):
+    """Envoyer identifiants au nouveau membre"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
+    email = request.data.get('email')
+    password = request.data.get('password')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    role = request.data.get('role')
+    
+    if not email or not password:
+        return Response({'error': 'Email et password requis'}, status=400)
+    
+    role_text = 'Responsable Commission' if role == 'responsable_commission' else 'Membre Commission'
+    
+    try:
+        send_mail(
+            subject='🎓 Vos identifiants ISIMM',
+            message=f"""
+Bonjour {first_name} {last_name},
+
+Votre compte a été créé sur la plateforme ISIMM.
+
+IDENTIFIANTS :
+━━━━━━━━━━━━━━━━━━━━━━━━
+Rôle : {role_text}
+Email : {email}
+Mot de passe : {password}
+
+CONNEXION :
+━━━━━━━━━━━━━━━━━━━━━━━━
+{settings.FRONTEND_URL}/login-commission
+
+Cordialement,
+ISIMM
+            """,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return Response({'message': 'Email envoyé'})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

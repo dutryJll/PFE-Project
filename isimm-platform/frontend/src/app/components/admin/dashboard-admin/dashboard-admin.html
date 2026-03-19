@@ -1,0 +1,536 @@
+<div class="dashboard-admin">
+  <!-- ✅ MENU LATÉRAL -->
+  <aside class="sidebar">
+    <div class="logo-section">
+      <div class="logo-icon">👨‍💼</div>
+      <h2>ISIMM</h2>
+      <p class="user-role">Espace Administrateur</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'dashboard'"
+        (click)="switchView('dashboard')"
+      >
+        <i class="fas fa-home"></i>
+        <span>Tableau de bord</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'utilisateurs'"
+        (click)="switchView('utilisateurs')"
+      >
+        <i class="fas fa-users"></i>
+        <span>Utilisateurs</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'masters'"
+        (click)="switchView('masters')"
+      >
+        <i class="fas fa-graduation-cap"></i>
+        <span>Gérer Masters</span>
+      </a>
+
+      <a class="nav-item" (click)="allerGestionCommission()">
+        <i class="fas fa-user-tie"></i>
+        <span>Gestion Commission</span>
+      </a>
+
+      <a class="nav-item" (click)="allerListesSelection()">
+        <i class="fas fa-list-alt"></i>
+        <span>Listes Sélection</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'candidatures'"
+        (click)="switchView('candidatures')"
+      >
+        <i class="fas fa-file-alt"></i>
+        <span>Candidatures</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'parametres'"
+        (click)="switchView('parametres')"
+      >
+        <i class="fas fa-cog"></i>
+        <span>Paramètres</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'rapports'"
+        (click)="switchView('rapports')"
+      >
+        <i class="fas fa-chart-line"></i>
+        <span>Rapports</span>
+      </a>
+
+      <a class="nav-item" [class.active]="currentView === 'profil'" (click)="switchView('profil')">
+        <i class="fas fa-user"></i>
+        <span>Mon Profil</span>
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <a class="nav-item logout" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Déconnexion</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <p>{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
+      <small>{{ currentUser?.email }}</small>
+    </div>
+  </aside>
+
+  <!-- ✅ CONTENU PRINCIPAL -->
+  <main class="main-content">
+    <header class="content-header">
+      <h1>{{ getViewTitle() }}</h1>
+      <div class="header-actions">
+        <span class="date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
+      </div>
+    </header>
+
+    <!-- ✅ TABLEAU DE BORD -->
+    <div *ngIf="currentView === 'dashboard'" class="view-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ statsData.totalUsers }}</h3>
+            <p>Total Utilisateurs</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ statsData.totalCandidatures }}</h3>
+            <p>Candidatures</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ statsData.admis }}</h3>
+            <p>Admis</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7)">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="stat-details">
+            <h3>{{ statsData.membresCommission }}</h3>
+            <p>Membres Commission</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activités récentes -->
+      <div class="section-card">
+        <h2>📊 Activités récentes</h2>
+        <div class="activites-list">
+          <div class="activite-item">
+            <i class="fas fa-user-plus"></i>
+            <div>
+              <strong>Nouvel utilisateur inscrit</strong>
+              <small>Ahmed Ben Ali - Il y a 2 heures</small>
+            </div>
+          </div>
+          <div class="activite-item">
+            <i class="fas fa-file-alt"></i>
+            <div>
+              <strong>Nouvelle candidature soumise</strong>
+              <small>Master Génie Logiciel - Il y a 3 heures</small>
+            </div>
+          </div>
+          <div class="activite-item">
+            <i class="fas fa-check-circle"></i>
+            <div>
+              <strong>Dossier validé</strong>
+              <small>Fatma Gharbi - Il y a 5 heures</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ GESTION UTILISATEURS -->
+    <div *ngIf="currentView === 'utilisateurs'" class="view-content">
+      <div class="section-card">
+        <div class="section-header">
+          <h2>👥 Liste des utilisateurs</h2>
+          <button class="btn-primary" (click)="nouvelUtilisateur()">
+            <i class="fas fa-plus"></i> Nouvel utilisateur
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nom complet</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Date inscription</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of utilisateursList">
+                <td>
+                  <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span class="role-badge" [ngClass]="user.role">{{
+                    getRoleLabel(user.role)
+                  }}</span>
+                </td>
+                <td>{{ user.date_inscription | date: 'dd/MM/yyyy' }}</td>
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.active]="user.is_active"
+                    [class.inactive]="!user.is_active"
+                  >
+                    {{ user.is_active ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirUtilisateur(user)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn-action modifier" (click)="modifierUtilisateur(user)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn-action supprimer" (click)="supprimerUtilisateur(user)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ GESTION MASTERS -->
+    <div *ngIf="currentView === 'masters'" class="view-content">
+      <div class="section-card">
+        <div class="section-header">
+          <h2>🎓 Gestion des Masters</h2>
+          <button class="btn-primary" (click)="ajouterMaster()">
+            <i class="fas fa-plus"></i> Nouveau Master
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nom du Master</th>
+                <th>Type</th>
+                <th>Spécialité</th>
+                <th>Places</th>
+                <th>Date limite</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let master of mastersList">
+                <td>
+                  <strong>{{ master.nom }}</strong>
+                </td>
+                <td>
+                  <span class="type-badge" [class]="master.type">{{ master.type }}</span>
+                </td>
+                <td>{{ master.specialite }}</td>
+                <td>{{ master.places }}</td>
+                <td>{{ master.date_limite | date: 'dd/MM/yyyy' }}</td>
+                <td>
+                  <span class="status-badge" [class]="master.statut">{{ master.statut }}</span>
+                </td>
+                <td>
+                  <button class="btn-action voir"><i class="fas fa-eye"></i></button>
+                  <button class="btn-action modifier" (click)="modifierMaster(master)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn-action supprimer" (click)="supprimerMaster(master)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ GESTION CANDIDATURES -->
+    <div *ngIf="currentView === 'candidatures'" class="view-content">
+      <div class="section-card">
+        <h2>📋 Toutes les candidatures</h2>
+
+        <div class="filters-bar">
+          <select class="filter-select">
+            <option value="">Toutes les spécialités</option>
+            <option>Informatique</option>
+            <option>Électronique</option>
+          </select>
+          <select class="filter-select">
+            <option value="">Tous les statuts</option>
+            <option>Accepté</option>
+            <option>En attente</option>
+            <option>Rejeté</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>N° Candidature</th>
+                <th>Candidat</th>
+                <th>Master</th>
+                <th>Score</th>
+                <th>Statut</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let candidature of candidaturesList">
+                <td>
+                  <strong>{{ candidature.numero }}</strong>
+                </td>
+                <td>{{ candidature.candidat_nom }}</td>
+                <td>{{ candidature.master_nom }}</td>
+                <td>
+                  <strong class="score-highlight">{{ candidature.score }}</strong>
+                </td>
+                <td>
+                  <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
+                    {{ getStatutLabel(candidature.statut) }}
+                  </span>
+                </td>
+                <td>{{ candidature.date_soumission | date: 'dd/MM/yyyy' }}</td>
+                <td>
+                  <button class="btn-action voir" (click)="voirCandidature(candidature)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ PARAMÈTRES -->
+    <div *ngIf="currentView === 'parametres'" class="view-content">
+      <div class="section-card">
+        <h2>⚙️ Paramètres système</h2>
+        <form (ngSubmit)="sauvegarderParametres()">
+          <div class="form-group">
+            <label>Nom de l'établissement</label>
+            <input type="text" value="ISIMM - Institut Supérieur d'Informatique" />
+          </div>
+
+          <div class="form-group">
+            <label>Email de contact</label>
+            <input type="email" value="contact@isimm.tn" />
+          </div>
+
+          <div class="form-group">
+            <label>Année universitaire</label>
+            <input type="text" value="2025-2026" />
+          </div>
+
+          <button type="submit" class="btn-primary">💾 Sauvegarder</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ✅ RAPPORTS -->
+    <div *ngIf="currentView === 'rapports'" class="view-content">
+      <div class="section-card">
+        <h2>📊 Rapports et statistiques</h2>
+        <div class="rapports-actions">
+          <button class="btn-primary" (click)="genererRapport()">
+            <i class="fas fa-file-pdf"></i> Générer rapport PDF
+          </button>
+          <button class="btn-primary" (click)="exporterDonnees()">
+            <i class="fas fa-file-excel"></i> Exporter données Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ PROFIL ADMIN -->
+    <div *ngIf="currentView === 'profil'" class="view-content">
+      <div class="section-card">
+        <h2>📋 Informations personnelles</h2>
+        <form (ngSubmit)="updateProfile()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" [(ngModel)]="profileData.first_name" name="first_name" required />
+            </div>
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" [(ngModel)]="profileData.last_name" name="last_name" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [value]="profileData.email" readonly class="readonly" />
+            <small>L'email ne peut pas être modifié</small>
+          </div>
+
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" [(ngModel)]="profileData.phone" name="phone" />
+          </div>
+
+          <button type="submit" class="btn-primary">💾 Enregistrer les modifications</button>
+        </form>
+      </div>
+
+      <div class="section-card">
+        <h2>🔐 Modifier le mot de passe</h2>
+        <form (ngSubmit)="changePassword()">
+          <div class="form-group">
+            <label>Mot de passe actuel *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.current_password"
+              name="current_password"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau mot de passe *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.new_password"
+              name="new_password"
+              required
+            />
+            <small>Au moins 8 caractères</small>
+          </div>
+
+          <div class="form-group">
+            <label>Confirmer le nouveau mot de passe *</label>
+            <input
+              type="password"
+              [(ngModel)]="passwordForm.confirm_password"
+              name="confirm_password"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-warning">🔑 Changer le mot de passe</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- ✅ MODAL MASTER -->
+  <div *ngIf="showModalMaster" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{{ nouveauMaster.id ? 'Modifier' : 'Ajouter' }} un Master</h2>
+        <button class="btn-close" (click)="fermerModalMaster()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="enregistrerMaster()">
+          <div class="form-group">
+            <label>Nom du Master *</label>
+            <input type="text" [(ngModel)]="nouveauMaster.nom" name="nom" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Type *</label>
+              <select [(ngModel)]="nouveauMaster.type" name="type" required>
+                <option value="recherche">Recherche</option>
+                <option value="professionnel">Professionnel</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Spécialité *</label>
+              <input
+                type="text"
+                [(ngModel)]="nouveauMaster.specialite"
+                name="specialite"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea
+              [(ngModel)]="nouveauMaster.description"
+              name="description"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre de places *</label>
+              <input type="number" [(ngModel)]="nouveauMaster.places" name="places" required />
+            </div>
+
+            <div class="form-group">
+              <label>Date limite *</label>
+              <input
+                type="date"
+                [(ngModel)]="nouveauMaster.date_limite"
+                name="date_limite"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="fermerModalMaster()">
+              Annuler
+            </button>
+            <button type="submit" class="btn-primary">
+              <i class="fas fa-save"></i> Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -14,6 +14,13 @@ import { CandidatureService } from '../../../services/candidature.service';
 export class ModifierCandidatureComponent implements OnInit {
   candidature: any = null;
   voeux: string[] = [];
+  mastersList: string[] = [
+    'Master en Génie Logiciel',
+    'Master en Microélectronique',
+    'Master en Data Science',
+    'Master Ingénierie Instrumentation',
+  ];
+  specialite: string = '';
 
   constructor(
     private candidatureService: CandidatureService,
@@ -48,5 +55,15 @@ export class ModifierCandidatureComponent implements OnInit {
     console.log('Sauvegarde des vœux:', this.voeux);
     // TODO: Appel API pour sauvegarder
     this.router.navigate(['/candidat/dashboard']);
+  }
+
+  getStatutClass(statut: string): string {
+    const classes: { [key: string]: string } = {
+      'En attente': 'badge-pending',
+      Approuvée: 'badge-approved',
+      Rejetée: 'badge-rejected',
+      'En examen': 'badge-reviewing',
+    };
+    return classes[statut] || 'badge-default';
   }
 }

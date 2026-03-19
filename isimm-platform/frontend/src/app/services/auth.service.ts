@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -12,7 +12,6 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  // Getter pour accès synchrone à la valeur actuelle
   get currentUserValue(): any {
     return this.currentUserSubject.value;
   }
@@ -21,46 +20,40 @@ export class AuthService {
     private http: HttpClient,
     private router: Router,
   ) {
-    // Charger l'utilisateur depuis localStorage au démarrage
     const storedUser = this.getCurrentUser();
     if (storedUser) {
       this.currentUserSubject.next(storedUser);
     }
   }
 
-  /**
-   * Connexion utilisateur
-   */
   login(email: string, password: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/login/`, { email, password }).pipe(
       tap((response: any) => {
+        console.log('🔐 Réponse login:', response);
+
         if (response.access && response.user) {
-          // Stocker les tokens
           localStorage.setItem('access_token', response.access);
           localStorage.setItem('refresh_token', response.refresh);
-
-          // Stocker les infos utilisateur
           localStorage.setItem('current_user', JSON.stringify(response.user));
 
-          // Mettre à jour le BehaviorSubject
           this.currentUserSubject.next(response.user);
 
-          console.log('✅ Connexion réussie:', response.user);
+          console.log('✅ Connexion OK - Rôle:', response.user.role);
         }
+      }),
+      catchError((error: any) => {
+        console.error('❌ Erreur login:', error);
+        return throwError(() => error);
       }),
     );
   }
 
-  /**
-   * Inscription utilisateur
-   */
   register(userData: any): Observable<any> {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('current_user');
     return this.http.post(`${this.apiUrl}/register/`, userData);
   }
 
-  /**
-   * Déconnexion
-   */
   logout(): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -70,9 +63,6 @@ export class AuthService {
     console.log('🚪 Déconnexion');
   }
 
-  /**
-   * Récupérer l'utilisateur actuel depuis localStorage
-   */
   getCurrentUser(): any {
     const userStr = localStorage.getItem('current_user');
     if (userStr) {
@@ -86,24 +76,14 @@ export class AuthService {
     return null;
   }
 
-  /**
-   * Vérifier si l'utilisateur est connecté
-   */
   isLoggedIn(): boolean {
-    const token = localStorage.getItem('access_token');
-    return !!token;
+    return !!localStorage.getItem('access_token');
   }
 
-  /**
-   * Récupérer le token d'accès
-   */
   getAccessToken(): string | null {
     return localStorage.getItem('access_token');
   }
 
-  /**
-   * Rafraîchir le token
-   */
   refreshToken(): Observable<any> {
     const refresh = localStorage.getItem('refresh_token');
     return this.http.post(`${this.apiUrl}/refresh/`, { refresh }).pipe(
@@ -115,11 +95,16 @@ export class AuthService {
     );
   }
 
-  /**
-   * Vérifie le mot de passe d'un utilisateur sans effectuer de login complet.
-   * Retourne un observable qui réussit si le mot de passe est correct.
-   */
   verifyPassword(email: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/verify-password/`, { email, password });
+    console.log('🔐 Vérification mot de passe pour:', email);
+    return this.http.post(`${this.apiUrl}/login/`, { email, password }).pipe(
+      tap((response: any) => {
+        console.log('✅ Mot de passe vérifié');
+      }),
+      catchError((error: any) => {
+        console.error('❌ Mot de passe incorrect');
+        return throwError(() => error);
+      }),
+    );
   }
 }

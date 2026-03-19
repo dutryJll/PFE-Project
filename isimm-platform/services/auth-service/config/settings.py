@@ -9,6 +9,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# ========================================
+# APPLICATIONS
+# ========================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -16,7 +19,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_rest_passwordreset',
     
     # Apps tierces
     'rest_framework',
@@ -27,6 +29,9 @@ INSTALLED_APPS = [
     'auth_app',
 ]
 
+# ========================================
+# MIDDLEWARE
+# ========================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -40,6 +45,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'config.urls'
 
+# ========================================
+# TEMPLATES
+# ========================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -58,6 +66,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# ========================================
+# BASE DE DONNÉES
+# ========================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -72,45 +83,75 @@ DATABASES = {
     }
 }
 
+# ========================================
+# VALIDATION MOT DE PASSE
+# ========================================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
 ]
 
+# ========================================
+# INTERNATIONALISATION
+# ========================================
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Tunis'
 USE_I18N = True
 USE_TZ = True
 
+# ========================================
+# FICHIERS STATIQUES
+# ========================================
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ========================================
+# MODÈLE USER PERSONNALISÉ
+# ========================================
 AUTH_USER_MODEL = 'auth_app.User'
 
+# ========================================
+# CORS
+# ========================================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# ========================================
+# REST FRAMEWORK
+# ========================================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
+# ========================================
+# JWT
+# ========================================
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
- #Configuration Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Pour tests (affiche dans console)
 
-DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
-DJANGO_REST_PASSWORDRESET_NO_INFORMATION_LEAKAGE = False  # Pour voir les vraies erreurs
-DJANGO_REST_PASSWORDRESET_TOKEN_CONFIG = {
-    "CLASS": "django_rest_passwordreset.tokens.RandomStringTokenGenerator",
-    "OPTIONS": {
-        "min_length": 20,
-        "max_length": 30
-    }
-}
+# ========================================
+# CONFIGURATION EMAIL
+# ========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'jellalidonia06@gmail.com'  # ✅ VOTRE EMAIL
+EMAIL_HOST_PASSWORD = 'zatr wdaz dqoy xtrz'  # ✅ À REMPLIR
+DEFAULT_FROM_EMAIL = 'ISIMM Admission <jellalidonia06@gmail.com>'
+EMAIL_SUBJECT_PREFIX = '[ISIMM] '
+FRONTEND_URL = 'http://localhost:4200'
+
+# Pour production (Gmail - décommenter quand prêt)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'votre-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'votre-app-password'

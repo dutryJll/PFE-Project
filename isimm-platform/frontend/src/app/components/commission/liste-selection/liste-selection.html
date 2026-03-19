@@ -1,0 +1,353 @@
+<div class="liste-selection-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/commission/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Liste de Sélection Finale</h1>
+        <p>Candidats sélectionnés et liste d'attente - Session 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs-section">
+    <div class="tabs-container">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'principale'"
+        (click)="activeTab = 'principale'"
+      >
+        <i class="fas fa-trophy"></i>
+        Liste Principale
+        <span class="tab-badge principale">{{ listePrincipale.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'attente'"
+        (click)="activeTab = 'attente'"
+      >
+        <i class="fas fa-clock"></i>
+        Liste d'Attente
+        <span class="tab-badge attente">{{ listeAttente.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'toutes'"
+        (click)="activeTab = 'toutes'"
+      >
+        <i class="fas fa-list"></i>
+        Toutes les Listes
+        <span class="tab-badge">{{ listePrincipale.length + listeAttente.length }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-banner">
+    <div class="stat-item principale">
+      <div class="stat-icon">
+        <i class="fas fa-star"></i>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Admis Liste Principale</span>
+        <span class="stat-value">{{ listePrincipale.length }}</span>
+      </div>
+    </div>
+
+    <div class="stat-item attente">
+      <div class="stat-icon">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Liste d'Attente</span>
+        <span class="stat-value">{{ listeAttente.length }}</span>
+      </div>
+    </div>
+
+    <div class="stat-item score">
+      <div class="stat-icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Score Minimum</span>
+        <span class="stat-value">{{ scoreMinimum }}/20</span>
+      </div>
+    </div>
+
+    <div class="stat-item avis">
+      <div class="stat-icon">
+        <i class="fas fa-comments"></i>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Avis Favorables</span>
+        <span class="stat-value">{{ avisFavorables }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions-bar">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="recherche"
+        (input)="filtrer()"
+        placeholder="Rechercher par nom, CIN..."
+      />
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-action btn-export">
+        <i class="fas fa-file-pdf"></i>
+        Exporter PDF
+      </button>
+      <button class="btn-action btn-excel">
+        <i class="fas fa-file-excel"></i>
+        Exporter Excel
+      </button>
+      <button class="btn-action btn-print" (click)="imprimerListe()">
+        <i class="fas fa-print"></i>
+        Imprimer
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenu -->
+  <div class="content-container">
+    <!-- LISTE PRINCIPALE -->
+    <div *ngIf="activeTab === 'principale' || activeTab === 'toutes'" class="liste-section">
+      <div class="section-header principale">
+        <h2>
+          <i class="fas fa-trophy"></i>
+          Liste Principale
+        </h2>
+        <span class="section-badge">{{ listePrincipale.length }} candidats admis</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="selection-table">
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Candidat</th>
+              <th>CIN</th>
+              <th>Type</th>
+              <th>Formation</th>
+              <th>Score</th>
+              <th>Avis Commission</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let candidat of listePrincipale; let i = index"
+              class="candidat-row principale"
+            >
+              <td>
+                <div class="rang-badge" [class.top3]="i < 3">
+                  <span class="rang-number">#{{ i + 1 }}</span>
+                  <i *ngIf="i === 0" class="fas fa-crown gold"></i>
+                  <i *ngIf="i === 1" class="fas fa-medal silver"></i>
+                  <i *ngIf="i === 2" class="fas fa-medal bronze"></i>
+                </div>
+              </td>
+              <td>
+                <div class="candidat-cell">
+                  <div class="avatar">
+                    {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
+                  </div>
+                  <div>
+                    <strong>{{ candidat.first_name }} {{ candidat.last_name }}</strong>
+                    <small>{{ candidat.email }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>{{ candidat.cin }}</td>
+              <td>
+                <span
+                  class="badge"
+                  [class.badge-master]="candidat.type === 'master'"
+                  [class.badge-ingenieur]="candidat.type === 'ingenieur'"
+                >
+                  {{ candidat.type === 'master' ? 'Master' : 'Ingénieur' }}
+                </span>
+              </td>
+              <td>
+                <div class="formation-cell">
+                  <span *ngIf="candidat.type === 'master'">{{ candidat.voeux?.[0] }}</span>
+                  <span *ngIf="candidat.type === 'ingenieur'">{{ candidat.specialite }}</span>
+                </div>
+              </td>
+              <td>
+                <div
+                  class="score-cell"
+                  [class.excellent]="candidat.score >= 18"
+                  [class.tres-bien]="candidat.score >= 16 && candidat.score < 18"
+                  [class.bien]="candidat.score >= 14 && candidat.score < 16"
+                >
+                  <span class="score-value">{{ candidat.score }}</span>
+                  <span class="score-max">/20</span>
+                </div>
+              </td>
+              <td>
+                <div class="avis-cell">
+                  <div class="avis-bar">
+                    <div class="avis-favorable" [style.width.%]="candidat.avisFavorables"></div>
+                  </div>
+                  <span class="avis-text">{{ candidat.avisFavorables }}% favorable</span>
+                </div>
+              </td>
+              <td>
+                <div class="actions-cell">
+                  <button
+                    class="btn-icon btn-view"
+                    (click)="voirDossier(candidat.id)"
+                    title="Voir dossier"
+                  >
+                    <i class="fas fa-folder-open"></i>
+                  </button>
+                  <button
+                    class="btn-icon btn-comment"
+                    (click)="ajouterCommentaire(candidat)"
+                    title="Commentaire"
+                  >
+                    <i class="fas fa-comment"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LISTE D'ATTENTE -->
+    <div *ngIf="activeTab === 'attente' || activeTab === 'toutes'" class="liste-section">
+      <div class="section-header attente">
+        <h2>
+          <i class="fas fa-clock"></i>
+          Liste d'Attente
+        </h2>
+        <span class="section-badge">{{ listeAttente.length }} candidats en attente</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="selection-table">
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Candidat</th>
+              <th>CIN</th>
+              <th>Type</th>
+              <th>Formation</th>
+              <th>Score</th>
+              <th>Avis Commission</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let candidat of listeAttente; let i = index" class="candidat-row attente">
+              <td>
+                <div class="rang-badge attente-badge">
+                  <span class="rang-number">#{{ i + 1 }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="candidat-cell">
+                  <div class="avatar">
+                    {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
+                  </div>
+                  <div>
+                    <strong>{{ candidat.first_name }} {{ candidat.last_name }}</strong>
+                    <small>{{ candidat.email }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>{{ candidat.cin }}</td>
+              <td>
+                <span
+                  class="badge"
+                  [class.badge-master]="candidat.type === 'master'"
+                  [class.badge-ingenieur]="candidat.type === 'ingenieur'"
+                >
+                  {{ candidat.type === 'master' ? 'Master' : 'Ingénieur' }}
+                </span>
+              </td>
+              <td>
+                <div class="formation-cell">
+                  <span *ngIf="candidat.type === 'master'">{{ candidat.voeux?.[0] }}</span>
+                  <span *ngIf="candidat.type === 'ingenieur'">{{ candidat.specialite }}</span>
+                </div>
+              </td>
+              <td>
+                <div
+                  class="score-cell"
+                  [class.bien]="candidat.score >= 14"
+                  [class.passable]="candidat.score >= 12 && candidat.score < 14"
+                >
+                  <span class="score-value">{{ candidat.score }}</span>
+                  <span class="score-max">/20</span>
+                </div>
+              </td>
+              <td>
+                <div class="avis-cell">
+                  <div class="avis-bar">
+                    <div class="avis-favorable" [style.width.%]="candidat.avisFavorables"></div>
+                  </div>
+                  <span class="avis-text">{{ candidat.avisFavorables }}% favorable</span>
+                </div>
+              </td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn-icon btn-view" (click)="voirDossier(candidat.id)">
+                    <i class="fas fa-folder-open"></i>
+                  </button>
+                  <button class="btn-icon btn-comment" (click)="ajouterCommentaire(candidat)">
+                    <i class="fas fa-comment"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si vide -->
+  <div *ngIf="listePrincipale.length === 0 && listeAttente.length === 0" class="empty-state">
+    <i class="fas fa-inbox"></i>
+    <h3>Aucune liste de sélection</h3>
+    <p>La liste de sélection n'a pas encore été générée</p>
+  </div>
+</div>
+
+<!-- Modal Commentaire -->
+<div class="modal-overlay" *ngIf="showCommentModal" (click)="fermerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Ajouter un commentaire</h3>
+      <button class="btn-close" (click)="fermerModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="candidat-info-modal">
+        <strong>{{ candidatSelectionne?.first_name }} {{ candidatSelectionne?.last_name }}</strong>
+        <span>Score: {{ candidatSelectionne?.score }}/20</span>
+      </div>
+      <textarea [(ngModel)]="commentaire" placeholder="Votre commentaire..." rows="5"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="fermerModal()">Annuler</button>
+      <button class="btn-save" (click)="sauvegarderCommentaire()">
+        <i class="fas fa-save"></i>
+        Sauvegarder
+      </button>
+    </div>
+  </div>
+</div>

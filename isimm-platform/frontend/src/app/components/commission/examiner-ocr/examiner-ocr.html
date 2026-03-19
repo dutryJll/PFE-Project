@@ -1,0 +1,392 @@
+<div class="examiner-ocr-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/commission/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Analyse OCR des Dossiers</h1>
+        <p>Vérification automatique des documents par intelligence artificielle</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Banner IA -->
+  <div class="ia-banner">
+    <div class="banner-content">
+      <div class="ia-icon">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div class="ia-info">
+        <h3>Intelligence Artificielle OCR</h3>
+        <p>
+          Le système analyse automatiquement les documents et extrait les informations clés pour
+          validation
+        </p>
+      </div>
+      <div class="ia-stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ dossiersAnalyses }}</span>
+          <span class="stat-label">Dossiers analysés</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ tauxPrecision }}%</span>
+          <span class="stat-label">Taux de précision</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sélection candidat -->
+  <div class="selection-section">
+    <div class="selection-content">
+      <h3>
+        <i class="fas fa-user-check"></i>
+        Sélectionner un candidat à analyser
+      </h3>
+
+      <!-- Filtres -->
+      <div class="filters-bar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            [(ngModel)]="recherche"
+            (input)="filtrerCandidats()"
+            placeholder="Rechercher par nom, CIN, email..."
+          />
+        </div>
+
+        <select [(ngModel)]="filtreMaster" (change)="filtrerCandidats()">
+          <option value="">Tous les masters</option>
+          <option *ngFor="let master of masters" [value]="master.id">{{ master.nom }}</option>
+        </select>
+
+        <select [(ngModel)]="filtreStatut" (change)="filtrerCandidats()">
+          <option value="">Tous les statuts</option>
+          <option value="en_attente">En attente d'analyse</option>
+          <option value="analyse_ok">Analyse OK</option>
+          <option value="probleme">Problèmes détectés</option>
+        </select>
+      </div>
+
+      <!-- Liste des candidats -->
+      <div class="candidats-list">
+        <div
+          class="candidat-item"
+          *ngFor="let candidat of candidatsFiltres"
+          [class.selected]="candidatSelectionne?.id === candidat.id"
+          [class.analyse]="candidat.analyse_effectuee"
+          (click)="selectionnerCandidat(candidat)"
+        >
+          <div class="candidat-avatar">
+            {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
+          </div>
+          <div class="candidat-info">
+            <strong>{{ candidat.first_name }} {{ candidat.last_name }}</strong>
+            <small>{{ candidat.cin }} • {{ candidat.email }}</small>
+            <span class="master-name">{{ candidat.master_nom }}</span>
+          </div>
+          <div class="candidat-statut">
+            <span class="badge" [class]="'badge-' + candidat.statut_analyse">
+              <i
+                class="fas"
+                [class.fa-clock]="candidat.statut_analyse === 'en_attente'"
+                [class.fa-check]="candidat.statut_analyse === 'analyse_ok'"
+                [class.fa-exclamation-triangle]="candidat.statut_analyse === 'probleme'"
+              ></i>
+              {{ getStatutAnalyseLabel(candidat.statut_analyse) }}
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="candidatsFiltres.length === 0" class="empty-state">
+          <i class="fas fa-inbox"></i>
+          <p>Aucun candidat trouvé</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyse OCR -->
+  <div class="content-container" *ngIf="candidatSelectionne">
+    <div class="candidat-header-card">
+      <div class="candidat-header-info">
+        <h2>{{ candidatSelectionne.first_name }} {{ candidatSelectionne.last_name }}</h2>
+        <p>{{ candidatSelectionne.cin }} • {{ candidatSelectionne.master_nom }}</p>
+      </div>
+      <button
+        class="btn-analyser-tous"
+        (click)="analyserTousDocuments()"
+        [disabled]="analysisEnCours"
+      >
+        <i
+          class="fas"
+          [class.fa-robot]="!analysisEnCours"
+          [class.fa-spinner]="analysisEnCours"
+          [class.fa-spin]="analysisEnCours"
+        ></i>
+        {{ analysisEnCours ? 'Analyse en cours...' : 'Analyser tous les documents' }}
+      </button>
+    </div>
+
+    <!-- Documents OCR -->
+    <div class="ocr-section">
+      <h3>
+        <i class="fas fa-file-invoice"></i>
+        Analyse automatique des documents
+      </h3>
+
+      <div class="documents-ocr">
+        <!-- Document OCR Card -->
+        <div class="document-ocr" *ngFor="let doc of documentsOCR">
+          <div class="ocr-header">
+            <div
+              class="doc-icon"
+              [class.success]="doc.verification?.statut === 'valide'"
+              [class.error]="doc.verification?.statut === 'invalide'"
+              [class.loading]="doc.analyzing"
+              [class.pending]="!doc.analyzing && !doc.verification"
+            >
+              <i [class]="'fas ' + doc.icon"></i>
+            </div>
+            <div class="doc-info">
+              <h4>{{ doc.nom }}</h4>
+              <p *ngIf="!doc.analyzing && doc.verification">
+                <span [class]="'statut-badge ' + doc.verification.statut">
+                  <i
+                    class="fas"
+                    [class.fa-check-circle]="doc.verification.statut === 'valide'"
+                    [class.fa-times-circle]="doc.verification.statut === 'invalide'"
+                  ></i>
+                  {{
+                    doc.verification.statut === 'valide' ? 'Document valide' : 'Document invalide'
+                  }}
+                </span>
+                <span
+                  class="confiance-score"
+                  [class.high]="doc.verification.confiance >= 90"
+                  [class.medium]="
+                    doc.verification.confiance >= 70 && doc.verification.confiance < 90
+                  "
+                  [class.low]="doc.verification.confiance < 70"
+                >
+                  Confiance: {{ doc.verification.confiance }}%
+                </span>
+              </p>
+              <p *ngIf="doc.analyzing" class="analyzing">
+                <i class="fas fa-spinner fa-spin"></i>
+                Analyse en cours...
+                <span class="progress-text">{{ doc.progress }}%</span>
+              </p>
+              <p *ngIf="!doc.analyzing && !doc.verification" class="non-analyse">
+                <i class="fas fa-hourglass-start"></i>
+                Non analysé
+              </p>
+            </div>
+          </div>
+
+          <!-- Progress bar (pendant l'analyse) -->
+          <div class="progress-bar-container" *ngIf="doc.analyzing">
+            <div class="progress-bar" [style.width.%]="doc.progress"></div>
+          </div>
+
+          <!-- Résultats OCR -->
+          <div class="ocr-results" *ngIf="!doc.analyzing && doc.verification">
+            <!-- Données extraites -->
+            <div class="extracted-data" *ngIf="doc.verification.donnees_extraites">
+              <h5>
+                <i class="fas fa-database"></i>
+                Données extraites
+              </h5>
+              <div class="data-grid">
+                <div
+                  class="data-item"
+                  *ngFor="let item of doc.verification.donnees_extraites | keyvalue"
+                >
+                  <span class="data-label">{{ formatLabel(item.key) }}:</span>
+                  <span class="data-value">{{ item.value }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vérifications -->
+            <div class="verifications">
+              <h5>
+                <i class="fas fa-tasks"></i>
+                Vérifications effectuées
+              </h5>
+              <div class="verification-item" *ngFor="let verif of doc.verification.verifications">
+                <i
+                  [class]="
+                    'fas ' + (verif.valide ? 'fa-check-circle success' : 'fa-times-circle error')
+                  "
+                ></i>
+                <span>{{ verif.description }}</span>
+              </div>
+            </div>
+
+            <!-- Anomalies -->
+            <div
+              class="anomalies"
+              *ngIf="doc.verification.anomalies && doc.verification.anomalies.length > 0"
+            >
+              <h5>
+                <i class="fas fa-exclamation-triangle"></i>
+                Anomalies détectées ({{ doc.verification.anomalies.length }})
+              </h5>
+              <div class="anomalie-item" *ngFor="let anomalie of doc.verification.anomalies">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ anomalie }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="ocr-actions">
+            <button
+              class="btn-ocr btn-analyze"
+              (click)="analyserDocument(doc)"
+              [disabled]="doc.analyzing"
+            >
+              <i [class]="doc.analyzing ? 'fas fa-spinner fa-spin' : 'fas fa-robot'"></i>
+              {{ doc.analyzing ? 'Analyse...' : 'Analyser' }}
+            </button>
+            <button class="btn-ocr btn-view" (click)="voirDocument(doc)">
+              <i class="fas fa-eye"></i>
+              Voir
+            </button>
+            <button
+              class="btn-ocr btn-reanalyze"
+              (click)="reanalyserDocument(doc)"
+              *ngIf="doc.verification"
+            >
+              <i class="fas fa-redo"></i>
+              Réanalyser
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rapport final -->
+    <div class="rapport-section" *ngIf="rapportFinal">
+      <h3>
+        <i class="fas fa-file-alt"></i>
+        Rapport d'analyse final
+      </h3>
+
+      <div
+        class="rapport-card"
+        [class.success]="rapportFinal.resultat === 'valide'"
+        [class.error]="rapportFinal.resultat === 'invalide'"
+      >
+        <div class="rapport-header">
+          <div class="rapport-icon">
+            <i
+              class="fas"
+              [class.fa-check-circle]="rapportFinal.resultat === 'valide'"
+              [class.fa-times-circle]="rapportFinal.resultat === 'invalide'"
+            ></i>
+          </div>
+          <div class="rapport-info">
+            <h4>
+              {{ rapportFinal.resultat === 'valide' ? 'Dossier Valide' : 'Dossier Invalide' }}
+            </h4>
+            <p>{{ rapportFinal.message }}</p>
+          </div>
+        </div>
+
+        <!-- Résumé -->
+        <div class="rapport-resume">
+          <div class="resume-item">
+            <i class="fas fa-check success"></i>
+            <span>{{ rapportFinal.documents_valides }} documents valides</span>
+          </div>
+          <div class="resume-item">
+            <i class="fas fa-times error"></i>
+            <span>{{ rapportFinal.documents_invalides }} documents invalides</span>
+          </div>
+          <div class="resume-item">
+            <i class="fas fa-exclamation-triangle warning"></i>
+            <span>{{ rapportFinal.total_anomalies }} anomalies détectées</span>
+          </div>
+        </div>
+
+        <!-- Score de confiance global -->
+        <div class="confiance-globale">
+          <h5>Score de confiance global</h5>
+          <div class="confiance-bar-container">
+            <div
+              class="confiance-bar"
+              [style.width.%]="rapportFinal.confiance_globale"
+              [class.high]="rapportFinal.confiance_globale >= 90"
+              [class.medium]="
+                rapportFinal.confiance_globale >= 70 && rapportFinal.confiance_globale < 90
+              "
+              [class.low]="rapportFinal.confiance_globale < 70"
+            ></div>
+          </div>
+          <span class="confiance-value">{{ rapportFinal.confiance_globale }}%</span>
+        </div>
+
+        <!-- Actions finales -->
+        <div class="rapport-actions">
+          <button
+            class="btn-rapport btn-valider"
+            (click)="validerDossier()"
+            *ngIf="rapportFinal.resultat === 'valide'"
+          >
+            <i class="fas fa-check"></i>
+            Valider le dossier
+          </button>
+          <button
+            class="btn-rapport btn-rejeter"
+            (click)="rejeterDossier()"
+            *ngIf="rapportFinal.resultat === 'invalide'"
+          >
+            <i class="fas fa-times"></i>
+            Rejeter le dossier
+          </button>
+          <button
+            class="btn-rapport btn-reclamation"
+            (click)="envoyerReclamation()"
+            *ngIf="rapportFinal.resultat === 'invalide'"
+          >
+            <i class="fas fa-exclamation-circle"></i>
+            Envoyer réclamation au candidat
+          </button>
+          <button class="btn-rapport btn-export" (click)="exporterRapport()">
+            <i class="fas fa-download"></i>
+            Télécharger rapport PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si aucun candidat sélectionné -->
+  <div class="no-selection" *ngIf="!candidatSelectionne">
+    <i class="fas fa-hand-pointer"></i>
+    <h3>Sélectionnez un candidat</h3>
+    <p>
+      Choisissez un candidat dans la liste ci-dessus pour commencer l'analyse OCR de son dossier
+    </p>
+  </div>
+</div>
+
+<!-- Modal Viewer Document -->
+<div class="modal-overlay" *ngIf="documentViewer" (click)="fermerViewer()">
+  <div class="modal-viewer" (click)="$event.stopPropagation()">
+    <div class="viewer-header">
+      <h3>{{ documentViewer?.nom }}</h3>
+      <button class="btn-close" (click)="fermerViewer()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="viewer-body">
+      <iframe [src]="documentViewer?.urlSafe" frameborder="0"></iframe>
+    </div>
+  </div>
+</div>

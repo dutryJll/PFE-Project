@@ -1,30 +1,195 @@
-<div class="deposer-documents">
-  <h2>Déposer mes documents</h2>
-
-  <div>
-    <label>CIN</label>
-    <input type="file" (change)="onFileSelected($event, 'cin')" />
+<div class="deposer-documents-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <button class="btn-back" [routerLink]="['/candidat/dashboard']">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1>Déposer mes documents</h1>
+        <p>Téléchargez les documents requis pour votre candidature</p>
+      </div>
+    </div>
   </div>
 
-  <div>
-    <label>Relevés de notes</label>
-    <input type="file" (change)="onFileSelected($event, 'releves')" />
+  <!-- Progression -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <h3>Progression du dossier</h3>
+      <span class="progress-text">{{ documentsUploaded }}/4 documents</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar" [style.width.%]="(documentsUploaded / 4) * 100"></div>
+    </div>
   </div>
 
-  <div>
-    <label>Diplôme</label>
-    <input type="file" (change)="onFileSelected($event, 'diplome')" />
-  </div>
+  <!-- Liste des documents -->
+  <div class="content-container">
+    <!-- CIN -->
+    <div class="document-card">
+      <div class="document-header">
+        <div class="document-icon cin">
+          <i class="fas fa-id-card"></i>
+        </div>
+        <div class="document-info">
+          <h3>Carte d'identité nationale (CIN)</h3>
+          <p>Format accepté : PDF, JPG, PNG | Taille max : 5 MB</p>
+        </div>
+        <div class="document-status" *ngIf="hasFile('cin')">
+          <i class="fas fa-check-circle"></i>
+        </div>
+      </div>
 
-  <div>
-    <label>CV</label>
-    <input type="file" (change)="onFileSelected($event, 'cv')" />
-  </div>
+      <div class="upload-zone" *ngIf="!hasFile('cin')" (click)="fileInputCin.click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Cliquez ou glissez votre fichier ici</p>
+        <input
+          #fileInputCin
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          (change)="onFileSelected($event, 'cin')"
+          hidden
+        />
+      </div>
 
-  <div>
-    <label>Photo</label>
-    <input type="file" (change)="onFileSelected($event, 'photo')" />
-  </div>
+      <div class="file-preview" *ngIf="hasFile('cin')">
+        <div class="file-info">
+          <i class="fas fa-file-pdf"></i>
+          <span>{{ selectedFiles['cin']?.name }}</span>
+          <small>{{ getFileSize(selectedFiles['cin']) }}</small>
+        </div>
+        <button class="btn-remove" (click)="removeFile('cin')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
 
-  <button (click)="soumettre()">Soumettre tous les documents</button>
+    <!-- Relevés de notes -->
+    <div class="document-card">
+      <div class="document-header">
+        <div class="document-icon releves">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="document-info">
+          <h3>Relevés de notes (L1, L2, L3)</h3>
+          <p>Tous les relevés en un seul fichier | Format : PDF | Taille max : 10 MB</p>
+        </div>
+        <div class="document-status" *ngIf="hasFile('releves')">
+          <i class="fas fa-check-circle"></i>
+        </div>
+      </div>
+
+      <div class="upload-zone" *ngIf="!hasFile('releves')" (click)="fileInputReleves.click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Cliquez ou glissez votre fichier ici</p>
+        <input
+          #fileInputReleves
+          type="file"
+          accept=".pdf"
+          (change)="onFileSelected($event, 'releves')"
+          hidden
+        />
+      </div>
+
+      <div class="file-preview" *ngIf="hasFile('releves')">
+        <div class="file-info">
+          <i class="fas fa-file-pdf"></i>
+          <span>{{ selectedFiles['releves']?.name }}</span>
+          <small>{{ getFileSize(selectedFiles['releves']) }}</small>
+        </div>
+        <button class="btn-remove" (click)="removeFile('releves')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Diplôme -->
+    <div class="document-card">
+      <div class="document-header">
+        <div class="document-icon diplome">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="document-info">
+          <h3>Diplôme de Licence</h3>
+          <p>Format accepté : PDF | Taille max : 5 MB</p>
+        </div>
+        <div class="document-status" *ngIf="hasFile('diplome')">
+          <i class="fas fa-check-circle"></i>
+        </div>
+      </div>
+
+      <div class="upload-zone" *ngIf="!hasFile('diplome')" (click)="fileInputDiplome.click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Cliquez ou glissez votre fichier ici</p>
+        <input
+          #fileInputDiplome
+          type="file"
+          accept=".pdf"
+          (change)="onFileSelected($event, 'diplome')"
+          hidden
+        />
+      </div>
+
+      <div class="file-preview" *ngIf="hasFile('diplome')">
+        <div class="file-info">
+          <i class="fas fa-file-pdf"></i>
+          <span>{{ selectedFiles['diplome']?.name }}</span>
+          <small>{{ getFileSize(selectedFiles['diplome']) }}</small>
+        </div>
+        <button class="btn-remove" (click)="removeFile('diplome')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Photo d'identité -->
+    <div class="document-card">
+      <div class="document-header">
+        <div class="document-icon photo">
+          <i class="fas fa-camera"></i>
+        </div>
+        <div class="document-info">
+          <h3>Photo d'identité</h3>
+          <p>Format accepté : JPG, PNG | Taille max : 2 MB</p>
+        </div>
+        <div class="document-status" *ngIf="hasFile('photo')">
+          <i class="fas fa-check-circle"></i>
+        </div>
+      </div>
+
+      <div class="upload-zone" *ngIf="!hasFile('photo')" (click)="fileInputPhoto.click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Cliquez ou glissez votre fichier ici</p>
+        <input
+          #fileInputPhoto
+          type="file"
+          accept=".jpg,.jpeg,.png"
+          (change)="onFileSelected($event, 'photo')"
+          hidden
+        />
+      </div>
+
+      <div class="file-preview" *ngIf="hasFile('photo')">
+        <img *ngIf="photoPreview" [src]="photoPreview" alt="Photo preview" class="photo-preview" />
+        <div class="file-info">
+          <span>{{ selectedFiles['photo']?.name }}</span>
+          <small>{{ getFileSize(selectedFiles['photo']) }}</small>
+        </div>
+        <button class="btn-remove" (click)="removeFile('photo')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bouton soumettre -->
+    <div class="submit-section">
+      <button class="btn-submit" (click)="soumettre()" [disabled]="documentsUploaded < 4">
+        <i class="fas fa-check"></i>
+        Soumettre tous les documents
+      </button>
+      <p class="submit-hint" *ngIf="documentsUploaded < 4">
+        Veuillez télécharger tous les documents requis ({{ 4 - documentsUploaded }} restant)
+      </p>
+    </div>
+  </div>
 </div>

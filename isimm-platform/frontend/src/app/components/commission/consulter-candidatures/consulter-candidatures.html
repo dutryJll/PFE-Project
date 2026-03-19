@@ -1,0 +1,246 @@
+<div class="consulter-candidatures-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div>
+        <h1>Consulter les candidatures</h1>
+        <p>Liste complète des candidatures reçues</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <div class="filters-content">
+      <div class="filter-group">
+        <label>
+          <i class="fas fa-graduation-cap"></i>
+          Type
+        </label>
+        <select [(ngModel)]="filtres.type" (change)="appliquerFiltres()">
+          <option value="">Tous</option>
+          <option value="master">Masters</option>
+          <option value="ingenieur">Cycle Ingénieur</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>
+          <i class="fas fa-flag"></i>
+          Statut
+        </label>
+        <select [(ngModel)]="filtres.statut" (change)="appliquerFiltres()">
+          <option value="">Tous</option>
+          <option value="en_cours">En cours</option>
+          <option value="validee">Validée</option>
+          <option value="rejetee">Rejetée</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>
+          <i class="fas fa-search"></i>
+          Rechercher
+        </label>
+        <input
+          type="text"
+          [(ngModel)]="filtres.recherche"
+          (input)="appliquerFiltres()"
+          placeholder="Nom, CIN, email..."
+        />
+      </div>
+
+      <button class="btn-reset" (click)="resetFiltres()">
+        <i class="fas fa-redo"></i>
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="quick-stats">
+    <div class="quick-stat">
+      <span class="stat-label">Total</span>
+      <span class="stat-value">{{ candidaturesFiltrees.length }}</span>
+    </div>
+    <div class="quick-stat">
+      <span class="stat-label">Masters</span>
+      <span class="stat-value">{{ countByType('master') }}</span>
+    </div>
+    <div class="quick-stat">
+      <span class="stat-label">Ingénieurs</span>
+      <span class="stat-value">{{ countByType('ingenieur') }}</span>
+    </div>
+    <div class="quick-stat">
+      <span class="stat-label">Validées</span>
+      <span class="stat-value">{{ countByStatut('validee') }}</span>
+    </div>
+  </div>
+
+  <!-- Table des candidatures -->
+  <div class="content-container">
+    <div class="table-container">
+      <table class="candidatures-table">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" (change)="toggleSelectAll($event)" />
+            </th>
+            <th>Candidat</th>
+            <th>CIN</th>
+            <th>Type</th>
+            <th>Vœux / Spécialité</th>
+            <th>Score</th>
+            <th>Statut</th>
+            <th>Résultat OCR</th>
+            <!-- ✅ NOUVEAU -->
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let candidature of candidaturesFiltrees">
+            <td>
+              <input type="checkbox" [(ngModel)]="candidature.selected" />
+            </td>
+            <td>
+              <div class="candidat-cell">
+                <div class="avatar">
+                  {{ candidature.first_name.charAt(0) }}{{ candidature.last_name.charAt(0) }}
+                </div>
+                <div>
+                  <strong>{{ candidature.first_name }} {{ candidature.last_name }}</strong>
+                  <small>{{ candidature.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>{{ candidature.cin }}</td>
+            <td>
+              <span
+                class="badge"
+                [class.badge-master]="candidature.type_candidature === 'master'"
+                [class.badge-ingenieur]="candidature.type_candidature === 'ingenieur'"
+              >
+                {{ candidature.type_candidature === 'master' ? 'Master' : 'Ingénieur' }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="candidature.type_candidature === 'master'">
+                <small *ngFor="let voeu of candidature.voeux">{{ voeu }}</small>
+              </div>
+              <div *ngIf="candidature.type_candidature === 'ingenieur'">
+                {{ candidature.specialite }}
+              </div>
+            </td>
+            <td>
+              <span
+                class="score-badge"
+                [class.excellent]="(candidature.score ?? 0) >= 16"
+                [class.bien]="(candidature.score ?? 0) >= 14 && (candidature.score ?? 0) < 16"
+                [class.passable]="(candidature.score ?? 0) < 14"
+              >
+                {{ candidature.score || '--' }}/20
+              </span>
+            </td>
+            <td>
+              <span class="statut-badge" [class]="'badge-' + candidature.statut">
+                {{ candidature.statut }}
+              </span>
+            </td>
+
+            <!-- ✅ COLONNE RÉSULTAT OCR -->
+            <td>
+              <div class="ocr-result" *ngIf="candidature.ocr_analyse">
+                <span
+                  class="ocr-badge"
+                  [class.valide]="candidature.ocr_analyse.resultat === 'valide'"
+                  [class.invalide]="candidature.ocr_analyse.resultat === 'invalide'"
+                  [class.en-cours]="candidature.ocr_analyse.resultat === 'en_cours'"
+                >
+                  <i
+                    class="fas"
+                    [class.fa-check-circle]="candidature.ocr_analyse.resultat === 'valide'"
+                    [class.fa-times-circle]="candidature.ocr_analyse.resultat === 'invalide'"
+                    [class.fa-spinner]="candidature.ocr_analyse.resultat === 'en_cours'"
+                    [class.fa-spin]="candidature.ocr_analyse.resultat === 'en_cours'"
+                  ></i>
+                  {{
+                    candidature.ocr_analyse.resultat === 'valide'
+                      ? 'Valide'
+                      : candidature.ocr_analyse.resultat === 'invalide'
+                        ? 'Invalide'
+                        : 'En cours'
+                  }}
+                </span>
+                <button
+                  class="btn-voir-rapport"
+                  (click)="voirRapportOCR(candidature)"
+                  *ngIf="candidature.ocr_analyse.rapport"
+                >
+                  <i class="fas fa-file-alt"></i>
+                  Voir rapport
+                </button>
+              </div>
+              <div *ngIf="!candidature.ocr_analyse" class="non-analyse">
+                <i class="fas fa-minus-circle"></i>
+                Non analysé
+              </div>
+            </td>
+
+            <td>
+              <div class="actions-cell">
+                <!-- ✅ BOUTON ANALYSER DOSSIER -->
+                <button
+                  class="btn-icon btn-ocr"
+                  (click)="analyserDossier(candidature)"
+                  title="Analyser avec OCR"
+                  [disabled]="candidature.ocr_analyse?.resultat === 'en_cours'"
+                >
+                  <i class="fas fa-robot"></i>
+                </button>
+
+                <button
+                  class="btn-icon btn-view"
+                  (click)="voirDetails(candidature)"
+                  title="Voir détails"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button
+                  class="btn-icon btn-dossier"
+                  (click)="voirDossier(candidature)"
+                  title="Voir dossier"
+                >
+                  <i class="fas fa-folder-open"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Message si vide -->
+      <div *ngIf="candidaturesFiltrees.length === 0" class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>Aucune candidature trouvée</p>
+      </div>
+    </div>
+
+    <!-- Actions groupées -->
+    <div class="bulk-actions" *ngIf="hasSelection()">
+      <div class="selection-info">
+        <i class="fas fa-check-square"></i>
+        {{ countSelected() }} candidature(s) sélectionnée(s)
+      </div>
+      <div class="bulk-buttons">
+        <button class="btn-bulk btn-export">
+          <i class="fas fa-file-excel"></i>
+          Exporter sélection
+        </button>
+        <button class="btn-bulk btn-print">
+          <i class="fas fa-print"></i>
+          Imprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
