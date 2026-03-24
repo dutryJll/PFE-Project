@@ -673,6 +673,62 @@
 }
 
 /* ========================================
+   PROFILE PAGE
+======================================== */
+.profile-shell {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.profile-hero-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 24px rgba(15, 47, 74, 0.1);
+}
+
+.profile-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #26466a;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.profile-hero-text h2 {
+  margin: 0;
+  color: #0f2f4a;
+}
+
+.profile-hero-text p {
+  margin: 0.35rem 0 0;
+  color: #5a6d80;
+}
+
+.profile-role-chip {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.33rem 0.72rem;
+  border-radius: 999px;
+  background: #e0ebf9;
+  color: #1b4f8b;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.profile-form-card {
+  margin-bottom: 0;
+}
+
+/* ========================================
    MASTERS GRID
 ======================================== */
 .masters-grid {
