@@ -4,6 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+interface Commission {
+  id: number;
+  nom: string;
+  master_nom: string;
+  responsable_nom?: string;
+  membres_count: number;
+  actif: boolean;
+}
 
 interface Master {
   id: number;
@@ -26,6 +37,16 @@ interface Utilisateur {
   date_inscription: string;
 }
 
+interface OffreIngenieur {
+  id: number;
+  titre: string;
+  specialite: string;
+  places: number;
+  date_limite: string;
+  statut: 'ouvert' | 'ferme';
+  description: string;
+}
+
 interface Candidature {
   id: number;
   numero: string;
@@ -37,6 +58,49 @@ interface Candidature {
   statut: string;
   date_soumission: string;
 }
+
+interface Role {
+  id: number;
+  nom: string;
+  description: string;
+  est_systeme: boolean;
+  nb_utilisateurs: number;
+  nb_permissions: number;
+  permissions?: number[];
+}
+
+interface Permission {
+  id: number;
+  nom: string;
+  module: string;
+}
+
+interface LogEntry {
+  id: number;
+  timestamp: string;
+  user_name: string;
+  action: string;
+  module: string;
+  description: string;
+  ip_address: string;
+  succes: boolean;
+}
+
+interface ActionMatrixRow {
+  action_no: number;
+  action_name: string;
+  description?: string;
+  roles: {
+    candidat: boolean;
+    commission: boolean;
+    responsable_commission: boolean;
+    admin: boolean;
+  };
+}
+
+type RoleKey = 'candidat' | 'commission' | 'responsable_commission' | 'admin';
+type ExportFormat = 'csv' | 'json' | 'ods' | 'pdf';
+type ExportRow = Record<string, string | number | boolean | null | undefined>;
 
 @Component({
   selector: 'app-dashboard-admin',
@@ -60,8 +124,81 @@ export class DashboardAdminComponent implements OnInit {
 
   // Listes
   utilisateursList: Utilisateur[] = [];
+  utilisateurRecherche: string = '';
+  selectedUserIds: number[] = [];
+  openUserMenuId: number | null = null;
+  exportFormat: ExportFormat = 'csv';
+  mastersExportFormat: ExportFormat = 'csv';
+  candidaturesExportFormat: ExportFormat = 'csv';
+  offresExportFormat: ExportFormat = 'csv';
   mastersList: Master[] = [];
+  offresIngenieurList: OffreIngenieur[] = [];
   candidaturesList: Candidature[] = [];
+  commissions: any[] = [];
+
+  // Administration Système
+  roles: Role[] = [
+    {
+      id: 1,
+      nom: 'Administrateur',
+      description: 'Accès complet au système',
+      est_systeme: true,
+      nb_utilisateurs: 3,
+      nb_permissions: 50,
+      permissions: [1, 2, 3, 4, 5],
+    },
+    {
+      id: 2,
+      nom: 'Responsable Commission',
+      description: 'Gestion complète de sa commission',
+      est_systeme: true,
+      nb_utilisateurs: 5,
+      nb_permissions: 35,
+      permissions: [1, 2, 3],
+    },
+    {
+      id: 3,
+      nom: 'Membre Commission',
+      description: 'Évaluation des candidatures',
+      est_systeme: true,
+      nb_utilisateurs: 25,
+      nb_permissions: 15,
+      permissions: [1],
+    },
+  ];
+
+  permissions: Permission[] = [
+    { id: 1, nom: 'Voir candidatures', module: 'Candidatures' },
+    { id: 2, nom: 'Modifier candidatures', module: 'Candidatures' },
+    { id: 3, nom: 'Gérer listes', module: 'Listes' },
+    { id: 4, nom: 'Gérer utilisateurs', module: 'Utilisateurs' },
+    { id: 5, nom: 'Configuration système', module: 'Système' },
+  ];
+
+  logs: LogEntry[] = [];
+
+  roleColumns: Array<{ key: RoleKey; label: string }> = [
+    { key: 'candidat', label: 'Candidat' },
+    { key: 'commission', label: 'Commission' },
+    { key: 'responsable_commission', label: 'Responsable commission' },
+    { key: 'admin', label: 'Admin' },
+  ];
+
+  actionRoleMatrix: ActionMatrixRow[] = [];
+  newActionName: string = '';
+  newActionDescription: string = '';
+  newActionRoles: Record<RoleKey, boolean> = {
+    candidat: false,
+    commission: false,
+    responsable_commission: false,
+    admin: false,
+  };
+
+  filtresLogs: any = {
+    module: '',
+    action: '',
+    utilisateur: '',
+  };
 
   // Profil
   profileData: any = {
@@ -69,7 +206,6 @@ export class DashboardAdminComponent implements OnInit {
     last_name: '',
     email: '',
     phone: '',
-    address: '',
   };
 
   passwordForm: any = {
@@ -91,6 +227,16 @@ export class DashboardAdminComponent implements OnInit {
   };
 
   showModalMaster: boolean = false;
+  showModalOffreIngenieur: boolean = false;
+  nouvelleOffreIngenieur: OffreIngenieur = {
+    id: 0,
+    titre: '',
+    specialite: '',
+    places: 0,
+    date_limite: '',
+    statut: 'ouvert',
+    description: '',
+  };
 
   constructor(
     private router: Router,
@@ -105,6 +251,9 @@ export class DashboardAdminComponent implements OnInit {
     this.loadUtilisateurs();
     this.loadMasters();
     this.loadCandidatures();
+    this.loadOffresIngenieur();
+    this.loadLogs();
+    this.loadActionRoleMatrix();
   }
 
   // ========================================
@@ -112,18 +261,42 @@ export class DashboardAdminComponent implements OnInit {
   // ========================================
   switchView(view: string): void {
     this.currentView = view;
+    if (view === 'logs') {
+      this.loadLogs();
+    } else if (view === 'commissions') {
+      this.loadCommissions();
+    }
+  }
+
+  loadCommissions(): void {
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .get('http://localhost:8003/api/commissions/list/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (data: any) => {
+          this.commissions = data;
+        },
+        error: (error) => {
+          console.error('Erreur chargement commissions:', error);
+        },
+      });
   }
 
   getViewTitle(): string {
     const titles: any = {
       dashboard: 'Tableau de bord',
+      analytics: 'Analytiques avancées',
       utilisateurs: 'Gestion des utilisateurs',
       masters: 'Gestion des Masters',
-      commission: 'Gestion de la commission',
-      listes: 'Listes de sélection',
-      candidatures: 'Toutes les candidatures',
-      parametres: 'Paramètres système',
-      rapports: 'Rapports et statistiques',
+      'concours-ingenieur': "Gestion des offres - Concours d'ingénieur",
+      candidatures: 'Gestion de candidature',
+      administration: 'Administration système',
+      logs: "Journaux d'activité",
+      parametres: 'Administration du site',
+      rapports: 'Rapports',
       profil: 'Mon Profil',
     };
     return titles[this.currentView] || 'Tableau de bord';
@@ -135,7 +308,6 @@ export class DashboardAdminComponent implements OnInit {
   loadStats(): void {
     const token = this.authService.getAccessToken();
 
-    // Charger utilisateurs pour stats
     this.http
       .get('http://localhost:8001/api/auth/users/', {
         headers: { Authorization: `Bearer ${token}` },
@@ -149,13 +321,11 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur chargement stats utilisateurs:', error);
-          // Données par défaut si erreur
           this.statsData.totalUsers = 1245;
           this.statsData.membresCommission = 45;
         },
       });
 
-    // Stats candidatures (données fictives pour le moment)
     this.statsData.totalCandidatures = 856;
     this.statsData.admis = 234;
   }
@@ -173,7 +343,6 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur chargement utilisateurs:', error);
-          // Données fictives si erreur
           this.utilisateursList = [
             {
               id: 1,
@@ -199,7 +368,6 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   loadMasters(): void {
-    // Données fictives pour le moment
     this.mastersList = [
       {
         id: 1,
@@ -221,36 +389,25 @@ export class DashboardAdminComponent implements OnInit {
         statut: 'ouvert',
         specialite: 'Informatique',
       },
-      {
-        id: 3,
-        nom: 'Master Recherche Microélectronique',
-        type: 'recherche',
-        description: 'Formation en microélectronique avancée',
-        places: 20,
-        date_limite: '2026-03-25',
-        statut: 'ouvert',
-        specialite: 'Électronique',
-      },
     ];
   }
 
   loadCandidatures(): void {
-    // Données fictives pour le moment
     this.candidaturesList = [
       {
         id: 1,
-        numero: 'CAND-2026-001',
+        numero: '2603-00001-GL',
         candidat_nom: 'Ahmed Ben Ali',
         candidat_email: 'ahmed@example.com',
         master_nom: 'Master Génie Logiciel',
         specialite: 'Informatique',
         score: 16.5,
-        statut: 'accepte',
+        statut: 'selectionne',
         date_soumission: '2026-02-15',
       },
       {
         id: 2,
-        numero: 'CAND-2026-002',
+        numero: '2603-00002-DS',
         candidat_nom: 'Fatma Gharbi',
         candidat_email: 'fatma@example.com',
         master_nom: 'Master Data Science',
@@ -262,12 +419,326 @@ export class DashboardAdminComponent implements OnInit {
     ];
   }
 
+  loadLogs(): void {
+    const token = this.authService.getAccessToken();
+
+    const params: any = {};
+    if (this.filtresLogs.module) params.module = this.filtresLogs.module;
+    if (this.filtresLogs.action) params.action = this.filtresLogs.action;
+    if (this.filtresLogs.utilisateur) params.search = this.filtresLogs.utilisateur;
+
+    this.http
+      .get('http://localhost:8001/api/admin/logs/', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: params,
+      })
+      .subscribe({
+        next: (data: any) => {
+          this.logs = data.results || data;
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          // Données fictives si erreur
+          this.logs = [
+            {
+              id: 1,
+              timestamp: '2026-03-22T14:30:00',
+              user_name: 'Ahmed Ben Ali',
+              action: 'create',
+              module: 'candidatures',
+              description: 'Nouvelle candidature créée',
+              ip_address: '192.168.1.10',
+              succes: true,
+            },
+            {
+              id: 2,
+              timestamp: '2026-03-22T14:25:00',
+              user_name: 'Admin ISIMM',
+              action: 'update',
+              module: 'users',
+              description: 'Utilisateur modifié',
+              ip_address: '192.168.1.1',
+              succes: true,
+            },
+          ];
+        },
+      });
+  }
+
   // ========================================
   // GESTION UTILISATEURS
   // ========================================
+  get utilisateursFiltres(): Utilisateur[] {
+    const q = this.utilisateurRecherche.trim().toLowerCase();
+    if (!q) {
+      return this.utilisateursList;
+    }
+
+    return this.utilisateursList.filter((user) => {
+      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+      return fullName.includes(q) || user.email.toLowerCase().includes(q);
+    });
+  }
+
+  get allUsersSelected(): boolean {
+    const ids = this.utilisateursFiltres.map((u) => u.id);
+    return ids.length > 0 && ids.every((id) => this.selectedUserIds.includes(id));
+  }
+
+  toggleAllUsers(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.checked) {
+      this.selectedUserIds = this.utilisateursFiltres.map((u) => u.id);
+    } else {
+      this.selectedUserIds = [];
+    }
+  }
+
+  toggleUserSelection(userId: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.checked) {
+      if (!this.selectedUserIds.includes(userId)) {
+        this.selectedUserIds.push(userId);
+      }
+      return;
+    }
+
+    this.selectedUserIds = this.selectedUserIds.filter((id) => id !== userId);
+  }
+
+  isUserSelected(userId: number): boolean {
+    return this.selectedUserIds.includes(userId);
+  }
+
+  toggleUserMenu(userId: number): void {
+    this.openUserMenuId = this.openUserMenuId === userId ? null : userId;
+  }
+
+  closeUserMenu(): void {
+    this.openUserMenuId = null;
+  }
+
+  getUserInitials(user: Utilisateur): string {
+    const first = (user.first_name || '').charAt(0).toUpperCase();
+    const last = (user.last_name || '').charAt(0).toUpperCase();
+    return `${first}${last}` || 'US';
+  }
+
+  suspendreUtilisateur(user: Utilisateur): void {
+    user.is_active = !user.is_active;
+    this.closeUserMenu();
+    alert(
+      user.is_active
+        ? `✅ Compte réactivé pour ${user.first_name} ${user.last_name}`
+        : `⛔ Candidature suspendue pour ${user.first_name} ${user.last_name}`,
+    );
+  }
+
+  downloadUsersFile(): void {
+    const rows: ExportRow[] = this.utilisateursFiltres.map((u) => ({
+      id: u.id,
+      nom: `${u.first_name} ${u.last_name}`,
+      email: u.email,
+      role: this.getRoleLabel(u.role),
+      statut: u.is_active ? 'Actif' : 'Suspendu',
+      date_inscription: u.date_inscription,
+    }));
+
+    void this.exportRows(rows, this.exportFormat, 'users-export', 'Export utilisateurs');
+  }
+
+  downloadMastersFile(): void {
+    const rows: ExportRow[] = this.mastersList.map((m) => ({
+      id: m.id,
+      nom: m.nom,
+      type: m.type,
+      specialite: m.specialite,
+      places: m.places,
+      date_limite: m.date_limite,
+      statut: m.statut,
+    }));
+
+    void this.exportRows(rows, this.mastersExportFormat, 'masters-export', 'Export masters');
+  }
+
+  downloadCandidaturesFile(): void {
+    const rows: ExportRow[] = this.candidaturesList.map((c) => ({
+      numero: c.numero,
+      candidat: c.candidat_nom,
+      email: c.candidat_email,
+      master: c.master_nom,
+      specialite: c.specialite,
+      score: c.score,
+      statut: this.getStatutLabel(c.statut),
+      date_soumission: c.date_soumission,
+    }));
+
+    void this.exportRows(
+      rows,
+      this.candidaturesExportFormat,
+      'candidatures-export',
+      'Export candidatures',
+    );
+  }
+
+  downloadOffresIngenieurFile(): void {
+    const rows: ExportRow[] = this.offresIngenieurList.map((o) => ({
+      id: o.id,
+      titre: o.titre,
+      specialite: o.specialite,
+      places: o.places,
+      date_limite: o.date_limite,
+      statut: o.statut === 'ouvert' ? 'Ouvert' : 'Ferme',
+      description: o.description,
+    }));
+
+    void this.exportRows(
+      rows,
+      this.offresExportFormat,
+      'offres-ingenieur-export',
+      'Export offres concours ingenieur',
+    );
+  }
+
+  private async exportRows(
+    rows: ExportRow[],
+    format: ExportFormat,
+    baseFileName: string,
+    pdfTitle: string,
+  ): Promise<void> {
+    if (!rows.length) {
+      alert('Aucune donnee a exporter');
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+
+    if (format === 'json') {
+      const json = JSON.stringify(rows, null, 2);
+      this.downloadBlob(
+        json,
+        this.buildExportFileName(baseFileName, 'json'),
+        'application/json;charset=utf-8;',
+      );
+      return;
+    }
+
+    if (format === 'ods') {
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Export');
+      XLSX.writeFile(workbook, this.buildExportFileName(baseFileName, 'ods'), { bookType: 'ods' });
+      return;
+    }
+
+    if (format === 'pdf') {
+      await this.exportRowsToPdf(
+        rows,
+        headers,
+        pdfTitle,
+        this.buildExportFileName(baseFileName, 'pdf'),
+      );
+      return;
+    }
+
+    const csvRows = rows.map((row) =>
+      headers.map((header) => `"${String(row[header] ?? '').replace(/"/g, '""')}"`).join(','),
+    );
+    const csv = [headers.join(','), ...csvRows].join('\n');
+    this.downloadBlob(
+      csv,
+      this.buildExportFileName(baseFileName, 'csv'),
+      'text/csv;charset=utf-8;',
+    );
+  }
+
+  private async exportRowsToPdf(
+    rows: ExportRow[],
+    headers: string[],
+    title: string,
+    fileName: string,
+  ): Promise<void> {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const logoDataUrl = await this.loadImageAsDataUrl('assets/images/logo-isimm.png');
+
+    let startY = 24;
+    let textX = 14;
+
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, 'PNG', 14, 8, 18, 18);
+      textX = 36;
+      startY = 34;
+    }
+
+    doc.setFontSize(14);
+    doc.text('ISIMM', textX, 14);
+    doc.setFontSize(11);
+    doc.text(title, textX, 20);
+    doc.setFontSize(9);
+    doc.text(`Genere le ${this.getHumanReadableTimestamp()}`, 14, startY - 4);
+
+    autoTable(doc, {
+      startY,
+      head: [headers.map((h) => h.replace(/_/g, ' '))],
+      body: rows.map((row) => headers.map((header) => String(row[header] ?? ''))),
+      styles: { fontSize: 8 },
+    });
+
+    doc.save(fileName);
+  }
+
+  private loadImageAsDataUrl(src: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  private buildExportFileName(baseFileName: string, extension: string): string {
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${this.pad2(now.getMonth() + 1)}-${this.pad2(now.getDate())}_${this.pad2(now.getHours())}-${this.pad2(now.getMinutes())}`;
+    return `${baseFileName}-${stamp}.${extension}`;
+  }
+
+  private getHumanReadableTimestamp(): string {
+    const now = new Date();
+    return `${this.pad2(now.getDate())}/${this.pad2(now.getMonth() + 1)}/${now.getFullYear()} ${this.pad2(now.getHours())}:${this.pad2(now.getMinutes())}`;
+  }
+
+  private pad2(value: number): string {
+    return String(value).padStart(2, '0');
+  }
+
+  private downloadBlob(content: string, fileName: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }
+
   nouvelUtilisateur(): void {
     alert('Créer un nouvel utilisateur');
-    // TODO: Ouvrir modal création utilisateur
   }
 
   voirUtilisateur(user: Utilisateur): void {
@@ -289,6 +760,7 @@ export class DashboardAdminComponent implements OnInit {
         .subscribe({
           next: () => {
             alert('✅ Utilisateur supprimé avec succès');
+            this.closeUserMenu();
             this.loadUtilisateurs();
           },
           error: (error) => {
@@ -307,6 +779,89 @@ export class DashboardAdminComponent implements OnInit {
       responsable_commission: 'Responsable Commission',
     };
     return labels[role] || role;
+  }
+
+  // ========================================
+  // GESTION OFFRES CONCOURS INGÉNIEUR
+  // ========================================
+  loadOffresIngenieur(): void {
+    this.offresIngenieurList = [
+      {
+        id: 1,
+        titre: "Concours d'accès - Cycle Ingénieur Génie Logiciel",
+        specialite: 'Génie Logiciel',
+        places: 50,
+        date_limite: '2026-05-31',
+        statut: 'ouvert',
+        description: 'Concours national pour les titulaires de licence en informatique.',
+      },
+      {
+        id: 2,
+        titre: "Concours d'accès - Cycle Ingénieur Data & IA",
+        specialite: 'Data & IA',
+        places: 35,
+        date_limite: '2026-06-05',
+        statut: 'ferme',
+        description: 'Admission sur dossier et entretien pour parcours Data Science.',
+      },
+    ];
+  }
+
+  ajouterOffreIngenieur(): void {
+    this.nouvelleOffreIngenieur = {
+      id: 0,
+      titre: '',
+      specialite: '',
+      places: 0,
+      date_limite: '',
+      statut: 'ouvert',
+      description: '',
+    };
+    this.showModalOffreIngenieur = true;
+  }
+
+  modifierOffreIngenieur(offre: OffreIngenieur): void {
+    this.nouvelleOffreIngenieur = { ...offre };
+    this.showModalOffreIngenieur = true;
+  }
+
+  fermerModalOffreIngenieur(): void {
+    this.showModalOffreIngenieur = false;
+  }
+
+  enregistrerOffreIngenieur(): void {
+    const item = this.nouvelleOffreIngenieur;
+    if (!item.titre || !item.specialite || !item.places || !item.date_limite) {
+      alert('❌ Veuillez remplir les champs obligatoires');
+      return;
+    }
+
+    if (item.id) {
+      const idx = this.offresIngenieurList.findIndex((o) => o.id === item.id);
+      if (idx !== -1) {
+        this.offresIngenieurList[idx] = { ...item };
+      }
+      alert('✅ Offre mise à jour');
+    } else {
+      const nextId = this.offresIngenieurList.length
+        ? Math.max(...this.offresIngenieurList.map((o) => o.id)) + 1
+        : 1;
+      this.offresIngenieurList.unshift({ ...item, id: nextId });
+      alert('✅ Offre ajoutée');
+    }
+
+    this.showModalOffreIngenieur = false;
+  }
+
+  toggleStatutOffreIngenieur(offre: OffreIngenieur): void {
+    offre.statut = offre.statut === 'ouvert' ? 'ferme' : 'ouvert';
+  }
+
+  supprimerOffreIngenieur(offre: OffreIngenieur): void {
+    if (!confirm(`Supprimer l'offre "${offre.titre}" ?`)) {
+      return;
+    }
+    this.offresIngenieurList = this.offresIngenieurList.filter((o) => o.id !== offre.id);
   }
 
   // ========================================
@@ -332,7 +887,6 @@ export class DashboardAdminComponent implements OnInit {
       return;
     }
 
-    // TODO: Appel API pour créer le master
     this.nouveauMaster.id = Date.now();
     this.mastersList.push({ ...this.nouveauMaster });
 
@@ -360,7 +914,59 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   // ========================================
-  // GESTION CANDIDATURES
+  // ADMINISTRATION SYSTÈME
+  // ========================================
+  creerRole(): void {
+    alert('Créer un nouveau rôle');
+  }
+
+  voirPermissions(role: Role): void {
+    alert(`Voir permissions de ${role.nom}`);
+  }
+
+  modifierRole(role: Role): void {
+    alert(`Modifier ${role.nom}`);
+  }
+
+  aPermission(role: Role, permission: Permission): boolean {
+    return role.permissions?.includes(permission.id) || false;
+  }
+
+  togglePermission(role: Role, permission: Permission): void {
+    if (role.est_systeme) {
+      alert('❌ Impossible de modifier un rôle système');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .post(
+        `http://localhost:8001/api/admin/roles/${role.id}/toggle-permission/`,
+        { permission_id: permission.id },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          if (this.aPermission(role, permission)) {
+            role.permissions = role.permissions!.filter((p) => p !== permission.id);
+          } else {
+            role.permissions!.push(permission.id);
+          }
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors de la modification');
+        },
+      });
+  }
+
+  chargerLogs(): void {
+    this.loadLogs();
+  }
+
+  // ========================================
+  // CANDIDATURES
   // ========================================
   voirCandidature(candidature: Candidature): void {
     alert(`Voir détails de la candidature ${candidature.numero}`);
@@ -368,12 +974,27 @@ export class DashboardAdminComponent implements OnInit {
 
   getStatutLabel(statut: string): string {
     const labels: any = {
-      accepte: 'Accepté',
+      selectionne: 'Sélectionné',
       en_attente: 'En attente',
       rejete: 'Rejeté',
-      en_cours: 'En cours',
+      soumis: 'Soumis',
     };
     return labels[statut] || statut;
+  }
+
+  // ========================================
+  // NAVIGATION PAGES DÉDIÉES
+  // ========================================
+  allerGestionCommission(): void {
+    this.router.navigate(['/admin/gestion-commission']);
+  }
+
+  allerGestionConcoursIngenieur(): void {
+    this.switchView('concours-ingenieur');
+  }
+
+  allerListesSelection(): void {
+    this.router.navigate(['/admin/listes-selection']);
   }
 
   // ========================================
@@ -387,7 +1008,7 @@ export class DashboardAdminComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
-        next: (response) => {
+        next: () => {
           alert('✅ Profil mis à jour avec succès !');
           this.currentUser = { ...this.currentUser, ...this.profileData };
         },
@@ -437,15 +1058,174 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   // ========================================
-  // PARAMÈTRES
+  // ADMINISTRATION DU SITE (MATRICE ACTION/RÔLE)
   // ========================================
-  sauvegarderParametres(): void {
-    alert('Sauvegarder les paramètres système');
+  loadActionRoleMatrix(): void {
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .get('http://localhost:8001/api/auth/admin/action-roles/matrix/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.actionRoleMatrix = (response.actions || []).map((row: any) => ({
+            action_no: row.action_no,
+            action_name: row.action_name,
+            description: row.description || '',
+            roles: {
+              candidat: !!row.roles?.candidat,
+              commission: !!row.roles?.commission,
+              responsable_commission: !!row.roles?.responsable_commission,
+              admin: !!row.roles?.admin,
+            },
+          }));
+        },
+        error: () => {
+          this.actionRoleMatrix = this.buildFallbackActionMatrix();
+        },
+      });
+  }
+
+  buildFallbackActionMatrix(): ActionMatrixRow[] {
+    return [
+      this.makeActionRow(1, 'Préinscription', { candidat: true }),
+      this.makeActionRow(2, 'Dépôt de dossier', { candidat: true }),
+      this.makeActionRow(3, 'Consultation de dossier', { candidat: true, commission: true }),
+      this.makeActionRow(4, 'Consultation de candidature', { candidat: true, commission: true }),
+      this.makeActionRow(5, 'Suivi de candidature', { candidat: true }),
+      this.makeActionRow(6, 'Préselection', { commission: true, responsable_commission: true }),
+      this.makeActionRow(7, 'Sélection finale', { responsable_commission: true }),
+      this.makeActionRow(8, 'Gestion des utilisateurs', { admin: true }),
+      this.makeActionRow(9, 'Gestion des masters', { admin: true }),
+      this.makeActionRow(10, "Gestion concours d'ingénieur", { admin: true }),
+    ];
+  }
+
+  makeActionRow(
+    no: number,
+    name: string,
+    enabled: Partial<Record<RoleKey, boolean>>,
+    description: string = '',
+  ): ActionMatrixRow {
+    return {
+      action_no: no,
+      action_name: name,
+      description,
+      roles: {
+        candidat: !!enabled.candidat,
+        commission: !!enabled.commission,
+        responsable_commission: !!enabled.responsable_commission,
+        admin: !!enabled.admin,
+      },
+    };
+  }
+
+  addAction(): void {
+    const actionName = this.newActionName.trim();
+    if (!actionName) {
+      alert("Le nom d'action est obligatoire");
+      return;
+    }
+
+    const nextNo = this.actionRoleMatrix.length
+      ? Math.max(...this.actionRoleMatrix.map((a) => a.action_no)) + 1
+      : 1;
+
+    this.actionRoleMatrix.push({
+      action_no: nextNo,
+      action_name: actionName,
+      description: this.newActionDescription.trim(),
+      roles: {
+        candidat: !!this.newActionRoles.candidat,
+        commission: !!this.newActionRoles.commission,
+        responsable_commission: !!this.newActionRoles.responsable_commission,
+        admin: !!this.newActionRoles.admin,
+      },
+    });
+
+    this.newActionName = '';
+    this.newActionDescription = '';
+    this.newActionRoles = {
+      candidat: false,
+      commission: false,
+      responsable_commission: false,
+      admin: false,
+    };
+  }
+
+  removeAction(actionNo: number): void {
+    if (!confirm('Supprimer cette action ?')) {
+      return;
+    }
+
+    this.actionRoleMatrix = this.actionRoleMatrix.filter((a) => a.action_no !== actionNo);
+  }
+
+  toggleRoleForAction(action: ActionMatrixRow, role: RoleKey, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    action.roles[role] = input.checked;
+  }
+
+  toggleNewActionRole(role: RoleKey, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.newActionRoles[role] = input.checked;
+  }
+
+  saveActionRoleMatrix(): void {
+    if (!this.actionRoleMatrix.length) {
+      alert('Ajoutez au moins une action avant de sauvegarder');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    const payload = {
+      actions: this.actionRoleMatrix.map((row) => ({
+        action_no: row.action_no,
+        action_name: row.action_name,
+        description: row.description || '',
+        roles: row.roles,
+      })),
+    };
+
+    this.http
+      .put('http://localhost:8001/api/auth/admin/action-roles/matrix/update/', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (response: any) => {
+          alert('✅ Matrice des actions enregistrée avec succès');
+          this.actionRoleMatrix = (response.actions || this.actionRoleMatrix).map((row: any) => ({
+            action_no: row.action_no,
+            action_name: row.action_name,
+            description: row.description || '',
+            roles: {
+              candidat: !!row.roles?.candidat,
+              commission: !!row.roles?.commission,
+              responsable_commission: !!row.roles?.responsable_commission,
+              admin: !!row.roles?.admin,
+            },
+          }));
+        },
+        error: (error) => {
+          console.error('Erreur sauvegarde matrice:', error);
+          alert("❌ Erreur lors de l'enregistrement de la matrice");
+        },
+      });
+  }
+
+  getEnabledRoleLabels(action: ActionMatrixRow): string[] {
+    return this.roleColumns.filter((r) => action.roles[r.key]).map((r) => r.label);
+  }
+
+  getRoleActions(role: RoleKey): string[] {
+    return this.actionRoleMatrix.filter((a) => a.roles[role]).map((a) => a.action_name);
   }
 
   // ========================================
-  // RAPPORTS
+  // PARAMÈTRES & RAPPORTS
   // ========================================
+
   genererRapport(): void {
     alert('Générer un rapport');
   }
@@ -454,21 +1234,8 @@ export class DashboardAdminComponent implements OnInit {
     alert('Exporter les données');
   }
 
-  // ========================================
-  // DÉCONNEXION
-  // ========================================
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
-  }
-  // ========================================
-  // NAVIGATION VERS PAGES DÉDIÉES
-  // ========================================
-  allerGestionCommission(): void {
-    this.router.navigate(['/admin/gestion-commission']);
-  }
-
-  allerListesSelection(): void {
-    this.router.navigate(['/admin/listes-selection']);
   }
 }

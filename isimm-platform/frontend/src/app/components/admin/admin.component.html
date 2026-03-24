@@ -85,9 +85,7 @@
         </div>
         <h3>Gérer les Masters</h3>
         <p>Ajouter, modifier ou supprimer des masters</p>
-        <div class="feature-badge">
-          {{ stats.totalMasters }} masters
-        </div>
+        <div class="feature-badge">{{ stats.totalMasters }} masters</div>
       </div>
 
       <div class="feature-card commission" (click)="activeSection = 'commission'">
@@ -96,9 +94,7 @@
         </div>
         <h3>Gérer la Commission</h3>
         <p>Ajouter/supprimer membres et responsables</p>
-        <div class="feature-badge">
-          {{ stats.totalCommission }} membres
-        </div>
+        <div class="feature-badge">{{ stats.totalCommission }} membres</div>
       </div>
 
       <div class="feature-card candidatures" (click)="activeSection = 'candidatures'">
@@ -107,9 +103,7 @@
         </div>
         <h3>Gérer les Candidatures</h3>
         <p>Consulter, modifier ou supprimer</p>
-        <div class="feature-badge">
-          {{ stats.totalCandidatures }} candidatures
-        </div>
+        <div class="feature-badge">{{ stats.totalCandidatures }} candidatures</div>
       </div>
 
       <div class="feature-card users" (click)="activeSection = 'users'">
@@ -118,9 +112,7 @@
         </div>
         <h3>Gérer les Utilisateurs</h3>
         <p>Voir tous les comptes utilisateurs</p>
-        <div class="feature-badge">
-          {{ stats.totalUsers }} utilisateurs
-        </div>
+        <div class="feature-badge">{{ stats.totalUsers }} utilisateurs</div>
       </div>
     </div>
   </div>
@@ -154,17 +146,25 @@
         <tbody>
           <tr *ngFor="let master of masters">
             <td>#{{ master.id }}</td>
-            <td><strong>{{ master.nom }}</strong></td>
             <td>
-              <span class="badge" [class.recherche]="master.type === 'recherche'"
-                                  [class.professionnel]="master.type === 'professionnel'">
+              <strong>{{ master.nom }}</strong>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.recherche]="master.type === 'recherche'"
+                [class.professionnel]="master.type === 'professionnel'"
+              >
                 {{ master.type }}
               </span>
             </td>
             <td>{{ master.places }}</td>
             <td>
-              <span class="statut-badge" [class.ouvert]="master.statut === 'ouvert'"
-                                        [class.ferme]="master.statut === 'ferme'">
+              <span
+                class="statut-badge"
+                [class.ouvert]="master.statut === 'ouvert'"
+                [class.ferme]="master.statut === 'ferme'"
+              >
                 {{ master.statut }}
               </span>
             </td>
@@ -191,7 +191,7 @@
       <h2>
         <i class="fas fa-users-cog"></i>
         Gestion de la Commission
-      </2>
+      </h2>
       <button class="btn-add" (click)="ouvrirModalAjouterMembre()">
         <i class="fas fa-user-plus"></i>
         Ajouter un membre
@@ -216,8 +216,11 @@
             </td>
             <td>{{ membre.email }}</td>
             <td>
-              <span class="badge" [class.responsable]="membre.role === 'responsable_commission'"
-                                  [class.membre]="membre.role === 'commission'">
+              <span
+                class="badge"
+                [class.responsable]="membre.role === 'responsable_commission'"
+                [class.membre]="membre.role === 'commission'"
+              >
                 {{ membre.role === 'responsable_commission' ? 'Responsable' : 'Membre' }}
               </span>
             </td>

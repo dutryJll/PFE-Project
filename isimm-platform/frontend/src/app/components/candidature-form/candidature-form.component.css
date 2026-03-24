@@ -1,6 +1,8 @@
 .candidature-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(29, 112, 162, 0.12), transparent 32%),
+    linear-gradient(180deg, #f6faff 0%, #edf4fb 100%);
   padding: 100px 2rem 50px;
 }
 
@@ -10,11 +12,13 @@
 }
 
 .form-header {
-  background: white;
+  background: linear-gradient(155deg, #ffffff, #f7fbff);
   padding: 3rem;
   border-radius: 20px 20px 0 0;
   text-align: center;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 14px 30px rgba(15, 47, 74, 0.08);
+  border: 1px solid #dbe8f5;
+  border-bottom: none;
 }
 
 .form-header h1 {
@@ -43,10 +47,12 @@
 }
 
 .candidature-form {
-  background: white;
+  background: #ffffff;
   padding: 0 3rem 3rem;
   border-radius: 0 0 20px 20px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 14px 30px rgba(15, 47, 74, 0.08);
+  border: 1px solid #dbe8f5;
+  border-top: none;
 }
 
 .form-section {
@@ -94,18 +100,20 @@
 .form-group input,
 .form-group select {
   padding: 0.9rem 1rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #dce7f3;
   border-radius: 10px;
   font-size: 1rem;
   transition: all 0.3s;
   font-family: inherit;
+  color: #17324b;
+  background: #fbfdff;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #ff8c42;
-  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+  border-color: #1d70a2;
+  box-shadow: 0 0 0 3px rgba(29, 112, 162, 0.13);
 }
 
 .form-group small {
@@ -176,8 +184,8 @@
 }
 
 .radio-option:hover {
-  border-color: #ff8c42;
-  background: #fff5f0;
+  border-color: #1d70a2;
+  background: #eef6ff;
 }
 
 .radio-option input[type='radio'] {
@@ -257,14 +265,14 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff8c42, #e85d04);
+  background: linear-gradient(135deg, #1d70a2, #2f6fa3);
   color: white;
-  box-shadow: 0 5px 20px rgba(255, 140, 66, 0.3);
+  box-shadow: 0 5px 20px rgba(29, 112, 162, 0.32);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(255, 140, 66, 0.4);
+  box-shadow: 0 8px 30px rgba(29, 112, 162, 0.42);
 }
 
 .btn-primary:disabled {
@@ -297,7 +305,7 @@
 }
 
 .login-link a {
-  color: #ff8c42;
+  color: #1d70a2;
   text-decoration: none;
   font-weight: 600;
 }

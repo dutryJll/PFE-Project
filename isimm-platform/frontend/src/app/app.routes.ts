@@ -12,6 +12,7 @@ import { CandidatureFormComponent } from './components/candidature-form/candidat
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin-guard';
 import { roleGuard } from './guards/role-guard';
+import { actionGuard } from './guards/action.guard';
 import { ProfilComponent } from './components/shared/profil.component';
 import { CreatePasswordComponent } from './components/create-password/create-password.component';
 
@@ -31,6 +32,7 @@ import { ModifierCandidatureComponent } from './components/candidat/modifier-can
 import { ConsulterDossierComponent } from './components/candidat/consulter-dossier/consulter-dossier';
 import { DeposerDocumentsComponent } from './components/candidat/deposer-documents/deposer-documents';
 import { ChoixCandidatureComponent } from './components/choix-candidature/choix-candidature';
+import { NouvelleReclamationComponent } from './components/candidat/nouvelle-reclamation/nouvelle-reclamation';
 
 // ========================================
 // ADMIN COMPONENTS
@@ -52,7 +54,6 @@ import { ExaminerOcrComponent } from './components/commission/examiner-ocr/exami
 import { TraiterReclamationsComponent } from './components/commission/traiter-reclamations/traiter-reclamations';
 import { GererInscriptionsComponent } from './components/commission/gerer-inscriptions/gerer-inscriptions';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
-import { Component, OnInit, HostListener } from '@angular/core';
 
 export const routes: Routes = [
   // ========================================
@@ -123,26 +124,38 @@ export const routes: Routes = [
   {
     path: 'candidat/candidature',
     component: ConsulterCandidaturesComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['candidat'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Consultation de candidature'] },
+  },
+  {
+    path: 'candidat/candidature/:id',
+    component: ConsulterCandidaturesComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Consultation de candidature'] },
   },
   {
     path: 'candidat/candidature/modifier',
     component: ModifierCandidatureComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['candidat'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Modifier candidature'] },
   },
   {
     path: 'candidat/dossier',
     component: ConsulterDossierComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['candidat'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Consultation de dossier'] },
   },
   {
     path: 'candidat/dossier/deposer',
     component: DeposerDocumentsComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['candidat'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Dépôt de dossier'] },
+  },
+  {
+    path: 'candidat/reclamations/nouvelle',
+    component: NouvelleReclamationComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Déposer réclamation'] },
   },
 
   // ========================================
@@ -157,56 +170,77 @@ export const routes: Routes = [
   {
     path: 'commission/dossiers',
     component: ListeDossiersComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
+      actions: ['Consultation de dossier'],
+    },
   },
   {
     path: 'commission/liste-preselection',
     component: ListePreselection,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['commission', 'responsable_commission'], actions: ['Préselection'] },
   },
   {
     path: 'commission/liste-selection',
     component: ListeSelection,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
+      actions: ['Sélection finale', 'Publier liste principale', 'Publier liste attente'],
+    },
   },
   {
     path: 'commission/candidatures',
     component: ConsulterCandidaturesCommissionComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
+      actions: ['Consultation de candidature'],
+    },
+  },
+  {
+    path: 'commission/candidatures/:id',
+    component: ConsulterCandidaturesCommissionComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
+      actions: ['Consultation de candidature'],
+    },
   },
   {
     path: 'commission/dossier/:id',
     component: CommissionDossierComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
+      actions: ['Consultation de dossier'],
+    },
   },
   {
     path: 'commission/preparer-preselection',
     component: PreparerPreselection,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['responsable_commission'], actions: ['Préselection'] },
   },
   {
     path: 'commission/examiner-ocr',
     component: ExaminerOcrComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['responsable_commission'], actions: ['Vérifier dossiers'] },
   },
   {
     path: 'commission/reclamations',
     component: TraiterReclamationsComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['responsable_commission'], actions: ['Traiter réclamations'] },
   },
   {
     path: 'commission/inscriptions',
     component: GererInscriptionsComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['responsable_commission'] },
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['responsable_commission'], actions: ['Gérer inscriptions'] },
   },
 
   // ========================================
@@ -227,6 +261,12 @@ export const routes: Routes = [
   {
     path: 'admin/candidatures',
     component: ListeCandidatures,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/concours-ingenieur',
+    component: ConcoursIngenieurComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['admin'] },
   },
@@ -251,11 +291,5 @@ export const routes: Routes = [
   {
     path: '**',
     redirectTo: '',
-  },
-  {
-    path: 'admin/gestion-commission',
-    component: GestionCommissionComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['admin'] },
   },
 ];

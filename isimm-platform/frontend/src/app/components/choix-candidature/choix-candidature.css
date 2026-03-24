@@ -1,69 +1,95 @@
 .choix-candidature-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(31, 95, 139, 0.14), transparent 38%),
+    radial-gradient(circle at 92% 100%, rgba(180, 83, 9, 0.12), transparent 40%),
+    linear-gradient(180deg, #f1f6fa 0%, #e8f0f7 100%);
 }
 
 .page-header {
-  background: linear-gradient(135deg, #003d5b 0%, #00587a 100%);
-  color: white;
-  padding: 120px 2rem 80px;
+  position: relative;
+  margin-bottom: 3rem;
   text-align: center;
-  margin-bottom: 4rem;
+  color: #fff;
+  padding: 115px 2rem 80px;
+  overflow: hidden;
+  background:
+    linear-gradient(122deg, rgba(7, 31, 49, 0.86), rgba(17, 71, 106, 0.68)),
+    url('/images/um3-bann.jpg') center 25% / cover no-repeat;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.32));
+}
+
+.page-header .container {
+  position: relative;
+  z-index: 1;
 }
 
 .page-header h1 {
+  margin: 0 0 0.9rem;
   font-family: 'Playfair Display', serif;
-  font-size: 3.5rem;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  color: #d3d6db;
+  font-size: clamp(2rem, 4.2vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 .page-header p {
-  font-size: 1.3rem;
-  opacity: 0.9;
+  margin: 0;
+  font-size: clamp(0.98rem, 1.6vw, 1.24rem);
+  color: rgba(255, 255, 255, 0.93);
 }
 
 .choix-container {
-  max-width: 1400px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: 0 2rem 4rem;
+  padding: 0 1.5rem 3.5rem;
 }
 
 .choix-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 4rem;
-  margin-bottom: 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
 }
 
 .choix-card {
-  background: white;
-  border-radius: 30px;
-  padding: 3rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  cursor: pointer;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #d9e6f1;
+  border-radius: 18px;
+  padding: 1.65rem;
+  cursor: pointer;
   overflow: hidden;
-  border: 3px solid transparent;
+  transition:
+    transform 0.26s ease,
+    border-color 0.26s ease,
+    box-shadow 0.26s ease;
+  box-shadow: 0 18px 34px -25px rgba(16, 42, 67, 0.56);
 }
 
 .choix-card::before {
   content: '';
   position: absolute;
-  top: 0;
   left: 0;
   right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  transform: scaleX(0);
-  transition: transform 0.4s;
+  top: 0;
+  height: 5px;
+  transform: scaleX(0.15);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+  background: linear-gradient(90deg, #1f5f8b, #4b8ab8);
 }
 
 .choix-card:hover {
-  transform: translateY(-15px);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 24px 38px -20px rgba(16, 42, 67, 0.48);
 }
 
 .choix-card:hover::before {
@@ -71,101 +97,95 @@
 }
 
 .choix-card.master:hover {
-  border-color: #667eea;
+  border-color: #1f5f8b;
+}
+
+.choix-card.ingenieur {
+  border-color: #eed0ab;
+  background: radial-gradient(circle at 105% 0%, rgba(197, 106, 9, 0.1), transparent 42%), #fff;
+}
+
+.choix-card.ingenieur::before {
+  background: linear-gradient(90deg, #b45309, #df8b2d);
 }
 
 .choix-card.ingenieur:hover {
-  border-color: #e85d04;
+  border-color: #c56a09;
 }
 
 .card-icon {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 25px;
-  display: flex;
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 3.5rem;
-  color: white;
-  margin-bottom: 2rem;
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
-  transition: all 0.4s;
+  font-size: 2rem;
+  color: #fff;
+  margin-bottom: 1.15rem;
+  background: linear-gradient(130deg, #1f5f8b, #3d84b5);
+  box-shadow: 0 14px 24px -15px rgba(31, 95, 139, 0.8);
 }
 
 .choix-card.ingenieur .card-icon {
-  background: linear-gradient(135deg, #e85d04, #f59e0b);
-  box-shadow: 0 15px 40px rgba(232, 93, 4, 0.3);
-}
-
-.choix-card:hover .card-icon {
-  transform: scale(1.1) rotate(10deg);
+  background: linear-gradient(130deg, #b45309, #df8b2d);
+  box-shadow: 0 14px 24px -15px rgba(180, 83, 9, 0.75);
 }
 
 .badge-featured {
   position: absolute;
-  top: 2rem;
-  right: 2rem;
-  background: linear-gradient(135deg, #e85d04, #f59e0b);
-  color: white;
-  padding: 0.6rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  display: flex;
+  top: 1.1rem;
+  right: 1.1rem;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 8px 25px rgba(232, 93, 4, 0.4);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+  gap: 0.35rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.36rem 0.75rem;
+  color: #fff;
+  background: linear-gradient(130deg, #b45309, #df8b2d);
+  box-shadow: 0 10px 20px -12px rgba(180, 83, 9, 0.95);
 }
 
 .choix-card h2 {
+  margin: 0 0 0.65rem;
+  color: #0f2b43;
   font-family: 'Poppins', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin-bottom: 1.5rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.95rem);
+  line-height: 1.3;
 }
 
 .card-description {
-  font-size: 1.1rem;
-  color: #64748b;
-  line-height: 1.8;
-  margin-bottom: 2rem;
+  margin: 0 0 1rem;
+  color: #435a6f;
+  line-height: 1.65;
+  font-size: 0.98rem;
 }
 
 .features-list {
   list-style: none;
-  margin-bottom: 2.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
 }
 
 .features-list li {
-  padding: 1rem 0;
-  font-size: 1.05rem;
-  color: #475569;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px dashed #d7e4ef;
+  color: #385068;
+  font-size: 0.95rem;
 }
 
 .features-list li:last-child {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
 .features-list i {
-  color: #10b981;
-  font-size: 1.2rem;
+  color: #1e9f71;
 }
 
 .card-footer {
@@ -174,76 +194,82 @@
 
 .btn-choisir {
   width: 100%;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 50px;
-  font-size: 1.2rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
+  border: 0;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  transition: all 0.3s;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  gap: 0.55rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(130deg, #1f5f8b, #3d84b5);
+  box-shadow: 0 16px 22px -16px rgba(31, 95, 139, 0.82);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
 .btn-choisir.featured {
-  background: linear-gradient(135deg, #e85d04, #f59e0b);
-  box-shadow: 0 10px 30px rgba(232, 93, 4, 0.3);
+  background: linear-gradient(130deg, #b45309, #df8b2d);
+  box-shadow: 0 16px 22px -16px rgba(180, 83, 9, 0.9);
 }
 
 .btn-choisir:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-}
-
-.btn-choisir.featured:hover {
-  box-shadow: 0 15px 40px rgba(232, 93, 4, 0.4);
+  transform: translateY(-2px);
 }
 
 .btn-choisir i {
-  transition: transform 0.3s;
+  transition: transform 0.22s ease;
 }
 
 .btn-choisir:hover i {
-  transform: translateX(5px);
+  transform: translateX(3px);
 }
 
 .back-link {
+  margin-top: 2.1rem;
   text-align: center;
-  margin-top: 3rem;
 }
 
 .back-link a {
   display: inline-flex;
   align-items: center;
-  gap: 0.8rem;
-  color: #003d5b;
+  gap: 0.55rem;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.3s;
+  color: #1f4f72;
+  font-size: 0.98rem;
+  font-weight: 700;
 }
 
 .back-link a:hover {
-  color: #e85d04;
-  transform: translateX(-5px);
+  color: #b45309;
 }
 
 @media (max-width: 768px) {
-  .page-header h1 {
-    font-size: 2.5rem;
+  .page-header {
+    padding: 95px 1rem 64px;
+    margin-bottom: 2.1rem;
+  }
+
+  .choix-container {
+    padding: 0 1rem 2.4rem;
   }
 
   .choix-grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1rem;
   }
 
-  .choix-card h2 {
-    font-size: 1.8rem;
+  .choix-card {
+    padding: 1.2rem;
+  }
+
+  .card-icon {
+    width: 66px;
+    height: 66px;
+    font-size: 1.7rem;
   }
 }

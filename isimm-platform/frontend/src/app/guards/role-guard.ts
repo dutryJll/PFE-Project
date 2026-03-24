@@ -25,12 +25,15 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return true;
   }
 
-  const userRole = currentUser.role?.toLowerCase();
-  const isAllowed = allowedRoles.some((role) => role.toLowerCase() === userRole);
+  const userRole = (currentUser.role ?? '').toString().trim().toLowerCase();
+  const normalizedAllowedRoles = (allowedRoles ?? []).map((role) =>
+    role.toString().trim().toLowerCase(),
+  );
+  const isAllowed = normalizedAllowedRoles.includes(userRole);
 
   console.log('🔍 Vérification rôle:', {
     userRole,
-    allowedRoles,
+    allowedRoles: normalizedAllowedRoles,
     isAllowed,
   });
 

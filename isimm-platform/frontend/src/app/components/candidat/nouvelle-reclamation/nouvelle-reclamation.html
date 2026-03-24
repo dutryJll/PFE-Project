@@ -1,0 +1,51 @@
+<div class="nouvelle-reclamation-page">
+  <div class="page-header">
+    <h1>Nouvelle reclamation</h1>
+    <p>Remplissez le formulaire pour envoyer votre demande de verification.</p>
+  </div>
+
+  <div class="form-card">
+    <form (ngSubmit)="submit()">
+      <div class="form-group">
+        <label for="master">Master concerne *</label>
+        <select id="master" name="master" [(ngModel)]="formData.master_id" required>
+          <option value="">-- Selectionner un master --</option>
+          <option *ngFor="let candidature of mesCandidatures" [value]="candidature.master_id || ''">
+            {{ candidature.master_nom }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="objet">Objet *</label>
+        <select id="objet" name="objet" [(ngModel)]="formData.objet" required>
+          <option value="">-- Selectionner un objet --</option>
+          <option value="score">Score incorrect</option>
+          <option value="statut">Statut non mis a jour</option>
+          <option value="dossier">Probleme de dossier</option>
+          <option value="paiement">Probleme de paiement</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="motif">Description du probleme *</label>
+        <textarea
+          id="motif"
+          name="motif"
+          rows="6"
+          [(ngModel)]="formData.motif"
+          placeholder="Expliquez clairement votre reclamation..."
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="cancel()">Annuler</button>
+        <button type="submit" class="btn-primary" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer la reclamation' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

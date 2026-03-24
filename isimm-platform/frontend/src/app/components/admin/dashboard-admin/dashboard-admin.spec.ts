@@ -1,19 +1,41 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 
-import { DashboardAdmin } from './dashboard-admin';
+import { DashboardAdminComponent } from './dashboard-admin';
+import { AuthService } from '../../../services/auth.service';
 
-describe('DashboardAdmin', () => {
-  let component: DashboardAdmin;
-  let fixture: ComponentFixture<DashboardAdmin>;
+describe('DashboardAdminComponent', () => {
+  let component: DashboardAdminComponent;
+  let fixture: ComponentFixture<DashboardAdminComponent>;
+
+  const authServiceStub = {
+    getCurrentUser: () => ({
+      first_name: 'Admin',
+      last_name: 'ISIMM',
+      email: 'admin@isimm.tn',
+    }),
+    getAccessToken: () => 'fake-token',
+    logout: () => undefined,
+  };
+
+  const routerStub = {
+    navigate: (_commands: unknown[]) => Promise.resolve(true),
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DashboardAdmin]
-    })
-    .compileComponents();
+      imports: [DashboardAdminComponent],
+      providers: [
+        provideHttpClient(),
+        { provide: AuthService, useValue: authServiceStub },
+        { provide: Router, useValue: routerStub },
+      ],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(DashboardAdmin);
+    fixture = TestBed.createComponent(DashboardAdminComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 

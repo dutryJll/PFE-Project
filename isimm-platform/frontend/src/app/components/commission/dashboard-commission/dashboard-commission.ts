@@ -1,19 +1,25 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
+import { ToastService } from '../../../services/toast.service';
 
 interface Candidature {
   id: number;
+  numero: string;
   candidat_nom: string;
   candidat_email: string;
+  candidat_cin?: string;
   specialite: string;
   score: number;
   dossier_depose: boolean;
   statut: string;
   avis?: string;
+  type_concours?: string;
+  parcours?: string;
+  nouveau_statut?: string;
 }
 
 interface Specialite {
@@ -53,6 +59,45 @@ interface DossierOCR {
   resultats?: any;
 }
 
+interface ProcesVerbal {
+  id: number;
+  titre: string;
+  date_reunion: string;
+  master_nom: string;
+  nb_participants: number;
+  nb_candidatures: number;
+  nb_admis: number;
+  nb_rejetes: number;
+  statut: string;
+}
+
+type CommissionView =
+  | 'dashboard'
+  | 'profil'
+  | 'specialites'
+  | 'candidatures'
+  | 'valider-dossier'
+  | 'dossiers'
+  | 'listes'
+  | 'membres'
+  | 'ocr'
+  | 'reclamations'
+  | 'inscriptions'
+  | 'statistiques'
+  | 'deliberations';
+
+interface CommissionActionPermissions {
+  consultationCandidature: boolean;
+  consultationDossier: boolean;
+  verifierDossiers: boolean;
+  preselection: boolean;
+  selectionFinale: boolean;
+  publierListes: boolean;
+  traiterReclamations: boolean;
+  gererInscriptions: boolean;
+  consulterStatistiques: boolean;
+}
+
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
@@ -61,16 +106,40 @@ interface DossierOCR {
   styleUrl: './dashboard-commission.css',
 })
 export class DashboardCommissionComponent implements OnInit {
-  currentView: string = 'dashboard';
+  currentView: CommissionView = 'dashboard';
   currentUser: any = null;
   currentDate: Date = new Date();
   isResponsable: boolean = false;
 
-  // Filtres
+  actionPermissions: CommissionActionPermissions = {
+    consultationCandidature: true,
+    consultationDossier: true,
+    verifierDossiers: true,
+    preselection: true,
+    selectionFinale: true,
+    publierListes: true,
+    traiterReclamations: true,
+    gererInscriptions: true,
+    consulterStatistiques: true,
+  };
+
+  // Menu Kebab
+  actionMenuOpen: number | null = null;
+
+  // Filtres principaux
   filtreSpecialite: 'actuel' | 'ancien' = 'actuel';
   filtreSpecialiteActive: string = '';
   filtreStatut: string = '';
   typeListe: 'preselection' | 'selection' = 'preselection';
+
+  // Filtres avancés
+  filtres: any = {
+    concours: '',
+    statut: '',
+    parcours: '',
+    recherche: '',
+  };
+  candidaturesFiltrees: Candidature[] = [];
 
   // Profil
   profileData: any = {
@@ -78,7 +147,6 @@ export class DashboardCommissionComponent implements OnInit {
     last_name: '',
     email: '',
     phone: '',
-    address: '',
   };
 
   passwordForm: any = {
@@ -115,31 +183,43 @@ export class DashboardCommissionComponent implements OnInit {
   candidatures: Candidature[] = [
     {
       id: 1,
+      numero: '2603-00001-GL',
       candidat_nom: 'Ahmed Ben Ali',
       candidat_email: 'ahmed@example.com',
+      candidat_cin: '12345678',
       specialite: 'Master Génie Logiciel',
       score: 16.5,
       dossier_depose: true,
-      statut: 'en_attente',
+      statut: 'sous_examen',
       avis: 'Très bon dossier',
+      type_concours: 'masters',
+      parcours: 'ia',
     },
     {
       id: 2,
+      numero: '2603-00002-DS',
       candidat_nom: 'Fatma Gharbi',
       candidat_email: 'fatma@example.com',
+      candidat_cin: '87654321',
       specialite: 'Master Data Science',
       score: 17.2,
       dossier_depose: true,
-      statut: 'en_attente',
+      statut: 'preselectionne',
+      type_concours: 'masters',
+      parcours: 'data',
     },
     {
       id: 3,
+      numero: '2603-00003-ING',
       candidat_nom: 'Mohamed Trabelsi',
       candidat_email: 'mohamed@example.com',
-      specialite: 'Master Génie Logiciel',
+      candidat_cin: '11223344',
+      specialite: 'Cycle Ingénieur',
       score: 15.8,
       dossier_depose: false,
-      statut: 'en_cours',
+      statut: 'soumis',
+      type_concours: 'ingenieur',
+      parcours: 'web',
     },
   ];
 
@@ -176,6 +256,20 @@ export class DashboardCommissionComponent implements OnInit {
     },
   ];
 
+  procesVerbaux: ProcesVerbal[] = [
+    {
+      id: 1,
+      titre: 'Délibération Master Génie Logiciel - Session 2026',
+      date_reunion: '2026-03-10',
+      master_nom: 'Master Génie Logiciel',
+      nb_participants: 5,
+      nb_candidatures: 45,
+      nb_admis: 30,
+      nb_rejetes: 5,
+      statut: 'publie',
+    },
+  ];
+
   // Modal avis
   showModalAvis: boolean = false;
   candidatureSelectionnee: Candidature | null = null;
@@ -184,23 +278,317 @@ export class DashboardCommissionComponent implements OnInit {
 
   // Modal OCR
   showModalOCR: boolean = false;
-  dossierOCRSelectionne: DossierOCR | null = null;
   fichierOCR: File | null = null;
 
   constructor(
     private router: Router,
     private http: HttpClient,
     private authService: AuthService,
+    private toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
+    this.loadActionPermissions();
+    this.candidaturesFiltrees = [...this.candidatures];
+  }
+
+  private loadActionPermissions(): void {
+    this.authService.getMyEnabledActions().subscribe({
+      next: () => {
+        this.actionPermissions = {
+          consultationCandidature: this.authService.hasMyAction('Consultation de candidature'),
+          consultationDossier: this.authService.hasMyAction('Consultation de dossier'),
+          verifierDossiers: this.authService.hasMyAction('Vérifier dossiers'),
+          preselection: this.authService.hasMyAction('Préselection'),
+          selectionFinale: this.authService.hasMyAction('Sélection finale'),
+          publierListes: this.authService.hasMyAction([
+            'Publier liste principale',
+            'Publier liste attente',
+          ]),
+          traiterReclamations: this.authService.hasMyAction('Traiter réclamations'),
+          gererInscriptions: this.authService.hasMyAction('Gérer inscriptions'),
+          consulterStatistiques: this.authService.hasMyAction('Consulter statistiques'),
+        };
+
+        if (!this.canAccessView(this.currentView)) {
+          this.currentView = 'dashboard';
+        }
+      },
+      error: () => {
+        console.warn('Permissions indisponibles, maintien du mode permissif local.');
+      },
+    });
+  }
+
+  canAccessView(view: CommissionView): boolean {
+    if (view === 'dashboard' || view === 'profil' || view === 'specialites') {
+      return true;
+    }
+
+    if (view === 'candidatures') {
+      return this.actionPermissions.consultationCandidature;
+    }
+
+    if (view === 'valider-dossier') {
+      return this.actionPermissions.verifierDossiers;
+    }
+
+    if (view === 'dossiers') {
+      return this.actionPermissions.consultationDossier;
+    }
+
+    if (view === 'listes') {
+      return (
+        this.isResponsable &&
+        (this.actionPermissions.preselection || this.actionPermissions.selectionFinale)
+      );
+    }
+
+    if (view === 'ocr') {
+      return this.isResponsable && this.actionPermissions.verifierDossiers;
+    }
+
+    if (view === 'reclamations') {
+      return this.isResponsable && this.actionPermissions.traiterReclamations;
+    }
+
+    if (view === 'inscriptions') {
+      return this.isResponsable && this.actionPermissions.gererInscriptions;
+    }
+
+    if (view === 'statistiques') {
+      return this.isResponsable && this.actionPermissions.consulterStatistiques;
+    }
+
+    if (view === 'deliberations') {
+      return (
+        this.isResponsable &&
+        (this.actionPermissions.selectionFinale || this.actionPermissions.publierListes)
+      );
+    }
+
+    if (view === 'membres') {
+      return this.isResponsable;
+    }
+
+    return true;
+  }
+
+  private notifyActionBlocked(message: string): void {
+    this.toastService.show(message, 'warning');
   }
 
   // ========================================
-  // GETTERS POUR FILTRES
+  // MENU KEBAB
+  // ========================================
+  toggleActionMenu(candidatureId: number): void {
+    if (this.actionMenuOpen === candidatureId) {
+      this.actionMenuOpen = null;
+    } else {
+      this.actionMenuOpen = candidatureId;
+    }
+  }
+
+  closeActionMenu(): void {
+    this.actionMenuOpen = null;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.action-menu-container')) {
+      this.closeActionMenu();
+    }
+  }
+
+  telechargerDossier(candidature: Candidature): void {
+    if (!this.actionPermissions.consultationDossier) {
+      this.notifyActionBlocked("Consultation dossier désactivée par l'administration.");
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .get(`http://localhost:8003/api/candidatures/${candidature.id}/telecharger-dossier/`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      })
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `dossier_${candidature.numero}.zip`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors du téléchargement');
+        },
+      });
+
+    this.closeActionMenu();
+  }
+
+  modifierScore(candidature: Candidature): void {
+    if (!this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked("Vérification dossier désactivée par l'administration.");
+      return;
+    }
+
+    const nouveauScore = prompt(
+      `Modifier le score de ${candidature.candidat_nom}\nScore actuel: ${candidature.score}`,
+    );
+
+    if (nouveauScore) {
+      const score = parseFloat(nouveauScore);
+
+      if (isNaN(score) || score < 0 || score > 20) {
+        alert('❌ Score invalide (doit être entre 0 et 20)');
+        return;
+      }
+
+      const token = this.authService.getAccessToken();
+
+      this.http
+        .put(
+          `http://localhost:8003/api/candidatures/${candidature.id}/modifier-score/`,
+          { score: score },
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .subscribe({
+          next: () => {
+            alert('✅ Score modifié');
+            candidature.score = score;
+          },
+          error: (error) => {
+            console.error('Erreur:', error);
+            alert('❌ Erreur lors de la modification');
+          },
+        });
+    }
+
+    this.closeActionMenu();
+  }
+
+  rejeterCandidature(candidature: Candidature): void {
+    if (!this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked("Rejet candidature désactivé par l'administration.");
+      return;
+    }
+
+    if (
+      !confirm(`Êtes-vous sûr de vouloir rejeter la candidature de ${candidature.candidat_nom} ?`)
+    ) {
+      return;
+    }
+
+    const motif = prompt('Motif du rejet :');
+
+    if (!motif) {
+      alert('❌ Le motif est obligatoire');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/${candidature.id}/rejeter/`,
+        { motif: motif },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          alert('✅ Candidature rejetée');
+          candidature.statut = 'rejete';
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors du rejet');
+        },
+      });
+
+    this.closeActionMenu();
+  }
+
+  // ========================================
+  // GESTION PROCÈS-VERBAUX
+  // ========================================
+  creerPV(): void {
+    if (!this.actionPermissions.selectionFinale) {
+      this.notifyActionBlocked("Création PV désactivée par l'administration.");
+      return;
+    }
+
+    alert('Créer un nouveau PV de délibération');
+  }
+
+  voirPV(pv: ProcesVerbal): void {
+    alert(`Consulter PV: ${pv.titre}`);
+  }
+
+  telechargerPV(pv: ProcesVerbal): void {
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .get(`http://localhost:8003/api/deliberations/${pv.id}/export-pdf/`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      })
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `PV_${pv.id}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors du téléchargement');
+        },
+      });
+  }
+
+  publierPV(pv: ProcesVerbal): void {
+    if (!this.actionPermissions.publierListes) {
+      this.notifyActionBlocked("Publication désactivée par l'administration.");
+      return;
+    }
+
+    if (!confirm('Publier ce PV ? Il ne sera plus modifiable.')) {
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .post(
+        `http://localhost:8003/api/deliberations/${pv.id}/publier/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          alert('✅ PV publié');
+          pv.statut = 'publie';
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors de la publication');
+        },
+      });
+  }
+
+  // ========================================
+  // NAVIGATION & TITRES
   // ========================================
   get candidaturesAvecDossier(): Candidature[] {
     return this.candidatures.filter((c) => c.dossier_depose);
@@ -210,11 +598,21 @@ export class DashboardCommissionComponent implements OnInit {
     return this.candidatures.filter((c) => c.dossier_depose).length;
   }
 
-  // ========================================
-  // NAVIGATION
-  // ========================================
-  switchView(view: string): void {
+  switchView(view: CommissionView): void {
+    if (!this.canAccessView(view)) {
+      this.notifyActionBlocked("Cette section n'est pas active pour votre rôle.");
+      return;
+    }
     this.currentView = view;
+  }
+
+  allerCandidaturesPage(): void {
+    if (!this.actionPermissions.consultationCandidature) {
+      this.notifyActionBlocked("Consultation candidature désactivée par l'administration.");
+      return;
+    }
+
+    this.router.navigate(['/commission/candidatures']);
   }
 
   getViewTitle(): string {
@@ -222,22 +620,20 @@ export class DashboardCommissionComponent implements OnInit {
       dashboard: 'Tableau de bord',
       profil: 'Mon Profil',
       specialites: 'Mes Spécialités',
-      candidatures: 'Gestion des candidatures',
-      'valider-dossier': 'Valider les dossiers',
-      dossiers: 'Tous les dossiers',
-      listes: 'Gestion des listes',
-      membres: 'Membres commission',
-      ocr: 'Analyser avec OCR',
-      reclamations: 'Traiter les réclamations',
-      inscriptions: 'Gérer les inscriptions',
-      statistiques: 'Statistiques',
+      candidatures: 'Candidatures à évaluer',
+      'valider-dossier': 'Dossiers à valider',
+      dossiers: 'Tous les dossiers soumis',
+      listes: "Listes d'admission",
+      membres: 'Membres de la commission',
+      ocr: 'Analyse automatique (OCR)',
+      reclamations: 'Gestion des réclamations',
+      inscriptions: 'Validation des inscriptions',
+      statistiques: 'Statistiques et rapports',
+      deliberations: 'Procès-verbaux de délibération',
     };
     return titles[this.currentView] || 'Tableau de bord';
   }
 
-  // ========================================
-  // SPÉCIALITÉS
-  // ========================================
   getSpecialitesFiltrees(): Specialite[] {
     return this.specialites.filter((s) => s.statut === this.filtreSpecialite);
   }
@@ -247,9 +643,6 @@ export class DashboardCommissionComponent implements OnInit {
     this.switchView('candidatures');
   }
 
-  // ========================================
-  // CANDIDATURES
-  // ========================================
   getCandidaturesFiltrees(): Candidature[] {
     let filtered = [...this.candidatures];
 
@@ -267,18 +660,75 @@ export class DashboardCommissionComponent implements OnInit {
     return filtered;
   }
 
+  // ========================================
+  // FILTRES AVANCÉS
+  // ========================================
+  appliquerFiltres(): void {
+    this.candidaturesFiltrees = this.candidatures.filter((candidature) => {
+      if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
+        return false;
+      }
+
+      if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
+        return false;
+      }
+
+      if (this.filtres.parcours) {
+        const parcours = (candidature.parcours || candidature.specialite || '').toLowerCase();
+        if (!parcours.includes(this.filtres.parcours.toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (this.filtres.recherche) {
+        const recherche = this.filtres.recherche.toLowerCase();
+        const matchNom = candidature.candidat_nom.toLowerCase().includes(recherche);
+        const matchEmail = candidature.candidat_email.toLowerCase().includes(recherche);
+        const matchCIN = (candidature.candidat_cin || '').toLowerCase().includes(recherche);
+
+        if (!matchNom && !matchEmail && !matchCIN) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  resetFiltres(): void {
+    this.filtres = {
+      concours: '',
+      statut: '',
+      parcours: '',
+      recherche: '',
+    };
+    this.candidaturesFiltrees = [...this.candidatures];
+  }
+
   voirDossier(candidature: Candidature): void {
+    if (!this.actionPermissions.consultationDossier) {
+      this.notifyActionBlocked("Consultation dossier désactivée par l'administration.");
+      return;
+    }
+
     if (!candidature.dossier_depose) {
       alert('❌ Aucun dossier déposé pour cette candidature');
       return;
     }
-    alert(`Voir le dossier de ${candidature.candidat_nom}`);
+
+    this.router.navigate(['/commission/dossier', candidature.id]);
+    this.closeActionMenu();
   }
 
   // ========================================
   // MODAL AVIS
   // ========================================
   ouvrirModalAvis(candidature: Candidature): void {
+    if (!this.actionPermissions.consultationCandidature) {
+      this.notifyActionBlocked("Consultation candidature désactivée par l'administration.");
+      return;
+    }
+
     this.candidatureSelectionnee = candidature;
     this.avisText = candidature.avis || '';
     this.avisRecommandation = 'favorable';
@@ -330,14 +780,77 @@ export class DashboardCommissionComponent implements OnInit {
       });
   }
 
+  onStatutChange(candidature: Candidature): void {
+    console.log('Nouveau statut sélectionné:', candidature.nouveau_statut);
+  }
+
+  changerStatut(candidature: Candidature): void {
+    if (!this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked("Changement de statut désactivé par l'administration.");
+      return;
+    }
+
+    if (!candidature.nouveau_statut) {
+      alert('❌ Veuillez sélectionner un statut');
+      return;
+    }
+
+    let motif_rejet = '';
+
+    if (candidature.nouveau_statut === 'rejete') {
+      motif_rejet = prompt('Motif du rejet :') || '';
+      if (!motif_rejet) {
+        alert('❌ Le motif de rejet est obligatoire');
+        return;
+      }
+    }
+
+    if (!confirm(`Confirmer le changement de statut vers "${candidature.nouveau_statut}" ?`)) {
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+        {
+          statut: candidature.nouveau_statut,
+          motif_rejet: motif_rejet,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          alert('✅ Statut changé avec succès !');
+          candidature.statut = candidature.nouveau_statut!;
+          candidature.nouveau_statut = '';
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          alert('❌ Erreur lors du changement de statut');
+        },
+      });
+  }
+
   // ========================================
-  // LISTES (RESPONSABLE)
+  // LISTES
   // ========================================
   getListesByType(): Liste[] {
     return this.listes.filter((l) => l.type === this.typeListe);
   }
 
   nouvelleListe(type: 'preselection' | 'selection'): void {
+    if (type === 'preselection' && !this.actionPermissions.preselection) {
+      this.notifyActionBlocked("Préselection désactivée par l'administration.");
+      return;
+    }
+
+    if (type === 'selection' && !this.actionPermissions.selectionFinale) {
+      this.notifyActionBlocked("Sélection finale désactivée par l'administration.");
+      return;
+    }
+
     alert(`Créer une nouvelle liste de ${type}`);
   }
 
@@ -346,6 +859,11 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   exporterListe(liste: Liste): void {
+    if (!this.actionPermissions.publierListes) {
+      this.notifyActionBlocked("Export des listes désactivé par l'administration.");
+      return;
+    }
+
     const token = this.authService.getAccessToken();
 
     this.http
@@ -370,6 +888,11 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   archiverListe(liste: Liste): void {
+    if (!this.actionPermissions.publierListes) {
+      this.notifyActionBlocked("Archivage des listes désactivé par l'administration.");
+      return;
+    }
+
     const action = liste.statut === 'active' ? 'archiver' : 'désarchiver';
 
     if (confirm(`Voulez-vous ${action} cette liste ?`)) {
@@ -388,24 +911,27 @@ export class DashboardCommissionComponent implements OnInit {
           },
           error: (error) => {
             console.error('Erreur:', error);
-            alert(`❌ Erreur lors de l'archivage`);
+            alert("❌ Erreur lors de l'archivage");
           },
         });
     }
   }
 
   // ========================================
-  // OCR (RESPONSABLE)
+  // OCR
   // ========================================
-  ouvrirModalOCR(dossier?: DossierOCR): void {
-    this.dossierOCRSelectionne = dossier || null;
+  ouvrirModalOCR(): void {
+    if (!this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked("Analyse dossier désactivée par l'administration.");
+      return;
+    }
+
     this.fichierOCR = null;
     this.showModalOCR = true;
   }
 
   fermerModalOCR(): void {
     this.showModalOCR = false;
-    this.dossierOCRSelectionne = null;
     this.fichierOCR = null;
   }
 
@@ -421,6 +947,11 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   lancerAnalyseOCR(): void {
+    if (!this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked("Analyse dossier désactivée par l'administration.");
+      return;
+    }
+
     if (!this.fichierOCR) {
       alert('❌ Veuillez sélectionner un fichier');
       return;
@@ -459,9 +990,14 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   // ========================================
-  // RÉCLAMATIONS (RESPONSABLE)
+  // RÉCLAMATIONS
   // ========================================
   traiterReclamation(reclamation: Reclamation): void {
+    if (!this.actionPermissions.traiterReclamations) {
+      this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
+      return;
+    }
+
     const reponse = prompt('Saisir la réponse à la réclamation :');
     if (reponse) {
       const token = this.authService.getAccessToken();
@@ -497,7 +1033,7 @@ export class DashboardCommissionComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
-        next: (response) => {
+        next: () => {
           alert('✅ Profil mis à jour avec succès !');
           this.currentUser = { ...this.currentUser, ...this.profileData };
         },
@@ -546,9 +1082,6 @@ export class DashboardCommissionComponent implements OnInit {
       });
   }
 
-  // ========================================
-  // DÉCONNEXION
-  // ========================================
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);

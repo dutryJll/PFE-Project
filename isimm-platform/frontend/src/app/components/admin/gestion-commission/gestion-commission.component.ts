@@ -28,6 +28,7 @@ export class GestionCommissionComponent implements OnInit {
   membres: MembreCommission[] = [];
   showModal: boolean = false;
   showActionsMenu: number | null = null;
+  isUsingFallbackData: boolean = false;
 
   nouveauMembre = {
     first_name: '',
@@ -71,11 +72,13 @@ export class GestionCommissionComponent implements OnInit {
       >('http://localhost:8001/api/auth/commission-members/', { headers: { Authorization: `Bearer ${token}` } })
       .subscribe({
         next: (response) => {
+          this.isUsingFallbackData = false;
           this.membres = response;
           console.log('✅ Membres chargés depuis la base:', this.membres);
         },
         error: (error) => {
           console.error('❌ Erreur chargement membres:', error);
+          this.isUsingFallbackData = true;
           // En cas d'erreur, utiliser des données de test
           this.membres = [
             {
@@ -247,13 +250,27 @@ export class GestionCommissionComponent implements OnInit {
         `⚠️ Supprimer définitivement ${membre.first_name} ${membre.last_name} ?\n\nCette action est irréversible.`,
       )
     ) {
+      // En mode fallback (backend indisponible), supprimer localement pour éviter un faux blocage UI.
+      if (this.isUsingFallbackData) {
+        const index = this.membres.indexOf(membre);
+        if (index > -1) {
+          this.membres.splice(index, 1);
+        }
+        this.showActionsMenu = null;
+        alert('⚠️ Suppression locale uniquement (backend auth indisponible).');
+        return;
+      }
+
       const token = this.authService.getAccessToken();
 
       // ✅ SUPPRIMER EN BASE DE DONNÉES
       this.http
-        .delete(`http://localhost:8001/api/auth/users/${membre.id}/delete/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        .delete(
+          `http://localhost:8001/api/auth/commission-members/${membre.id}/delete/?email=${encodeURIComponent(membre.email)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        )
         .subscribe({
           next: (response: any) => {
             console.log('✅ Membre supprimé de la base:', response);
@@ -267,7 +284,17 @@ export class GestionCommissionComponent implements OnInit {
           },
           error: (error) => {
             console.error('❌ Erreur suppression:', error);
-            alert('⚠️ Erreur lors de la suppression du membre');
+            if (error.status === 0) {
+              alert('⚠️ Backend auth inaccessible. Vérifiez le service sur le port 8001.');
+            } else if (error.status === 403) {
+              alert('⚠️ Accès refusé: vous devez être connecté avec un compte admin.');
+            } else if (error.status === 404) {
+              alert('⚠️ Membre introuvable ou déjà supprimé.');
+            } else if (error.error?.error) {
+              alert(`⚠️ ${error.error.error}`);
+            } else {
+              alert('⚠️ Erreur lors de la suppression du membre');
+            }
             this.showActionsMenu = null;
           },
         });

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, ActionRole
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle User"""
@@ -44,3 +44,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('password2')
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class ActionRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActionRole
+        fields = [
+            'id',
+            'action_no',
+            'action_name',
+            'target_role',
+            'enabled',
+            'description',
+        ]

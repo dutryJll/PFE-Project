@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router'; // ✅ RouterLink supprimé
+import { ActivatedRoute, Router } from '@angular/router'; // ✅ RouterLink supprimé
 import { CandidatureService } from '../../../services/candidature.service';
 
 interface Candidature {
@@ -39,6 +39,8 @@ interface Candidature {
 export class ConsulterCandidaturesComponent implements OnInit {
   candidatures: Candidature[] = [];
   candidaturesFiltrees: Candidature[] = [];
+  selectedCandidature: Candidature | null = null;
+  detailRequested: boolean = false;
 
   filtres = {
     type: '',
@@ -48,11 +50,25 @@ export class ConsulterCandidaturesComponent implements OnInit {
 
   constructor(
     private candidatureService: CandidatureService,
+    private route: ActivatedRoute,
     private router: Router,
   ) {}
 
   ngOnInit(): void {
     this.loadCandidatures();
+
+    this.route.paramMap.subscribe((params) => {
+      const rawId = params.get('id');
+      const id = rawId ? Number(rawId) : NaN;
+
+      if (rawId && !Number.isNaN(id)) {
+        this.detailRequested = true;
+        this.selectedCandidature = this.candidatures.find((item) => item.id === id) || null;
+      } else {
+        this.detailRequested = false;
+        this.selectedCandidature = null;
+      }
+    });
   }
 
   loadCandidatures(): void {
@@ -224,7 +240,11 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
   }
 
   voirDetails(candidature: Candidature): void {
-    console.log('Détails:', candidature);
+    this.router.navigate(['/commission/candidatures', candidature.id]);
+  }
+
+  retourListe(): void {
+    this.router.navigate(['/commission/candidatures']);
   }
 
   voirDossier(candidature: Candidature): void {

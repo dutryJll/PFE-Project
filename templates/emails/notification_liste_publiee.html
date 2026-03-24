@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 10px 10px 0 0;
+      }
+      .content {
+        background: #f8f9fa;
+        padding: 30px;
+        border-radius: 0 0 10px 10px;
+      }
+      .success-box {
+        background: #d1fae5;
+        padding: 20px;
+        margin: 20px 0;
+        border-left: 4px solid #10b981;
+        border-radius: 5px;
+      }
+      .info-box {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-left: 4px solid #3b82f6;
+        border-radius: 5px;
+      }
+      .warning-box {
+        background: #fff3cd;
+        padding: 15px;
+        margin: 20px 0;
+        border-left: 4px solid #ffc107;
+        border-radius: 5px;
+      }
+      .button {
+        display: inline-block;
+        padding: 15px 30px;
+        background: #10b981;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-weight: bold;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background: #f1f5f9;
+        font-weight: bold;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎉 FÉLICITATIONS !</h1>
+      </div>
+      <div class="content">
+        <p>Bonjour {{ candidat.first_name }} {{ candidat.last_name }},</p>
+
+        {% if type_liste == 'principale' %}
+        <div class="success-box">
+          <h3>✅ Vous avez été SÉLECTIONNÉ(E) !</h3>
+          <p>
+            <strong
+              >Vous figurez sur la liste principale d'admission pour :</strong
+            >
+          </p>
+          <p style="font-size: 18px; font-weight: bold; color: #065f46">
+            {{ master.nom }}
+          </p>
+        </div>
+        {% else %}
+        <div class="info-box">
+          <h3>📋 Vous êtes sur la LISTE D'ATTENTE</h3>
+          <p><strong>Vous figurez sur la liste d'attente pour :</strong></p>
+          <p style="font-size: 18px; font-weight: bold; color: #1e40af">
+            {{ master.nom }}
+          </p>
+          <p>Vous serez contacté(e) si des places se libèrent.</p>
+        </div>
+        {% endif %}
+
+        <table>
+          <tr>
+            <th>Détail</th>
+            <th>Information</th>
+          </tr>
+          <tr>
+            <td><strong>Votre position</strong></td>
+            <td>{{ position }}</td>
+          </tr>
+          <tr>
+            <td><strong>Votre score</strong></td>
+            <td>{{ score }}/20</td>
+          </tr>
+          <tr>
+            <td><strong>Itération</strong></td>
+            <td>{{ iteration }}</td>
+          </tr>
+          <tr>
+            <td><strong>Date de publication</strong></td>
+            <td>{{ date_publication }}</td>
+          </tr>
+        </table>
+
+        {% if type_liste == 'principale' %}
+        <div class="warning-box">
+          <h3>⚠️ PROCHAINES ÉTAPES - IMPORTANT</h3>
+          <ol>
+            <li>
+              <strong>Effectuez le paiement</strong> des frais d'inscription
+              avant le <strong>{{ date_limite_paiement }}</strong>
+            </li>
+            <li>
+              Accédez au site
+              <a href="http://www.inscription.tn">www.inscription.tn</a>
+            </li>
+            <li>Confirmez votre inscription dans votre espace candidat</li>
+          </ol>
+          <p style="color: #dc2626; font-weight: bold">
+            ⏰ ATTENTION : Passé ce délai, votre place sera attribuée à un
+            candidat en liste d'attente !
+          </p>
+        </div>
+
+        <a href="http://localhost:4200/candidat/dashboard" class="button"
+          >Accéder à mon espace candidat</a
+        >
+        {% endif %}
+
+        <div class="footer">
+          <p>
+            Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+          </p>
+          <p>
+            Pour toute question, contactez :
+            <a href="mailto:admissions@isimm.tn">admissions@isimm.tn</a>
+          </p>
+          <p>
+            © 2026 ISIMM - Institut Supérieur d'Informatique et de Mathématiques
+            de Monastir
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

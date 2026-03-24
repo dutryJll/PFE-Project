@@ -1,8 +1,15 @@
 <div class="gestion-commission-page">
   <div class="page-header">
-    <button class="btn-back" (click)="retourDashboard()">← Retour au dashboard</button>
-    <h1>Gestion de la Commission</h1>
-    <button class="btn-add" (click)="ouvrirModal()">+ Ajouter un membre</button>
+    <div class="header-copy">
+      <p class="eyebrow">Administration</p>
+      <h1>Gestion de la Commission</h1>
+      <p class="subtitle">Organisation des membres, roles et statuts de la commission</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-back" (click)="retourDashboard()">Retour au dashboard</button>
+      <button class="btn-add" (click)="ouvrirModal()">Ajouter un membre</button>
+    </div>
   </div>
 
   <div class="table-container">
@@ -21,18 +28,18 @@
       </thead>
       <tbody>
         <tr *ngFor="let membre of membres" [class.suspendu]="membre.statut === 'suspendu'">
-          <td>
-            <strong>{{ membre.first_name }} {{ membre.last_name }}</strong>
+          <td data-label="Nom complet">
+            <strong class="person-name">{{ membre.first_name }} {{ membre.last_name }}</strong>
           </td>
-          <td>{{ membre.email }}</td>
-          <td>{{ membre.specialite }}</td>
-          <td>{{ membre.grade }}</td>
-          <td>
+          <td data-label="Email" class="cell-email">{{ membre.email }}</td>
+          <td data-label="Spécialité">{{ membre.specialite }}</td>
+          <td data-label="Grade">{{ membre.grade }}</td>
+          <td data-label="Rôle">
             <span class="badge" [class.responsable]="membre.role === 'responsable_commission'">
               {{ membre.role === 'responsable_commission' ? 'Responsable' : 'Membre' }}
             </span>
           </td>
-          <td>
+          <td data-label="Statut">
             <span
               class="statut-badge"
               [class.actif]="membre.statut === 'actif'"
@@ -41,8 +48,8 @@
               {{ membre.statut }}
             </span>
           </td>
-          <td>{{ membre.date_creation | date: 'dd/MM/yyyy' }}</td>
-          <td class="actions-cell">
+          <td data-label="Date création">{{ membre.date_creation | date: 'dd/MM/yyyy' }}</td>
+          <td data-label="Actions" class="actions-cell">
             <button class="btn-kebab" (click)="toggleActionsMenu(membre.id)">⋮</button>
 
             <div class="kebab-menu" *ngIf="showActionsMenu === membre.id">

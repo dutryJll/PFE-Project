@@ -35,7 +35,7 @@ ROOT_URLCONF = 'candidature_service.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'candidature_app' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -50,7 +50,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'candidature_service.wsgi.application'
 
-# DATABASES - UTILISER SQLITE (pas d'erreur Unicode)
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -58,6 +58,7 @@ DATABASES = {
     }
 }
 
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -65,14 +66,19 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# Internationalization
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Tunis'
 USE_I18N = True
 USE_TZ = True
 
+# Static files
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'uploads'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -87,15 +93,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-}  # ✅ ACCOLADE FERMANTE AJOUTÉE
+}
 
 # ========================================
-# CONFIGURATION EMAIL
+# EMAIL CONFIGURATION
 # ========================================
-
-# Pour développement (affiche emails dans la console)
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-#DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
+# Pour développement (affiche dans console)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
 
 # Pour production (décommenter et configurer)
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -103,14 +108,18 @@ REST_FRAMEWORK = {
 # EMAIL_PORT = 587
 # EMAIL_USE_TLS = True
 # EMAIL_HOST_USER = 'votre-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'votre-mot-de-passe-app'
-# DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'votre-email@gmail.com'  # ✅ REMPLACER PAR VOTRE EMAIL
-EMAIL_HOST_PASSWORD = 'abcd efgh ijkl mnop'  # ✅ REMPLACER PAR APP PASSWORD
-DEFAULT_FROM_EMAIL = 'ISIMM Admission <votre-email@gmail.com>'
-EMAIL_SUBJECT_PREFIX = '[ISIMM] '
+# EMAIL_HOST_PASSWORD = 'votre-app-password'
+# DEFAULT_FROM_EMAIL = 'ISIMM Admission <votre-email@gmail.com>'
+
+# ========================================
+# CELERY CONFIGURATION
+# ========================================
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Africa/Tunis'
+
+# Frontend URL
 FRONTEND_URL = 'http://localhost:4200'

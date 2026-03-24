@@ -8,6 +8,9 @@
     </div>
 
     <nav class="sidebar-nav">
+      <!-- GÉNÉRAL -->
+      <div class="nav-section-title">GÉNÉRAL</div>
+
       <a
         class="nav-item"
         [class.active]="currentView === 'dashboard'"
@@ -31,83 +34,117 @@
         <span>Mes Spécialités</span>
       </a>
 
+      <!-- ÉVALUATION -->
+      <div class="nav-section-title">ÉVALUATION</div>
+
       <a
         class="nav-item"
+        *ngIf="actionPermissions.consultationCandidature"
         [class.active]="currentView === 'candidatures'"
         (click)="switchView('candidatures')"
       >
         <i class="fas fa-file-alt"></i>
-        <span>Candidatures</span>
+        <span>Candidatures à évaluer</span>
+        <span class="badge-count">{{ candidatures.length }}</span>
       </a>
 
       <a
         class="nav-item"
+        *ngIf="actionPermissions.verifierDossiers"
         [class.active]="currentView === 'valider-dossier'"
         (click)="switchView('valider-dossier')"
       >
         <i class="fas fa-check-circle"></i>
-        <span>Valider Dossiers</span>
+        <span>étude de dossier de candidature </span>
+        <span class="badge-warning">{{ candidaturesAvecDossier.length }}</span>
       </a>
 
       <a
         class="nav-item"
+        *ngIf="actionPermissions.consultationDossier"
         [class.active]="currentView === 'dossiers'"
         (click)="switchView('dossiers')"
       >
         <i class="fas fa-folder-open"></i>
-        <span>Tous les dossiers</span>
+        <span>Tous les dossiers soumis</span>
       </a>
 
+      <!-- RESPONSABLE -->
       <div class="nav-section-title" *ngIf="isResponsable">RESPONSABLE</div>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'ocr'"
-        (click)="switchView('ocr')"
-      >
-        <i class="fas fa-robot"></i>
-        <span>Analyser avec OCR</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'reclamations'"
-        (click)="switchView('reclamations')"
-      >
-        <i class="fas fa-exclamation-circle"></i>
-        <span>Traiter Réclamations</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'inscriptions'"
-        (click)="switchView('inscriptions')"
-      >
-        <i class="fas fa-user-plus"></i>
-        <span>Gérer Inscriptions</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable"
+        *ngIf="
+          isResponsable && (actionPermissions.preselection || actionPermissions.selectionFinale)
+        "
         [class.active]="currentView === 'listes'"
         (click)="switchView('listes')"
       >
         <i class="fas fa-list-alt"></i>
-        <span>Gestion Listes</span>
+        <span>Listes d'admission</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable && actionPermissions.verifierDossiers"
+        [class.active]="currentView === 'ocr'"
+        (click)="switchView('ocr')"
+      >
+        <i class="fas fa-robot"></i>
+        <span>Analyse dossier</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable && actionPermissions.traiterReclamations"
+        [class.active]="currentView === 'reclamations'"
+        (click)="switchView('reclamations')"
+      >
+        <i class="fas fa-exclamation-circle"></i>
+        <span>Traitement de réclamations</span>
+        <span class="badge-danger">{{ reclamations.length }}</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable && actionPermissions.gererInscriptions"
+        [class.active]="currentView === 'inscriptions'"
+        (click)="switchView('inscriptions')"
+      >
+        <i class="fas fa-user-plus"></i>
+        <span>Validation des inscriptions</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="
+          isResponsable && (actionPermissions.selectionFinale || actionPermissions.publierListes)
+        "
+        [class.active]="currentView === 'deliberations'"
+        (click)="switchView('deliberations')"
+      >
+        <i class="fas fa-file-signature"></i>
+        <span>PV de délibération</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable && actionPermissions.consulterStatistiques"
+        [class.active]="currentView === 'statistiques'"
+        (click)="switchView('statistiques')"
+      >
+        <i class="fas fa-chart-bar"></i>
+        <span>Statistiques et rapports</span>
       </a>
 
       <a
         class="nav-item"
         *ngIf="isResponsable"
-        [class.active]="currentView === 'statistiques'"
-        (click)="switchView('statistiques')"
+        [class.active]="currentView === 'membres'"
+        (click)="switchView('membres')"
       >
-        <i class="fas fa-chart-bar"></i>
-        <span>Statistiques</span>
+        <i class="fas fa-users"></i>
+        <span>Membres de la commission</span>
       </a>
 
       <div class="nav-divider"></div>
@@ -177,7 +214,6 @@
         </div>
       </div>
 
-      <!-- Activités récentes -->
       <div class="section-card">
         <h2>📊 Activités récentes</h2>
         <p>Dernières actions sur vos spécialités</p>
@@ -301,39 +337,96 @@
       </div>
     </div>
 
-    <!-- ✅ CANDIDATURES -->
-    <div *ngIf="currentView === 'candidatures'" class="view-content">
+    <!-- ✅ CANDIDATURES AVEC MENU KEBAB ET FILTRES AVANCÉS -->
+    <div
+      *ngIf="currentView === 'candidatures' && actionPermissions.consultationCandidature"
+      class="view-content"
+    >
       <div class="section-card">
         <div class="candidatures-header">
           <h2>📋 Gestion des candidatures</h2>
         </div>
 
-        <div class="filters-bar">
-          <select class="filter-select" [(ngModel)]="filtreStatut">
-            <option value="">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
-            <option value="accepte">Accepté</option>
-            <option value="rejete">Rejeté</option>
-          </select>
+        <!-- FILTRES AVANCÉS -->
+        <div class="filters-advanced">
+          <div class="filter-row">
+            <div class="filter-item">
+              <label class="filter-label">Concours</label>
+              <select class="filter-select" [(ngModel)]="filtres.concours">
+                <option value="">Tous les concours</option>
+                <option value="masters">Masters</option>
+                <option value="ingenieur">Cycle Ingénieur</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label class="filter-label">Statut</label>
+              <select class="filter-select" [(ngModel)]="filtres.statut">
+                <option value="">Tous les statuts</option>
+                <option value="soumis">Soumis</option>
+                <option value="sous_examen">En Analyse</option>
+                <option value="preselectionne">Présélectionné</option>
+                <option value="dossier_depose">Dossiers Validés</option>
+                <option value="rejete">Refusés</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label class="filter-label">Parcours</label>
+              <select class="filter-select" [(ngModel)]="filtres.parcours">
+                <option value="">Tous les parcours</option>
+                <option value="ia">Intelligence Artificielle</option>
+                <option value="securite">Sécurité des Systèmes</option>
+                <option value="web">Ingénierie Web</option>
+                <option value="data">Data Science</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label class="filter-label">Recherche</label>
+              <input
+                type="text"
+                class="filter-input"
+                placeholder="Nom, CIN, Email..."
+                [(ngModel)]="filtres.recherche"
+                (input)="appliquerFiltres()"
+              />
+            </div>
+
+            <div class="filter-actions">
+              <button class="btn-filter" (click)="appliquerFiltres()">
+                <i class="fas fa-search"></i> Rechercher
+              </button>
+              <button class="btn-reset" (click)="resetFiltres()">
+                <i class="fas fa-redo"></i> Réinitialiser
+              </button>
+            </div>
+          </div>
         </div>
 
+        <!-- TABLEAU AVEC MENU KEBAB -->
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
+                <th>N° Candidature</th>
                 <th>Candidat</th>
                 <th>Spécialité</th>
                 <th>Score</th>
                 <th>Dossier</th>
                 <th>Statut</th>
-                <th>Avis</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let candidature of getCandidaturesFiltrees()">
+              <tr *ngFor="let candidature of candidaturesFiltrees">
+                <td>
+                  <strong class="numero-candidature">{{ candidature.numero }}</strong>
+                </td>
                 <td>
                   <strong>{{ candidature.candidat_nom }}</strong>
+                  <br />
+                  <small>{{ candidature.candidat_email }}</small>
                 </td>
                 <td>{{ candidature.specialite }}</td>
                 <td>
@@ -350,16 +443,72 @@
                   </span>
                 </td>
                 <td>
-                  <span class="avis-preview" *ngIf="candidature.avis">{{ candidature.avis }}</span>
-                  <span class="no-avis" *ngIf="!candidature.avis">Aucun avis</span>
-                </td>
-                <td>
-                  <button class="btn-action voir" (click)="voirDossier(candidature)">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="btn-action" (click)="ouvrirModalAvis(candidature)">
-                    <i class="fas fa-comment"></i>
-                  </button>
+                  <!-- MENU KEBAB -->
+                  <div class="action-menu-container">
+                    <button class="btn-kebab" (click)="toggleActionMenu(candidature.id)">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+
+                    <div
+                      class="action-menu-dropdown"
+                      *ngIf="actionMenuOpen === candidature.id"
+                      (click)="$event.stopPropagation()"
+                    >
+                      <button
+                        class="action-menu-item"
+                        *ngIf="actionPermissions.consultationDossier"
+                        (click)="voirDossier(candidature)"
+                      >
+                        <i class="fas fa-eye"></i>
+                        <span>Voir dossier</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item"
+                        *ngIf="actionPermissions.consultationCandidature"
+                        (click)="ouvrirModalAvis(candidature)"
+                      >
+                        <i class="fas fa-comment"></i>
+                        <span>Donner un avis</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item"
+                        *ngIf="actionPermissions.consultationDossier"
+                        (click)="telechargerDossier(candidature)"
+                      >
+                        <i class="fas fa-download"></i>
+                        <span>Télécharger</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item"
+                        *ngIf="actionPermissions.verifierDossiers"
+                        (click)="modifierScore(candidature)"
+                      >
+                        <i class="fas fa-edit"></i>
+                        <span>Modifier score</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item"
+                        *ngIf="actionPermissions.verifierDossiers"
+                        (click)="changerStatut(candidature)"
+                      >
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Changer statut</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item danger"
+                        *ngIf="actionPermissions.verifierDossiers"
+                        (click)="rejeterCandidature(candidature)"
+                      >
+                        <i class="fas fa-times-circle"></i>
+                        <span>Rejeter</span>
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -369,7 +518,10 @@
     </div>
 
     <!-- ✅ VALIDER DOSSIERS -->
-    <div *ngIf="currentView === 'valider-dossier'" class="view-content">
+    <div
+      *ngIf="currentView === 'valider-dossier' && actionPermissions.verifierDossiers"
+      class="view-content"
+    >
       <div class="section-card">
         <h2>✅ Validation des dossiers</h2>
         <div class="table-container">
@@ -412,13 +564,17 @@
     </div>
 
     <!-- ✅ TOUS LES DOSSIERS -->
-    <div *ngIf="currentView === 'dossiers'" class="view-content">
+    <div
+      *ngIf="currentView === 'dossiers' && actionPermissions.consultationDossier"
+      class="view-content"
+    >
       <div class="section-card">
         <h2>📁 Tous les dossiers</h2>
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
+                <th>N° Candidature</th>
                 <th>Candidat</th>
                 <th>Spécialité</th>
                 <th>Score</th>
@@ -428,6 +584,9 @@
             </thead>
             <tbody>
               <tr *ngFor="let candidature of candidatures">
+                <td>
+                  <strong class="numero-candidature">{{ candidature.numero }}</strong>
+                </td>
                 <td>
                   <strong>{{ candidature.candidat_nom }}</strong>
                 </td>
@@ -452,8 +611,95 @@
       </div>
     </div>
 
+    <!-- ✅ LISTES (RESPONSABLE) -->
+    <div
+      *ngIf="
+        currentView === 'listes' &&
+        isResponsable &&
+        (actionPermissions.preselection || actionPermissions.selectionFinale)
+      "
+      class="view-content"
+    >
+      <div class="section-card">
+        <div class="listes-header">
+          <h2>📋 Gestion des listes</h2>
+          <div class="listes-actions">
+            <button
+              class="btn-primary"
+              *ngIf="actionPermissions.preselection"
+              (click)="nouvelleListe('preselection')"
+            >
+              <i class="fas fa-plus"></i> Nouvelle présélection
+            </button>
+            <button
+              class="btn-primary"
+              *ngIf="actionPermissions.selectionFinale"
+              (click)="nouvelleListe('selection')"
+            >
+              <i class="fas fa-plus"></i> Nouvelle sélection
+            </button>
+          </div>
+        </div>
+
+        <div class="listes-tabs">
+          <button
+            class="liste-tab"
+            [class.active]="typeListe === 'preselection'"
+            (click)="typeListe = 'preselection'"
+          >
+            Présélection
+          </button>
+          <button
+            class="liste-tab"
+            [class.active]="typeListe === 'selection'"
+            (click)="typeListe = 'selection'"
+          >
+            Sélection
+          </button>
+        </div>
+
+        <div class="listes-grid">
+          <div class="liste-card" *ngFor="let liste of getListesByType()">
+            <div class="liste-header">
+              <h3>{{ liste.nom }}</h3>
+              <span class="liste-badge" [class.active]="liste.statut === 'active'">
+                {{ liste.statut }}
+              </span>
+            </div>
+            <div class="liste-info">
+              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
+              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
+              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
+            </div>
+            <div class="liste-actions">
+              <button class="btn-action voir" (click)="modifierListe(liste)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button
+                class="btn-action"
+                *ngIf="actionPermissions.publierListes"
+                (click)="exporterListe(liste)"
+              >
+                <i class="fas fa-download"></i>
+              </button>
+              <button
+                class="btn-action archived"
+                *ngIf="actionPermissions.publierListes"
+                (click)="archiverListe(liste)"
+              >
+                <i class="fas fa-archive"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ✅ OCR (RESPONSABLE) -->
-    <div *ngIf="currentView === 'ocr' && isResponsable" class="view-content">
+    <div
+      *ngIf="currentView === 'ocr' && isResponsable && actionPermissions.verifierDossiers"
+      class="view-content"
+    >
       <div class="section-card">
         <div class="section-header">
           <h2>🤖 Analyser les documents avec OCR</h2>
@@ -498,7 +744,12 @@
     </div>
 
     <!-- ✅ RÉCLAMATIONS (RESPONSABLE) -->
-    <div *ngIf="currentView === 'reclamations' && isResponsable" class="view-content">
+    <div
+      *ngIf="
+        currentView === 'reclamations' && isResponsable && actionPermissions.traiterReclamations
+      "
+      class="view-content"
+    >
       <div class="section-card">
         <h2>📢 Traiter les réclamations</h2>
         <div class="reclamations-list">
@@ -527,80 +778,101 @@
       </div>
     </div>
 
+    <!-- ✅ PROCÈS-VERBAUX (RESPONSABLE) -->
+    <div
+      *ngIf="
+        currentView === 'deliberations' &&
+        isResponsable &&
+        (actionPermissions.selectionFinale || actionPermissions.publierListes)
+      "
+      class="view-content"
+    >
+      <div class="section-card">
+        <div class="section-header">
+          <h2>📝 Procès-verbaux de délibération</h2>
+          <button class="btn-primary" *ngIf="actionPermissions.selectionFinale" (click)="creerPV()">
+            <i class="fas fa-plus"></i> Nouveau PV
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>Titre</th>
+                <th>Master</th>
+                <th>Date réunion</th>
+                <th>Participants</th>
+                <th>Admis/Total</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pv of procesVerbaux">
+                <td>
+                  <strong>{{ pv.titre }}</strong>
+                </td>
+                <td>{{ pv.master_nom }}</td>
+                <td>{{ pv.date_reunion | date: 'dd/MM/yyyy' }}</td>
+                <td>{{ pv.nb_participants }}</td>
+                <td>{{ pv.nb_admis }} / {{ pv.nb_candidatures }}</td>
+                <td>
+                  <span class="statut-badge" [ngClass]="'badge-' + pv.statut">
+                    {{ pv.statut }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action voir" (click)="voirPV(pv)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn-action" (click)="telechargerPV(pv)">
+                    <i class="fas fa-download"></i>
+                  </button>
+                  <button
+                    class="btn-action"
+                    *ngIf="pv.statut !== 'publie' && actionPermissions.publierListes"
+                    (click)="publierPV(pv)"
+                  >
+                    <i class="fas fa-paper-plane"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ✅ INSCRIPTIONS (RESPONSABLE) -->
-    <div *ngIf="currentView === 'inscriptions' && isResponsable" class="view-content">
+    <div
+      *ngIf="currentView === 'inscriptions' && isResponsable && actionPermissions.gererInscriptions"
+      class="view-content"
+    >
       <div class="section-card">
         <h2>📝 Gérer les inscriptions</h2>
         <p>Fonctionnalité à implémenter - Gestion des inscriptions aux masters</p>
       </div>
     </div>
 
-    <!-- ✅ LISTES (RESPONSABLE) -->
-    <div *ngIf="currentView === 'listes' && isResponsable" class="view-content">
-      <div class="section-card">
-        <div class="listes-header">
-          <h2>📋 Gestion des listes</h2>
-          <div class="listes-actions">
-            <button class="btn-primary" (click)="nouvelleListe('preselection')">
-              <i class="fas fa-plus"></i> Nouvelle présélection
-            </button>
-            <button class="btn-primary" (click)="nouvelleListe('selection')">
-              <i class="fas fa-plus"></i> Nouvelle sélection
-            </button>
-          </div>
-        </div>
-
-        <div class="listes-tabs">
-          <button
-            class="liste-tab"
-            [class.active]="typeListe === 'preselection'"
-            (click)="typeListe = 'preselection'"
-          >
-            Présélection
-          </button>
-          <button
-            class="liste-tab"
-            [class.active]="typeListe === 'selection'"
-            (click)="typeListe = 'selection'"
-          >
-            Sélection
-          </button>
-        </div>
-
-        <div class="listes-grid">
-          <div class="liste-card" *ngFor="let liste of getListesByType()">
-            <div class="liste-header">
-              <h3>{{ liste.nom }}</h3>
-              <span class="liste-badge" [class.active]="liste.statut === 'active'">
-                {{ liste.statut }}
-              </span>
-            </div>
-            <div class="liste-info">
-              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
-              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
-              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
-            </div>
-            <div class="liste-actions">
-              <button class="btn-action voir" (click)="modifierListe(liste)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn-action" (click)="exporterListe(liste)">
-                <i class="fas fa-download"></i>
-              </button>
-              <button class="btn-action archived" (click)="archiverListe(liste)">
-                <i class="fas fa-archive"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ✅ STATISTIQUES (RESPONSABLE) -->
-    <div *ngIf="currentView === 'statistiques' && isResponsable" class="view-content">
+    <div
+      *ngIf="
+        currentView === 'statistiques' && isResponsable && actionPermissions.consulterStatistiques
+      "
+      class="view-content"
+    >
       <div class="section-card">
         <h2>📊 Statistiques détaillées</h2>
         <p>Graphiques et analyses à implémenter</p>
+      </div>
+    </div>
+
+    <!-- ✅ MEMBRES (RESPONSABLE) -->
+    <div *ngIf="currentView === 'membres' && isResponsable" class="view-content">
+      <div class="section-card">
+        <h2>👥 Membres de la commission</h2>
+        <p>Gestion des membres - À implémenter</p>
       </div>
     </div>
   </main>

@@ -1,1 +1,13 @@
 <router-outlet />
+
+<div
+  class="app-toast"
+  *ngIf="toastService.message$ | async as toast"
+  [class.toast-success]="toast.type === 'success'"
+  [class.toast-info]="toast.type === 'info'"
+  [class.toast-warning]="toast.type === 'warning'"
+  [class.toast-error]="toast.type === 'error'"
+  (click)="toastService.clear()"
+>
+  {{ toast.text }}
+</div>

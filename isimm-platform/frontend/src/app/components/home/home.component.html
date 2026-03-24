@@ -6,7 +6,7 @@
       <img src="/ISIMM_LOGO.png" />
       <div class="logo-text">
         <span class="main-title">ISIMM Admissions</span>
-        <span class="subtitle">Plateforme Officielle</span>
+        <span class="subtitle">{{ tr.nav.official }}</span>
       </div>
     </div>
 
@@ -18,7 +18,7 @@
           class="nav-link"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
-          >Accueil</a
+          >{{ tr.nav.home }}</a
         >
       </li>
       <li>
@@ -27,32 +27,58 @@
           class="nav-link"
           routerLinkActive="active"
           (click)="goToMasters($event)"
-          >Formation</a
+          >{{ tr.nav.formation }}</a
         >
       </li>
-      <li><a href="#contact">Contact</a></li>
+
+      <li>
+        <a routerLink="/guide-etudiant" routerLinkActive="active">{{ tr.nav.guide }}</a>
+      </li>
+      <li>
+        <a href="#contact">{{ tr.nav.contact }}</a>
+      </li>
     </ul>
 
-    <!-- Bouton connexion -->
-    <a routerLink="/login" class="btn-connexion">Se connecter</a>
+    <div class="nav-actions">
+      <div class="lang-dropdown" (click)="$event.stopPropagation()">
+        <a
+          class="dropdown-toggle nav-link"
+          href="#"
+          role="menuitem"
+          aria-label="Langue"
+          aria-haspopup="true"
+          [attr.aria-expanded]="showLangMenu"
+          (click)="toggleLanguageMenu($event)"
+        >
+          {{ tr.nav.languageLabel }}
+          <b class="caret"></b>
+        </a>
+
+        <div class="lang-menu" *ngIf="showLangMenu">
+          <a href="#" (click)="selectLanguage('fr', $event)">{{ tr.nav.languageFr }}</a>
+          <a href="#" (click)="selectLanguage('en', $event)">{{ tr.nav.languageEn }}</a>
+        </div>
+      </div>
+
+      <a routerLink="/login" class="btn-connexion">{{ tr.nav.login }}</a>
+    </div>
   </nav>
 </header>
 
 <!-- Hero Section MODIFIÉ -->
 <section class="hero" id="accueil">
   <div class="hero-content">
-    <h1>
-      Bienvenue sur la plateforme d'admission
-      <span>ISIMM</span>
-    </h1>
-    <p>
-      Candidatez en ligne aux Masters et au Cycle d'Ingénieur de l'Institut Supérieur d'Informatique
-      et de Mathématiques de Monastir
-    </p>
-    <div class="cta-buttons">
-      <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
-      <a [routerLink]="['/choisir-candidature']" class="btn-primary"> Candidater maintenant </a>
-      <a [routerLink]="['/masters']" class="btn-secondary"> Découvrir les formations </a>
+    <div class="hero-panel">
+      <h1>
+        {{ tr.hero.title }}
+        <span>ISIMM</span>
+      </h1>
+      <p>{{ tr.hero.subtitle }}</p>
+      <div class="cta-buttons">
+        <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
+        <a [routerLink]="['/choisir-candidature']" class="btn-primary"> {{ tr.hero.apply }} </a>
+        <a [routerLink]="['/masters']" class="btn-secondary"> {{ tr.hero.discover }} </a>
+      </div>
     </div>
   </div>
 </section>
@@ -62,19 +88,19 @@
   <div class="stats-grid">
     <div class="stat-item">
       <h3>100%</h3>
-      <p>Processus dématérialisé</p>
+      <p>{{ tr.stats.one }}</p>
     </div>
     <div class="stat-item">
       <h3>24/7</h3>
-      <p>Accès à votre dossier</p>
+      <p>{{ tr.stats.two }}</p>
     </div>
     <div class="stat-item">
       <h3>IA</h3>
-      <p>Vérification intelligente</p>
+      <p>{{ tr.stats.three }}</p>
     </div>
     <div class="stat-item">
       <h3>✓</h3>
-      <p>Processus sécurisé</p>
+      <p>{{ tr.stats.four }}</p>
     </div>
   </div>
 </section>
@@ -82,10 +108,8 @@
 <!-- FORMATIONS SECTION MODIFIÉE -->
 <section class="formations-section" id="masters">
   <div class="concours-container">
-    <h2 class="section-title">Nos Formations d'Excellence</h2>
-    <p class="section-subtitle">
-      Choisissez parmi nos programmes de formation reconnus nationalement et internationalement
-    </p>
+    <h2 class="section-title">{{ tr.sections.formationsTitle }}</h2>
+    <p class="section-subtitle">{{ tr.sections.formationsSubtitle }}</p>
 
     <div class="formations-grid">
       <!-- Masters de Recherche -->
@@ -94,32 +118,30 @@
           <div class="icon-circle research-bg">
             <i class="fas fa-flask"></i>
           </div>
-          <div class="card-badge research-badge">Recherche</div>
+          <div class="card-badge research-badge">{{ tr.cards.researchBadge }}</div>
         </div>
 
-        <h3 class="card-title">Masters de Recherche</h3>
-        <p class="card-description">
-          Programmes orientés recherche scientifique et innovation technologique
-        </p>
+        <h3 class="card-title">{{ tr.cards.researchTitle }}</h3>
+        <p class="card-description">{{ tr.cards.researchDesc }}</p>
 
         <ul class="card-features">
           <li>
             <span class="feature-icon research-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Master en Génie Logiciel</span>
+            <span>{{ tr.cards.researchItem1 }}</span>
           </li>
           <li>
             <span class="feature-icon research-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Master en Microélectronique</span>
+            <span>{{ tr.cards.researchItem2 }}</span>
           </li>
         </ul>
 
         <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
         <button class="btn-card research-btn" [routerLink]="['/masters']">
-          <span>Explorer</span>
+          <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
       </div>
@@ -130,38 +152,36 @@
           <div class="icon-circle professional-bg">
             <i class="fas fa-briefcase"></i>
           </div>
-          <div class="card-badge professional-badge">Professionnel</div>
+          <div class="card-badge professional-badge">{{ tr.cards.professionalBadge }}</div>
         </div>
 
-        <h3 class="card-title">Masters Professionnels</h3>
-        <p class="card-description">
-          Formations pratiques pour une insertion professionnelle immédiate
-        </p>
+        <h3 class="card-title">{{ tr.cards.professionalTitle }}</h3>
+        <p class="card-description">{{ tr.cards.professionalDesc }}</p>
 
         <ul class="card-features">
           <li>
             <span class="feature-icon professional-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Master en Data Science</span>
+            <span>{{ tr.cards.professionalItem1 }}</span>
           </li>
           <li>
             <span class="feature-icon professional-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Master Ingénierie Instrumentation</span>
+            <span>{{ tr.cards.professionalItem2 }}</span>
           </li>
           <li>
             <span class="feature-icon professional-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Master Génie Logiciel</span>
+            <span>{{ tr.cards.professionalItem3 }}</span>
           </li>
         </ul>
 
         <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
         <button class="btn-card professional-btn" [routerLink]="['/masters']">
-          <span>Explorer</span>
+          <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
       </div>
@@ -174,33 +194,31 @@
           </div>
           <div class="card-badge engineer-badge featured">
             <i class="fas fa-star"></i>
-            Ingénieur
+            {{ tr.cards.engineerBadge }}
           </div>
         </div>
 
-        <h3 class="card-title">Cycle Ingénieur</h3>
-        <p class="card-description">
-          Formation d'ingénieur en 3 ans avec 2 spécialités d'excellence
-        </p>
+        <h3 class="card-title">{{ tr.cards.engineerTitle }}</h3>
+        <p class="card-description">{{ tr.cards.engineerDesc }}</p>
 
         <ul class="card-features">
           <li>
             <span class="feature-icon engineer-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Génie Informatique</span>
+            <span>{{ tr.cards.engineerItem1 }}</span>
           </li>
           <li>
             <span class="feature-icon engineer-icon">
               <i class="fas fa-check"></i>
             </span>
-            <span>Génie Électrique</span>
+            <span>{{ tr.cards.engineerItem2 }}</span>
           </li>
         </ul>
 
         <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /concours-ingenieur -->
         <button class="btn-card engineer-btn" [routerLink]="['/concours-ingenieur']">
-          <span>Explorer</span>
+          <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
       </div>
@@ -211,63 +229,63 @@
 <!-- Processus Section ORIGINAL -->
 <section class="etapes-section" id="processus">
   <div class="concours-container">
-    <h2 class="section-title">Le processus d'admission</h2>
-    <p class="section-subtitle">Un parcours simple et transparent en 7 étapes</p>
+    <h2 class="section-title">{{ tr.sections.processTitle }}</h2>
+    <p class="section-subtitle">{{ tr.sections.processSubtitle }}</p>
 
     <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-number">1</div>
         <div class="timeline-content">
-          <h4>Préinscription en ligne</h4>
-          <p>Créez votre compte et remplissez votre formulaire de candidature avec vos vœux.</p>
+          <h4>{{ tr.process.s1Title }}</h4>
+          <p>{{ tr.process.s1Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">2</div>
         <div class="timeline-content">
-          <h4>Présélection</h4>
-          <p>Calcul automatique de votre score selon les critères officiels.</p>
+          <h4>{{ tr.process.s2Title }}</h4>
+          <p>{{ tr.process.s2Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">3</div>
         <div class="timeline-content">
-          <h4>Dépôt du dossier</h4>
-          <p>Téléchargez vos documents justificatifs (relevés, diplômes, CIN...).</p>
+          <h4>{{ tr.process.s3Title }}</h4>
+          <p>{{ tr.process.s3Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">4</div>
         <div class="timeline-content">
-          <h4>Vérification intelligente</h4>
-          <p>Notre système OCR vérifie automatiquement l'authenticité de vos documents.</p>
+          <h4>{{ tr.process.s4Title }}</h4>
+          <p>{{ tr.process.s4Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">5</div>
         <div class="timeline-content">
-          <h4>Publication des résultats</h4>
-          <p>Consultez votre statut : Admis, Liste d'attente ou Refusé.</p>
+          <h4>{{ tr.process.s5Title }}</h4>
+          <p>{{ tr.process.s5Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">6</div>
         <div class="timeline-content">
-          <h4>Paiement des frais</h4>
-          <p>Les candidats admis règlent leurs frais d'inscription via inscription.tn.</p>
+          <h4>{{ tr.process.s6Title }}</h4>
+          <p>{{ tr.process.s6Text }}</p>
         </div>
       </div>
 
       <div class="timeline-item">
         <div class="timeline-number">7</div>
         <div class="timeline-content">
-          <h4>Confirmation d'inscription</h4>
-          <p>Validation finale et bienvenue à l'ISIMM !</p>
+          <h4>{{ tr.process.s7Title }}</h4>
+          <p>{{ tr.process.s7Text }}</p>
         </div>
       </div>
     </div>
@@ -279,15 +297,23 @@
   <div class="footer-content">
     <div class="footer-section">
       <h3>ISIMM</h3>
-      <p>Institut Supérieur d'Informatique et de Mathématiques de Monastir</p>
+      <p>{{ tr.footer.institute }}</p>
     </div>
     <div class="footer-section">
-      <h3>Liens Rapides</h3>
+      <h3>{{ tr.footer.quickLinks }}</h3>
       <ul>
-        <li><a href="#">Calendrier des concours</a></li>
-        <li><a href="#">FAQ</a></li>
-        <li><a href="#">Documents requis</a></li>
-        <li><a routerLink="/login">Connexion</a></li>
+        <li>
+          <a href="#">{{ tr.footer.calendar }}</a>
+        </li>
+        <li>
+          <a href="#">{{ tr.footer.faq }}</a>
+        </li>
+        <li>
+          <a href="#">{{ tr.footer.docs }}</a>
+        </li>
+        <li>
+          <a routerLink="/login">{{ tr.footer.login }}</a>
+        </li>
       </ul>
     </div>
     <div class="footer-section">
@@ -300,6 +326,6 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <p>&copy; 2026 ISIMM - Tous droits réservés</p>
+    <p>&copy; 2026 ISIMM - {{ tr.footer.rights }}</p>
   </div>
 </footer>

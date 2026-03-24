@@ -2,16 +2,83 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
+try:
+    from rest_framework_simplejwt.tokens import RefreshToken
+except ImportError:
+    RefreshToken = None
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import transaction
 import uuid
 
-from .models import User
+from .models import User, ActionRole
 from .serializers import UserSerializer, RegisterSerializer
 from .email_service import send_verification_email, send_login_notification
+
+
+ROLE_KEYS = ['candidat', 'commission', 'responsable_commission', 'admin']
+
+DEFAULT_ACTIONS = [
+    {'action_no': 1, 'action_name': 'Préinscription', 'enabled_roles': ['candidat']},
+    {'action_no': 2, 'action_name': 'Dépôt de dossier', 'enabled_roles': ['candidat']},
+    {'action_no': 3, 'action_name': 'Consultation de dossier', 'enabled_roles': ['candidat', 'commission']},
+    {'action_no': 4, 'action_name': 'Consultation de candidature', 'enabled_roles': ['candidat', 'commission']},
+    {'action_no': 5, 'action_name': 'Suivi de candidature', 'enabled_roles': ['candidat']},
+    {'action_no': 6, 'action_name': 'Modifier candidature', 'enabled_roles': ['candidat']},
+    {'action_no': 7, 'action_name': 'Déposer réclamation', 'enabled_roles': ['candidat']},
+    {'action_no': 8, 'action_name': 'Consulter notifications', 'enabled_roles': ['candidat', 'commission', 'responsable_commission', 'admin']},
+    {'action_no': 9, 'action_name': 'Vérifier dossiers', 'enabled_roles': ['commission', 'responsable_commission']},
+    {'action_no': 10, 'action_name': 'Préselection', 'enabled_roles': ['commission', 'responsable_commission']},
+    {'action_no': 11, 'action_name': 'Sélection finale', 'enabled_roles': ['responsable_commission']},
+    {'action_no': 12, 'action_name': 'Publier liste principale', 'enabled_roles': ['responsable_commission']},
+    {'action_no': 13, 'action_name': 'Publier liste attente', 'enabled_roles': ['responsable_commission']},
+    {'action_no': 14, 'action_name': 'Traiter réclamations', 'enabled_roles': ['commission', 'responsable_commission']},
+    {'action_no': 15, 'action_name': 'Gérer inscriptions', 'enabled_roles': ['responsable_commission']},
+    {'action_no': 16, 'action_name': 'Assigner commission', 'enabled_roles': ['admin']},
+    {'action_no': 17, 'action_name': 'Gérer masters', 'enabled_roles': ['admin']},
+    {'action_no': 18, 'action_name': 'Gérer concours ingénieur', 'enabled_roles': ['admin']},
+    {'action_no': 19, 'action_name': 'Gérer utilisateurs', 'enabled_roles': ['admin']},
+    {'action_no': 20, 'action_name': 'Gérer matrice des actions', 'enabled_roles': ['admin']},
+    {'action_no': 21, 'action_name': 'Consulter statistiques', 'enabled_roles': ['commission', 'responsable_commission', 'admin']},
+    {'action_no': 22, 'action_name': 'Exporter données', 'enabled_roles': ['admin']},
+]
+
+
+def _ensure_default_action_roles():
+    if ActionRole.objects.exists():
+        return
+
+    bulk_rows = []
+    for row in DEFAULT_ACTIONS:
+        for role in ROLE_KEYS:
+            bulk_rows.append(
+                ActionRole(
+                    action_no=row['action_no'],
+                    action_name=row['action_name'],
+                    target_role=role,
+                    enabled=role in row['enabled_roles'],
+                )
+            )
+
+    ActionRole.objects.bulk_create(bulk_rows)
+
+
+def _build_action_matrix_payload():
+    grouped = {}
+    rows = ActionRole.objects.all().order_by('action_no', 'target_role')
+
+    for row in rows:
+        if row.action_no not in grouped:
+            grouped[row.action_no] = {
+                'action_no': row.action_no,
+                'action_name': row.action_name,
+                'roles': {k: False for k in ROLE_KEYS},
+            }
+        grouped[row.action_no]['roles'][row.target_role] = row.enabled
+
+    return [grouped[key] for key in sorted(grouped.keys())]
 
 
 # ========================================
@@ -248,24 +315,38 @@ def create_commission_member(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Vérifier si l'email existe déjà
-    if User.objects.filter(email=email).exists():
-        return Response(
-            {'error': 'Un compte avec cet email existe déjà'}, 
-            status=status.HTTP_400_BAD_REQUEST
+    created_new_user = False
+
+    # Si un compte existe deja avec cet email, on le reutilise pour reaffecter la commission.
+    user = User.objects.filter(email=email).first()
+
+    if user:
+        if user.role == 'admin':
+            return Response(
+                {'error': 'Impossible de convertir un compte administrateur en membre commission'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.username = email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.role = role
+        user.is_email_verified = False
+        user.is_active = False
+        user.set_unusable_password()
+    else:
+        created_new_user = True
+        # Créer l'utilisateur SANS mot de passe
+        user = User.objects.create(
+            username=email,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            is_email_verified=False,
+            is_active=False
         )
-    
-    # Créer l'utilisateur SANS mot de passe
-    user = User.objects.create(
-        username=email,
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        role=role,
-        is_email_verified=False,
-        is_active=False
-    )
-    
+
     # Générer un token unique
     activation_token = uuid.uuid4()
     user.email_verification_token = activation_token
@@ -323,8 +404,9 @@ L'équipe ISIMM
             'user_id': user.id
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
-        # Si l'email échoue, supprimer l'utilisateur créé
-        user.delete()
+        # Si l'email échoue, supprimer uniquement un nouvel utilisateur créé.
+        if created_new_user:
+            user.delete()
         print(f"❌ Erreur envoi email: {e}")
         return Response(
             {'error': f'Erreur lors de l\'envoi de l\'email: {str(e)}'}, 
@@ -367,7 +449,8 @@ def set_password_with_token(request, token):
         user.set_password(password)
         user.is_active = True
         user.is_email_verified = True
-        user.email_verification_token = None
+        # Invalider le token en le remplaçant par un nouveau UUID.
+        user.email_verification_token = uuid.uuid4()
         user.save()
         
         return Response({
@@ -416,3 +499,167 @@ def list_commission_members(request):
         })
     
     return Response(members_data, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_commission_member(request, user_id):
+    """Supprimer un membre de commission (admin uniquement)."""
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Accès refusé'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    fallback_email = request.query_params.get('email')
+
+    user = User.objects.filter(
+        id=user_id,
+        role__in=['commission', 'responsable_commission']
+    ).first()
+
+    if not user and fallback_email:
+        user = User.objects.filter(
+            email=fallback_email,
+            role__in=['commission', 'responsable_commission']
+        ).first()
+
+    if not user:
+        return Response(
+            {'error': 'Membre de commission introuvable'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        user.delete()
+
+        return Response(
+            {'message': 'Membre de commission supprimé définitivement'},
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur suppression: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def verify_token(request, token):
+    """
+    Vérifie si le token est valide et retourne les infos utilisateur
+    """
+    try:
+        # Le convertisseur <uuid:token> de Django peut déjà fournir un UUID.
+        token_uuid = token if isinstance(token, uuid.UUID) else uuid.UUID(str(token))
+
+        # Token de creation de mot de passe commission.
+        user = User.objects.filter(
+            email_verification_token=token_uuid,
+            is_active=False
+        ).first()
+        
+        if not user:
+            return Response(
+                {'error': 'Token invalide ou expiré'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Un compte deja actif a deja finalise son mot de passe.
+        if user.has_usable_password() and user.is_email_verified:
+            return Response(
+                {'error': 'Ce lien a déjà été utilisé'},
+                status=status.HTTP_410_GONE
+            )
+        
+        return Response({
+            'valid': True,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name
+        })
+        
+    except (ValueError, TypeError, AttributeError):
+        return Response(
+            {'error': 'Format de token invalide'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+# ========================================
+# MATRICE ACTIONS / RÔLES (ADMIN)
+# ========================================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def action_roles_matrix(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    _ensure_default_action_roles()
+    return Response({'actions': _build_action_matrix_payload()}, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_action_roles_matrix(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    actions = request.data.get('actions', [])
+    if not isinstance(actions, list) or not actions:
+        return Response({'error': 'Le champ actions est requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    normalized_rows = []
+    for index, row in enumerate(actions):
+        action_no = row.get('action_no', index + 1)
+        action_name = (row.get('action_name') or '').strip()
+        roles = row.get('roles') or {}
+
+        if not action_name:
+            return Response(
+                {'error': f"Nom d'action manquant pour la ligne {index + 1}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for role in ROLE_KEYS:
+            normalized_rows.append(
+                ActionRole(
+                    action_no=int(action_no),
+                    action_name=action_name,
+                    target_role=role,
+                    enabled=bool(roles.get(role, False)),
+                )
+            )
+
+    with transaction.atomic():
+        ActionRole.objects.all().delete()
+        ActionRole.objects.bulk_create(normalized_rows)
+
+    return Response(
+        {
+            'message': 'Matrice action/rôle mise à jour avec succès',
+            'actions': _build_action_matrix_payload(),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_enabled_actions(request):
+    _ensure_default_action_roles()
+    actions = ActionRole.objects.filter(target_role=request.user.role, enabled=True).order_by('action_no')
+
+    return Response(
+        {
+            'role': request.user.role,
+            'actions': [
+                {
+                    'action_no': row.action_no,
+                    'action_name': row.action_name,
+                }
+                for row in actions
+            ],
+        },
+        status=status.HTTP_200_OK,
+    )

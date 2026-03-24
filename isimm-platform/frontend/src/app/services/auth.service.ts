@@ -1,16 +1,27 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError, of } from 'rxjs';
+import { tap, catchError, map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+
+interface MyActionsResponse {
+  role: string;
+  actions: Array<{
+    action_no: number;
+    action_name: string;
+  }>;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8001/api/auth';
+  private apiUrl = environment.authServiceUrl;
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
+  private enabledActions = new Set<string>();
+  private actionsLoaded = false;
 
   get currentUserValue(): any {
     return this.currentUserSubject.value;
@@ -42,6 +53,9 @@ export class AuthService {
         }
       }),
       catchError((error: any) => {
+        if (error?.status === 0) {
+          console.error(`❌ Service Auth indisponible: ${this.apiUrl}`);
+        }
         console.error('❌ Erreur login:', error);
         return throwError(() => error);
       }),
@@ -58,6 +72,8 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('current_user');
+    this.enabledActions.clear();
+    this.actionsLoaded = false;
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
     console.log('🚪 Déconnexion');
@@ -106,5 +122,44 @@ export class AuthService {
         return throwError(() => error);
       }),
     );
+  }
+
+  getMyEnabledActions(forceReload: boolean = false): Observable<string[]> {
+    if (this.actionsLoaded && !forceReload) {
+      return of(Array.from(this.enabledActions));
+    }
+
+    return this.http.get<MyActionsResponse>(`${this.apiUrl}/my-actions/`).pipe(
+      map((response) => (response.actions || []).map((item) => item.action_name || '')),
+      tap((actionNames) => {
+        this.enabledActions = new Set(
+          actionNames.filter((name) => !!name).map((name) => this.normalizeActionName(name)),
+        );
+        this.actionsLoaded = true;
+      }),
+      catchError((error: any) => {
+        console.error('❌ Erreur chargement actions actives:', error);
+        this.actionsLoaded = false;
+        this.enabledActions.clear();
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  hasMyAction(actionNames: string | string[]): boolean {
+    const names = Array.isArray(actionNames) ? actionNames : [actionNames];
+    if (!names.length) {
+      return false;
+    }
+
+    return names.some((name) => this.enabledActions.has(this.normalizeActionName(name)));
+  }
+
+  private normalizeActionName(value: string): string {
+    return (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 }
