@@ -1,4 +1,7 @@
 import os
+import logging
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -11,6 +14,7 @@ from rest_framework.response import Response
 
 from .models import (
     Candidature,
+    CandidatListe,
     ConfigurationAppel,
     DonneesAcademiques,
     FormuleScore,
@@ -18,12 +22,37 @@ from .models import (
     Master,
     InscriptionEnLigne,
 )
+from .services import GestionListesService, SelectionCandidatsService
 from .serializers import (
     CandidatureSerializer,
     ConfigurationAppelSerializer,
     FormuleScoreSerializer,
     UserUpdateSerializer,
 )
+from .emails import (
+    envoyer_email_changement_statut,
+    envoyer_email_confirmation_candidature,
+    envoyer_notifications_masse,
+    envoyer_email_inscription_validee,
+)
+
+
+logger = logging.getLogger(__name__)
+
+
+ALLOWED_STATUS_TRANSITIONS = {
+    'soumis': {'sous_examen', 'rejete', 'annule'},
+    'sous_examen': {'preselectionne', 'en_attente_dossier', 'rejete'},
+    'preselectionne': {'en_attente_dossier', 'rejete'},
+    'en_attente_dossier': {'dossier_depose', 'dossier_non_depose', 'rejete'},
+    'dossier_depose': {'en_attente', 'selectionne', 'rejete'},
+    'en_attente': {'selectionne', 'rejete', 'annule'},
+    'selectionne': {'inscrit', 'rejete'},
+    'dossier_non_depose': {'en_attente_dossier', 'rejete'},
+    'annule': set(),
+    'rejete': set(),
+    'inscrit': set(),
+}
 
 
 @api_view(['POST'])
@@ -40,6 +69,11 @@ def create_candidature(request):
         return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
 
     candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
+
+    try:
+        envoyer_email_confirmation_candidature(candidature)
+    except Exception as exc:
+        logger.exception("Erreur envoi email confirmation candidature %s: %s", candidature.id, exc)
 
     serializer = CandidatureSerializer(candidature)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -60,7 +94,22 @@ def modifier_candidature(request, candidature_id):
     except Candidature.DoesNotExist:
         return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = CandidatureSerializer(candidature, data=request.data, partial=True)
+    if not candidature.peut_etre_modifie():
+        return Response(
+            {'error': 'Le delai de modification est expire ou la candidature ne peut plus etre modifiee'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    allowed_fields = {'choix_priorite'}
+    payload = {key: value for key, value in request.data.items() if key in allowed_fields}
+
+    if not payload:
+        return Response(
+            {'error': 'Aucun champ modifiable fourni', 'allowed_fields': sorted(list(allowed_fields))},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    serializer = CandidatureSerializer(candidature, data=payload, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
@@ -108,6 +157,24 @@ def offres_inscription(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def lister_masters(request):
+    masters = Master.objects.filter(actif=True).order_by('nom')
+    payload = [
+        {
+            'id': m.id,
+            'nom': m.nom,
+            'specialite': m.specialite,
+            'type_master': m.type_master,
+            'date_limite_candidature': m.date_limite_candidature,
+            'annee_universitaire': m.annee_universitaire,
+        }
+        for m in masters
+    ]
+    return Response(payload)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def mes_dossiers(request):
     """Retourne les dossiers du candidat derives des candidatures."""
     candidatures = Candidature.objects.filter(candidat=request.user).select_related('master')
@@ -145,7 +212,7 @@ def update_profile(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def changer_statut_candidature(request, candidature_id):
-    if request.user.role not in ['commission', 'responsable_commission', 'admin']:
+    if getattr(request.user, 'role', None) not in ['commission', 'responsable_commission', 'admin']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -160,6 +227,22 @@ def changer_statut_candidature(request, candidature_id):
         return Response({'error': 'Statut invalide'}, status=status.HTTP_400_BAD_REQUEST)
 
     ancien_statut = candidature.statut
+    if ancien_statut == nouveau_statut:
+        return Response(
+            {'error': 'Aucun changement detecte sur le statut'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    statuts_suivants = ALLOWED_STATUS_TRANSITIONS.get(ancien_statut, set())
+    if nouveau_statut not in statuts_suivants:
+        return Response(
+            {
+                'error': f'Transition interdite: {ancien_statut} -> {nouveau_statut}',
+                'allowed_transitions': sorted(list(statuts_suivants)),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     candidature.statut = nouveau_statut
     candidature.date_changement_statut = timezone.now()
 
@@ -170,6 +253,30 @@ def changer_statut_candidature(request, candidature_id):
         candidature.peut_modifier = False
 
     candidature.save()
+    candidature.ajouter_historique(
+        ancien_statut,
+        nouveau_statut,
+        request.user,
+        'Changement de statut via commission',
+    )
+
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)(
+            'candidatures_updates',
+            {
+                'type': 'candidature_status_changed',
+                'candidature_id': candidature.id,
+                'candidate_user_id': candidature.candidat_id,
+                'new_status': nouveau_statut,
+                'updated_at': timezone.now().isoformat(),
+            },
+        )
+
+    try:
+        envoyer_email_changement_statut(candidature, ancien_statut, nouveau_statut)
+    except Exception as exc:
+        logger.exception("Erreur envoi email changement statut %s: %s", candidature.id, exc)
 
     serializer = CandidatureSerializer(candidature)
     return Response(
@@ -317,21 +424,105 @@ def generer_listes_admission(request, master_id):
         return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
 
     iteration = int(request.data.get('iteration', 1))
-    liste = ListeAdmission.objects.create(
+
+    if iteration == 1:
+        resultats = SelectionCandidatsService.selectionner_candidats_par_specialite(master)
+        principale = resultats['liste_principale']
+        attente = resultats['liste_attente']
+
+        annee = timezone.now().year
+        annee_universitaire = request.data.get('annee_universitaire', f'{annee}/{annee+1}')
+        capacite = master.configuration.capacite_accueil
+        capacite_attente = master.configuration.capacite_liste_attente
+
+        liste_principale = ListeAdmission.objects.create(
+            master=master,
+            type_liste='principale',
+            iteration=1,
+            annee_universitaire=annee_universitaire,
+            capacite_accueil=capacite,
+            places_restantes=max(0, capacite - len(principale)),
+            active=True,
+            publiee=False,
+        )
+
+        for i, candidature in enumerate(principale, start=1):
+            CandidatListe.objects.create(
+                liste=liste_principale,
+                candidature=candidature,
+                position=i,
+                score=candidature.score,
+            )
+            candidature.statut = 'preselectionne'
+            candidature.save(update_fields=['statut', 'updated_at'])
+
+        liste_attente = ListeAdmission.objects.create(
+            master=master,
+            type_liste='attente',
+            iteration=1,
+            annee_universitaire=annee_universitaire,
+            capacite_accueil=capacite_attente,
+            places_restantes=max(0, capacite_attente - min(len(attente), capacite_attente)),
+            active=True,
+            publiee=False,
+        )
+
+        for i, candidature in enumerate(attente[:capacite_attente], start=1):
+            CandidatListe.objects.create(
+                liste=liste_attente,
+                candidature=candidature,
+                position=i,
+                score=candidature.score,
+            )
+            candidature.statut = 'en_attente'
+            candidature.save(update_fields=['statut', 'updated_at'])
+
+        return Response(
+            {
+                'success': True,
+                'message': 'Listes principale et attente (itération 1) générées avec succès',
+                'liste_principale_id': liste_principale.id,
+                'liste_attente_id': liste_attente.id,
+                'nb_principale': liste_principale.candidats.count(),
+                'nb_attente': liste_attente.candidats.count(),
+                'tri': 'score croissant, puis date soumission',
+                'classement': 'par spécialité et diplôme',
+            }
+        )
+
+    precedente = ListeAdmission.objects.filter(
         master=master,
         type_liste='principale',
-        iteration=iteration,
-        annee_universitaire=request.data.get('annee_universitaire', '2025-2026'),
-        capacite_accueil=request.data.get('capacite_accueil', 0),
-        places_restantes=request.data.get('places_restantes', 0),
-    )
+        iteration=iteration - 1,
+        active=True,
+    ).first()
+    if not precedente:
+        return Response(
+            {'error': f'Liste principale itération {iteration - 1} introuvable'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    places_liberees = int(request.data.get('places_liberees', 0))
+    if places_liberees > 0:
+        precedente.places_restantes = places_liberees
+        precedente.save(update_fields=['places_restantes'])
+
+    nouvelle_liste = GestionListesService.generer_liste_suivante_si_necessaire(precedente)
+    if not nouvelle_liste:
+        return Response(
+            {
+                'success': False,
+                'message': 'Aucune nouvelle liste à générer (pas de places libérées ou liste attente vide).',
+            },
+            status=status.HTTP_200_OK,
+        )
 
     return Response(
         {
             'success': True,
-            'message': f'Liste principale (iteration {iteration}) generee avec succes',
-            'liste_id': liste.id,
-            'nb_candidats': liste.candidats.count(),
+            'message': f'Liste principale itération {nouvelle_liste.iteration} générée depuis la liste d’attente.',
+            'liste_id': nouvelle_liste.id,
+            'nb_candidats': nouvelle_liste.candidats.count(),
         }
     )
 
@@ -339,7 +530,7 @@ def generer_listes_admission(request, master_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def publier_liste(request, liste_id):
-    if request.user.role not in ['admin', 'responsable_commission']:
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -354,10 +545,21 @@ def publier_liste(request, liste_id):
     liste.date_publication = timezone.now()
     liste.save()
 
+    resultats_notifications = {'envoyes': 0, 'echoues': 0, 'total': 0}
+    try:
+        resultats_notifications = envoyer_notifications_masse(liste)
+    except Exception as exc:
+        logger.exception("Erreur envoi notifications liste %s: %s", liste.id, exc)
+
     return Response(
         {
             'success': True,
-            'message': f'Liste publiee et {liste.candidats.count()} notifications envoyees',
+            'message': (
+                'Liste publiee: '
+                f"{resultats_notifications.get('envoyes', 0)} emails envoyes, "
+                f"{resultats_notifications.get('echoues', 0)} echecs"
+            ),
+            'notifications': resultats_notifications,
         }
     )
 
@@ -513,8 +715,6 @@ def valider_paiement_enligne(request, inscription_id):
         inscription.candidature.statut = 'inscrit'
         inscription.candidature.save()
         
-        # Envoyer email confirmation
-        from .emails import envoyer_email_inscription_validee
         envoyer_email_inscription_validee(inscription)
         
         return Response({

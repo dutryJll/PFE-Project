@@ -66,6 +66,44 @@
   margin-bottom: 0;
 }
 
+.profile-collapse {
+  margin: 0.85rem 0;
+  border: 1px solid #dbe6f2;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.profile-collapse summary {
+  cursor: pointer;
+  padding: 0.8rem 0.95rem;
+  font-weight: 700;
+  color: #1a3e63;
+}
+
+.profile-collapse-body {
+  padding: 0.35rem 0.95rem 0.95rem;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.7rem;
+  margin-top: 0.95rem;
+}
+
+.btn-outline {
+  border: 1px solid #b9cbe0;
+  background: #ffffff;
+  color: #1f4f7e;
+  border-radius: 8px;
+  padding: 0.72rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  background: #edf5ff;
+}
+
 /* ========================================
    SIDEBAR
 ======================================== */
@@ -1020,6 +1058,24 @@
 
 .activity-item:last-child {
   border-bottom: none;
+}
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.activity-content strong {
+  color: #1e293b;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.activity-content small {
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .activity-icon {

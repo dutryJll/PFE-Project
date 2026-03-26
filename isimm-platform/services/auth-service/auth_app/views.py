@@ -7,6 +7,8 @@ try:
 except ImportError:
     RefreshToken = None
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -246,11 +248,26 @@ def create_user(request):
         )
     
     data = request.data
+    raw_password = data.get('password')
+
+    if not raw_password:
+        return Response(
+            {'error': 'Mot de passe requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        validate_password(raw_password)
+    except DjangoValidationError as exc:
+        return Response(
+            {'error': 'Mot de passe invalide', 'details': list(exc.messages)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     
     user = User.objects.create_user(
         username=data.get('email'),
         email=data.get('email'),
-        password=data.get('password'),
+        password=raw_password,
         first_name=data.get('first_name'),
         last_name=data.get('last_name'),
         role=data.get('role', 'candidat'),
@@ -436,14 +453,16 @@ def set_password_with_token(request, token):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    if len(password) < 8:
-        return Response(
-            {'error': 'Le mot de passe doit contenir au moins 8 caractères'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
     try:
         user = User.objects.get(email_verification_token=token, is_active=False)
+
+        try:
+            validate_password(password, user=user)
+        except DjangoValidationError as exc:
+            return Response(
+                {'error': 'Mot de passe invalide', 'details': list(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         # Définir le mot de passe
         user.set_password(password)

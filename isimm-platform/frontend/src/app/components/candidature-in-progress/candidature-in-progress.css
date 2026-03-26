@@ -1,0 +1,149 @@
+.inprogress-page {
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(180deg, #f4f8fc, #edf2f7);
+}
+
+.inprogress-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+}
+
+.steps-sidebar {
+  background: #f7fbff;
+  border-right: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
+.steps-sidebar h3 {
+  margin: 0 0 0.8rem;
+}
+
+.step-item {
+  width: 100%;
+  margin-bottom: 0.45rem;
+  border: 1px solid #d8e1ec;
+  background: #fff;
+  border-radius: 8px;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.step-item.active {
+  background: #1d70a2;
+  border-color: #1d70a2;
+  color: #fff;
+}
+
+.step-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.step-content {
+  padding: 1.25rem;
+}
+
+.step-panel {
+  margin-top: 1rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group input,
+textarea,
+.table-like input,
+.notes-table input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+
+.table-like {
+  display: grid;
+  grid-template-columns: 1fr 1fr 120px auto;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.notes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.8rem;
+}
+
+.notes-table th,
+.notes-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.45rem;
+}
+
+.step-actions {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.btn-mini {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.btn-primary {
+  background: #1d70a2;
+  color: #fff;
+  border-color: #1d70a2;
+}
+
+.step-ok {
+  color: #166534;
+  font-weight: 600;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+@media (max-width: 960px) {
+  .inprogress-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .grid-2,
+  .table-like {
+    grid-template-columns: 1fr;
+  }
+}

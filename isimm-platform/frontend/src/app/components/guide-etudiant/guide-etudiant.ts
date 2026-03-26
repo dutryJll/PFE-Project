@@ -1,5 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+
+interface Section {
+  id: string;
+  icon: string;
+  titre: string;
+  contenu: string[];
+}
 
 @Component({
   selector: 'app-guide-etudiant',
@@ -9,87 +17,160 @@ import { CommonModule } from '@angular/common';
   styleUrl: './guide-etudiant.css',
 })
 export class GuideEtudiantComponent {
-  guides = [
+  sectionActive: string = 'introduction';
+
+  sections: Section[] = [
     {
-      id: 1,
-      titre: 'Comment candidater ?',
-      description: 'Guide complet pour soumettre votre candidature aux masters ISIMM',
+      id: 'introduction',
+      icon: 'fa-info-circle',
+      titre: 'Introduction',
+      contenu: [
+        "Bienvenue sur la plateforme d'admission ISIMM",
+        'Ce guide vous accompagne dans toutes les étapes de votre candidature',
+        'Prenez le temps de lire attentivement chaque section',
+      ],
+    },
+    {
+      id: 'inscription',
+      icon: 'fa-user-plus',
+      titre: 'Création de Compte',
+      contenu: [
+        "1. Accédez à la page d'inscription",
+        '2. Remplissez vos informations personnelles (Email, Nom, Prénom)',
+        '3. Créez votre mot de passe sécurisé (8+ caractères, majuscule, chiffre, caractère spécial)',
+        '4. Validez votre compte par email',
+        '5. Connectez-vous avec vos identifiants',
+      ],
+    },
+    {
+      id: 'candidature',
       icon: 'fa-file-alt',
-      steps: [
-        'Créer votre compte',
-        'Remplir le formulaire de candidature',
-        'Soumettre votre dossier avant la date limite',
-        "Suivre l'état de votre candidature",
+      titre: 'Soumettre une Candidature',
+      contenu: [
+        '1. Consultez les masters ouverts',
+        "2. Vérifiez les prérequis et conditions d'admission",
+        '3. Cliquez sur "Postuler"',
+        '4. Remplissez le formulaire de candidature',
+        '5. Vous recevez un email de confirmation avec votre numéro de candidature (format: AAMM-XXXXX-ABR)',
+        '⚠️ IMPORTANT: Vous disposez de 7 jours pour modifier votre candidature',
       ],
     },
     {
-      id: 2,
-      titre: "Procédure d'inscription",
-      description: 'Étapes à suivre après votre admission',
-      icon: 'fa-user-graduate',
-      steps: [
-        "Vérifier votre statut d'admission",
-        'Effectuer le paiement en ligne',
-        'Déposer les documents requis',
-        'Confirmer votre inscription',
-      ],
-    },
-    {
-      id: 3,
-      titre: 'Documents requis',
-      description: 'Liste complète des documents à fournir',
+      id: 'dossier',
       icon: 'fa-folder-open',
-      steps: [
-        'Copie CIN',
-        'Diplôme de licence certifié',
-        'Relevés de notes',
-        'CV et lettre de motivation',
+      titre: 'Dépôt de Dossier',
+      contenu: [
+        'Après présélection, vous devez déposer votre dossier numérique complet:',
+        '📄 Documents requis:',
+        "- Carte d'identité nationale (CIN)",
+        '- Diplôme de licence',
+        '- Relevés de notes (L1, L2, L3)',
+        '- CV détaillé',
+        '- Lettre de motivation',
+        '- Attestation de PFE',
+        '💡 Format: PDF uniquement, Taille max: 5 Mo par fichier',
+        '⏰ Respectez la date limite fixée par la commission',
       ],
     },
     {
-      id: 4,
-      titre: 'Calcul du score',
-      description: 'Comment votre score est calculé',
+      id: 'selection',
+      icon: 'fa-clipboard-check',
+      titre: 'Processus de Sélection',
+      contenu: [
+        'Phase 1 - Préinscription: Soumission de votre candidature',
+        'Phase 2 - Présélection: Vérification des prérequis',
+        'Phase 3 - Dépôt dossier: Upload des documents',
+        'Phase 4 - Étude des dossiers: Calcul du score et classement',
+        "Phase 5 - Publication liste: Liste principale + Liste d'attente",
+        'Phase 6 - Paiement: Inscription via inscription.tn',
+        "Phase 7 - Confirmation: Validation finale de l'inscription",
+      ],
+    },
+    {
+      id: 'score',
       icon: 'fa-calculator',
-      steps: [
-        'Moyenne générale (60%)',
-        'Moyenne spécialité (30%)',
-        'Note PFE (10%)',
-        'Bonus/Malus selon critères',
+      titre: 'Calcul du Score',
+      contenu: [
+        'Votre score est calculé selon la formule suivante:',
+        'Score = (Moyenne Générale × 60%) + (Moyenne Spécialité × 30%) + (Note PFE × 10%)',
+        '',
+        '🎖️ Bonus:',
+        '- Mention Excellent: +1.5 points',
+        '- Mention Très Bien: +1.0 point',
+        '- Mention Bien: +0.5 point',
+        '- Mention Assez Bien: +0.25 point',
+        '',
+        '⚠️ Malus:',
+        '- Redoublement: -0.5 par année',
+        '- Dette: -0.25 par module',
+        '',
+        '📊 Score minimum requis: 10/20',
+      ],
+    },
+    {
+      id: 'paiement',
+      icon: 'fa-credit-card',
+      titre: 'Paiement et Inscription',
+      contenu: [
+        'Si vous êtes sélectionné:',
+        '1. Vous recevez un email de notification',
+        '2. Accédez au site www.inscription.tn',
+        '3. Effectuez le paiement en ligne (500 TND)',
+        '4. Téléchargez le reçu de paiement',
+        '5. Importez le reçu sur notre plateforme',
+        '6. La commission vérifie votre paiement',
+        '7. Votre inscription est confirmée',
+        '',
+        '⚠️ Date limite: Respectez impérativement la date limite de paiement',
+      ],
+    },
+    {
+      id: 'reclamation',
+      icon: 'fa-exclamation-triangle',
+      titre: 'Réclamations',
+      contenu: [
+        'Vous pouvez déposer une réclamation si:',
+        '- Votre score affiché est incorrect',
+        "- Votre statut n'est pas mis à jour",
+        '- Vous rencontrez un problème technique',
+        '- Votre dossier présente une anomalie',
+        '',
+        'Processus:',
+        '1. Accédez à "Mes Réclamations"',
+        '2. Cliquez sur "Nouvelle Réclamation"',
+        "3. Sélectionnez le master concerné et l'objet",
+        '4. Décrivez votre problème en détail',
+        '5. Joignez des pièces justificatives si nécessaire',
+        '6. La commission traite votre réclamation sous 48h',
+      ],
+    },
+    {
+      id: 'contact',
+      icon: 'fa-envelope',
+      titre: 'Contact et Support',
+      contenu: [
+        '📧 Email: contact@isimm.tn',
+        '📞 Téléphone: +216 73 500 274',
+        '📍 Adresse: Route de Kairouan, 5000 Monastir',
+        '🕒 Horaires: Lun-Ven 8h-17h',
+        '',
+        'Support technique: support@isimm.tn',
+        'Réclamations urgentes: reclamations@isimm.tn',
       ],
     },
   ];
 
-  faq = [
-    {
-      question: 'Quelle est la date limite de candidature ?',
-      reponse:
-        'La date limite varie selon les masters. Consultez la page "Formations" pour les dates spécifiques.',
-    },
-    {
-      question: 'Puis-je candidater à plusieurs masters ?',
-      reponse:
-        "Oui, vous pouvez soumettre jusqu'à 3 candidatures en les classant par ordre de préférence.",
-    },
-    {
-      question: "Comment suivre l'état de ma candidature ?",
-      reponse:
-        'Connectez-vous à votre espace candidat. Vous recevrez également des emails à chaque changement de statut.',
-    },
-    {
-      question: 'Que faire si je suis présélectionné ?',
-      reponse:
-        'Vous recevrez un email avec les instructions pour déposer votre dossier numérique dans les délais impartis.',
-    },
-  ];
+  constructor(private router: Router) {}
 
-  selectedGuide: any = null;
-
-  openGuide(guide: any): void {
-    this.selectedGuide = guide;
+  changerSection(sectionId: string): void {
+    this.sectionActive = sectionId;
   }
 
-  closeGuide(): void {
-    this.selectedGuide = null;
+  getSectionActive(): Section {
+    return this.sections.find((s) => s.id === this.sectionActive) || this.sections[0];
+  }
+
+  retourAccueil(): void {
+    this.router.navigate(['/']);
   }
 }

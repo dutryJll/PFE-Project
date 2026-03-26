@@ -127,3 +127,31 @@ def envoyer_notifications_masse(liste_admission):
             resultats['echoues'] += 1
     
     return resultats
+
+
+def envoyer_email_inscription_validee(inscription):
+    """Email de confirmation après validation du paiement d'inscription."""
+    candidature = inscription.candidature
+    candidat = candidature.candidat
+
+    subject = f"Confirmation d'inscription validee - {candidature.master.nom}"
+    message = (
+        f"Bonjour {candidat.get_full_name() or candidat.username},\n\n"
+        f"Votre paiement pour la candidature {candidature.numero} a ete valide.\n"
+        f"Formation: {candidature.master.nom}\n"
+        f"Reference paiement: {inscription.reference_paiement or '-'}\n"
+        f"Montant: {inscription.montant_paye}\n\n"
+        "Votre statut est maintenant: Inscrit.\n"
+        "Cordialement,\n"
+        "ISIMM Admission"
+    )
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[candidat.email],
+        fail_silently=False,
+    )
+
+    return True

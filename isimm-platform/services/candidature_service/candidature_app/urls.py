@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path('create/', views.create_candidature, name='create_candidature'),
     path('soumettre/', views.soumettre_candidature, name='soumettre_candidature'),
+    path('masters/', views.lister_masters, name='lister_masters'),
     path('mes-candidatures/', views.mes_candidatures, name='mes_candidatures'),
     path('offres-inscription/', views.offres_inscription, name='offres_inscription'),
     path('mes-dossiers/', views.mes_dossiers, name='mes_dossiers'),

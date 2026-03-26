@@ -112,7 +112,7 @@
         <div class="alert-content">
           <strong>⏰ N'attendez pas le dernier moment !</strong>
           <p>
-            Vous avez jusqu'au <strong>jeudi 12 mars, 23h59 heure de Paris</strong> pour finaliser
+            Vous avez jusqu'au <strong>jeudi 12 mars, 23h59 heure de Tunis</strong> pour finaliser
             vos actions.
           </p>
         </div>
@@ -145,6 +145,39 @@
           <div class="stat-details">
             <h3>{{ dossiersCandidature.length }}</h3>
             <p>Dossiers</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h2>📊 Activités récentes</h2>
+        <div class="activites-list">
+          <div class="activity-item">
+            <div class="activity-icon check-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Suivi candidature</strong>
+              <small>Votre dernière candidature est bien enregistrée.</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon file-icon">
+              <i class="fas fa-file-upload"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Dépôt de dossier</strong>
+              <small>Un nouveau document a été ajouté à votre dossier.</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon user-icon">
+              <i class="fas fa-user-edit"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Profil mis à jour</strong>
+              <small>Vos informations personnelles sont à jour.</small>
+            </div>
           </div>
         </div>
       </div>
@@ -186,7 +219,43 @@
               <label>Email</label>
               <input type="email" [value]="profileData.email" readonly class="readonly" />
             </div>
-            <button type="submit" class="btn-primary">💾 Enregistrer</button>
+
+            <details class="profile-collapse">
+              <summary>Additional names</summary>
+              <div class="profile-collapse-body form-row">
+                <div class="form-group">
+                  <label>Nom additionnel</label>
+                  <input type="text" name="additional_name" />
+                </div>
+                <div class="form-group">
+                  <label>Nom préféré</label>
+                  <input type="text" name="preferred_name" />
+                </div>
+              </div>
+            </details>
+
+            <details class="profile-collapse">
+              <summary>Interests</summary>
+              <div class="profile-collapse-body form-group">
+                <label>Centres d'intérêt académiques</label>
+                <input type="text" name="academic_interests" placeholder="IA, Data, Web..." />
+              </div>
+            </details>
+
+            <details class="profile-collapse">
+              <summary>Optional</summary>
+              <div class="profile-collapse-body form-group">
+                <label>Notes complémentaires</label>
+                <textarea name="optional_notes" rows="3"></textarea>
+              </div>
+            </details>
+
+            <div class="profile-actions">
+              <button type="submit" class="btn-primary">Update profile</button>
+              <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -391,6 +460,15 @@
                   <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">{{
                     getStatutLabel(candidature.statut)
                   }}</span>
+                  <div class="modification-deadline" *ngIf="candidature.statut === 'soumis'">
+                    <small *ngIf="canModifyCandidature(candidature)">
+                      Modifiable encore {{ getModificationCountdown(candidature) }} (jusqu'au
+                      {{ candidature.date_limite_modification | date: 'dd/MM/yyyy HH:mm' }})
+                    </small>
+                    <small *ngIf="!canModifyCandidature(candidature)">
+                      Délai de modification expiré
+                    </small>
+                  </div>
                 </td>
                 <td>
                   <span
@@ -406,6 +484,13 @@
                   <div class="kebab-menu" *ngIf="openActionMenuId === candidature.id">
                     <button (click)="consulterCandidature(candidature)">
                       Consulter candidature
+                    </button>
+                    <button
+                      *ngIf="canShowModifyButton(candidature)"
+                      [disabled]="!canModifyCandidature(candidature)"
+                      (click)="modifierCandidature(candidature)"
+                    >
+                      Modifier candidature
                     </button>
                     <button
                       *ngIf="actionPermissions.depotDossier"
@@ -472,6 +557,15 @@
                   <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">{{
                     getStatutLabel(candidature.statut)
                   }}</span>
+                  <div class="modification-deadline" *ngIf="candidature.statut === 'soumis'">
+                    <small *ngIf="canModifyCandidature(candidature)">
+                      Modifiable encore {{ getModificationCountdown(candidature) }} (jusqu'au
+                      {{ candidature.date_limite_modification | date: 'dd/MM/yyyy HH:mm' }})
+                    </small>
+                    <small *ngIf="!canModifyCandidature(candidature)">
+                      Délai de modification expiré
+                    </small>
+                  </div>
                 </td>
                 <td>
                   <span
@@ -487,6 +581,13 @@
                   <div class="kebab-menu" *ngIf="openActionMenuId === candidature.id">
                     <button (click)="consulterCandidature(candidature)">
                       Consulter candidature
+                    </button>
+                    <button
+                      *ngIf="canShowModifyButton(candidature)"
+                      [disabled]="!canModifyCandidature(candidature)"
+                      (click)="modifierCandidature(candidature)"
+                    >
+                      Modifier candidature
                     </button>
                     <button
                       *ngIf="actionPermissions.depotDossier"
@@ -572,7 +673,25 @@
 
     <div *ngIf="currentView === 'inscription'" class="view-content">
       <div class="section-card">
-        <h2>💳 Inscription en ligne</h2>
+        <div class="section-header section-header-export">
+          <h2>💳 Inscription en ligne</h2>
+          <div class="download-box">
+            <label for="inscriptionExportFormat">Download table data as</label>
+            <select
+              id="inscriptionExportFormat"
+              [(ngModel)]="inscriptionExportFormat"
+              class="export-select"
+            >
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="xlsx">Excel</option>
+            </select>
+            <button class="btn-download" (click)="exportInscriptionsEnLigne()">
+              <i class="fas fa-download"></i> Télécharger
+            </button>
+          </div>
+        </div>
         <div class="inscription-guide">
           <p>
             Faites votre inscription et le paiement en ligne sur la plateforme officielle, puis
@@ -616,7 +735,10 @@
                 <td>
                   <button
                     class="btn-action deposer"
-                    [disabled]="!actionPermissions.consultationCandidature"
+                    [disabled]="
+                      !actionPermissions.consultationCandidature ||
+                      !canAccessInscriptionEtape(candidature)
+                    "
                     (click)="ouvrirInscription(candidature, paiementPicker)"
                   >
                     <i class="fas fa-file-upload"></i> Déposer fichier paiement
@@ -760,7 +882,7 @@
 
     <div *ngIf="currentView === 'reclamations'" class="view-content">
       <div class="section-card">
-        <h2>📢 Mes Réclamations</h2>
+        <h2>📢 Mes Réclamations (Tableau)</h2>
         <button
           class="btn-nouvelle-reclamation"
           *ngIf="actionPermissions.deposerReclamation"
@@ -768,24 +890,35 @@
         >
           <i class="fas fa-plus"></i> Nouvelle réclamation
         </button>
-        <div class="reclamations-list" *ngIf="reclamations.length > 0; else noReclamations">
-          <article class="reclamation-card" *ngFor="let reclamation of reclamations">
-            <div class="reclamation-header">
-              <h4>{{ reclamation.identifiant }}</h4>
-              <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
-                {{ getStatutReclamationLabel(reclamation.statut) }}
-              </span>
-            </div>
-            <div class="reclamation-body">
-              <p><strong>Objet:</strong> {{ getObjetLabel(reclamation.objet) }}</p>
-              <p><strong>Master concerné:</strong> {{ reclamation.master_nom }}</p>
-              <p><strong>Date:</strong> {{ reclamation.date | date: 'dd/MM/yyyy' }}</p>
-              <p><strong>Motif:</strong> {{ reclamation.motif }}</p>
-            </div>
-            <div class="reclamation-actions">
-              <button class="btn-doc" (click)="voirReclamation(reclamation)">Consulter</button>
-            </div>
-          </article>
+        <div class="table-container" *ngIf="reclamations.length > 0; else noReclamations">
+          <table class="candidatures-table reclamations-table">
+            <thead>
+              <tr>
+                <th>Identifiant</th>
+                <th>Objet</th>
+                <th>Master concerné</th>
+                <th>État</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let reclamation of reclamations">
+                <td>
+                  <strong>{{ reclamation.identifiant }}</strong>
+                </td>
+                <td>{{ getObjetLabel(reclamation.objet) }}</td>
+                <td>{{ reclamation.master_nom }}</td>
+                <td>
+                  <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
+                    {{ getStatutReclamationLabel(reclamation.statut) }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-doc" (click)="voirReclamation(reclamation)">Consulter</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <ng-template #noReclamations>
@@ -796,4 +929,222 @@
       </div>
     </div>
   </main>
+
+  <div *ngIf="showEditCandidatureModal" class="modal-overlay" (click)="fermerModalModification()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Modifier candidature</h2>
+        <button class="btn-close" (click)="fermerModalModification()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedCandidatureForEdit as candidature">
+        <p>
+          <strong>{{ candidature.numero }}</strong> - {{ candidature.master_nom }}
+        </p>
+        <p class="modification-countdown">
+          Temps restant: {{ getModificationCountdown(candidature) }}
+        </p>
+
+        <div class="form-group">
+          <label for="editPriorite">Choix de priorité (1 à 5)</label>
+          <input
+            id="editPriorite"
+            type="number"
+            min="1"
+            max="5"
+            [(ngModel)]="editChoixPriorite"
+            name="editChoixPriorite"
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fermerModalModification()">
+            Annuler
+          </button>
+          <button type="button" class="btn-primary" (click)="confirmerModificationCandidature()">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showSubmissionWizardModal" class="modal-overlay" (click)="closeSubmissionWizard()">
+    <div class="wizard-modal-content" (click)="$event.stopPropagation()">
+      <aside class="wizard-sidebar">
+        <h3>Soumission</h3>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 1"
+          [disabled]="!canGoToWizardStep(1)"
+          (click)="goToWizardStep(1)"
+        >
+          Étape 1: Type, Titre, Résumé
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 2"
+          [disabled]="!canGoToWizardStep(2)"
+          (click)="goToWizardStep(2)"
+        >
+          Étape 2: Upload fichier
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 3"
+          [disabled]="!canGoToWizardStep(3)"
+          (click)="goToWizardStep(3)"
+        >
+          Étape 3: Attributs
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 4"
+          [disabled]="!canGoToWizardStep(4)"
+          (click)="goToWizardStep(4)"
+        >
+          Étape 4: Auteurs
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 5"
+          [disabled]="!canGoToWizardStep(5)"
+          (click)="goToWizardStep(5)"
+        >
+          Étape 5: Reviewers
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 6"
+          [disabled]="!canGoToWizardStep(6)"
+          (click)="goToWizardStep(6)"
+        >
+          Étape 6: Détails
+        </button>
+        <button
+          type="button"
+          class="wizard-step-nav"
+          [class.active]="wizardCurrentStep === 7"
+          [disabled]="!canGoToWizardStep(7)"
+          (click)="goToWizardStep(7)"
+        >
+          Étape 7: Revue & Soumission
+        </button>
+      </aside>
+
+      <section class="wizard-main">
+        <div class="wizard-header">
+          <h2>Soumettre candidature par étapes</h2>
+          <p *ngIf="wizardOffre">
+            <strong>{{ wizardOffre.titre }}</strong>
+          </p>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 1">
+          <div class="form-group">
+            <label>Type *</label>
+            <select [(ngModel)]="wizardData.type" name="wizardType">
+              <option value="">Choisir</option>
+              <option value="master">Master</option>
+              <option value="cycle_ingenieur">Cycle ingénieur</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Titre *</label>
+            <input type="text" [(ngModel)]="wizardData.titre" name="wizardTitre" />
+          </div>
+          <div class="form-group">
+            <label>Résumé *</label>
+            <textarea [(ngModel)]="wizardData.resume" name="wizardResume" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 2">
+          <div class="form-group">
+            <label>Fichier candidature *</label>
+            <input type="file" (change)="onWizardFileSelected($event)" />
+            <small *ngIf="wizardData.fichierNom">Fichier: {{ wizardData.fichierNom }}</small>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 3">
+          <div class="form-group">
+            <label>Attributs</label>
+            <textarea [(ngModel)]="wizardData.attributs" name="wizardAttributs" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 4">
+          <div class="form-group">
+            <label>Auteurs et institutions</label>
+            <textarea [(ngModel)]="wizardData.auteurs" name="wizardAuteurs" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 5">
+          <div class="form-group">
+            <label>Reviewers et éditeurs</label>
+            <textarea [(ngModel)]="wizardData.reviewers" name="wizardReviewers" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 6">
+          <div class="form-group">
+            <label>Détails & commentaires</label>
+            <textarea [(ngModel)]="wizardData.details" name="wizardDetails" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="wizard-body" *ngIf="wizardCurrentStep === 7">
+          <p>Vérifiez vos informations puis confirmez la soumission.</p>
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="wizardData.confirmation"
+              name="wizardConfirmation"
+            />
+            Je confirme que les informations sont correctes.
+          </label>
+        </div>
+
+        <div class="wizard-footer">
+          <button type="button" class="btn-secondary" (click)="closeSubmissionWizard()">
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="btn-outline"
+            (click)="previousWizardStep()"
+            [disabled]="wizardCurrentStep === 1"
+          >
+            Précédent
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            *ngIf="wizardCurrentStep < 7"
+            (click)="nextWizardStep()"
+          >
+            Suivant
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            *ngIf="wizardCurrentStep === 7"
+            (click)="submitWizardCandidature()"
+          >
+            Soumettre candidature
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>

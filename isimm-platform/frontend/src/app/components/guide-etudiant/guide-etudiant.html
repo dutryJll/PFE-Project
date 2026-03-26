@@ -1,54 +1,46 @@
-<div class="guide-etudiant-container">
-  <div class="hero-section">
-    <h1>📚 Guide Étudiant</h1>
-    <p>Tout ce que vous devez savoir sur la candidature et l'inscription aux masters ISIMM</p>
-  </div>
+<div class="guide-page">
+  <!-- Header -->
+  <header class="guide-header">
+    <button class="btn-retour" (click)="retourAccueil()">
+      <i class="fas fa-arrow-left"></i>
+      Retour à l'accueil
+    </button>
+    <h1>📚 Guide de l'Étudiant</h1>
+    <p>Tout ce que vous devez savoir sur le processus d'admission</p>
+  </header>
 
-  <!-- Guides principaux -->
-  <div class="guides-grid">
-    <div class="guide-card" *ngFor="let guide of guides" (click)="openGuide(guide)">
-      <div class="guide-icon">
-        <i class="fas" [ngClass]="guide.icon"></i>
-      </div>
-      <h3>{{ guide.titre }}</h3>
-      <p>{{ guide.description }}</p>
-      <button class="btn-voir-guide">Voir le guide <i class="fas fa-arrow-right"></i></button>
-    </div>
-  </div>
-
-  <!-- FAQ -->
-  <div class="faq-section">
-    <h2>❓ Questions Fréquentes</h2>
-    <div class="faq-list">
-      <div class="faq-item" *ngFor="let item of faq">
-        <h4>{{ item.question }}</h4>
-        <p>{{ item.reponse }}</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal détail guide -->
-  <div class="modal-overlay" *ngIf="selectedGuide" (click)="closeGuide()">
-    <div class="modal-content guide-modal" (click)="$event.stopPropagation()">
-      <button class="btn-close" (click)="closeGuide()">
-        <i class="fas fa-times"></i>
-      </button>
-
-      <div class="guide-header">
-        <i class="fas" [ngClass]="selectedGuide.icon"></i>
-        <h2>{{ selectedGuide.titre }}</h2>
+  <div class="guide-container">
+    <!-- Menu latéral -->
+    <aside class="guide-sidebar">
+      <div class="sidebar-title">
+        <i class="fas fa-list"></i>
+        <span>Sommaire</span>
       </div>
 
-      <div class="guide-body">
-        <p class="guide-description">{{ selectedGuide.description }}</p>
+      <ul class="sections-menu">
+        <li
+          *ngFor="let section of sections"
+          [class.active]="section.id === sectionActive"
+          (click)="changerSection(section.id)"
+        >
+          <i class="fas" [ngClass]="section.icon"></i>
+          <span>{{ section.titre }}</span>
+        </li>
+      </ul>
+    </aside>
 
-        <div class="steps-list">
-          <div class="step-item" *ngFor="let step of selectedGuide.steps; let i = index">
-            <div class="step-number">{{ i + 1 }}</div>
-            <div class="step-content">{{ step }}</div>
-          </div>
+    <!-- Contenu principal -->
+    <main class="guide-content">
+      <div class="content-card">
+        <div class="content-header">
+          <i class="fas" [ngClass]="getSectionActive().icon"></i>
+          <h2>{{ getSectionActive().titre }}</h2>
+        </div>
+
+        <div class="content-body">
+          <p *ngFor="let paragraphe of getSectionActive().contenu" [innerHTML]="paragraphe"></p>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </div>

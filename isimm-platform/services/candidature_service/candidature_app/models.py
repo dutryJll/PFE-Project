@@ -27,6 +27,9 @@ class Master(models.Model):
     
     class Meta:
         ordering = ['nom']
+        indexes = [
+            models.Index(fields=['actif', 'date_limite_candidature']),
+        ]
     
     def __str__(self):
         return self.nom
@@ -86,6 +89,12 @@ class ConfigurationAppel(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['actif', 'date_limite_preinscription']),
+            models.Index(fields=['date_debut_visibilite', 'date_fin_visibilite']),
+        ]
     
     def __str__(self):
         return f"Configuration {self.master.nom}"
@@ -156,6 +165,12 @@ class Candidature(models.Model):
     class Meta:
         unique_together = ['candidat', 'master']
         ordering = ['-date_soumission']
+        indexes = [
+            models.Index(fields=['candidat', 'statut']),
+            models.Index(fields=['master', 'statut']),
+            models.Index(fields=['statut', 'date_soumission']),
+            models.Index(fields=['concours', 'statut']),
+        ]
     
     def __str__(self):
         return f"{self.numero} - {self.candidat.get_full_name()}"
@@ -487,6 +502,11 @@ class Concours(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['actif', 'date_cloture']),
+        ]
     
     def __str__(self):
         return f"{self.nom} ({self.get_type_concours_display()})"

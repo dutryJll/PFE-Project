@@ -1,10 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Candidature {
   id: number;
@@ -23,6 +26,10 @@ interface Candidature {
   total_candidats?: number;
   statut_inscription?: string;
   annee_universitaire?: string;
+  choix_priorite?: number;
+  date_limite_modification?: string;
+  peut_modifier?: boolean;
+  jours_restants?: number;
 }
 
 interface Master {
@@ -103,6 +110,9 @@ interface HistoriqueItem {
   date_soumission?: string;
 }
 
+type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
+type ExportRow = Record<string, string | number | boolean | null | undefined>;
+
 type CandidatView =
   | 'dashboard'
   | 'profil'
@@ -131,7 +141,7 @@ interface CandidatActionPermissions {
   templateUrl: './dashboard-candidat.html',
   styleUrl: './dashboard-candidat.css',
 })
-export class DashboardCandidatComponent implements OnInit {
+export class DashboardCandidatComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   currentView: CandidatView = 'dashboard';
   currentDate: Date = new Date();
@@ -143,6 +153,41 @@ export class DashboardCandidatComponent implements OnInit {
   selectedDossierNumber: string | null = null;
   selectedCandidatureForInscription: Candidature | null = null;
   openActionMenuId: number | null = null;
+  inscriptionExportFormat: ExportFormat = 'pdf';
+  showEditCandidatureModal: boolean = false;
+  selectedCandidatureForEdit: Candidature | null = null;
+  editChoixPriorite: number = 1;
+  showSubmissionWizardModal: boolean = false;
+  wizardCurrentStep: number = 1;
+  wizardMaxAllowedStep: number = 1;
+  wizardOffre: Offre | null = null;
+  wizardData: {
+    type: string;
+    titre: string;
+    resume: string;
+    fichierNom: string;
+    attributs: string;
+    auteurs: string;
+    reviewers: string;
+    details: string;
+    confirmation: boolean;
+  } = {
+    type: '',
+    titre: '',
+    resume: '',
+    fichierNom: '',
+    attributs: '',
+    auteurs: '',
+    reviewers: '',
+    details: '',
+    confirmation: false,
+  };
+
+  private countdownNow: number = Date.now();
+  private countdownTimerId: ReturnType<typeof setInterval> | null = null;
+  private ws: WebSocket | null = null;
+  private reconnectTimerId: ReturnType<typeof setTimeout> | null = null;
+  private readonly wsReconnectDelayMs = 3000;
 
   mesCandidatures: Candidature[] = [
     {
@@ -416,6 +461,104 @@ export class DashboardCandidatComponent implements OnInit {
     this.loadMesCandidatures();
     this.loadOffresInscription();
     this.loadMesDossiers();
+    this.startCountdownClock();
+    this.connectStatusWebSocket();
+  }
+
+  ngOnDestroy(): void {
+    this.stopCountdownClock();
+    this.disconnectStatusWebSocket();
+  }
+
+  private startCountdownClock(): void {
+    this.stopCountdownClock();
+    this.countdownTimerId = setInterval(() => {
+      this.countdownNow = Date.now();
+    }, 1000);
+  }
+
+  private stopCountdownClock(): void {
+    if (this.countdownTimerId) {
+      clearInterval(this.countdownTimerId);
+      this.countdownTimerId = null;
+    }
+  }
+
+  private buildWebSocketUrl(): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${protocol}://localhost:8003/ws/candidatures/`;
+  }
+
+  private connectStatusWebSocket(): void {
+    this.disconnectStatusWebSocket();
+
+    try {
+      this.ws = new WebSocket(this.buildWebSocketUrl());
+    } catch (error) {
+      console.warn('WebSocket indisponible:', error);
+      this.scheduleWebSocketReconnect();
+      return;
+    }
+
+    this.ws.onopen = () => {
+      if (this.reconnectTimerId) {
+        clearTimeout(this.reconnectTimerId);
+        this.reconnectTimerId = null;
+      }
+    };
+
+    this.ws.onmessage = (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload?.type !== 'candidature_status_changed') {
+          return;
+        }
+
+        const userId = this.currentUser?.id;
+        if (!userId || payload.candidate_user_id !== userId) {
+          return;
+        }
+
+        this.loadMesCandidatures();
+        this.loadMesDossiers();
+      } catch (error) {
+        console.warn('Message WebSocket invalide:', error);
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.scheduleWebSocketReconnect();
+    };
+
+    this.ws.onerror = () => {
+      this.ws?.close();
+    };
+  }
+
+  private scheduleWebSocketReconnect(): void {
+    if (this.reconnectTimerId) {
+      return;
+    }
+    this.reconnectTimerId = setTimeout(() => {
+      this.reconnectTimerId = null;
+      this.connectStatusWebSocket();
+    }, this.wsReconnectDelayMs);
+  }
+
+  private disconnectStatusWebSocket(): void {
+    if (this.reconnectTimerId) {
+      clearTimeout(this.reconnectTimerId);
+      this.reconnectTimerId = null;
+    }
+
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.close();
+      this.ws = null;
+    }
   }
 
   ouvrirFormulaireReclamation(): void {
@@ -556,6 +699,8 @@ export class DashboardCandidatComponent implements OnInit {
             etat_candidature: item.etat_candidature ?? this.getStatutLabel(item.statut),
             date_depot_dossier: item.date_depot_dossier ?? '',
             annee_universitaire: item.annee_universitaire ?? this.currentAcademicYear(),
+            jours_restants: item.jours_restants ?? 0,
+            peut_modifier: item.peut_modifier ?? false,
           }));
         },
         error: (error) => {
@@ -715,6 +860,137 @@ export class DashboardCandidatComponent implements OnInit {
   }
 
   postulerOffre(offre: Offre): void {
+    if (!this.actionPermissions.preinscription) {
+      this.notifyActionBlocked("Action préinscription désactivée par l'administration.");
+      return;
+    }
+
+    if (this.dejaCandidature(offre.id)) {
+      alert('Vous avez déjà candidaté pour cette offre');
+      return;
+    }
+
+    if (offre.statut === 'ferme') {
+      alert('❌ Cette offre est fermée');
+      return;
+    }
+
+    this.router.navigate(['/candidature/in-progress'], {
+      queryParams: {
+        offerId: offre.id,
+        type: offre.type,
+        title: offre.titre,
+      },
+    });
+  }
+
+  startSubmissionWizard(offre: Offre): void {
+    if (!this.actionPermissions.preinscription) {
+      this.notifyActionBlocked("Action préinscription désactivée par l'administration.");
+      return;
+    }
+
+    if (this.dejaCandidature(offre.id)) {
+      alert('Vous avez déjà candidaté pour cette offre');
+      return;
+    }
+
+    if (offre.statut === 'ferme') {
+      alert('❌ Cette offre est fermée');
+      return;
+    }
+
+    this.wizardOffre = offre;
+    this.wizardCurrentStep = 1;
+    this.wizardMaxAllowedStep = 1;
+    this.wizardData = {
+      type: offre.type,
+      titre: offre.titre,
+      resume: '',
+      fichierNom: '',
+      attributs: '',
+      auteurs: '',
+      reviewers: '',
+      details: '',
+      confirmation: false,
+    };
+    this.showSubmissionWizardModal = true;
+  }
+
+  closeSubmissionWizard(): void {
+    this.showSubmissionWizardModal = false;
+    this.wizardOffre = null;
+  }
+
+  canGoToWizardStep(step: number): boolean {
+    return step >= 1 && step <= this.wizardMaxAllowedStep;
+  }
+
+  goToWizardStep(step: number): void {
+    if (this.canGoToWizardStep(step)) {
+      this.wizardCurrentStep = step;
+    }
+  }
+
+  previousWizardStep(): void {
+    if (this.wizardCurrentStep > 1) {
+      this.wizardCurrentStep -= 1;
+    }
+  }
+
+  nextWizardStep(): void {
+    if (!this.isWizardStepValid(this.wizardCurrentStep)) {
+      alert('❌ Veuillez compléter les champs requis avant de continuer.');
+      return;
+    }
+
+    if (this.wizardCurrentStep < 7) {
+      this.wizardCurrentStep += 1;
+      this.wizardMaxAllowedStep = Math.max(this.wizardMaxAllowedStep, this.wizardCurrentStep);
+    }
+  }
+
+  private isWizardStepValid(step: number): boolean {
+    if (step === 1) {
+      return (
+        !!this.wizardData.type && !!this.wizardData.titre.trim() && !!this.wizardData.resume.trim()
+      );
+    }
+
+    if (step === 2) {
+      return !!this.wizardData.fichierNom;
+    }
+
+    if (step === 7) {
+      return this.wizardData.confirmation;
+    }
+
+    return true;
+  }
+
+  onWizardFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    this.wizardData.fichierNom = file.name;
+  }
+
+  submitWizardCandidature(): void {
+    if (!this.wizardOffre) {
+      return;
+    }
+
+    if (!this.isWizardStepValid(7)) {
+      alert('❌ Veuillez confirmer avant de soumettre.');
+      return;
+    }
+
+    const offre = this.wizardOffre;
+    this.closeSubmissionWizard();
     this.postuler(offre);
   }
 
@@ -770,16 +1046,23 @@ export class DashboardCandidatComponent implements OnInit {
   }
 
   workflowSteps(candidature: Candidature): Array<{ key: string; label: string; done: boolean }> {
-    const submitted = candidature.statut === 'soumis' || !!candidature.date_soumission;
-    const preselected = ['sous_examen', 'preselectionne', 'selectionne', 'inscrit'].includes(
+    const rawSubmitted = candidature.statut === 'soumis' || !!candidature.date_soumission;
+    const rawPreselected = ['sous_examen', 'preselectionne', 'selectionne', 'inscrit'].includes(
       candidature.statut,
     );
-    const dossierDone =
+    const rawDossierDone =
       !!candidature.dossier_depose ||
       ['dossier_depose', 'selectionne', 'inscrit'].includes(candidature.statut);
-    const selected = ['selectionne', 'inscrit'].includes(candidature.statut);
-    const confirmed =
+    const rawSelected = ['selectionne', 'inscrit'].includes(candidature.statut);
+    const rawConfirmed =
       candidature.statut_inscription === 'valide' || candidature.statut === 'inscrit';
+
+    // Verrouillage séquentiel: une étape n'est validée que si toutes les précédentes le sont.
+    const submitted = rawSubmitted;
+    const preselected = submitted && rawPreselected;
+    const dossierDone = preselected && rawDossierDone;
+    const selected = dossierDone && rawSelected;
+    const confirmed = selected && rawConfirmed;
 
     return [
       { key: 'preinscription', label: 'Préinscription', done: submitted },
@@ -788,6 +1071,10 @@ export class DashboardCandidatComponent implements OnInit {
       { key: 'selection', label: 'Sélection de candidature', done: selected },
       { key: 'confirmation', label: 'Confirmation inscription en ligne', done: confirmed },
     ];
+  }
+
+  canAccessInscriptionEtape(candidature: Candidature): boolean {
+    return ['selectionne', 'inscrit'].includes(candidature.statut);
   }
 
   workflowProcessGuide(): Array<{ title: string; description: string }> {
@@ -825,7 +1112,13 @@ export class DashboardCandidatComponent implements OnInit {
 
   consulterCandidature(candidature: Candidature): void {
     this.closeActionMenu();
-    this.router.navigate(['/candidat/candidature', candidature.id]);
+    this.router.navigate(['/candidature/in-progress'], {
+      queryParams: {
+        candidatureId: candidature.id,
+        type: this.isCycleIngenieur(candidature) ? 'ingenieur' : 'master',
+        title: candidature.master_nom,
+      },
+    });
   }
 
   ouvrirDepotDossier(candidature: Candidature): void {
@@ -844,14 +1137,123 @@ export class DashboardCandidatComponent implements OnInit {
       return;
     }
 
+    if (!this.canAccessInscriptionEtape(candidature)) {
+      this.notifyActionBlocked(
+        "Vous devez terminer les étapes précédentes (présélection, dépôt dossier, sélection) avant l'inscription en ligne.",
+      );
+      return;
+    }
+
     this.closeActionMenu();
     this.selectedCandidatureForInscription = candidature;
     this.switchView('inscription');
   }
 
+  canModifyCandidature(candidature: Candidature): boolean {
+    if (candidature.statut !== 'soumis' || candidature.peut_modifier !== true) {
+      return false;
+    }
+
+    if (!candidature.date_limite_modification) {
+      return false;
+    }
+
+    return new Date(candidature.date_limite_modification).getTime() > this.countdownNow;
+  }
+
+  canShowModifyButton(candidature: Candidature): boolean {
+    return this.actionPermissions.consultationCandidature && candidature.statut === 'soumis';
+  }
+
+  getModificationCountdown(candidature: Candidature): string {
+    if (!candidature.date_limite_modification) {
+      return 'Délai indisponible';
+    }
+
+    const remainingMs =
+      new Date(candidature.date_limite_modification).getTime() - this.countdownNow;
+    if (remainingMs <= 0) {
+      return 'Expiré';
+    }
+
+    const totalMinutes = Math.floor(remainingMs / 60000);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return `${days}j ${hours}h ${minutes}min`;
+    }
+
+    return `${hours}h ${minutes}min`;
+  }
+
+  modifierCandidature(candidature: Candidature): void {
+    if (!this.actionPermissions.consultationCandidature) {
+      this.notifyActionBlocked("Modification candidature désactivée par l'administration.");
+      return;
+    }
+
+    if (!this.canModifyCandidature(candidature)) {
+      this.notifyActionBlocked(
+        'Cette candidature ne peut plus être modifiée (délai dépassé ou statut non autorisé).',
+      );
+      return;
+    }
+
+    this.closeActionMenu();
+    this.selectedCandidatureForEdit = candidature;
+    this.editChoixPriorite = candidature.choix_priorite ?? 1;
+    this.showEditCandidatureModal = true;
+  }
+
+  fermerModalModification(): void {
+    this.showEditCandidatureModal = false;
+    this.selectedCandidatureForEdit = null;
+    this.editChoixPriorite = 1;
+  }
+
+  confirmerModificationCandidature(): void {
+    if (!this.selectedCandidatureForEdit) {
+      return;
+    }
+
+    const priorite = Number(this.editChoixPriorite);
+    if (!Number.isInteger(priorite) || priorite < 1 || priorite > 5) {
+      alert('❌ Priorité invalide. Veuillez entrer un entier entre 1 et 5.');
+      return;
+    }
+
+    const candidature = this.selectedCandidatureForEdit;
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .put<Candidature>(
+        `http://localhost:8003/api/candidatures/${candidature.id}/modifier/`,
+        { choix_priorite: priorite },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          alert('✅ Candidature modifiée avec succès.');
+          this.fermerModalModification();
+          this.loadMesCandidatures();
+        },
+        error: (error) => {
+          console.error('Erreur modification candidature:', error);
+          alert(error?.error?.error || '❌ Erreur lors de la modification de la candidature.');
+        },
+      });
+  }
+
   ouvrirInscription(candidature: Candidature, fileInput: HTMLInputElement): void {
     if (!this.actionPermissions.consultationCandidature) {
       this.notifyActionBlocked("Inscription en ligne désactivée par l'administration.");
+      return;
+    }
+
+    if (!this.canAccessInscriptionEtape(candidature)) {
+      this.notifyActionBlocked("Cette candidature n'a pas encore atteint l'étape de sélection.");
       return;
     }
 
@@ -965,6 +1367,13 @@ export class DashboardCandidatComponent implements OnInit {
     fichierPaiement: File,
     reference: string,
   ): void {
+    if (!this.canAccessInscriptionEtape(candidature)) {
+      this.notifyActionBlocked(
+        "Paiement non autorisé: la candidature doit d'abord être sélectionnée.",
+      );
+      return;
+    }
+
     const token = this.authService.getAccessToken();
     const formData = new FormData();
 
@@ -1204,6 +1613,144 @@ export class DashboardCandidatComponent implements OnInit {
 
   telechargerFichier(fichier: FichierHistorique): void {
     alert(`Télécharger le fichier : ${fichier.nom}`);
+  }
+
+  exportInscriptionsEnLigne(): void {
+    if (!this.mesCandidatures.length) {
+      alert('❌ Aucune candidature à exporter');
+      return;
+    }
+
+    const rows: ExportRow[] = this.mesCandidatures.map((c) => ({
+      'N° Candidature': c.numero,
+      Formation: c.master_nom,
+      'Statut inscription': this.getStatutLabel(c.statut_inscription || 'en_attente'),
+      'Statut candidature': this.getStatutLabel(c.statut),
+      'Date soumission': c.date_soumission
+        ? new Date(c.date_soumission).toLocaleDateString('fr-FR')
+        : '-',
+      'Année universitaire': c.annee_universitaire || this.currentAcademicYear(),
+    }));
+
+    this.exportRows(
+      rows,
+      this.inscriptionExportFormat,
+      'inscriptions-en-ligne',
+      'Inscriptions en ligne',
+    );
+  }
+
+  private exportRows(
+    rows: ExportRow[],
+    format: ExportFormat,
+    baseFileName: string,
+    tableTitle: string,
+  ): void {
+    if (format === 'csv') {
+      this.exportRowsToCSV(rows, baseFileName);
+      return;
+    }
+
+    if (format === 'json') {
+      this.exportRowsToJSON(rows, baseFileName);
+      return;
+    }
+
+    if (format === 'xlsx') {
+      this.exportRowsToXLSX(rows, baseFileName, tableTitle);
+      return;
+    }
+
+    this.exportRowsToPdf(rows, baseFileName, tableTitle);
+  }
+
+  private exportRowsToCSV(rows: ExportRow[], baseFileName: string): void {
+    if (!rows.length) {
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers.map((h) => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(','),
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    this.downloadFile(blob, baseFileName, 'csv');
+  }
+
+  private exportRowsToJSON(rows: ExportRow[], baseFileName: string): void {
+    if (!rows.length) {
+      return;
+    }
+
+    const jsonContent = JSON.stringify(rows, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    this.downloadFile(blob, baseFileName, 'json');
+  }
+
+  private exportRowsToXLSX(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
+    if (!rows.length) {
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, tableTitle.substring(0, 31));
+    XLSX.writeFile(workbook, this.buildExportFileName(baseFileName, 'xlsx'));
+  }
+
+  private exportRowsToPdf(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
+    if (!rows.length) {
+      return;
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(14);
+    doc.text(tableTitle, pageWidth / 2, 14, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 21, {
+      align: 'center',
+    });
+
+    const headers = Object.keys(rows[0]);
+    const body = rows.map((row) => headers.map((h) => row[h] ?? ''));
+
+    autoTable(doc, {
+      head: [headers],
+      body,
+      startY: 26,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      didDrawPage: (data) => {
+        doc.setFontSize(8);
+        doc.text(`Page ${data.pageNumber}`, pageWidth - 18, pageHeight - 8);
+      },
+    });
+
+    doc.save(this.buildExportFileName(baseFileName, 'pdf'));
+  }
+
+  private downloadFile(blob: Blob, baseFileName: string, extension: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = this.buildExportFileName(baseFileName, extension);
+    document.body.appendChild(anchor);
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(anchor);
+  }
+
+  private buildExportFileName(baseName: string, extension: string): string {
+    const timestamp = new Date().toISOString().split('T')[0];
+    return `${baseName}_${timestamp}.${extension}`;
   }
 
   logout(): void {

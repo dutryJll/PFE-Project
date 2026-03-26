@@ -21,7 +21,7 @@ if crontab:
     },
     'purge-rgpd-mensuel': {
         'task': 'candidature_app.tasks.purger_donnees_candidats_non_admis',
-        'schedule': crontab(day_of_month=1, hour=3, minute=0),  # 1er du mois à 3h
+        'schedule': crontab(hour=3, minute=10),  # Tous les jours à 03:10
     },
     'verifier-paiements-quotidien': {
         'task': 'candidature_app.tasks.verifier_paiements_listes_actives',

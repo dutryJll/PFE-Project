@@ -9,6 +9,7 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { MastersComponent } from './components/masters/masters';
 import { ConcoursIngenieurComponent } from './components/concours-ingenieur/concours-ingenieur.component';
 import { CandidatureFormComponent } from './components/candidature-form/candidature-form.component';
+import { CandidatureInProgressComponent } from './components/candidature-in-progress/candidature-in-progress';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin-guard';
 import { roleGuard } from './guards/role-guard';
@@ -33,6 +34,7 @@ import { ConsulterDossierComponent } from './components/candidat/consulter-dossi
 import { DeposerDocumentsComponent } from './components/candidat/deposer-documents/deposer-documents';
 import { ChoixCandidatureComponent } from './components/choix-candidature/choix-candidature';
 import { NouvelleReclamationComponent } from './components/candidat/nouvelle-reclamation/nouvelle-reclamation';
+import { GuideEtudiantComponent } from './components/guide-etudiant/guide-etudiant';
 
 // ========================================
 // ADMIN COMPONENTS
@@ -106,6 +108,14 @@ export const routes: Routes = [
   {
     path: 'candidature',
     component: CandidatureFormComponent,
+  },
+  {
+    path: 'candidature/in-progress',
+    component: CandidatureInProgressComponent,
+  },
+  {
+    path: 'guide-etudiant',
+    component: GuideEtudiantComponent,
   },
 
   // ========================================

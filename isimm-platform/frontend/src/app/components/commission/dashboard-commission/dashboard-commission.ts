@@ -5,6 +5,9 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Candidature {
   id: number;
@@ -13,13 +16,16 @@ interface Candidature {
   candidat_email: string;
   candidat_cin?: string;
   specialite: string;
+  master_nom?: string;
   score: number;
   dossier_depose: boolean;
+  dossier_id?: string;
   statut: string;
   avis?: string;
   type_concours?: string;
   parcours?: string;
   nouveau_statut?: string;
+  date_inscription?: string;
 }
 
 interface Specialite {
@@ -28,6 +34,15 @@ interface Specialite {
   statut: 'actuel' | 'ancien';
   nb_candidatures: number;
   nb_dossiers: number;
+}
+
+interface Concours {
+  id: number;
+  nom: string;
+  annee: string;
+  nb_candidatures: number;
+  nb_acceptes: number;
+  nb_refuses: number;
 }
 
 interface Liste {
@@ -44,6 +59,9 @@ interface Reclamation {
   id: number;
   candidat_nom: string;
   objet: string;
+  master_nom?: string;
+  master?: string;
+  specialite?: string;
   motif: string;
   date: string;
   statut: string;
@@ -74,7 +92,9 @@ interface ProcesVerbal {
 type CommissionView =
   | 'dashboard'
   | 'profil'
-  | 'specialites'
+  | 'masters'
+  | 'configuration-appels'
+  | 'concours-ingenieur'
   | 'candidatures'
   | 'valider-dossier'
   | 'dossiers'
@@ -85,6 +105,9 @@ type CommissionView =
   | 'inscriptions'
   | 'statistiques'
   | 'deliberations';
+
+type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
+type ExportRow = Record<string, string | number | boolean | null | undefined>;
 
 interface CommissionActionPermissions {
   consultationCandidature: boolean;
@@ -97,6 +120,40 @@ interface CommissionActionPermissions {
   gererInscriptions: boolean;
   consulterStatistiques: boolean;
 }
+
+interface MasterOption {
+  id: number;
+  nom: string;
+}
+
+interface ConfigurationAppelForm {
+  master: number | null;
+  date_debut_visibilite: string;
+  date_fin_visibilite: string;
+  date_limite_preinscription: string;
+  date_limite_depot_dossier: string;
+  date_limite_paiement: string;
+  delai_modification_candidature_jours: number;
+  delai_depot_dossier_preselectionnes_jours: number;
+  actif: boolean;
+}
+
+// ========================================
+// WORKFLOW TRANSITION RULES
+// ========================================
+const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
+  soumis: new Set(['sous_examen', 'rejete', 'annule']),
+  sous_examen: new Set(['preselectionne', 'en_attente_dossier', 'rejete']),
+  preselectionne: new Set(['en_attente_dossier', 'rejete']),
+  en_attente_dossier: new Set(['dossier_depose', 'dossier_non_depose', 'rejete']),
+  dossier_depose: new Set(['en_attente', 'selectionne', 'rejete']),
+  en_attente: new Set(['selectionne', 'rejete', 'annule']),
+  selectionne: new Set(['inscrit', 'rejete']),
+  dossier_non_depose: new Set(['en_attente_dossier', 'rejete']),
+  annule: new Set(),
+  rejete: new Set(),
+  inscrit: new Set(),
+};
 
 @Component({
   selector: 'app-dashboard-commission',
@@ -180,6 +237,25 @@ export class DashboardCommissionComponent implements OnInit {
     },
   ];
 
+  concoursIngenieur: Concours[] = [
+    {
+      id: 1,
+      nom: 'Cycle Ingénieur 2025-2026',
+      annee: '2026',
+      nb_candidatures: 120,
+      nb_acceptes: 45,
+      nb_refuses: 75,
+    },
+    {
+      id: 2,
+      nom: 'Cycle Ingénieur (Double Diplôme)',
+      annee: '2026',
+      nb_candidatures: 35,
+      nb_acceptes: 12,
+      nb_refuses: 23,
+    },
+  ];
+
   candidatures: Candidature[] = [
     {
       id: 1,
@@ -234,12 +310,32 @@ export class DashboardCommissionComponent implements OnInit {
       date_creation: '15/02/2026',
     },
   ];
+  listesExportFormat: ExportFormat = 'pdf';
+  deliberationsExportFormat: ExportFormat = 'pdf';
+  inscriptionsExportFormat: ExportFormat = 'xlsx';
+
+  masterOptions: MasterOption[] = [];
+  selectedConfigMasterId: number | null = null;
+  configLoading: boolean = false;
+  configSaving: boolean = false;
+  configurationAppel: ConfigurationAppelForm = {
+    master: null,
+    date_debut_visibilite: '',
+    date_fin_visibilite: '',
+    date_limite_preinscription: '',
+    date_limite_depot_dossier: '',
+    date_limite_paiement: '',
+    delai_modification_candidature_jours: 7,
+    delai_depot_dossier_preselectionnes_jours: 14,
+    actif: true,
+  };
 
   reclamations: Reclamation[] = [
     {
       id: 1,
       candidat_nom: 'Ahmed Ben Ali',
       objet: 'Score incorrect',
+      master_nom: 'Master Génie Logiciel',
       motif: 'Le score affiché ne correspond pas',
       date: '2026-03-01',
       statut: 'en_cours',
@@ -293,6 +389,137 @@ export class DashboardCommissionComponent implements OnInit {
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
+    this.loadMastersForConfiguration();
+  }
+
+  loadMastersForConfiguration(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<any[]>('http://localhost:8003/api/candidatures/masters/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (masters) => {
+          this.masterOptions = (masters || []).map((m) => ({ id: Number(m.id), nom: m.nom }));
+          if (!this.selectedConfigMasterId && this.masterOptions.length > 0) {
+            this.selectedConfigMasterId = this.masterOptions[0].id;
+            this.onConfigMasterChange();
+          }
+        },
+        error: (error) => {
+          console.error('Erreur chargement masters:', error);
+        },
+      });
+  }
+
+  onConfigMasterChange(): void {
+    if (!this.selectedConfigMasterId) {
+      return;
+    }
+    this.loadConfigurationAppel(this.selectedConfigMasterId);
+  }
+
+  private loadConfigurationAppel(masterId: number): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.configLoading = true;
+
+    this.http
+      .get<any>(`http://localhost:8003/api/candidatures/configuration/${masterId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (config) => {
+          this.configurationAppel = {
+            master: config.master,
+            date_debut_visibilite: config.date_debut_visibilite || '',
+            date_fin_visibilite: config.date_fin_visibilite || '',
+            date_limite_preinscription: config.date_limite_preinscription || '',
+            date_limite_depot_dossier: config.date_limite_depot_dossier || '',
+            date_limite_paiement: config.date_limite_paiement || '',
+            delai_modification_candidature_jours: config.delai_modification_candidature_jours ?? 7,
+            delai_depot_dossier_preselectionnes_jours:
+              config.delai_depot_dossier_preselectionnes_jours ?? 14,
+            actif: config.actif ?? true,
+          };
+          this.configLoading = false;
+        },
+        error: () => {
+          this.configurationAppel = {
+            master: masterId,
+            date_debut_visibilite: '',
+            date_fin_visibilite: '',
+            date_limite_preinscription: '',
+            date_limite_depot_dossier: '',
+            date_limite_paiement: '',
+            delai_modification_candidature_jours: 7,
+            delai_depot_dossier_preselectionnes_jours: 14,
+            actif: true,
+          };
+          this.configLoading = false;
+        },
+      });
+  }
+
+  saveConfigurationAppel(): void {
+    if (!this.isResponsable || !this.selectedConfigMasterId) {
+      this.notifyActionBlocked('Configuration des appels réservée au responsable.');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const payload = {
+      ...this.configurationAppel,
+      master: this.selectedConfigMasterId,
+    };
+
+    this.configSaving = true;
+
+    this.http
+      .put(
+        `http://localhost:8003/api/candidatures/configuration/${this.selectedConfigMasterId}/`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('Configuration des appels enregistrée.', 'success');
+          this.configSaving = false;
+        },
+        error: () => {
+          this.http
+            .post('http://localhost:8003/api/candidatures/configuration/', payload, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .subscribe({
+              next: () => {
+                this.toastService.show('Configuration des appels créée.', 'success');
+                this.configSaving = false;
+              },
+              error: (createError) => {
+                console.error('Erreur sauvegarde configuration:', createError);
+                this.toastService.show(
+                  'Erreur lors de la sauvegarde de la configuration.',
+                  'error',
+                );
+                this.configSaving = false;
+              },
+            });
+        },
+      });
   }
 
   private loadActionPermissions(): void {
@@ -324,7 +551,13 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canAccessView(view: CommissionView): boolean {
-    if (view === 'dashboard' || view === 'profil' || view === 'specialites') {
+    if (
+      view === 'dashboard' ||
+      view === 'profil' ||
+      view === 'masters' ||
+      view === 'configuration-appels' ||
+      view === 'concours-ingenieur'
+    ) {
       return true;
     }
 
@@ -619,7 +852,9 @@ export class DashboardCommissionComponent implements OnInit {
     const titles: any = {
       dashboard: 'Tableau de bord',
       profil: 'Mon Profil',
-      specialites: 'Mes Spécialités',
+      masters: 'Les Masters',
+      'configuration-appels': 'Configuration des Appels',
+      'concours-ingenieur': "Concours Cycle d'Ingénieur",
       candidatures: 'Candidatures à évaluer',
       'valider-dossier': 'Dossiers à valider',
       dossiers: 'Tous les dossiers soumis',
@@ -641,6 +876,17 @@ export class DashboardCommissionComponent implements OnInit {
   consulterSpecialite(spec: Specialite): void {
     this.filtreSpecialiteActive = spec.id.toString();
     this.switchView('candidatures');
+  }
+
+  getConcoursIngenieur(): Concours[] {
+    return this.concoursIngenieur;
+  }
+
+  consulterConcours(concours: Concours): void {
+    this.filtreSpecialiteActive = '';
+    this.filtres.concours = 'ingenieur';
+    this.switchView('candidatures');
+    this.appliquerFiltres();
   }
 
   getCandidaturesFiltrees(): Candidature[] {
@@ -784,6 +1030,12 @@ export class DashboardCommissionComponent implements OnInit {
     console.log('Nouveau statut sélectionné:', candidature.nouveau_statut);
   }
 
+  getAuthorizedStatutTransitions(candidature: Candidature): string[] {
+    const currentStatut = candidature.statut;
+    const allowed = ALLOWED_STATUS_TRANSITIONS[currentStatut] || new Set();
+    return Array.from(allowed);
+  }
+
   changerStatut(candidature: Candidature): void {
     if (!this.actionPermissions.verifierDossiers) {
       this.notifyActionBlocked("Changement de statut désactivé par l'administration.");
@@ -792,6 +1044,14 @@ export class DashboardCommissionComponent implements OnInit {
 
     if (!candidature.nouveau_statut) {
       alert('❌ Veuillez sélectionner un statut');
+      // Vérifier que la transition est autorisée
+      const authorized = this.getAuthorizedStatutTransitions(candidature);
+      if (!authorized.includes(candidature.nouveau_statut!)) {
+        alert(`❌ Transition non autorisée: ${candidature.statut} → ${candidature.nouveau_statut}`);
+        candidature.nouveau_statut = '';
+        return;
+      }
+
       return;
     }
 
@@ -992,6 +1252,36 @@ export class DashboardCommissionComponent implements OnInit {
   // ========================================
   // RÉCLAMATIONS
   // ========================================
+  getReclamationMaster(reclamation: Reclamation): string {
+    return reclamation.master_nom || reclamation.master || reclamation.specialite || '-';
+  }
+
+  formatReclamationStatus(statut: string): string {
+    if (statut === 'en_cours') {
+      return 'En cours';
+    }
+    if (statut === 'en_attente') {
+      return 'En attente';
+    }
+    if (statut === 'traitee') {
+      return 'Traité';
+    }
+    return statut;
+  }
+
+  getReclamationStatusClass(statut: string): string {
+    if (statut === 'en_cours') {
+      return 'statut-en_cours';
+    }
+    if (statut === 'en_attente') {
+      return 'statut-en_attente';
+    }
+    if (statut === 'traitee') {
+      return 'statut-traitee';
+    }
+    return '';
+  }
+
   traiterReclamation(reclamation: Reclamation): void {
     if (!this.actionPermissions.traiterReclamations) {
       this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
@@ -1085,5 +1375,197 @@ export class DashboardCommissionComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  // ========================================
+  // EXPORT FUNCTIONALITY
+  // ========================================
+  exportListes(): void {
+    if (this.listes.length === 0) {
+      alert('❌ Aucune liste à exporter');
+      return;
+    }
+
+    const rows: ExportRow[] = this.listes.map((liste) => ({
+      ID: liste.id.toString(),
+      Nom: liste.nom,
+      Spécialité: liste.specialite,
+      Type: liste.type === 'preselection' ? 'Présélection' : 'Sélection',
+      Statut: liste.statut === 'active' ? 'Active' : 'Inactive',
+      Candidats: liste.nb_candidats.toString(),
+      'Date Création': liste.date_creation,
+    }));
+
+    this.exportRows(rows, this.listesExportFormat, 'listes-admission', "Listes d'Admission");
+  }
+
+  exportDeliberations(): void {
+    if (this.procesVerbaux.length === 0) {
+      alert('❌ Aucune délibération à exporter');
+      return;
+    }
+
+    const rows: ExportRow[] = this.procesVerbaux.map((pv) => ({
+      ID: pv.id.toString(),
+      Titre: pv.titre,
+      Master: pv.master_nom,
+      'Date Réunion': pv.date_reunion,
+      Participants: pv.nb_participants.toString(),
+      Candidatures: pv.nb_candidatures.toString(),
+      Admis: pv.nb_admis.toString(),
+      Rejetés: pv.nb_rejetes.toString(),
+      Statut:
+        pv.statut === 'approuve' ? 'Approuvé' : pv.statut === 'en_cours' ? 'En Cours' : 'Archivé',
+    }));
+
+    this.exportRows(
+      rows,
+      this.deliberationsExportFormat,
+      'deliberations-pv',
+      'Procès-Verbaux de Délibération',
+    );
+  }
+
+  exportInscriptions(): void {
+    const inscriptions = this.candidatures.filter((c) => c.statut === 'inscrit');
+    if (inscriptions.length === 0) {
+      alert('❌ Aucune inscription à exporter');
+      return;
+    }
+
+    const rows: ExportRow[] = inscriptions.map((cand) => ({
+      ID: cand.id.toString(),
+      Dossier: cand.dossier_id || '-',
+      Candidat: cand.candidat_nom || cand.candidat_email,
+      Master: cand.master_nom,
+      Spécialité: cand.specialite,
+      Statut: 'Inscrit',
+      'Date Inscription': cand.date_inscription || new Date().toLocaleDateString('fr-FR'),
+    }));
+
+    this.exportRows(
+      rows,
+      this.inscriptionsExportFormat,
+      'inscriptions-payment',
+      'Fichier de Paiement',
+    );
+  }
+
+  exportRows(
+    rows: ExportRow[],
+    format: ExportFormat,
+    baseFileName: string,
+    tableTitle: string,
+  ): void {
+    if (format === 'csv') {
+      this.exportRowsToCSV(rows, baseFileName);
+    } else if (format === 'json') {
+      this.exportRowsToJSON(rows, baseFileName);
+    } else if (format === 'xlsx') {
+      this.exportRowsToXLSX(rows, baseFileName, tableTitle);
+    } else if (format === 'pdf') {
+      this.exportRowsToPdf(rows, baseFileName, tableTitle);
+    }
+  }
+
+  exportRowsToCSV(rows: ExportRow[], baseFileName: string): void {
+    if (rows.length === 0) {
+      alert('❌ Aucune donnée à exporter');
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => headers.map((h) => `"${row[h]}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    this.downloadFile(blob, baseFileName, 'csv');
+  }
+
+  exportRowsToJSON(rows: ExportRow[], baseFileName: string): void {
+    if (rows.length === 0) {
+      alert('❌ Aucune donnée à exporter');
+      return;
+    }
+
+    const jsonContent = JSON.stringify(rows, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    this.downloadFile(blob, baseFileName, 'json');
+  }
+
+  exportRowsToXLSX(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
+    if (rows.length === 0) {
+      alert('❌ Aucune donnée à exporter');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, tableTitle.substring(0, 31));
+
+    const fileName = this.buildExportFileName(baseFileName, 'xlsx');
+    XLSX.writeFile(workbook, fileName);
+  }
+
+  exportRowsToPdf(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
+    if (rows.length === 0) {
+      alert('❌ Aucune donnée à exporter');
+      return;
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Add title
+    doc.setFontSize(14);
+    doc.text(tableTitle, pageWidth / 2, 15, { align: 'center' });
+
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 22, {
+      align: 'center',
+    });
+
+    // Add table
+    const headers = Object.keys(rows[0]);
+    const tableRows = rows.map((row) => headers.map((h) => row[h]));
+
+    (doc as any).autoTable({
+      head: [headers],
+      body: tableRows,
+      startY: 28,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 15 } },
+      didDrawPage: (data: any) => {
+        // Footer
+        const pageCount = (doc as any).internal.pages.length - 1;
+        const currentPage = data.pageNumber;
+        doc.setFontSize(8);
+        doc.text(`Page ${currentPage} / ${pageCount}`, pageWidth - 20, pageHeight - 10);
+      },
+    });
+
+    const fileName = this.buildExportFileName(baseFileName, 'pdf');
+    doc.save(fileName);
+  }
+
+  downloadFile(blob: Blob, baseFileName: string, format: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.buildExportFileName(baseFileName, format);
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
+  buildExportFileName(baseName: string, format: string): string {
+    const timestamp = new Date().toISOString().split('T')[0];
+    return `${baseName}_${timestamp}.${format}`;
   }
 }

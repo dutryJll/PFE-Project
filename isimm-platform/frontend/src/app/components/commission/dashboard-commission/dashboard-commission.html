@@ -27,11 +27,30 @@
 
       <a
         class="nav-item"
-        [class.active]="currentView === 'specialites'"
-        (click)="switchView('specialites')"
+        [class.active]="currentView === 'masters'"
+        (click)="switchView('masters')"
       >
         <i class="fas fa-book"></i>
-        <span>Mes Spécialités</span>
+        <span>Les Masters</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'configuration-appels'"
+        (click)="switchView('configuration-appels')"
+      >
+        <i class="fas fa-calendar-check"></i>
+        <span>Configuration des appels</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'concours-ingenieur'"
+        (click)="switchView('concours-ingenieur')"
+      >
+        <i class="fas fa-graduation-cap"></i>
+        <span>Concours Cycle d'Ingénieur</span>
       </a>
 
       <!-- ÉVALUATION -->
@@ -59,18 +78,18 @@
         <span class="badge-warning">{{ candidaturesAvecDossier.length }}</span>
       </a>
 
+      <!-- RESPONSABLE -->
+      <div class="nav-section-title" *ngIf="isResponsable">RESPONSABLE</div>
+
       <a
         class="nav-item"
-        *ngIf="actionPermissions.consultationDossier"
+        *ngIf="isResponsable && actionPermissions.consultationDossier"
         [class.active]="currentView === 'dossiers'"
         (click)="switchView('dossiers')"
       >
         <i class="fas fa-folder-open"></i>
         <span>Tous les dossiers soumis</span>
       </a>
-
-      <!-- RESPONSABLE -->
-      <div class="nav-section-title" *ngIf="isResponsable">RESPONSABLE</div>
 
       <a
         class="nav-item"
@@ -216,7 +235,35 @@
 
       <div class="section-card">
         <h2>📊 Activités récentes</h2>
-        <p>Dernières actions sur vos spécialités</p>
+        <div class="activites-list">
+          <div class="activity-item">
+            <div class="activity-icon check-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Validation de dossiers</strong>
+              <small>Plusieurs dossiers ont été validés aujourd'hui.</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon file-icon">
+              <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Mise à jour des candidatures</strong>
+              <small>Les statuts ont été actualisés par la commission.</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon list-icon">
+              <i class="fas fa-list-alt"></i>
+            </div>
+            <div class="activity-content">
+              <strong>Préparation des listes</strong>
+              <small>Les listes de pré-sélection sont en cours de finalisation.</small>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -267,7 +314,46 @@
               <input type="tel" [(ngModel)]="profileData.phone" name="phone" />
             </div>
 
-            <button type="submit" class="btn-primary">💾 Enregistrer les modifications</button>
+            <details class="profile-collapse">
+              <summary>Additional names</summary>
+              <div class="profile-collapse-body form-row">
+                <div class="form-group">
+                  <label>Nom additionnel</label>
+                  <input type="text" name="additional_name" />
+                </div>
+                <div class="form-group">
+                  <label>Nom préféré</label>
+                  <input type="text" name="preferred_name" />
+                </div>
+              </div>
+            </details>
+
+            <details class="profile-collapse">
+              <summary>Interests</summary>
+              <div class="profile-collapse-body form-group">
+                <label>Centres d'intérêt</label>
+                <input
+                  type="text"
+                  name="commission_interests"
+                  placeholder="Génie logiciel, data..."
+                />
+              </div>
+            </details>
+
+            <details class="profile-collapse">
+              <summary>Optional</summary>
+              <div class="profile-collapse-body form-group">
+                <label>Notes complémentaires</label>
+                <textarea name="optional_notes" rows="3"></textarea>
+              </div>
+            </details>
+
+            <div class="profile-actions">
+              <button type="submit" class="btn-primary">Update profile</button>
+              <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
 
@@ -305,17 +391,28 @@
               />
             </div>
 
-            <button type="submit" class="btn-warning">🔑 Changer le mot de passe</button>
+            <div class="profile-actions">
+              <button type="submit" class="btn-warning">Update password</button>
+              <button
+                type="button"
+                class="btn-outline"
+                (click)="
+                  passwordForm = { current_password: '', new_password: '', confirm_password: '' }
+                "
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- ✅ MES SPÉCIALITÉS -->
-    <div *ngIf="currentView === 'specialites'" class="view-content">
+    <!-- ✅ LES MASTERS -->
+    <div *ngIf="currentView === 'masters'" class="view-content">
       <div class="section-card">
-        <div class="specialites-header">
-          <h2>📚 Mes Spécialités</h2>
+        <div class="masters-header">
+          <h2>📚 Les Masters</h2>
           <div class="filter-tabs">
             <button
               class="filter-tab"
@@ -334,13 +431,13 @@
           </div>
         </div>
 
-        <div class="specialites-grid">
-          <div class="specialite-card" *ngFor="let spec of getSpecialitesFiltrees()">
-            <div class="specialite-header">
+        <div class="masters-grid">
+          <div class="master-card" *ngFor="let spec of getSpecialitesFiltrees()">
+            <div class="master-header">
               <h3>{{ spec.nom }}</h3>
-              <span class="specialite-badge" [class]="spec.statut">{{ spec.statut }}</span>
+              <span class="master-badge" [class]="spec.statut">{{ spec.statut }}</span>
             </div>
-            <div class="specialite-stats">
+            <div class="master-stats">
               <div class="stat-item">
                 <i class="fas fa-file-alt"></i>
                 <span>{{ spec.nb_candidatures }} candidatures</span>
@@ -351,6 +448,157 @@
               </div>
             </div>
             <button class="btn-primary" (click)="consulterSpecialite(spec)">
+              <i class="fas fa-eye"></i> Consulter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentView === 'configuration-appels' && isResponsable" class="view-content">
+      <div class="section-card">
+        <h2>⚙️ Configuration des Appels à candidatures</h2>
+        <p>
+          Définissez la visibilité de l'appel et les délais de chaque étape: préinscription, dépôt
+          du dossier et paiement.
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Master concerné</label>
+            <select [(ngModel)]="selectedConfigMasterId" (change)="onConfigMasterChange()">
+              <option [ngValue]="null">Sélectionnez un master</option>
+              <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div *ngIf="configLoading" class="empty-state">Chargement de la configuration...</div>
+
+        <form *ngIf="!configLoading" (ngSubmit)="saveConfigurationAppel()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date début visibilité</label>
+              <input
+                type="date"
+                [(ngModel)]="configurationAppel.date_debut_visibilite"
+                name="date_debut_visibilite"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Date fin visibilité</label>
+              <input
+                type="date"
+                [(ngModel)]="configurationAppel.date_fin_visibilite"
+                name="date_fin_visibilite"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date limite préinscription</label>
+              <input
+                type="date"
+                [(ngModel)]="configurationAppel.date_limite_preinscription"
+                name="date_limite_preinscription"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Date limite dépôt dossier</label>
+              <input
+                type="date"
+                [(ngModel)]="configurationAppel.date_limite_depot_dossier"
+                name="date_limite_depot_dossier"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date limite paiement</label>
+              <input
+                type="date"
+                [(ngModel)]="configurationAppel.date_limite_paiement"
+                name="date_limite_paiement"
+              />
+            </div>
+            <div class="form-group">
+              <label>Délai modification candidature (jours)</label>
+              <input
+                type="number"
+                min="0"
+                [(ngModel)]="configurationAppel.delai_modification_candidature_jours"
+                name="delai_modification_candidature_jours"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Délai dépôt dossier présélectionnés (jours)</label>
+              <input
+                type="number"
+                min="0"
+                [(ngModel)]="configurationAppel.delai_depot_dossier_preselectionnes_jours"
+                name="delai_depot_dossier_preselectionnes_jours"
+                required
+              />
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" [(ngModel)]="configurationAppel.actif" name="config_actif" />
+                Appel actif
+              </label>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="configSaving || !selectedConfigMasterId"
+            >
+              {{ configSaving ? 'Enregistrement...' : 'Enregistrer la configuration' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ✅ CONCOURS CYCLE D'INGÉNIEUR -->
+    <div *ngIf="currentView === 'concours-ingenieur'" class="view-content">
+      <div class="section-card">
+        <div class="concours-header">
+          <h2>🎓 Concours Cycle d'Ingénieur</h2>
+          <p class="concours-subtitle">Candidatures pour les programmes de cycle ingénieur</p>
+        </div>
+
+        <div class="concours-grid">
+          <div class="concours-card" *ngFor="let concours of getConcoursIngenieur()">
+            <div class="concours-card-header">
+              <h3>{{ concours.nom }}</h3>
+              <span class="concours-badge">{{ concours.annee }}</span>
+            </div>
+            <div class="concours-card-stats">
+              <div class="stat-item">
+                <i class="fas fa-file-alt"></i>
+                <span>{{ concours.nb_candidatures }} candidatures</span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-check-circle"></i>
+                <span>{{ concours.nb_acceptes }} acceptés</span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-times-circle"></i>
+                <span>{{ concours.nb_refuses }} refusés</span>
+              </div>
+            </div>
+            <button class="btn-primary" (click)="consulterConcours(concours)">
               <i class="fas fa-eye"></i> Consulter
             </button>
           </div>
@@ -677,6 +925,17 @@
           >
             Sélection
           </button>
+          <div class="download-box">
+            <select [(ngModel)]="listesExportFormat" class="export-select">
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="xlsx">Excel</option>
+            </select>
+            <button class="btn-download" (click)="exportListes()">
+              <i class="fas fa-download"></i> Télécharger
+            </button>
+          </div>
         </div>
 
         <div class="listes-grid">
@@ -772,29 +1031,42 @@
       class="view-content"
     >
       <div class="section-card">
-        <h2>📢 Traiter les réclamations</h2>
-        <div class="reclamations-list">
-          <div class="reclamation-card" *ngFor="let reclamation of reclamations">
-            <div class="reclamation-header">
-              <h4>{{ reclamation.objet }}</h4>
-              <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
-                {{ reclamation.statut }}
-              </span>
-            </div>
-            <div class="reclamation-body">
-              <p><strong>Candidat :</strong> {{ reclamation.candidat_nom }}</p>
-              <p><strong>Date :</strong> {{ reclamation.date | date: 'dd/MM/yyyy' }}</p>
-              <p><strong>Motif :</strong> {{ reclamation.motif }}</p>
-              <p *ngIf="reclamation.reponse">
-                <strong>Réponse :</strong> {{ reclamation.reponse }}
-              </p>
-            </div>
-            <div class="reclamation-actions" *ngIf="reclamation.statut !== 'traitee'">
-              <button class="btn-primary" (click)="traiterReclamation(reclamation)">
-                <i class="fas fa-reply"></i> Répondre
-              </button>
-            </div>
-          </div>
+        <h2>📢 Traiter les réclamations (Tableau)</h2>
+        <div class="table-container">
+          <table class="candidatures-table reclamations-table">
+            <thead>
+              <tr>
+                <th>Identifiant</th>
+                <th>Objet</th>
+                <th>Master concerné</th>
+                <th>État</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let reclamation of reclamations">
+                <td>
+                  <strong class="reclamation-id">#{{ reclamation.id }}</strong>
+                </td>
+                <td>
+                  <strong>{{ reclamation.objet }}</strong>
+                </td>
+                <td>{{ getReclamationMaster(reclamation) }}</td>
+                <td>
+                  <span
+                    class="reclamation-statut"
+                    [ngClass]="getReclamationStatusClass(reclamation.statut)"
+                  >
+                    {{ formatReclamationStatus(reclamation.statut) }}
+                  </span>
+                  <div style="margin-top: 0.5rem" *ngIf="reclamation.statut !== 'traitee'">
+                    <button class="btn-action voir" (click)="traiterReclamation(reclamation)">
+                      <i class="fas fa-reply"></i> Traiter
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -811,9 +1083,26 @@
       <div class="section-card">
         <div class="section-header">
           <h2>📝 Procès-verbaux de délibération</h2>
-          <button class="btn-primary" *ngIf="actionPermissions.selectionFinale" (click)="creerPV()">
-            <i class="fas fa-plus"></i> Nouveau PV
-          </button>
+          <div style="display: flex; gap: 10px">
+            <button
+              class="btn-primary"
+              *ngIf="actionPermissions.selectionFinale"
+              (click)="creerPV()"
+            >
+              <i class="fas fa-plus"></i> Nouveau PV
+            </button>
+            <div class="download-box">
+              <select [(ngModel)]="deliberationsExportFormat" class="export-select">
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+                <option value="pdf">PDF</option>
+                <option value="xlsx">Excel</option>
+              </select>
+              <button class="btn-download" (click)="exportDeliberations()">
+                <i class="fas fa-download"></i> Télécharger
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="table-container">
@@ -871,7 +1160,20 @@
       class="view-content"
     >
       <div class="section-card">
-        <h2>📝 Gérer les inscriptions</h2>
+        <div class="section-header">
+          <h2>📝 Gérer les inscriptions</h2>
+          <div class="download-box">
+            <select [(ngModel)]="inscriptionsExportFormat" class="export-select">
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="xlsx">Excel</option>
+            </select>
+            <button class="btn-download" (click)="exportInscriptions()">
+              <i class="fas fa-download"></i> Télécharger
+            </button>
+          </div>
+        </div>
         <p>Fonctionnalité à implémenter - Gestion des inscriptions aux masters</p>
       </div>
     </div>

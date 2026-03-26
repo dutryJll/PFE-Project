@@ -14,7 +14,7 @@ class GestionListesService:
     @staticmethod
     @transaction.atomic
     def generer_liste_principale(master, iteration=1):
-        """Générer la liste principale d'admission"""
+        """Générer la liste principale à partir des candidats éligibles (score croissant)."""
         annee = timezone.now().year
         config = master.configuration
         
@@ -22,7 +22,7 @@ class GestionListesService:
             master=master,
             statut='dossier_depose',
             score__isnull=False
-        ).order_by('-score', 'date_soumission')
+        ).select_related('donnees_academiques').order_by('score', 'date_soumission')
         
         if iteration > 1:
             candidatures = candidatures.exclude(statut='inscrit')
@@ -45,7 +45,7 @@ class GestionListesService:
                 score=candidature.score
             )
             
-            candidature.statut = 'selectionne'
+            candidature.statut = 'preselectionne'
             candidature.save()
             
             position += 1
@@ -242,12 +242,99 @@ class VerificationPaiementService:
         
         return False
 
+    @staticmethod
+    @transaction.atomic
+    def generer_liste_suivante_si_necessaire(liste_admission):
+        """
+        Génère automatiquement une 2ème/3ème liste principale si des places sont libérées,
+        en puisant dans la liste d'attente active.
+        """
+        if liste_admission.type_liste != 'principale':
+            return None
+
+        places_a_combler = max(0, int(liste_admission.places_restantes or 0))
+        if places_a_combler == 0:
+            return None
+
+        if liste_admission.iteration >= 3:
+            return None
+
+        liste_attente_active = ListeAdmission.objects.filter(
+            master=liste_admission.master,
+            type_liste='attente',
+            active=True,
+        ).order_by('-iteration', '-date_creation').first()
+
+        if not liste_attente_active:
+            return None
+
+        attente_qs = liste_attente_active.candidats.select_related('candidature').order_by('position')
+        promus = list(attente_qs[:places_a_combler])
+        if not promus:
+            return None
+
+        nouvelle_iteration = liste_admission.iteration + 1
+        annee = timezone.now().year
+
+        nouvelle_liste = ListeAdmission.objects.create(
+            master=liste_admission.master,
+            type_liste='principale',
+            iteration=nouvelle_iteration,
+            annee_universitaire=f"{annee}/{annee+1}",
+            capacite_accueil=len(promus),
+            places_restantes=0,
+            active=True,
+            publiee=False,
+        )
+
+        for idx, candidat_liste in enumerate(promus, start=1):
+            candidature = candidat_liste.candidature
+            CandidatListe.objects.create(
+                liste=nouvelle_liste,
+                candidature=candidature,
+                position=idx,
+                score=candidat_liste.score,
+            )
+            candidature.statut = 'selectionne'
+            candidature.save(update_fields=['statut', 'updated_at'])
+            candidat_liste.delete()
+
+        reste_attente = list(attente_qs[len(promus):])
+        if reste_attente:
+            nouvelle_attente = ListeAdmission.objects.create(
+                master=liste_admission.master,
+                type_liste='attente',
+                iteration=nouvelle_iteration,
+                annee_universitaire=f"{annee}/{annee+1}",
+                capacite_accueil=len(reste_attente),
+                places_restantes=len(reste_attente),
+                active=True,
+                publiee=False,
+            )
+            for idx, old_item in enumerate(reste_attente, start=1):
+                CandidatListe.objects.create(
+                    liste=nouvelle_attente,
+                    candidature=old_item.candidature,
+                    position=idx,
+                    score=old_item.score,
+                )
+
+        liste_attente_active.active = False
+        liste_attente_active.save(update_fields=['active'])
+
+        return nouvelle_liste
+
 
 class SelectionCandidatsService:
     
     @staticmethod
     def selectionner_candidats_par_specialite(master):
-        """Sélectionner candidats selon Article 12"""
+        """
+        Sélectionner candidats (article 12):
+        - classement par spécialité exigée du master
+        - sous-classement par diplôme
+        - tri final par score croissant
+        """
         config = master.configuration
         
         candidatures_eligibles = Candidature.objects.filter(
@@ -259,16 +346,23 @@ class SelectionCandidatsService:
         candidatures_par_specialite = defaultdict(list)
         
         for candidature in candidatures_eligibles:
-            specialite = candidature.master.specialite
-            candidatures_par_specialite[specialite].append(candidature)
+            specialite = (candidature.master.specialite or '').strip().lower() or 'non_renseignee'
+            diplome = 'non_renseigne'
+            if hasattr(candidature, 'donnees_academiques') and candidature.donnees_academiques:
+                diplome = (
+                    candidature.donnees_academiques.notes_detaillees.get('diplome')
+                    or candidature.donnees_academiques.notes_detaillees.get('diplome_exige')
+                    or 'non_renseigne'
+                )
+            candidatures_par_specialite[(specialite, str(diplome).lower())].append(candidature)
         
         liste_principale_finale = []
         liste_attente_finale = []
         
-        for specialite, candidatures in candidatures_par_specialite.items():
+        for _, candidatures in candidatures_par_specialite.items():
             candidatures_triees = sorted(
                 candidatures,
-                key=lambda c: (-c.score, c.date_soumission)
+                key=lambda c: (c.score, c.date_soumission)
             )
             
             capacite_specialite = config.capacite_accueil // len(candidatures_par_specialite)
