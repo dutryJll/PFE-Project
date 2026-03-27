@@ -45,6 +45,24 @@ interface OffreIngenieur {
   date_limite: string;
   statut: 'ouvert' | 'ferme';
   description: string;
+  backend_id?: number;
+}
+
+interface ReglementConcoursIngenieur {
+  metadata?: any;
+  [key: string]: any;
+}
+
+interface ReferentielMasters {
+  metadata?: any;
+  sections_masters?: Record<string, any>;
+  documents_requis_pdf_unique?: string[];
+  regles_importantes?: string[];
+  modele_formulaire_candidature?: {
+    champs?: string[];
+    choix_possibles?: string[];
+  };
+  [key: string]: any;
 }
 
 interface Candidature {
@@ -110,6 +128,7 @@ type ExportRow = Record<string, string | number | boolean | null | undefined>;
   styleUrl: './dashboard-admin.css',
 })
 export class DashboardAdminComponent implements OnInit {
+  adminLogoSrc: string = '/assets/images/logo-universite.png';
   currentUser: any = null;
   currentView: string = 'dashboard';
   currentDate: Date = new Date();
@@ -133,6 +152,17 @@ export class DashboardAdminComponent implements OnInit {
   offresExportFormat: ExportFormat = 'csv';
   mastersList: Master[] = [];
   offresIngenieurList: OffreIngenieur[] = [];
+  reglementReference: ReglementConcoursIngenieur | null = null;
+  chapitresReglement: Array<{ key: string; label: string; value: any }> = [];
+  referentielMasters: ReferentielMasters | null = null;
+  isLoadingReferentielMasters: boolean = false;
+  referentielMastersMessage: string = '';
+  point13Message: string = '';
+  isLoadingReglement: boolean = false;
+  isApplyingReglement: boolean = false;
+  concoursIngenieurApiAvailable: boolean = true;
+  selectedConcoursIdForReglement: number | null = null;
+  reglementApplyMessage: string = '';
   candidaturesList: Candidature[] = [];
   commissions: any[] = [];
 
@@ -250,6 +280,7 @@ export class DashboardAdminComponent implements OnInit {
     this.loadStats();
     this.loadUtilisateurs();
     this.loadMasters();
+    this.loadReferentielMasters();
     this.loadCandidatures();
     this.loadOffresIngenieur();
     this.loadLogs();
@@ -300,6 +331,17 @@ export class DashboardAdminComponent implements OnInit {
       profil: 'Mon Profil',
     };
     return titles[this.currentView] || 'Tableau de bord';
+  }
+
+  onAdminLogoError(): void {
+    if (this.adminLogoSrc === '/assets/images/logo-universite.png') {
+      this.adminLogoSrc = '/assets/images/logo-isimm.png';
+      return;
+    }
+
+    if (this.adminLogoSrc === '/assets/images/logo-isimm.png') {
+      this.adminLogoSrc = '/ISIMM_LOGO.png';
+    }
   }
 
   // ========================================
@@ -390,6 +432,99 @@ export class DashboardAdminComponent implements OnInit {
         specialite: 'Informatique',
       },
     ];
+  }
+
+  executerSelectionMaster(master: Master): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.point13Message = 'Session expirée. Veuillez vous reconnecter.';
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/master/${master.id}/generer-listes/`,
+        { iteration: 1 },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (res: any) => {
+          this.point13Message = `✅ Sélection lancée pour ${master.nom}. ${res?.message || ''}`;
+        },
+        error: (err) => {
+          const msg = err?.error?.error || err?.error?.message || 'Erreur de sélection.';
+          this.point13Message = `❌ ${msg}`;
+        },
+      });
+  }
+
+  verifierClotureOuRelance(master: Master): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.point13Message = 'Session expirée. Veuillez vous reconnecter.';
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/master/${master.id}/cloture-ou-relance/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (res: any) => {
+          this.point13Message =
+            `ℹ️ ${res?.message || 'Cloture/relance executée.'}` +
+            ` (inscrits: ${res?.nb_inscrits ?? '-'}, capacité: ${res?.capacite_accueil ?? '-'})`;
+        },
+        error: (err) => {
+          const msg = err?.error?.error || err?.error?.message || 'Erreur cloture/relance.';
+          this.point13Message = `❌ ${msg}`;
+        },
+      });
+  }
+
+  loadReferentielMasters(): void {
+    this.isLoadingReferentielMasters = true;
+    this.referentielMastersMessage = '';
+
+    this.http
+      .get<ReferentielMasters>(
+        'http://localhost:8003/api/candidatures/masters/reglement-reference/',
+      )
+      .subscribe({
+        next: (data) => {
+          this.referentielMasters = data;
+          this.isLoadingReferentielMasters = false;
+        },
+        error: (err) => {
+          console.error('Erreur chargement referentiel masters:', err);
+          this.isLoadingReferentielMasters = false;
+          this.referentielMastersMessage =
+            'Impossible de charger le referentiel masters 2025/2026.';
+        },
+      });
+  }
+
+  getMastersReferenceCards(): Array<{ code: string; data: any }> {
+    const sections = this.referentielMasters?.sections_masters || {};
+    const orderedCodes = ['mpgl', 'mrgl', 'mpds'];
+
+    return orderedCodes
+      .filter((code) => !!sections[code])
+      .map((code) => ({ code: code.toUpperCase(), data: sections[code] }));
+  }
+
+  formatMasterFieldLabel(key: string): string {
+    return key.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  normalizeKey(key: string | number | symbol): string {
+    return String(key);
+  }
+
+  joinMasterChoices(values?: string[]): string {
+    return (values || []).join(', ');
   }
 
   loadCandidatures(): void {
@@ -659,7 +794,7 @@ export class DashboardAdminComponent implements OnInit {
     fileName: string,
   ): Promise<void> {
     const doc = new jsPDF({ orientation: 'landscape' });
-    const logoDataUrl = await this.loadImageAsDataUrl('assets/images/logo-isimm.png');
+    const logoDataUrl = await this.loadImageAsDataUrl('/assets/images/logo-isimm.png');
 
     let startY = 24;
     let textX = 14;
@@ -785,6 +920,54 @@ export class DashboardAdminComponent implements OnInit {
   // GESTION OFFRES CONCOURS INGÉNIEUR
   // ========================================
   loadOffresIngenieur(): void {
+    this.loadReglementReference();
+
+    const token = this.authService.getAccessToken();
+    this.http
+      .get<any[]>('http://localhost:8003/api/candidatures/concours/?type_concours=ingenieur', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (items: any[]) => {
+          this.concoursIngenieurApiAvailable = true;
+          this.offresIngenieurList = (items || []).map((c: any) => ({
+            id: c.id,
+            backend_id: c.id,
+            titre: c.nom,
+            specialite: c.description || 'Cycle Ingenieur',
+            places: c.places_disponibles,
+            date_limite: c.date_cloture,
+            statut: c.actif ? 'ouvert' : 'ferme',
+            description: c.description || '',
+          }));
+
+          if (this.offresIngenieurList.length > 0 && !this.selectedConcoursIdForReglement) {
+            this.selectedConcoursIdForReglement =
+              this.offresIngenieurList[0].backend_id || this.offresIngenieurList[0].id;
+          }
+        },
+        error: () => {
+          this.concoursIngenieurApiAvailable = false;
+          // fallback mock si l'API concours n'est pas disponible
+          this.offresIngenieurList = [
+            {
+              id: 1,
+              titre: "Concours d'accès - Cycle Ingénieur Génie Logiciel",
+              specialite: 'Génie Logiciel',
+              places: 50,
+              date_limite: '2026-05-31',
+              statut: 'ouvert',
+              description: 'Concours national pour les titulaires de licence en informatique.',
+            },
+          ];
+          if (!this.selectedConcoursIdForReglement) {
+            this.selectedConcoursIdForReglement = this.offresIngenieurList[0].id;
+          }
+        },
+      });
+
+    return;
+
     this.offresIngenieurList = [
       {
         id: 1,
@@ -805,6 +988,190 @@ export class DashboardAdminComponent implements OnInit {
         description: 'Admission sur dossier et entretien pour parcours Data Science.',
       },
     ];
+  }
+
+  loadReglementReference(): void {
+    this.isLoadingReglement = true;
+    this.reglementApplyMessage = '';
+
+    this.http
+      .get<ReglementConcoursIngenieur>(
+        'http://localhost:8003/api/candidatures/concours/reglement-reference/',
+      )
+      .subscribe({
+        next: (data) => {
+          this.hydrateReglementDisplay(data);
+          this.isLoadingReglement = false;
+        },
+        error: (err) => {
+          console.error('Erreur chargement règlement:', err);
+          this.isLoadingReglement = false;
+          this.reglementApplyMessage = 'Impossible de charger le règlement de référence.';
+        },
+      });
+  }
+
+  applyReglementOfficiel(): void {
+    if (!this.concoursIngenieurApiAvailable) {
+      this.reglementApplyMessage =
+        '❌ API concours indisponible: impossible d’appliquer le règlement sur une offre fictive.';
+      alert('❌ API concours indisponible. Vérifiez le backend concours puis réessayez.');
+      return;
+    }
+
+    if (!this.selectedConcoursIdForReglement) {
+      alert('Veuillez sélectionner un concours ingénieur à mettre à jour.');
+      return;
+    }
+
+    this.isApplyingReglement = true;
+    this.reglementApplyMessage = '';
+
+    const token = this.authService.getAccessToken();
+    const payload = {
+      sections_personnalisees: {},
+    };
+
+    this.http
+      .put(
+        `http://localhost:8003/api/candidatures/concours/${this.selectedConcoursIdForReglement}/appliquer-reglement-reference/`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.hydrateReglementDisplay(response);
+          this.isApplyingReglement = false;
+          this.reglementApplyMessage = `✅ Règlement officiel appliqué avec succès (${this.chapitresReglement.length} chapitres affichés).`;
+          alert('✅ Règlement officiel appliqué au concours.');
+        },
+        error: (err) => {
+          console.error('Erreur application règlement:', err);
+          this.isApplyingReglement = false;
+          const message = this.extractApiErrorMessage(err);
+          this.reglementApplyMessage = `❌ ${message}`;
+          alert(`❌ Échec application du règlement: ${message}`);
+        },
+      });
+  }
+
+  private extractApiErrorMessage(err: any): string {
+    const statusCode = err?.status ? `HTTP ${err.status}` : 'Erreur reseau';
+
+    const apiMessage =
+      err?.error?.error ||
+      err?.error?.detail ||
+      err?.error?.message ||
+      (typeof err?.error === 'string' ? err.error : '');
+
+    if (apiMessage) {
+      return `${statusCode}: ${apiMessage}`;
+    }
+
+    if (statusCode === 'HTTP 401') {
+      return 'HTTP 401: session expirée ou token invalide.';
+    }
+    if (statusCode === 'HTTP 403') {
+      return 'HTTP 403: permission refusée pour ce rôle.';
+    }
+    if (statusCode === 'HTTP 404') {
+      return 'HTTP 404: concours introuvable dans le backend.';
+    }
+
+    return `${statusCode}: erreur inconnue côté backend.`;
+  }
+
+  private buildChapitresFromReglement(
+    data: ReglementConcoursIngenieur | null,
+  ): Array<{ key: string; label: string; value: any }> {
+    if (!data) return [];
+
+    const rootEntries = Object.entries(data)
+      .filter(([k]) => k.startsWith('chapitre_'))
+      .sort((a, b) => a[0].localeCompare(b[0]));
+
+    if (rootEntries.length > 0) {
+      return rootEntries.map(([key, value]) => ({
+        key,
+        label: this.prettyChapitreLabel(key),
+        value,
+      }));
+    }
+
+    const nested = data['chapitres'];
+    if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+      return Object.entries(nested).map(([key, value]) => ({
+        key,
+        label: this.prettyChapitreLabel(key),
+        value,
+      }));
+    }
+
+    return [];
+  }
+
+  private prettyChapitreLabel(key: string): string {
+    return key
+      .replaceAll('_', ' ')
+      .replace('chapitre', 'Chapitre')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private prettyFieldLabel(key: string): string {
+    return key.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private stringifyInline(value: any): string {
+    if (value === null || value === undefined) {
+      return '-';
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.stringifyInline(item))
+        .filter((item) => !!item)
+        .join(', ');
+    }
+
+    if (typeof value === 'object') {
+      return Object.entries(value)
+        .map(([k, v]) => `${this.prettyFieldLabel(k)}: ${this.stringifyInline(v)}`)
+        .join(' ; ');
+    }
+
+    return String(value);
+  }
+
+  formatChapitreContent(value: any): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item, index) => `${index + 1}. ${this.stringifyInline(item)}`).join('\n');
+    }
+
+    if (typeof value === 'object') {
+      return Object.entries(value)
+        .map(([k, v]) => `${this.prettyFieldLabel(k)}: ${this.stringifyInline(v)}`)
+        .join('\n');
+    }
+
+    return String(value);
+  }
+
+  private hydrateReglementDisplay(payload: any): void {
+    const source = payload?.conditions_admission ?? payload;
+    this.reglementReference = source;
+    this.chapitresReglement = this.buildChapitresFromReglement(source);
   }
 
   ajouterOffreIngenieur(): void {
@@ -991,6 +1358,7 @@ export class DashboardAdminComponent implements OnInit {
 
   allerGestionConcoursIngenieur(): void {
     this.switchView('concours-ingenieur');
+    this.loadReglementReference();
   }
 
   allerListesSelection(): void {

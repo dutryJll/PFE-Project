@@ -79,6 +79,53 @@
               required
             />
           </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>🎓 Diplôme et parcours académique</h2>
+        <p class="info-text">
+          Cette section suit les champs demandés dans l'appel officiel: établissement d'origine,
+          diplôme obtenu, sessions de rattrapage et bonus session principale (BSP).
+        </p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Établissement d'origine *</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.etablissementOrigine"
+              name="etablissementOrigine"
+              placeholder="ISIMM, FST, ISET..."
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Diplôme obtenu *</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.diplome"
+              name="diplome"
+              placeholder="Licence en Informatique, Cycle préparatoire..."
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Nombre d'années avec session de rattrapage *</label>
+            <select [(ngModel)]="formData.anneesRattrapage" name="anneesRattrapage" required>
+              <option value="0">Aucune année en session de rattrapage</option>
+              <option value="1">1 année en session de rattrapage</option>
+              <option value="2">2 années ou plus en session de rattrapage</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Bonus session principale (BSP)</label>
+            <input type="text" [value]="bspValue" readonly />
+            <small>Règle appliquée: 0 (aucune), 0.5 (1 année), 1 (2 années ou plus)</small>
+          </div>
 
           <div class="form-group">
             <label>Moyenne Bac *</label>
@@ -136,6 +183,87 @@
             />
             <small>Entre 0 et 20</small>
           </div>
+        </div>
+
+        <div class="docs-section">
+          <h3>
+            <span *ngIf="typeCandidature === 'master'"
+              >📎 Documents requis - Candidature Master</span
+            >
+            <span *ngIf="typeCandidature === 'ingenieur'"
+              >📎 Documents requis - Candidature Ingénieur</span
+            >
+          </h3>
+
+          <div class="docs-grid">
+            <div class="doc-card" *ngFor="let doc of currentRequiredDocuments">
+              <div class="doc-card-head">
+                <strong>{{ doc.label }}</strong>
+                <span class="doc-badge" [class.optional]="!doc.required">
+                  {{ doc.required ? 'Obligatoire' : 'Optionnel' }}
+                </span>
+              </div>
+              <input
+                type="file"
+                [name]="doc.key"
+                (change)="onDocumentChange($event, doc.key)"
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <small>{{ getDocumentName(doc.key) }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" *ngIf="typeCandidature === 'master'">
+        <h2>🎯 Choix des masters (vœux)</h2>
+        <p class="info-text">Sélectionnez vos choix par ordre de priorité (1, 2, 3).</p>
+
+        <div class="voeux-container">
+          <div class="form-group">
+            <label>Vœu 1 *</label>
+            <select [(ngModel)]="formData.voeu1" name="voeu1" required>
+              <option value="">-- Choisir le vœu 1 --</option>
+              <option *ngFor="let master of getMastersForVoeu(1)" [value]="master.id">
+                {{ master.nom }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Vœu 2</label>
+            <select [(ngModel)]="formData.voeu2" name="voeu2">
+              <option value="">-- Choisir le vœu 2 --</option>
+              <option *ngFor="let master of getMastersForVoeu(2)" [value]="master.id">
+                {{ master.nom }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Vœu 3</label>
+            <select [(ngModel)]="formData.voeu3" name="voeu3">
+              <option value="">-- Choisir le vœu 3 --</option>
+              <option *ngFor="let master of getMastersForVoeu(3)" [value]="master.id">
+                {{ master.nom }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" *ngIf="typeCandidature === 'ingenieur'">
+        <h2>⚙️ Choix de spécialité ingénieur</h2>
+        <p class="info-text">Sélectionnez la spécialité du cycle ingénieur.</p>
+
+        <div class="form-group">
+          <label>Spécialité *</label>
+          <select [(ngModel)]="formData.specialite" name="specialite" required>
+            <option value="">-- Choisir une spécialité --</option>
+            <option *ngFor="let specialite of specialitesIngenieur" [value]="specialite.id">
+              {{ specialite.nom }}
+            </option>
+          </select>
         </div>
       </div>
 

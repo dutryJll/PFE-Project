@@ -14,7 +14,7 @@ class GestionListesService:
     @staticmethod
     @transaction.atomic
     def generer_liste_principale(master, iteration=1):
-        """Générer la liste principale à partir des candidats éligibles (score croissant)."""
+        """Générer la liste principale à partir des candidats éligibles (score décroissant)."""
         annee = timezone.now().year
         config = master.configuration
         
@@ -22,7 +22,7 @@ class GestionListesService:
             master=master,
             statut='dossier_depose',
             score__isnull=False
-        ).select_related('donnees_academiques').order_by('score', 'date_soumission')
+        ).select_related('donnees_academiques').order_by('-score', 'date_soumission')
         
         if iteration > 1:
             candidatures = candidatures.exclude(statut='inscrit')
@@ -92,29 +92,83 @@ class GestionListesService:
 
 
 class ImportPaiementService:
+
+    @staticmethod
+    def _normaliser_colonnes(df):
+        mapping = {}
+        for col in df.columns:
+            key = str(col).strip().lower()
+            key = key.replace('é', 'e').replace('è', 'e').replace('ê', 'e').replace('à', 'a').replace('ù', 'u')
+            key = key.replace(' ', '_')
+            mapping[col] = key
+        return df.rename(columns=mapping)
+
+    @staticmethod
+    def _extraire_valeur(row, candidates, default=None):
+        for c in candidates:
+            if c in row and row[c] is not None and str(row[c]).strip() != '':
+                return row[c]
+        return default
     
     @staticmethod
     def importer_fichier_excel(fichier_path):
         """Importer un fichier Excel de www.inscription.tn"""
+        if pd is None:
+            return {
+                'success': 0,
+                'errors': 1,
+                'details': [{'erreur': 'pandas n est pas installe dans cet environnement'}],
+            }
+
         try:
             df = pd.read_excel(fichier_path)
+            df = ImportPaiementService._normaliser_colonnes(df)
             
             resultats = {
                 'success': 0,
                 'errors': 0,
-                'details': []
+                'details': [],
+                'processed': 0,
+                'on_time': 0,
+                'late': 0,
             }
             
             for index, row in df.iterrows():
                 try:
-                    cin = str(row['CIN']).strip()
-                    reference = str(row['Référence']).strip()
-                    date_paiement_str = row['Date Paiement']
+                    cin = str(
+                        ImportPaiementService._extraire_valeur(
+                            row,
+                            ['cin', 'numero_cin', 'num_cin'],
+                            '',
+                        )
+                    ).strip()
+                    reference = str(
+                        ImportPaiementService._extraire_valeur(
+                            row,
+                            ['reference', 'reference_paiement', 'numero_reference'],
+                            '',
+                        )
+                    ).strip()
+                    date_paiement_raw = ImportPaiementService._extraire_valeur(
+                        row,
+                        ['date_paiement', 'date'],
+                        None,
+                    )
+                    montant = ImportPaiementService._extraire_valeur(
+                        row,
+                        ['montant', 'montant_paye', 'amount'],
+                        0,
+                    )
+
+                    if not cin or not reference:
+                        raise ValueError('Colonnes obligatoires manquantes: CIN/Reference')
+
+                    date_paiement = pd.to_datetime(date_paiement_raw) if date_paiement_raw is not None else timezone.now()
                     
                     candidature = Candidature.objects.filter(
                         candidat__cin=cin,
-                        statut='selectionne'
-                    ).first()
+                        statut__in=['selectionne', 'inscrit']
+                    ).select_related('master', 'master__configuration').order_by('-updated_at').first()
                     
                     if not candidature:
                         resultats['errors'] += 1
@@ -128,21 +182,52 @@ class ImportPaiementService:
                     paiement, created = Paiement.objects.get_or_create(
                         candidature=candidature,
                         defaults={
-                            'montant': row.get('Montant', 0),
+                            'montant': montant,
                             'statut': 'en_attente'
                         }
                     )
-                    
-                    paiement.marquer_comme_paye(
-                        reference=reference,
-                        date_paiement=pd.to_datetime(date_paiement_str)
-                    )
-                    
+
+                    try:
+                        date_limite = candidature.master.configuration.date_limite_paiement
+                    except Exception:
+                        date_limite = None
+
+                    paiement.reference_paiement = reference
+                    paiement.date_paiement = date_paiement
+                    paiement.montant = montant
+                    paiement.statut = 'paye'
                     paiement.fichier_import = fichier_path
                     paiement.date_import = timezone.now()
                     paiement.save()
+
+                    on_time = True
+                    if date_limite is not None and getattr(date_paiement, 'date', None):
+                        on_time = date_paiement.date() <= date_limite
+
+                    if on_time:
+                        candidature.statut = 'inscrit'
+                        candidature.save(update_fields=['statut', 'updated_at'])
+                        resultats['on_time'] += 1
+                    else:
+                        # Paiement enregistre mais hors delai: inscription administrative incomplete.
+                        if candidature.statut == 'inscrit':
+                            candidature.statut = 'selectionne'
+                            candidature.save(update_fields=['statut', 'updated_at'])
+                        resultats['late'] += 1
                     
+                    resultats['processed'] += 1
                     resultats['success'] += 1
+                    resultats['details'].append(
+                        {
+                            'ligne': index + 2,
+                            'cin': cin,
+                            'candidature_id': candidature.id,
+                            'master': candidature.master.nom,
+                            'date_limite': str(date_limite) if date_limite else None,
+                            'date_paiement': str(date_paiement),
+                            'paiement_dans_delai': on_time,
+                        }
+                    )
                     
                 except Exception as e:
                     resultats['errors'] += 1
@@ -162,6 +247,70 @@ class ImportPaiementService:
 
 
 class VerificationPaiementService:
+
+    @staticmethod
+    def consulter_statuts_inscription(master_id=None):
+        """
+        Retourne les listes des candidats admis:
+        - inscription_finalisee: paiement effectue dans le delai commission
+        - inscription_incomplete: non paye ou paiement hors delai
+        """
+        qs = Candidature.objects.filter(statut__in=['selectionne', 'inscrit']).select_related(
+            'candidat',
+            'master',
+            'master__configuration',
+        )
+        if master_id:
+            qs = qs.filter(master_id=master_id)
+
+        finalisee = []
+        incomplete = []
+
+        for candidature in qs:
+            paiement = getattr(candidature, 'paiement', None)
+            date_limite = None
+            try:
+                date_limite = candidature.master.configuration.date_limite_paiement
+            except Exception:
+                date_limite = None
+
+            record = {
+                'candidature_id': candidature.id,
+                'numero': candidature.numero,
+                'candidat_id': candidature.candidat_id,
+                'cin': getattr(candidature.candidat, 'cin', None),
+                'email': getattr(candidature.candidat, 'email', None),
+                'master_id': candidature.master_id,
+                'master': candidature.master.nom,
+                'statut_candidature': candidature.statut,
+                'date_limite_paiement': str(date_limite) if date_limite else None,
+                'paiement_statut': getattr(paiement, 'statut', 'non_paye') if paiement else 'non_paye',
+                'date_paiement': str(getattr(paiement, 'date_paiement', None)) if paiement else None,
+                'reference_paiement': getattr(paiement, 'reference_paiement', None) if paiement else None,
+            }
+
+            if not paiement or paiement.statut != 'paye':
+                record['motif'] = 'paiement_non_effectue'
+                incomplete.append(record)
+                continue
+
+            if date_limite is not None and paiement.date_paiement and paiement.date_paiement.date() > date_limite:
+                record['motif'] = 'paiement_hors_delai'
+                incomplete.append(record)
+                continue
+
+            record['motif'] = 'inscription_finalisee'
+            finalisee.append(record)
+
+        return {
+            'inscription_finalisee': finalisee,
+            'inscription_incomplete': incomplete,
+            'stats': {
+                'total': len(finalisee) + len(incomplete),
+                'finalisee': len(finalisee),
+                'incomplete': len(incomplete),
+            },
+        }
     
     @staticmethod
     @transaction.atomic
@@ -256,9 +405,6 @@ class VerificationPaiementService:
         if places_a_combler == 0:
             return None
 
-        if liste_admission.iteration >= 3:
-            return None
-
         liste_attente_active = ListeAdmission.objects.filter(
             master=liste_admission.master,
             type_liste='attente',
@@ -324,56 +470,149 @@ class VerificationPaiementService:
 
         return nouvelle_liste
 
+    @staticmethod
+    @transaction.atomic
+    def evaluer_cloture_ou_relance(master):
+        """
+        Point 13 - clôture ou relance:
+        - si capacité atteinte: clôture + publication liste définitive
+        - sinon: relance via génération d'une nouvelle itération à partir de la liste d'attente
+        """
+        try:
+            capacite = int(master.configuration.capacite_accueil)
+        except Exception:
+            capacite = int(master.places_disponibles or 0)
+
+        nb_inscrits = Candidature.objects.filter(master=master, statut='inscrit').count()
+        reste_a_pourvoir = max(0, capacite - nb_inscrits)
+
+        derniere_principale = ListeAdmission.objects.filter(
+            master=master,
+            type_liste='principale',
+            active=True,
+        ).order_by('-iteration', '-date_creation').first()
+
+        if reste_a_pourvoir == 0:
+            if derniere_principale and not derniere_principale.publiee:
+                derniere_principale.publiee = True
+                derniere_principale.date_publication = timezone.now()
+                derniere_principale.save(update_fields=['publiee', 'date_publication', 'updated_at'])
+
+            ListeAdmission.objects.filter(master=master, active=True).update(active=False)
+
+            return {
+                'cloturee': True,
+                'relance': False,
+                'capacite_accueil': capacite,
+                'nb_inscrits': nb_inscrits,
+                'message': 'Capacite atteinte: procedure cloturee et liste definitive publiee.',
+            }
+
+        if not derniere_principale:
+            return {
+                'cloturee': False,
+                'relance': False,
+                'capacite_accueil': capacite,
+                'nb_inscrits': nb_inscrits,
+                'message': 'Aucune liste principale active a relancer.',
+            }
+
+        derniere_principale.places_restantes = max(
+            int(derniere_principale.places_restantes or 0),
+            reste_a_pourvoir,
+        )
+        derniere_principale.save(update_fields=['places_restantes', 'updated_at'])
+
+        nouvelle_liste = VerificationPaiementService.generer_liste_suivante_si_necessaire(derniere_principale)
+        if not nouvelle_liste:
+            return {
+                'cloturee': False,
+                'relance': False,
+                'capacite_accueil': capacite,
+                'nb_inscrits': nb_inscrits,
+                'reste_a_pourvoir': reste_a_pourvoir,
+                'message': 'Capacite non atteinte mais aucune relance possible (liste attente vide).',
+            }
+
+        return {
+            'cloturee': False,
+            'relance': True,
+            'capacite_accueil': capacite,
+            'nb_inscrits': nb_inscrits,
+            'reste_a_pourvoir': reste_a_pourvoir,
+            'iteration_generee': nouvelle_liste.iteration,
+            'nouvelle_liste_id': nouvelle_liste.id,
+            'nb_promus': nouvelle_liste.candidats.count(),
+            'message': (
+                'Capacite non atteinte: relance effectuee et nouvelle liste principale generee.'
+            ),
+        }
+
 
 class SelectionCandidatsService:
     
     @staticmethod
     def selectionner_candidats_par_specialite(master):
         """
-        Sélectionner candidats (article 12):
-        - classement par spécialité exigée du master
-        - sous-classement par diplôme
-        - tri final par score croissant
+        Sélection des candidats admis (article 12):
+        - candidats éligibles uniquement
+        - classement séparé par spécialité
+        - score décroissant
+        - affectation par ordre de préférence (choix 1 -> choix 2 -> choix 3)
+        - candidats non affectés basculent en liste d'attente
         """
         config = master.configuration
-        
+
         candidatures_eligibles = Candidature.objects.filter(
             master=master,
             statut='dossier_depose',
-            score__isnull=False
+            dossier_depose=True,
+            score__isnull=False,
         ).select_related('candidat', 'donnees_academiques')
-        
+
         candidatures_par_specialite = defaultdict(list)
-        
+
         for candidature in candidatures_eligibles:
-            specialite = (candidature.master.specialite or '').strip().lower() or 'non_renseignee'
-            diplome = 'non_renseigne'
+            specialite = (candidature.master.specialite or '').strip().lower()
             if hasattr(candidature, 'donnees_academiques') and candidature.donnees_academiques:
-                diplome = (
-                    candidature.donnees_academiques.notes_detaillees.get('diplome')
-                    or candidature.donnees_academiques.notes_detaillees.get('diplome_exige')
-                    or 'non_renseigne'
+                details = candidature.donnees_academiques.notes_detaillees or {}
+                specialite = (
+                    str(details.get('specialite_cible') or details.get('specialite') or specialite)
+                    .strip()
+                    .lower()
                 )
-            candidatures_par_specialite[(specialite, str(diplome).lower())].append(candidature)
-        
+
+            candidatures_par_specialite[specialite or 'non_renseignee'].append(candidature)
+
         liste_principale_finale = []
         liste_attente_finale = []
-        
-        for _, candidatures in candidatures_par_specialite.items():
+
+        nb_groupes = max(1, len(candidatures_par_specialite))
+        capacite_totale = int(config.capacite_accueil)
+        base_capacite = capacite_totale // nb_groupes
+        reste = capacite_totale % nb_groupes
+
+        groupes_ordonnes = sorted(
+            candidatures_par_specialite.items(),
+            key=lambda item: len(item[1]),
+            reverse=True,
+        )
+
+        for idx_groupe, (_, candidatures) in enumerate(groupes_ordonnes):
             candidatures_triees = sorted(
                 candidatures,
-                key=lambda c: (c.score, c.date_soumission)
+                key=lambda c: (-float(c.score), c.date_soumission)
             )
-            
-            capacite_specialite = config.capacite_accueil // len(candidatures_par_specialite)
+
+            capacite_specialite = base_capacite + (1 if idx_groupe < reste else 0)
             places_disponibles = capacite_specialite
-            
+
             # CHOIX 1 en priorité
             for candidature in candidatures_triees:
                 if candidature.choix_priorite == 1 and places_disponibles > 0:
                     liste_principale_finale.append(candidature)
                     places_disponibles -= 1
-            
+
             # CHOIX 2
             if places_disponibles > 0:
                 for candidature in candidatures_triees:
@@ -381,7 +620,7 @@ class SelectionCandidatsService:
                         if candidature not in liste_principale_finale:
                             liste_principale_finale.append(candidature)
                             places_disponibles -= 1
-            
+
             # CHOIX 3
             if places_disponibles > 0:
                 for candidature in candidatures_triees:
@@ -389,11 +628,11 @@ class SelectionCandidatsService:
                         if candidature not in liste_principale_finale:
                             liste_principale_finale.append(candidature)
                             places_disponibles -= 1
-            
+
             for candidature in candidatures_triees:
                 if candidature not in liste_principale_finale:
                     liste_attente_finale.append(candidature)
-        
+
         return {
             'liste_principale': liste_principale_finale,
             'liste_attente': liste_attente_finale

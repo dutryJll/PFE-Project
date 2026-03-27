@@ -138,10 +138,10 @@ export class AuthService {
         this.actionsLoaded = true;
       }),
       catchError((error: any) => {
-        console.error('❌ Erreur chargement actions actives:', error);
+        console.warn('Actions indisponibles (fallback local permissif):', error?.status || error);
         this.actionsLoaded = false;
         this.enabledActions.clear();
-        return throwError(() => error);
+        return of([]);
       }),
     );
   }

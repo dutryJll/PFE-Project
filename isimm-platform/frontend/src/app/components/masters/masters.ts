@@ -1,6 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+
+interface ReferentielMasters {
+  metadata?: any;
+  sections_masters?: Record<string, any>;
+  documents_requis_pdf_unique?: string[];
+  regles_importantes?: string[];
+  [key: string]: any;
+}
 
 @Component({
   selector: 'app-masters',
@@ -10,52 +19,38 @@ import { RouterLink } from '@angular/router';
   styleUrl: './masters.css',
 })
 export class MastersComponent implements OnInit {
+  referentielMasters: ReferentielMasters | null = null;
+  isLoadingReferentiel = false;
+  referentielMessage = '';
+
   mastersRecherche = [
     {
       id: 1,
-      titre: 'Master de recherche en génie logiciel',
+      titre: 'Master Recherche - Sciences de l Informatique: Ingenierie Logicielle (MRGL)',
       description:
-        'Formation approfondie en génie logiciel, architecture logicielle, et méthodes formelles.',
+        'Master de recherche avec selection sur score selon l appel a candidatures 2025/2026.',
       duree: '2 ans',
       prerequis: 'Licence',
       debouches: 'Recherche, R&D',
-    },
-    {
-      id: 2,
-      titre: 'Master de recherche en Microélectronique et Instrumentation',
-      description:
-        'Spécialisation en circuits intégrés, systèmes embarqués et instrumentation avancée.',
-      duree: '2 ans',
-      prerequis: 'Licence',
-      debouches: 'R&D, Industrie',
     },
   ];
 
   mastersProfessionnels = [
     {
       id: 3,
-      titre: 'Master Professionnel en Data Science',
-      description:
-        'Formation en science des données, intelligence artificielle et analyse prédictive.',
+      titre: 'Master Professionnel en Ingenierie Logicielle (MPGL)',
+      description: 'Ouverture officielle 2025/2026 avec preselection puis depot dossier numerique.',
       duree: '2 ans',
       prerequis: 'Licence',
-      debouches: 'Data Scientist, IA Engineer',
+      debouches: 'Developpement logiciel, architecture, DevOps',
     },
     {
       id: 4,
-      titre: 'Master Professionnel en Ingénierie Instrumentation',
-      description: 'Spécialisation en systèmes de mesure, capteurs et automatisation industrielle.',
+      titre: 'Master Professionnel en Science des Donnees (MPDS)',
+      description: 'Formation appliquee en data science avec quotas officiels 2025/2026.',
       duree: '2 ans',
       prerequis: 'Licence',
-      debouches: 'Ingénierie, Industrie',
-    },
-    {
-      id: 5,
-      titre: 'Master Professionnel en Génie Logiciel',
-      description: 'Formation pratique en développement logiciel, architecture cloud et DevOps.',
-      duree: '2 ans',
-      prerequis: 'Licence',
-      debouches: 'Développeur, Architecte',
+      debouches: 'Data analyst, data scientist, IA appliquee',
     },
   ];
 
@@ -81,10 +76,44 @@ export class MastersComponent implements OnInit {
     },
   ];
 
+  constructor(private http: HttpClient) {}
+
   ngOnInit(): void {
+    this.loadReferentielMasters();
     console.log('✅ Masters page loaded');
     console.log('🎓 Masters Recherche:', this.mastersRecherche);
     console.log('💼 Masters Professionnels:', this.mastersProfessionnels);
     console.log('🔧 Cycle Ingénieur:', this.cycleIngenieur);
+  }
+
+  loadReferentielMasters(): void {
+    this.isLoadingReferentiel = true;
+    this.referentielMessage = '';
+
+    this.http
+      .get<ReferentielMasters>(
+        'http://localhost:8003/api/candidatures/masters/reglement-reference/',
+      )
+      .subscribe({
+        next: (data) => {
+          this.referentielMasters = data;
+          this.isLoadingReferentiel = false;
+        },
+        error: (err) => {
+          console.error('Erreur chargement référentiel masters:', err);
+          this.referentielMessage =
+            'Impossible de charger les détails officiels des appels d inscription.';
+          this.isLoadingReferentiel = false;
+        },
+      });
+  }
+
+  getSection(code: string): any {
+    return this.referentielMasters?.sections_masters?.[code] || null;
+  }
+
+  getTotalPlaces(code: string): number | null {
+    const total = this.getSection(code)?.capacites?.total;
+    return typeof total === 'number' ? total : null;
   }
 }

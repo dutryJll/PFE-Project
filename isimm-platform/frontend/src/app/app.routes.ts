@@ -52,6 +52,7 @@ import { PreparerPreselection } from './components/commission/preparer-preselect
 import { ListePreselection } from './components/commission/liste-preselection/liste-preselection';
 import { ListeSelection } from './components/commission/liste-selection/liste-selection';
 import { ListeDossiersComponent } from './components/commission/liste-dossiers/liste-dossiers';
+import { DossierAnalysisComponent } from './components/commission/dossier-analysis/dossier-analysis';
 import { ExaminerOcrComponent } from './components/commission/examiner-ocr/examiner-ocr';
 import { TraiterReclamationsComponent } from './components/commission/traiter-reclamations/traiter-reclamations';
 import { GererInscriptionsComponent } from './components/commission/gerer-inscriptions/gerer-inscriptions';
@@ -226,6 +227,14 @@ export const routes: Routes = [
     data: {
       roles: ['commission', 'responsable_commission'],
       actions: ['Consultation de dossier'],
+    },
+  },
+  {
+    path: 'commission/dossier-analysis',
+    component: DossierAnalysisComponent,
+    canActivate: [authGuard, roleGuard],
+    data: {
+      roles: ['commission', 'responsable_commission'],
     },
   },
   {

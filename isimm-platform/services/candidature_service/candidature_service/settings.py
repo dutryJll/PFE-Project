@@ -132,18 +132,17 @@ REST_FRAMEWORK = {
 # ========================================
 # EMAIL CONFIGURATION
 # ========================================
-# Pour développement (affiche dans console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@isimm.tn'
-
-# Pour production (décommenter et configurer)
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'votre-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'votre-app-password'
-# DEFAULT_FROM_EMAIL = 'ISIMM Admission <votre-email@gmail.com>'
+# Dev par defaut: console backend.
+# Prod: definir EMAIL_BACKEND=smtp + variables SMTP dans l'environnement.
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@isimm.tn')
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
 
 # ========================================
 # CELERY CONFIGURATION
@@ -157,3 +156,10 @@ CELERY_TIMEZONE = 'Africa/Tunis'
 
 # Frontend URL
 FRONTEND_URL = 'http://localhost:4200'
+
+# ========================================
+# OCR EXTERNE (optionnel)
+# ========================================
+OCR_PROVIDER = config('OCR_PROVIDER', default='none')
+OCR_API_URL = config('OCR_API_URL', default='')
+OCR_API_KEY = config('OCR_API_KEY', default='')

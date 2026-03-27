@@ -107,7 +107,7 @@
         class="nav-item"
         *ngIf="isResponsable && actionPermissions.verifierDossiers"
         [class.active]="currentView === 'ocr'"
-        (click)="switchView('ocr')"
+        (click)="openOcrAnalysisPage()"
       >
         <i class="fas fa-robot"></i>
         <span>Analyse dossier</span>

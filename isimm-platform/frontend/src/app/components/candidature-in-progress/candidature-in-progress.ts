@@ -17,6 +17,15 @@ interface ReleveRow {
   note: string;
 }
 
+interface RequiredDocumentField {
+  key: string;
+  label: string;
+  hint: string;
+  accept: string;
+  multiple?: boolean;
+  required?: boolean;
+}
+
 @Component({
   selector: 'app-candidature-in-progress',
   standalone: true,
@@ -42,20 +51,75 @@ export class CandidatureInProgressComponent implements OnInit {
   };
 
   diplomes: DiplomeRow[] = [{ intitule: '', etablissement: '', annee: '' }];
-  attestations: string[] = [''];
   parcoursDescription = '';
   releves: ReleveRow[] = [{ semestre: 'S1', module: '', note: '' }];
   confirmation = false;
 
   isSubmitting = false;
 
+  requiredDocumentFields: RequiredDocumentField[] = [
+    {
+      key: 'demande_candidature',
+      label: 'Demande de candidature',
+      hint: 'Formulaire joint au communique',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      required: true,
+    },
+    {
+      key: 'fiche_candidature_signee',
+      label: 'Fiche de candidature signee',
+      hint: 'Fiche imprimee depuis le site',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      required: true,
+    },
+    {
+      key: 'cv',
+      label: 'CV (1 page)',
+      hint: 'Adresse, telephone, email',
+      accept: '.pdf,.doc,.docx',
+      required: true,
+    },
+    {
+      key: 'cin',
+      label: 'Copie CIN',
+      hint: 'Carte identite nationale',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      required: true,
+    },
+    {
+      key: 'diplomes',
+      label: 'Copies diplomes (bac inclus)',
+      hint: 'Vous pouvez importer plusieurs fichiers',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      multiple: true,
+      required: true,
+    },
+    {
+      key: 'releves_notes',
+      label: 'Copies releves de notes (bac inclus)',
+      hint: 'Un ou plusieurs fichiers',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      multiple: true,
+      required: true,
+    },
+    {
+      key: 'justificatifs_report',
+      label: 'Justificatifs report/reorientation',
+      hint: 'Facultatif, selon votre situation',
+      accept: '.pdf,.jpg,.jpeg,.png',
+      multiple: true,
+      required: false,
+    },
+  ];
+
+  uploadedRequiredDocuments: Record<string, File[]> = {};
+
   steps = [
     { no: 1, label: 'Informations personnelles' },
-    { no: 2, label: 'Diplômes' },
-    { no: 3, label: 'Attestations' },
-    { no: 4, label: 'Mon parcours' },
-    { no: 5, label: 'Relevés de notes (tableau)' },
-    { no: 6, label: 'Revue & Soumission' },
+    { no: 2, label: 'Diplômes et documents requis' },
+    { no: 3, label: 'Mon parcours' },
+    { no: 4, label: 'Relevés de notes (tableau)' },
+    { no: 5, label: 'Revue & Soumission' },
   ];
 
   constructor(
@@ -130,24 +194,21 @@ export class CandidatureInProgressComponent implements OnInit {
     }
 
     if (this.currentStep === 2) {
-      return this.diplomes.some(
+      const diplomeOk = this.diplomes.some(
         (d) => !!d.intitule.trim() && !!d.etablissement.trim() && !!d.annee.trim(),
       );
+      return diplomeOk && this.hasAllRequiredDocumentsUploaded();
     }
 
     if (this.currentStep === 3) {
-      return this.attestations.some((a) => !!a.trim());
-    }
-
-    if (this.currentStep === 4) {
       return !!this.parcoursDescription.trim();
     }
 
-    if (this.currentStep === 5) {
+    if (this.currentStep === 4) {
       return this.releves.some((r) => !!r.module.trim() && !!r.note.trim());
     }
 
-    if (this.currentStep === 6) {
+    if (this.currentStep === 5) {
       return this.confirmation;
     }
 
@@ -170,14 +231,24 @@ export class CandidatureInProgressComponent implements OnInit {
     }
   }
 
-  addAttestationRow(): void {
-    this.attestations.push('');
+  onRequiredDocumentChange(key: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    this.uploadedRequiredDocuments[key] = files;
   }
 
-  removeAttestationRow(index: number): void {
-    if (this.attestations.length > 1) {
-      this.attestations.splice(index, 1);
+  getUploadedDocumentNames(key: string): string {
+    const files = this.uploadedRequiredDocuments[key] || [];
+    if (!files.length) {
+      return 'Aucun fichier importé';
     }
+    return files.map((f) => f.name).join(', ');
+  }
+
+  hasAllRequiredDocumentsUploaded(): boolean {
+    const requiredKeys = this.requiredDocumentFields.filter((d) => d.required).map((d) => d.key);
+
+    return requiredKeys.every((key) => (this.uploadedRequiredDocuments[key] || []).length > 0);
   }
 
   addReleveRow(): void {

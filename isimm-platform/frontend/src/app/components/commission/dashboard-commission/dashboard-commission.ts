@@ -524,7 +524,14 @@ export class DashboardCommissionComponent implements OnInit {
 
   private loadActionPermissions(): void {
     this.authService.getMyEnabledActions().subscribe({
-      next: () => {
+      next: (actions: string[]) => {
+        // Fallback permissif: si l'API des actions est indisponible/vide,
+        // on conserve les permissions locales pour ne pas masquer le menu.
+        if (!actions || actions.length === 0) {
+          console.warn('Aucune action distante chargee, conservation des permissions locales.');
+          return;
+        }
+
         this.actionPermissions = {
           consultationCandidature: this.authService.hasMyAction('Consultation de candidature'),
           consultationDossier: this.authService.hasMyAction('Consultation de dossier'),
@@ -837,6 +844,15 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
     this.currentView = view;
+  }
+
+  openOcrAnalysisPage(): void {
+    if (!this.isResponsable || !this.actionPermissions.verifierDossiers) {
+      this.notifyActionBlocked('Analyse OCR non autorisee pour votre profil.');
+      return;
+    }
+    this.currentView = 'ocr';
+    this.router.navigate(['/commission/dossier-analysis']);
   }
 
   allerCandidaturesPage(): void {

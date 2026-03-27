@@ -1,5 +1,7 @@
 import os
 import logging
+import csv
+import tempfile
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -7,6 +9,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db.utils import OperationalError
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,6 +18,7 @@ from rest_framework.response import Response
 from .models import (
     Candidature,
     CandidatListe,
+    Concours,
     ConfigurationAppel,
     DonneesAcademiques,
     FormuleScore,
@@ -22,7 +26,13 @@ from .models import (
     Master,
     InscriptionEnLigne,
 )
-from .services import GestionListesService, SelectionCandidatsService
+from .services import (
+    GestionListesService,
+    ImportPaiementService,
+    SelectionCandidatsService,
+    VerificationPaiementService,
+)
+from .ocr_service import verifier_concordance_dossier
 from .serializers import (
     CandidatureSerializer,
     ConfigurationAppelSerializer,
@@ -53,6 +63,238 @@ ALLOWED_STATUS_TRANSITIONS = {
     'rejete': set(),
     'inscrit': set(),
 }
+
+
+# Reglement de reference (article fourni) transforme en structure exploitable.
+REGLEMENT_CONCOURS_INGENIEUR_REFERENCE_2025_2026 = {
+    'metadata': {
+        'version': '2025-07-03',
+        'annee_universitaire': '2025/2026',
+        'type_concours': 'ingenieur',
+        'source': 'Decision commission masters / concours ingenieur',
+    },
+    'chapitre_1_ouverture': {
+        'resume': (
+            'Ouverture du concours sur dossiers pour l acces a la formation ingenieur '
+            'a l ISIMM pour l annee universitaire 2025/2026.'
+        ),
+    },
+    'chapitre_2_eligibilite': {
+        'paragraphe_1': {
+            'public': 'Etudiants reussis en 2eme annee preparatoire integree ISIMM 2024/2025',
+        },
+        'paragraphe_2': {
+            'public': (
+                'Etudiants inscrits/admis en 3eme annee licence (specialites scientifiques '
+                'et techniques LMD) en 2024/2025 et n ayant pas redouble cette annee'
+            ),
+            'diplomes_acceptes': [
+                'Licence en sciences de l informatique',
+                'Genie logiciel et systemes d information',
+                'Licence en mathematiques et informatique ou diplome equivalent',
+            ],
+        },
+    },
+    'chapitre_3_quotas': {
+        'regle': 'Quotas par filiere et par type de candidature (paragraphe 1 / paragraphe 2).',
+        'filieres': [
+            {
+                'filiere': 'Informatique (Ingenierie des systemes - Genie Logiciel)',
+                'places_paragraphe_1': 52,
+                'places_paragraphe_2': 13,
+            }
+        ],
+    },
+    'chapitre_4_calcul_score': {
+        'paragraphe_1': {
+            'formule': 'M2 + B1 + B2',
+            'variables': {
+                'M2': 'Moyenne de la 2eme annee (en score de selection)',
+                'B1': 'Bonification relative a la 1ere annee',
+                'B2': 'Bonification relative a la 2eme annee',
+            },
+            'bonification_sans_redoublement': {
+                'B1_session_principale': 2,
+                'B1_session_controle': 1.5,
+                'B2_session_principale': 2,
+                'B2_session_controle': 1.5,
+            },
+            'bonification_avec_redoublement': {
+                'B1_session_principale': 1,
+                'B1_session_controle': 0,
+                'B2_session_principale': 1,
+                'B2_session_controle': 0,
+            },
+        },
+        'paragraphe_2': {
+            'formule': '0.5*(2*M1 + 2*M2 + M3) + 50*(1-R1) + 50*(1-R2)',
+            'variables': {
+                'M1': 'Moyenne 1ere annee (session principale)',
+                'M2': 'Moyenne 2eme annee (session principale)',
+                'M3': 'Moyenne S1 3eme annee (session principale)',
+                'R1': 'Rang 1ere annee / (effectif - 1)',
+                'R2': 'Rang 2eme annee / (effectif - 1)',
+            },
+            'sous_cas': [
+                'Etudiants internes ISIMM (paragraphe 2-b-1)',
+                'Etudiants externes ISIMM (paragraphe 2-b-2)',
+            ],
+        },
+    },
+    'chapitre_5_classement': {
+        'regle': 'Classement par filiere selon le score calcule; admission selon le quota disponible.',
+    },
+    'chapitre_6_publication': {
+        'regle': 'Publication des listes finales apres deliberations de la commission.',
+    },
+    'chapitre_7_documents_obligatoires': [
+        'Fiche de candidature telechargee du site et signee',
+        'Annexe du site signee et legalisee par le directeur de l etablissement d origine (cas paragraphe 2-b)',
+        'Copie certifiee conforme du releve bac',
+        'Copies certifiees conformes des releves de toutes les annees universitaires',
+        'Copie CIN ou passeport (etudiants etrangers)',
+        'Pieces justifiant reorientation ou retrait d inscription le cas echeant',
+    ],
+    'chapitre_8_depot': {
+        'mode': 'Courrier rapide',
+        'adresse': 'ISIMM - Route de Kheniss - BP 223 - 5000 Monastir',
+        'date_limite': '2025-08-08',
+        'reference_delai': 'Cachet de la poste fait foi',
+    },
+    'chapitre_9_execution': {
+        'responsable': 'Directeur de l ISIMM',
+    },
+}
+
+
+REFERENTIEL_MASTERS_ISIMM_2025_2026 = {
+    'metadata': {
+        'annee_universitaire': '2025/2026',
+        'etablissement': 'ISIMM Monastir',
+        'source': 'Communique officiel masters 2025/2026 (synthese structuree)',
+    },
+    'sections_masters': {
+        'mpgl': {
+            'intitule': 'Master Professionnel en Ingenierie Logicielle (MPGL)',
+            'calendrier': {
+                'inscription_web': {
+                    'debut': 'date_publication',
+                    'fin': '2025-07-22',
+                },
+                'publication_preselection': '2025-07-28',
+                'depot_dossier_numerique': {
+                    'debut': '2025-07-28',
+                    'fin': '2025-07-31',
+                },
+                'publication_liste_finale': '2025-08-08',
+            },
+            'capacites': {
+                'isimm_licence_info': 30,
+                'autres_etablissements_licence_info_ou_info_gestion': 5,
+                'total': 35,
+            },
+            'modalites_candidature': [
+                'Etape 1: inscription obligatoire en ligne avant la date limite.',
+                'Etape 2: pour les preselectionnes, depot d un dossier numerique en un seul fichier PDF.',
+            ],
+        },
+        'mrgl': {
+            'intitule': 'Master de Recherche en Sciences de l Informatique: Ingenierie Logicielle (MRGL)',
+            'capacites': {
+                'isimm_licence_ou_maitrise_info': 28,
+                'autres_etablissements': 2,
+                'total': 30,
+            },
+            'score': {
+                'note': 'Calcul specifique au master de recherche.',
+                'formule_licence': (
+                    'Score = 1.5*Moy_1ere_Annee + 2*Moy_2eme_Annee + Moy_3eme_Annee '
+                    '+ Bonus_Redoublement + Bonus_SessionPrincipale '
+                    '+ (MoyBac + Note_Math_Bac - 20)/2 + Bonus_Langue + Bonus_Annee_Diplome'
+                ),
+                'bonus_langue': (
+                    '1 point si note de Francais ou Anglais au bac >= 12 '
+                    'ou certification niveau B2.'
+                ),
+                'bonus_annee_diplome': {
+                    '2025_ou_2023': 4,
+                    '2022_2021_2020': 2,
+                },
+            },
+        },
+        'mpds': {
+            'intitule': 'Master Professionnel en Science des Donnees (MPDS)',
+            'capacites': {
+                'isimm_licence_math_appliquees': 10,
+                'isimm_licence_informatique': 19,
+                'autres_licence_math_appliquees': 2,
+                'autres_licence_informatique': 4,
+                'total': 35,
+            },
+        },
+    },
+    'documents_requis_pdf_unique': [
+        'Demande de candidature (formulaire joint).',
+        'Fiche de candidature imprimee du site et signee.',
+        'CV d une page avec coordonnees (adresse, telephone, email).',
+        'Copie de la carte d identite nationale.',
+        'Copies certifiees conformes de tous les diplomes (bac inclus).',
+        'Copies certifiees conformes de tous les releves de notes (bac inclus).',
+        'Justificatifs de report d inscription ou de reorientation si necessaire.',
+    ],
+    'regles_importantes': [
+        'Aucun dossier hors delai ou incomplet ne sera examine.',
+        'Toute donnee erronnee entraine l annulation immediate de la candidature.',
+        'En cas de falsification, des poursuites judiciaires peuvent etre engagees.',
+        'Recours possible pour les non retenus par email avant le 2025-07-31.',
+        'Presentation des originaux obligatoire lors de l inscription administrative finale.',
+    ],
+    'modele_formulaire_candidature': {
+        'champs': [
+            'nom_prenom',
+            'etablissement_origine',
+            'diplome',
+            'choix_1',
+            'choix_2',
+            'choix_3',
+            'numero_dossier_reserve_administration',
+        ],
+        'choix_possibles': ['MPGL', 'MRGL', 'MPDS'],
+    },
+}
+
+
+def _validate_formulaire_commission(configuration, formulaire_payload):
+    """Valide les champs/documents requis selon la configuration du master."""
+    schema = configuration.formulaire_commission_schema or {}
+    required_fields = schema.get('required_fields', []) or []
+    required_documents = schema.get('required_documents', []) or []
+
+    if not isinstance(formulaire_payload, dict):
+        return {'ok': False, 'error': 'Le champ formulaire doit etre un objet JSON.'}
+
+    missing_fields = []
+    for field_name in required_fields:
+        value = formulaire_payload.get(field_name)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            missing_fields.append(field_name)
+
+    uploaded_documents = formulaire_payload.get('documents', [])
+    if not isinstance(uploaded_documents, list):
+        return {'ok': False, 'error': 'Le champ formulaire.documents doit etre une liste.'}
+
+    uploaded_documents_set = {str(doc).strip() for doc in uploaded_documents if str(doc).strip()}
+    missing_documents = [doc for doc in required_documents if str(doc).strip() not in uploaded_documents_set]
+
+    if missing_fields or missing_documents:
+        return {
+            'ok': False,
+            'error': 'Formulaire commission incomplet pour ce master.',
+            'missing_fields': missing_fields,
+            'missing_documents': missing_documents,
+        }
+
+    return {'ok': True}
 
 
 @api_view(['POST'])
@@ -156,7 +398,7 @@ def offres_inscription(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def lister_masters(request):
     masters = Master.objects.filter(actif=True).order_by('nom')
     payload = [
@@ -197,6 +439,43 @@ def mes_dossiers(request):
         )
 
     return Response(dossiers)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def lister_dossiers_ocr(request):
+    """Retourne les dossiers deposes a analyser par la commission (OCR)."""
+    try:
+        candidatures = (
+            Candidature.objects.select_related('candidat', 'master')
+            .filter(dossier_depose=True)
+            .order_by('-date_depot_dossier', '-updated_at')
+        )
+    except OperationalError as exc:
+        logger.exception('Schema candidature indisponible pour dossiers-ocr: %s', exc)
+        return Response(
+            {
+                'results': [],
+                'warning': 'Base candidature non initialisee correctement (table manquante).',
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    payload = []
+    for c in candidatures:
+        payload.append(
+            {
+                'id': c.id,
+                'candidat_nom': f"{getattr(c.candidat, 'first_name', '')} {getattr(c.candidat, 'last_name', '')}".strip(),
+                'email': getattr(c.candidat, 'email', ''),
+                'master_nom': c.master.nom if c.master else '',
+                'statut': c.statut,
+                'date_depot_dossier': c.date_depot_dossier,
+                'score': c.score,
+            }
+        )
+
+    return Response(payload)
 
 
 @api_view(['PUT'])
@@ -395,6 +674,221 @@ class FormuleScoreViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def formule_score_master(request, master_id):
+    """Expose une API simple pour consulter/editer la formule de score d'un master."""
+    if getattr(request.user, 'role', None) not in ['admin', 'commission', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        formule = FormuleScore.objects.filter(master=master).first()
+        if not formule:
+            return Response(
+                {
+                    'master_id': master.id,
+                    'master_nom': master.nom,
+                    'message': 'Aucune formule configuree pour ce master.',
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(FormuleScoreSerializer(formule).data)
+
+    formule, _ = FormuleScore.objects.get_or_create(
+        master=master,
+        defaults={'nom': f'Formule {master.nom}', 'description': ''},
+    )
+
+    payload = request.data.copy()
+    payload['master'] = master.id
+    if 'nom' not in payload:
+        payload['nom'] = formule.nom or f'Formule {master.nom}'
+
+    serializer = FormuleScoreSerializer(
+        formule,
+        data=payload,
+        partial=(request.method == 'PATCH'),
+    )
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def deposer_dossier_numerique(request, candidature_id):
+    """
+    Depot dossier numerique avec controle strict:
+    - uniquement candidat proprietaire
+    - uniquement statut autorise
+    - validation formulaire commission par master
+    """
+    try:
+        candidature = Candidature.objects.select_related('master', 'master__configuration').get(
+            id=candidature_id,
+            candidat=request.user,
+        )
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    statuts_autorises = {'preselectionne', 'en_attente_dossier'}
+    if candidature.statut not in statuts_autorises:
+        return Response(
+            {
+                'error': 'Depot dossier non autorise pour ce statut.',
+                'statut_actuel': candidature.statut,
+                'statuts_autorises': sorted(list(statuts_autorises)),
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        configuration = candidature.master.configuration
+    except ConfigurationAppel.DoesNotExist:
+        return Response(
+            {'error': 'Configuration master introuvable.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    formulaire_payload = request.data.get('formulaire', {})
+    validation = _validate_formulaire_commission(configuration, formulaire_payload)
+    if not validation.get('ok'):
+        return Response(validation, status=status.HTTP_400_BAD_REQUEST)
+
+    diagnostic_ocr = verifier_concordance_dossier(candidature, formulaire_payload)
+
+    ancien_statut = candidature.statut
+    candidature.statut = 'dossier_depose'
+    candidature.dossier_depose = True
+    candidature.dossier_valide = bool(diagnostic_ocr.get('validation_auto'))
+    candidature.date_depot_dossier = timezone.now()
+    candidature.save(
+        update_fields=['statut', 'dossier_depose', 'dossier_valide', 'date_depot_dossier', 'updated_at']
+    )
+
+    candidature.ajouter_historique(
+        ancien_statut,
+        'dossier_depose',
+        request.user,
+        (
+            'Depot dossier numerique via formulaire commission | '
+            f"OCR: {diagnostic_ocr.get('decision')} | confiance={diagnostic_ocr.get('confiance')}"
+        ),
+    )
+
+    return Response(
+        {
+            'success': True,
+            'message': 'Dossier numerique depose avec succes.',
+            'candidature_id': candidature.id,
+            'statut': candidature.statut,
+            'dossier_valide_auto': candidature.dossier_valide,
+            'ocr_diagnostic': diagnostic_ocr,
+            'date_depot_dossier': candidature.date_depot_dossier,
+        }
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ocr_test_diagnostic(request):
+    """Endpoint de test OCR/IA independant du depot dossier final."""
+    candidature_id = request.data.get('candidature_id')
+
+    candidature = None
+    if candidature_id:
+        try:
+            candidature = Candidature.objects.select_related('candidat').get(id=candidature_id)
+        except Candidature.DoesNotExist:
+            return Response({'error': 'Candidature non trouvee.'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        candidature = (
+            Candidature.objects.select_related('candidat')
+            .filter(candidat=request.user)
+            .order_by('-created_at')
+            .first()
+        )
+        if not candidature and getattr(request.user, 'role', None) in ['admin', 'commission', 'responsable_commission']:
+            candidature = Candidature.objects.select_related('candidat').order_by('-created_at').first()
+
+    if not candidature:
+        return Response(
+            {'error': 'Aucune candidature disponible pour le test OCR.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    formulaire_payload = request.data.get('formulaire', {})
+    if not isinstance(formulaire_payload, dict):
+        return Response(
+            {'error': 'Le champ formulaire doit etre un objet JSON.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    diagnostic = verifier_concordance_dossier(candidature, formulaire_payload)
+    return Response(
+        {
+            'success': True,
+            'message': 'Diagnostic OCR execute.',
+            'candidature_id': candidature.id,
+            'ocr_diagnostic': diagnostic,
+        }
+    )
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def formulaire_commission_master(request, master_id):
+    """Permet a la commission de consulter/modifier le schema du formulaire par master."""
+    if getattr(request.user, 'role', None) not in ['admin', 'commission', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        configuration = ConfigurationAppel.objects.select_related('master').get(master_id=master_id)
+    except ConfigurationAppel.DoesNotExist:
+        return Response({'error': 'Configuration master introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(
+            {
+                'master_id': configuration.master_id,
+                'master_nom': configuration.master.nom,
+                'formulaire_commission_schema': configuration.formulaire_commission_schema or {},
+            }
+        )
+
+    schema = request.data.get('formulaire_commission_schema', {})
+    if not isinstance(schema, dict):
+        return Response(
+            {'error': 'formulaire_commission_schema doit etre un objet JSON'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    for key in ['required_fields', 'required_documents']:
+        if key in schema and not isinstance(schema[key], list):
+            return Response(
+                {'error': f'{key} doit etre une liste'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    configuration.formulaire_commission_schema = schema
+    configuration.save(update_fields=['formulaire_commission_schema', 'updated_at'])
+
+    return Response(
+        {
+            'success': True,
+            'master_id': configuration.master_id,
+            'formulaire_commission_schema': configuration.formulaire_commission_schema,
+        }
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def calculer_score_candidature(request, candidature_id):
@@ -485,8 +979,8 @@ def generer_listes_admission(request, master_id):
                 'liste_attente_id': liste_attente.id,
                 'nb_principale': liste_principale.candidats.count(),
                 'nb_attente': liste_attente.candidats.count(),
-                'tri': 'score croissant, puis date soumission',
-                'classement': 'par spécialité et diplôme',
+                'tri': 'score decroissant, puis date soumission',
+                'classement': 'par specialite avec priorite choix 1 puis 2 puis 3',
             }
         )
 
@@ -525,6 +1019,26 @@ def generer_listes_admission(request, master_id):
             'nb_candidats': nouvelle_liste.candidats.count(),
         }
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cloturer_ou_relancer_admission(request, master_id):
+    """
+    Point 13:
+    - si capacite atteinte => cloture + publication definitive
+    - sinon => relance (generation itération suivante) jusqu a capacite max
+    """
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        master = Master.objects.select_related('configuration').get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    resultat = VerificationPaiementService.evaluer_cloture_ou_relance(master)
+    return Response({'success': True, **resultat})
 
 
 @api_view(['POST'])
@@ -574,15 +1088,140 @@ def importer_paiements(request):
         return Response({'error': 'Aucun fichier fourni'}, status=status.HTTP_400_BAD_REQUEST)
 
     fichier = request.FILES['fichier']
-    temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', fichier.name)
-    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+    extension = os.path.splitext(fichier.name)[1].lower()
+    if extension not in ['.xlsx', '.xls']:
+        return Response(
+            {'error': 'Format invalide. Utilisez un fichier Excel (.xlsx ou .xls).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    with open(temp_path, 'wb+') as destination:
+    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=extension, dir=temp_dir) as tmp:
         for chunk in fichier.chunks():
-            destination.write(chunk)
+            tmp.write(chunk)
+        temp_path = tmp.name
 
-    os.remove(temp_path)
-    return Response({'success': True, 'message': 'Fichier importe'})
+    try:
+        resultats_import = ImportPaiementService.importer_fichier_excel(temp_path)
+        master_id = request.data.get('master_id')
+        statuts = VerificationPaiementService.consulter_statuts_inscription(master_id=master_id)
+        return Response(
+            {
+                'success': True,
+                'message': 'Import paiements execute avec verification de delai commission.',
+                'import': resultats_import,
+                'inscriptions': statuts,
+            }
+        )
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def consulter_inscriptions_administratives(request):
+    """
+    Point 13:
+    - consultation liste candidats ayant finalise l'inscription administrative
+    - consultation liste candidats inscription incomplete
+    - extraction CSV via ?export=csv
+    """
+    if request.user.role not in ['admin', 'commission', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    master_id = request.query_params.get('master_id')
+    export_format = (request.query_params.get('export') or '').lower()
+
+    resultats = VerificationPaiementService.consulter_statuts_inscription(master_id=master_id)
+
+    if export_format != 'csv':
+        return Response(resultats)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="inscriptions_administratives.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            'groupe',
+            'candidature_id',
+            'numero',
+            'cin',
+            'email',
+            'master',
+            'statut_candidature',
+            'paiement_statut',
+            'date_paiement',
+            'date_limite_paiement',
+            'motif',
+        ]
+    )
+
+    for row in resultats['inscription_finalisee']:
+        writer.writerow(
+            [
+                'inscription_finalisee',
+                row.get('candidature_id'),
+                row.get('numero'),
+                row.get('cin'),
+                row.get('email'),
+                row.get('master'),
+                row.get('statut_candidature'),
+                row.get('paiement_statut'),
+                row.get('date_paiement'),
+                row.get('date_limite_paiement'),
+                row.get('motif'),
+            ]
+        )
+
+    for row in resultats['inscription_incomplete']:
+        writer.writerow(
+            [
+                'inscription_incomplete',
+                row.get('candidature_id'),
+                row.get('numero'),
+                row.get('cin'),
+                row.get('email'),
+                row.get('master'),
+                row.get('statut_candidature'),
+                row.get('paiement_statut'),
+                row.get('date_paiement'),
+                row.get('date_limite_paiement'),
+                row.get('motif'),
+            ]
+        )
+
+    return response
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def lister_concours(request):
+    """Retourne la liste des concours pour l'interface d'administration."""
+    qs = Concours.objects.all().order_by('-created_at')
+    type_filter = request.query_params.get('type_concours')
+    if type_filter:
+        qs = qs.filter(type_concours=type_filter)
+
+    payload = [
+        {
+            'id': concours.id,
+            'nom': concours.nom,
+            'description': concours.description,
+            'type_concours': concours.type_concours,
+            'date_ouverture': concours.date_ouverture,
+            'date_cloture': concours.date_cloture,
+            'places_disponibles': concours.places_disponibles,
+            'actif': concours.actif,
+            'conditions_admission': concours.conditions_admission,
+            'created_at': concours.created_at,
+            'updated_at': concours.updated_at,
+        }
+        for concours in qs
+    ]
+    return Response(payload)
 
 
 @api_view(['GET'])
@@ -612,6 +1251,72 @@ def exporter_liste_excel(request, liste_id):
     )
     response['Content-Disposition'] = f'attachment; filename="liste_{liste_id}.xlsx"'
     return response
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def reglement_concours_ingenieur_reference(request):
+    """Retourne la version structuree du reglement de reference pour integration front/back."""
+    return Response(REGLEMENT_CONCOURS_INGENIEUR_REFERENCE_2025_2026)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def reglement_masters_reference(request):
+    """Retourne le referentiel masters officiel 2025/2026 (MPGL, MRGL, MPDS)."""
+    return Response(REFERENTIEL_MASTERS_ISIMM_2025_2026)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def appliquer_reglement_reference_concours(request, concours_id):
+    """
+    Applique le reglement de reference dans un concours existant.
+    - met a jour conditions_admission avec une structure complete exploitable.
+    - permet surcharge de date_ouverture/date_cloture/places_disponibles.
+    """
+    if getattr(request.user, 'role', None) not in ['admin', 'commission', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        concours = Concours.objects.get(id=concours_id)
+    except Concours.DoesNotExist:
+        return Response({'error': 'Concours non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    if concours.type_concours != 'ingenieur':
+        return Response(
+            {'error': 'Ce reglement de reference ne peut etre applique qu a un concours ingenieur.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    payload = REGLEMENT_CONCOURS_INGENIEUR_REFERENCE_2025_2026.copy()
+
+    # Permet d injecter des sections supplementaires ou corrections sans casser le standard.
+    sections_personnalisees = request.data.get('sections_personnalisees', {})
+    if isinstance(sections_personnalisees, dict) and sections_personnalisees:
+        payload.update(sections_personnalisees)
+
+    concours.conditions_admission = payload
+
+    if request.data.get('date_ouverture'):
+        concours.date_ouverture = request.data.get('date_ouverture')
+    if request.data.get('date_cloture'):
+        concours.date_cloture = request.data.get('date_cloture')
+    if request.data.get('places_disponibles') is not None:
+        concours.places_disponibles = request.data.get('places_disponibles')
+
+    concours.save(update_fields=['conditions_admission', 'date_ouverture', 'date_cloture', 'places_disponibles', 'updated_at'])
+
+    return Response(
+        {
+            'success': True,
+            'concours_id': concours.id,
+            'nom': concours.nom,
+            'type_concours': concours.type_concours,
+            'message': 'Reglement de reference integre avec succes dans le concours.',
+            'conditions_admission': concours.conditions_admission,
+        }
+    )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def soumettre_paiement_enligne(request):

@@ -1,8 +1,35 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
+// Backend API response structure
+interface InscriptionsResponse {
+  inscription_finalisee: Candidature[];
+  inscription_incomplete: Candidature[];
+  stats: {
+    total_finalisee: number;
+    total_incomplete: number;
+    total: number;
+  };
+}
+
+interface Candidature {
+  id: number;
+  cin: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  telephone?: string;
+  date_paiement?: string;
+  date_limite_paiement?: string;
+  statut_paiement?: 'on_time' | 'late' | 'not_paid';
+  statut: string;
+  selected?: boolean;
+}
+
+// Legacy interface for backward compatibility
 interface Inscrit {
   id: number;
   prenom: string;
@@ -25,15 +52,22 @@ interface Inscrit {
 @Component({
   selector: 'app-gerer-inscriptions',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, HttpClientModule],
   templateUrl: './gerer-inscriptions.html',
   styleUrl: './gerer-inscriptions.css',
 })
 export class GererInscriptionsComponent implements OnInit {
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
+  // API data
+  inscritsFinalises: Candidature[] = [];
+  inscritsIncomplete: Candidature[] = [];
+  inscritsFiltres: Candidature[] = [];
   inscrits: Inscrit[] = [];
-  inscritsFiltres: Inscrit[] = [];
+
   masters: any[] = [];
 
+  // UI State
   recherche: string = '';
   filtreType: string = '';
   filtreMaster: string = '';
@@ -41,7 +75,13 @@ export class GererInscriptionsComponent implements OnInit {
 
   showModalAjouter: boolean = false;
   showModalDetails: boolean = false;
-  inscritSelectionne: Inscrit | null = null;
+  inscritSelectionne: Candidature | Inscrit | null = null;
+
+  // Tabs and import
+  activeTab: 'finalisee' | 'incomplete' = 'finalisee';
+  isImporting: boolean = false;
+  importProgress: string = '';
+  selectedMasterId: string = '1';
 
   nouveauInscrit: any = {
     prenom: '',
@@ -56,15 +96,176 @@ export class GererInscriptionsComponent implements OnInit {
     statut: 'en_attente',
   };
 
-  constructor(private router: Router) {}
+  private apiUrl: string;
+
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+  ) {
+    this.apiUrl = this.getApiUrl();
+  }
 
   ngOnInit(): void {
     this.loadMasters();
-    this.loadInscrits();
+    this.chargerInscriptions();
+  }
+
+  private getApiUrl(): string {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8000/api/candidatures';
+    }
+    return '/api/candidatures';
+  }
+
+  /**
+   * Appelle l'endpoint backend pour récupérer les listes finalisée et incomplete
+   * GET /api/candidatures/inscriptions-administratives/?master_id=X
+   */
+  chargerInscriptions(): void {
+    this.isImporting = true;
+    this.importProgress = 'Chargement des inscriptions...';
+
+    const masterId = this.selectedMasterId;
+
+    this.http
+      .get<InscriptionsResponse>(
+        `${this.apiUrl}/inscriptions-administratives/?master_id=${masterId}`,
+      )
+      .subscribe({
+        next: (response) => {
+          this.inscritsFinalises = response.inscription_finalisee || [];
+          this.inscritsIncomplete = response.inscription_incomplete || [];
+          this.mettreAJourAffichage();
+          this.isImporting = false;
+          this.importProgress = '';
+          console.log(
+            '✅ Inscriptions chargées:',
+            this.inscritsFinalises.length,
+            'finalisées,',
+            this.inscritsIncomplete.length,
+            'incomplete',
+          );
+        },
+        error: (err) => {
+          this.isImporting = false;
+          console.error('❌ Erreur chargement:', err);
+          this.importProgress = `Erreur: ${err.status || 'Connexion'} - ${err.statusText || err.message}`;
+          alert('Erreur lors du chargement des inscriptions: ' + this.importProgress);
+        },
+      });
+  }
+
+  /**
+   * Met à jour l'affichage selon l'onglet actif
+   */
+  mettreAJourAffichage(): void {
+    if (this.activeTab === 'finalisee') {
+      this.inscritsFiltres = [...this.inscritsFinalises];
+    } else {
+      this.inscritsFiltres = [...this.inscritsIncomplete];
+    }
+    this.filtrerInscrits();
+  }
+
+  /**
+   * Change l'onglet actif et met à jour l'affichage
+   */
+  changerOnglet(onglet: 'finalisee' | 'incomplete'): void {
+    this.activeTab = onglet;
+    this.mettreAJourAffichage();
+  }
+
+  /**
+   * Déclenche le fichier d'import Excel
+   */
+  ouvrirImportExcel(): void {
+    this.fileInput.nativeElement.click();
+  }
+
+  /**
+   * Gère le fichier Excel sélectionné et l'envoie au backend
+   * POST /api/candidatures/importer-paiements/
+   */
+  onFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const files = target.files;
+
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    // Vérifier l'extension
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+      return;
+    }
+
+    this.isImporting = true;
+    this.importProgress = `Upload en cours: ${file.name}...`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('master_id', this.selectedMasterId);
+
+    this.http
+      .post<{
+        message: string;
+        count: number;
+        errors?: string[];
+      }>(`${this.apiUrl}/importer-paiements/`, formData)
+      .subscribe({
+        next: (response) => {
+          console.log('✅ Import réussi:', response.message);
+          alert(
+            `Import réussi! ${response.count} paiements importés.${response.errors?.length ? '\n\n' + response.errors.join('\n') : ''}`,
+          );
+          this.chargerInscriptions(); // Recharger la liste
+          this.fileInput.nativeElement.value = '';
+        },
+        error: (err) => {
+          console.error('❌ Erreur import:', err);
+          alert(
+            "Erreur lors de l'import: " +
+              (err.error?.detail || err.error?.message || err.statusText || err.message),
+          );
+        },
+        complete: () => {
+          this.isImporting = false;
+          this.importProgress = '';
+        },
+      });
+  }
+
+  /**
+   * Exporte la liste actuelle en CSV
+   */
+  exporterCSV(): void {
+    const masterId = this.selectedMasterId;
+
+    this.http
+      .get(`${this.apiUrl}/inscriptions-administratives/?master_id=${masterId}&export=csv`, {
+        responseType: 'blob',
+      })
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `inscriptions_${new Date().getTime()}.csv`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+          console.log('✅ Export réussi');
+        },
+        error: (err) => {
+          console.error('❌ Erreur export:', err);
+          alert("Erreur lors de l'export CSV");
+        },
+      });
   }
 
   loadMasters(): void {
-    // TODO: Charger depuis l'API
+    // TODO: Charger depuis une API si disponible
     this.masters = [
       { id: 1, nom: 'Master Recherche Génie Logiciel' },
       { id: 2, nom: 'Master Professionnel Data Science' },
@@ -73,11 +274,61 @@ export class GererInscriptionsComponent implements OnInit {
     ];
   }
 
-  loadInscrits(): void {
-    // TODO: Charger depuis l'API
-    // this.commissionService.getInscriptions().subscribe({...})
+  filtrerInscrits(): void {
+    this.inscritsFiltres = this.inscritsFiltres.filter((i) => {
+      const matchRecherche =
+        !this.recherche ||
+        (i.prenom && i.prenom.toLowerCase().includes(this.recherche.toLowerCase())) ||
+        (i.nom && i.nom.toLowerCase().includes(this.recherche.toLowerCase())) ||
+        (i.cin && i.cin.includes(this.recherche)) ||
+        (i.email && i.email.toLowerCase().includes(this.recherche.toLowerCase()));
 
-    // Données simulées
+      return matchRecherche;
+    });
+  }
+
+  countSelected(): number {
+    return this.inscritsFiltres.filter((i) => i.selected).length;
+  }
+
+  toggleSelectAll(event: any): void {
+    const checked = event.target.checked;
+    this.inscritsFiltres.forEach((i) => (i.selected = checked));
+  }
+
+  voirDetails(inscrit: Candidature | Inscrit): void {
+    this.inscritSelectionne = inscrit;
+    this.showModalDetails = true;
+  }
+
+  fermerModal(): void {
+    this.showModalAjouter = false;
+    this.showModalDetails = false;
+    this.inscritSelectionne = null;
+  }
+
+  getStatutPaiementLabel(statut: string | undefined | null | any): string {
+    if (!statut) return '❓ Inconnu';
+    const labels: any = {
+      on_time: '✅ À temps',
+      late: '⚠️ Retard',
+      not_paid: '❌ Non payé',
+    };
+    return labels[statut] || '❓ Inconnu';
+  }
+
+  getStatutColor(statut: string | undefined | null | any): string {
+    if (!statut) return '#6c757d';
+    const colors: any = {
+      on_time: '#28a745',
+      late: '#ffc107',
+      not_paid: '#dc3545',
+    };
+    return colors[statut] || '#6c757d';
+  }
+
+  // Legacy methods for backward compatibility (mock data)
+  loadInscrits(): void {
     this.inscrits = [
       {
         id: 1,
@@ -95,82 +346,11 @@ export class GererInscriptionsComponent implements OnInit {
         date_confirmation: '2026-03-02',
         statut: 'confirme',
       },
-      {
-        id: 2,
-        prenom: 'Fatma',
-        nom: 'Trabelsi',
-        cin: '87654321',
-        email: 'fatma@example.com',
-        type: 'master',
-        master_id: 2,
-        master_nom: 'Master Professionnel Data Science',
-        score: 16.8,
-        rang: 2,
-        date_inscription: '2026-03-01T11:15:00',
-        statut: 'en_attente',
-      },
-      {
-        id: 3,
-        prenom: 'Mohamed',
-        nom: 'Karoui',
-        cin: '11223344',
-        email: 'mohamed@example.com',
-        type: 'ingenieur',
-        specialite: 'Génie Informatique',
-        score: 16.2,
-        rang: 3,
-        date_inscription: '2026-03-01T14:20:00',
-        date_confirmation: '2026-03-02',
-        statut: 'confirme',
-      },
-      {
-        id: 4,
-        prenom: 'Sarra',
-        nom: 'Mansouri',
-        cin: '99887766',
-        email: 'sarra@example.com',
-        type: 'master',
-        master_id: 3,
-        master_nom: 'Master Recherche Microélectronique',
-        score: 15.9,
-        rang: 4,
-        date_inscription: '2026-03-02T09:00:00',
-        statut: 'en_attente',
-      },
-      {
-        id: 5,
-        prenom: 'Youssef',
-        nom: 'Bouzid',
-        cin: '55443322',
-        email: 'youssef@example.com',
-        type: 'ingenieur',
-        specialite: 'Génie Électrique',
-        score: 15.5,
-        rang: 5,
-        date_inscription: '2026-03-02T10:30:00',
-        statut: 'annule',
-      },
     ];
-
-    this.inscritsFiltres = [...this.inscrits];
-    console.log('✅ Inscrits chargés:', this.inscrits.length);
   }
 
-  filtrerInscrits(): void {
-    this.inscritsFiltres = this.inscrits.filter((i) => {
-      const matchRecherche =
-        !this.recherche ||
-        i.prenom.toLowerCase().includes(this.recherche.toLowerCase()) ||
-        i.nom.toLowerCase().includes(this.recherche.toLowerCase()) ||
-        i.cin.includes(this.recherche) ||
-        i.email.toLowerCase().includes(this.recherche.toLowerCase());
-
-      const matchType = !this.filtreType || i.type === this.filtreType;
-      const matchMaster = !this.filtreMaster || i.master_id?.toString() === this.filtreMaster;
-      const matchStatut = !this.filtreStatut || i.statut === this.filtreStatut;
-
-      return matchRecherche && matchType && matchMaster && matchStatut;
-    });
+  filtrerInscritsByType(): Inscrit[] {
+    return this.inscrits.filter((i) => !this.filtreType || i.type === this.filtreType);
   }
 
   countByType(type: string): number {
@@ -190,39 +370,12 @@ export class GererInscriptionsComponent implements OnInit {
     return labels[statut] || statut;
   }
 
-  toggleSelectAll(event: any): void {
-    const checked = event.target.checked;
-    this.inscritsFiltres.forEach((i) => (i.selected = checked));
-  }
-
   hasSelection(): boolean {
     return this.inscritsFiltres.some((i) => i.selected);
   }
 
-  countSelected(): number {
-    return this.inscritsFiltres.filter((i) => i.selected).length;
-  }
-
   ouvrirModalAjouter(): void {
-    this.nouveauInscrit = {
-      prenom: '',
-      nom: '',
-      cin: '',
-      email: '',
-      type: '',
-      master_id: '',
-      specialite: '',
-      score: null,
-      rang: null,
-      statut: 'en_attente',
-    };
     this.showModalAjouter = true;
-  }
-
-  fermerModal(): void {
-    this.showModalAjouter = false;
-    this.showModalDetails = false;
-    this.inscritSelectionne = null;
   }
 
   onTypeChange(): void {
@@ -256,10 +409,6 @@ export class GererInscriptionsComponent implements OnInit {
 
     console.log('➕ Ajout inscription:', this.nouveauInscrit);
 
-    // TODO: Appeler l'API
-    // this.commissionService.ajouterInscription(this.nouveauInscrit).subscribe({...})
-
-    // Simuler l'ajout
     const masterNom =
       this.nouveauInscrit.type === 'master'
         ? this.masters.find((m) => m.id == this.nouveauInscrit.master_id)?.nom
@@ -273,49 +422,15 @@ export class GererInscriptionsComponent implements OnInit {
     };
 
     this.inscrits.unshift(nouvelInscrit);
-    this.filtrerInscrits();
 
     alert('Inscription ajoutée avec succès !');
     this.fermerModal();
   }
 
-  voirDetails(inscrit: Inscrit): void {
-    this.inscritSelectionne = inscrit;
-    this.showModalDetails = true;
-  }
-
-  editerInscrit(inscrit: Inscrit): void {
-    console.log('✏️ Éditer:', inscrit);
-    // TODO: Ouvrir modal d'édition
-    alert("Fonctionnalité d'édition à implémenter");
-  }
-
-  supprimerInscrit(inscrit: Inscrit): void {
-    if (
-      confirm(
-        `Êtes-vous sûr de vouloir supprimer l'inscription de ${inscrit.prenom} ${inscrit.nom} ?`,
-      )
-    ) {
-      console.log('🗑️ Supprimer:', inscrit);
-
-      // TODO: Appeler l'API
-
-      const index = this.inscrits.findIndex((i) => i.id === inscrit.id);
-      if (index > -1) {
-        this.inscrits.splice(index, 1);
-        this.filtrerInscrits();
-        alert('Inscription supprimée');
-      }
-    }
-  }
-
   confirmerSelection(): void {
     const selection = this.inscritsFiltres.filter((i) => i.selected);
     if (confirm(`Confirmer ${selection.length} inscription(s) ?`)) {
-      selection.forEach((i) => {
-        i.statut = 'confirme';
-        i.date_confirmation = new Date().toISOString().split('T')[0];
-      });
+      console.log('✅ Confirmations:', selection.length);
       alert(`${selection.length} inscription(s) confirmée(s)`);
     }
   }
@@ -323,38 +438,27 @@ export class GererInscriptionsComponent implements OnInit {
   annulerSelection(): void {
     const selection = this.inscritsFiltres.filter((i) => i.selected);
     if (confirm(`Annuler ${selection.length} inscription(s) ?`)) {
-      selection.forEach((i) => (i.statut = 'annule'));
+      console.log('❌ Annulations:', selection.length);
       alert(`${selection.length} inscription(s) annulée(s)`);
     }
-  }
-
-  envoyerEmailSelection(): void {
-    const selection = this.inscritsFiltres.filter((i) => i.selected);
-    console.log('📧 Envoyer email à', selection.length, 'inscrits');
-    alert(`Email envoyé à ${selection.length} inscrit(s)`);
   }
 
   supprimerSelection(): void {
     const selection = this.inscritsFiltres.filter((i) => i.selected);
     if (confirm(`Supprimer définitivement ${selection.length} inscription(s) ?`)) {
-      selection.forEach((i) => {
-        const index = this.inscrits.findIndex((inscrit) => inscrit.id === i.id);
-        if (index > -1) this.inscrits.splice(index, 1);
-      });
-      this.filtrerInscrits();
+      console.log('🗑️ Suppressions:', selection.length);
       alert(`${selection.length} inscription(s) supprimée(s)`);
     }
   }
 
-  exporterExcel(): void {
-    console.log('📊 Export Excel');
-    // TODO: Générer fichier Excel
-    alert('Export Excel lancé !');
+  envoyerEmailSelection(): void {
+    const selection = this.inscritsFiltres.filter((i) => i.selected);
+    console.log('📧 Email à:', selection.length, 'inscrits');
+    alert(`Email envoyé à ${selection.length} inscrit(s)`);
   }
 
-  exporterPDF(): void {
-    console.log('📄 Export PDF');
-    // TODO: Générer fichier PDF
-    alert('Export PDF lancé !');
+  exporterExcel(): void {
+    console.log('📊 Export Excel');
+    alert('Export Excel en cours...');
   }
 }

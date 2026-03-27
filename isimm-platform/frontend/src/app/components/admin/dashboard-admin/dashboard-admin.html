@@ -3,7 +3,7 @@
   <aside class="sidebar">
     <div class="logo-section">
       <div class="logo-icon" aria-hidden="true">
-        <img src="assets/images/logo-universite.png" alt="Université de Monastir" />
+        <img [src]="adminLogoSrc" (error)="onAdminLogoError()" alt="Université de Monastir" />
       </div>
       <h2>ISIMM</h2>
       <p class="user-role">Espace Administrateur</p>
@@ -37,11 +37,6 @@
         <span>Gestion des Masters</span>
       </a>
 
-      <a class="nav-item" (click)="allerGestionCommission()">
-        <i class="fas fa-user-tie"></i>
-        <span>Gestion des Commissions </span>
-      </a>
-
       <a
         class="nav-item"
         [class.active]="currentView === 'concours-ingenieur'"
@@ -49,6 +44,11 @@
       >
         <i class="fas fa-cogs"></i>
         <span>Gestion des concours d'ingénieur</span>
+      </a>
+
+      <a class="nav-item" (click)="allerGestionCommission()">
+        <i class="fas fa-user-tie"></i>
+        <span>Gestion des Commissions </span>
       </a>
 
       <a
@@ -290,6 +290,64 @@
           ouverture/fermeture).
         </p>
 
+        <div class="reglement-panel">
+          <div class="reglement-header">
+            <h3>📘 Règlement officiel concours ingénieur</h3>
+            <div class="reglement-actions">
+              <select [(ngModel)]="selectedConcoursIdForReglement">
+                <option [ngValue]="null">Sélectionner un concours</option>
+                <option
+                  *ngFor="let offre of offresIngenieurList"
+                  [ngValue]="offre.backend_id || offre.id"
+                >
+                  #{{ offre.backend_id || offre.id }} - {{ offre.titre }}
+                </option>
+              </select>
+              <button
+                class="btn-primary"
+                [disabled]="isApplyingReglement || !concoursIngenieurApiAvailable"
+                (click)="applyReglementOfficiel()"
+              >
+                <i class="fas fa-check-circle"></i>
+                {{ isApplyingReglement ? 'Application...' : 'Appliquer le règlement officiel' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="reglement-message" *ngIf="!concoursIngenieurApiAvailable">
+            API concours indisponible: les offres affichées sont locales (test), l'application du
+            règlement est désactivée.
+          </div>
+
+          <div class="reglement-meta" *ngIf="reglementReference?.metadata as meta">
+            <span><strong>Version:</strong> {{ meta.version }}</span>
+            <span><strong>Année:</strong> {{ meta.annee_universitaire }}</span>
+            <span><strong>Type:</strong> {{ meta.type_concours }}</span>
+          </div>
+
+          <div *ngIf="isLoadingReglement" class="reglement-loading">Chargement du règlement...</div>
+          <div *ngIf="reglementApplyMessage" class="reglement-message">
+            {{ reglementApplyMessage }}
+          </div>
+
+          <div
+            class="reglement-chapitres"
+            *ngIf="!isLoadingReglement && chapitresReglement.length > 0"
+          >
+            <details class="chapitre-item" *ngFor="let chap of chapitresReglement" open>
+              <summary>{{ chap.label }}</summary>
+              <div class="chapitre-content" [innerText]="formatChapitreContent(chap.value)"></div>
+            </details>
+          </div>
+
+          <div
+            class="reglement-message"
+            *ngIf="!isLoadingReglement && reglementReference && chapitresReglement.length === 0"
+          >
+            Aucun chapitre détecté dans la réponse du règlement.
+          </div>
+        </div>
+
         <div class="users-toolbar">
           <div class="download-box">
             <label>Download table data as</label>
@@ -363,6 +421,121 @@
           </button>
         </div>
 
+        <div class="reglement-panel masters-ref-panel">
+          <div class="reglement-header">
+            <h3>📘 Référentiel officiel Masters 2025/2026</h3>
+            <button class="btn-secondary" (click)="loadReferentielMasters()">
+              <i class="fas fa-sync-alt"></i>
+              Actualiser
+            </button>
+          </div>
+
+          <div class="reglement-meta" *ngIf="referentielMasters?.metadata as meta">
+            <span><strong>Année:</strong> {{ meta.annee_universitaire }}</span>
+            <span><strong>Etablissement:</strong> {{ meta.etablissement }}</span>
+          </div>
+
+          <div *ngIf="isLoadingReferentielMasters" class="reglement-loading">
+            Chargement du référentiel masters...
+          </div>
+          <div *ngIf="referentielMastersMessage" class="reglement-message">
+            {{ referentielMastersMessage }}
+          </div>
+
+          <div
+            class="masters-ref-grid"
+            *ngIf="!isLoadingReferentielMasters && getMastersReferenceCards().length > 0"
+          >
+            <div class="masters-ref-card" *ngFor="let item of getMastersReferenceCards()">
+              <h4>{{ item.code }} - {{ item.data.intitule }}</h4>
+
+              <div class="masters-ref-block" *ngIf="item.data.calendrier">
+                <h5>Calendrier</h5>
+                <ul>
+                  <li *ngFor="let cal of item.data.calendrier | keyvalue">
+                    <strong>{{ formatMasterFieldLabel(normalizeKey(cal.key)) }}:</strong>
+                    <span *ngIf="cal.value?.debut && cal.value?.fin">
+                      {{ cal.value.debut }} au {{ cal.value.fin }}
+                    </span>
+                    <span *ngIf="!cal.value?.debut || !cal.value?.fin">
+                      {{ cal.value }}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="masters-ref-block" *ngIf="item.data.capacites">
+                <h5>Capacités d'accueil</h5>
+                <ul>
+                  <li *ngFor="let cap of item.data.capacites | keyvalue">
+                    <strong>{{ formatMasterFieldLabel(normalizeKey(cap.key)) }}:</strong>
+                    {{ cap.value }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="masters-ref-block" *ngIf="item.data.modalites_candidature?.length">
+                <h5>Modalités de candidature</h5>
+                <ol>
+                  <li *ngFor="let modalite of item.data.modalites_candidature">
+                    {{ modalite }}
+                  </li>
+                </ol>
+              </div>
+
+              <div class="masters-ref-block" *ngIf="item.data.score">
+                <h5>Calcul du score</h5>
+                <p><strong>Formule licence:</strong> {{ item.data.score.formule_licence }}</p>
+                <p><strong>Bonus langue:</strong> {{ item.data.score.bonus_langue }}</p>
+                <ul *ngIf="item.data.score.bonus_annee_diplome">
+                  <li *ngFor="let bonus of item.data.score.bonus_annee_diplome | keyvalue">
+                    <strong>{{ formatMasterFieldLabel(normalizeKey(bonus.key)) }}:</strong>
+                    {{ bonus.value }} pts
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="masters-ref-footer"
+            *ngIf="!isLoadingReferentielMasters && referentielMasters"
+          >
+            <div class="masters-ref-block" *ngIf="referentielMasters.documents_requis_pdf_unique">
+              <h5>Documents requis (PDF unique)</h5>
+              <ul>
+                <li *ngFor="let doc of referentielMasters.documents_requis_pdf_unique">
+                  {{ doc }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="masters-ref-block" *ngIf="referentielMasters.regles_importantes">
+              <h5>Remarques importantes et règles</h5>
+              <ul>
+                <li *ngFor="let rule of referentielMasters.regles_importantes">
+                  {{ rule }}
+                </li>
+              </ul>
+            </div>
+
+            <div
+              class="masters-ref-block"
+              *ngIf="referentielMasters.modele_formulaire_candidature as formModel"
+            >
+              <h5>Modèle de formulaire de candidature</h5>
+              <ul>
+                <li *ngFor="let field of formModel.champs">
+                  {{ formatMasterFieldLabel(field) }}
+                </li>
+              </ul>
+              <p *ngIf="formModel.choix_possibles?.length">
+                <strong>Choix possibles:</strong> {{ joinMasterChoices(formModel.choix_possibles) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div class="users-toolbar">
           <div class="download-box">
             <label>Download table data as</label>
@@ -407,6 +580,20 @@
                 </td>
                 <td>
                   <button class="btn-action voir"><i class="fas fa-eye"></i></button>
+                  <button
+                    class="btn-action voir"
+                    title="Générer la liste définitive (tri score desc, voeux 1-2-3)"
+                    (click)="executerSelectionMaster(master)"
+                  >
+                    <i class="fas fa-list-ol"></i>
+                  </button>
+                  <button
+                    class="btn-action voir"
+                    title="Clôturer si capacité atteinte, sinon relancer depuis la liste d'attente"
+                    (click)="verifierClotureOuRelance(master)"
+                  >
+                    <i class="fas fa-repeat"></i>
+                  </button>
                   <button class="btn-action modifier" (click)="modifierMaster(master)">
                     <i class="fas fa-edit"></i>
                   </button>
@@ -417,6 +604,18 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <p class="info-text">
+          <strong>Actions Point 13:</strong> icone
+          <i class="fas fa-list-ol" aria-hidden="true"></i>
+          = generation liste definitive, icone
+          <i class="fas fa-repeat" aria-hidden="true"></i>
+          = cloture ou relance selon capacite.
+        </p>
+
+        <div class="reglement-message" *ngIf="point13Message">
+          {{ point13Message }}
         </div>
       </div>
     </div>

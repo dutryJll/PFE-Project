@@ -20,6 +20,12 @@ interface Specialite {
   nom: string;
 }
 
+interface RequiredDocument {
+  key: string;
+  label: string;
+  required: boolean;
+}
+
 @Component({
   selector: 'app-candidature-form',
   standalone: true,
@@ -37,6 +43,9 @@ export class CandidatureFormComponent implements OnInit {
     cin: '',
     email: '',
     telephone: '',
+    etablissementOrigine: '',
+    diplome: '',
+    anneesRattrapage: '0',
     moyenneBac: null as number | null,
     moyenneL1: null as number | null,
     moyenneL2: null as number | null,
@@ -55,20 +64,46 @@ export class CandidatureFormComponent implements OnInit {
   accepteCGU = false;
   isLoading = false;
   errorMessage = '';
+  uploadedDocuments: Record<string, File | null> = {};
 
   // Listes de choix - données hardcodées
   mastersList: Master[] = [
-    { id: '1', nom: 'Master de recherche en génie logiciel' },
-    { id: '2', nom: 'Master de recherche en Microélectronique et Instrumentation' },
-    { id: '3', nom: 'Master Professionnel en Data Science' },
-    { id: '4', nom: 'Master Professionnel en Ingénierie Instrumentation' },
-    { id: '5', nom: 'Master Professionnel en Génie Logiciel' },
+    { id: 'mpgl', nom: 'Master Professionnel en Ingenierie Logicielle (MPGL)' },
+    { id: 'mrgl', nom: 'Master Recherche en Ingenierie Logicielle (MRGL)' },
+    { id: 'mpds', nom: 'Master Professionnel en Science des Donnees (MPDS)' },
   ];
 
   specialitesIngenieur: Specialite[] = [
     { id: '1', nom: 'Génie Informatique' },
     { id: '2', nom: 'Génie Électrique' },
     { id: '3', nom: 'Génie Mécanique' },
+  ];
+
+  masterRequiredDocuments: RequiredDocument[] = [
+    { key: 'master_cin', label: 'Copie de la CIN', required: true },
+    {
+      key: 'master_diplome',
+      label: 'Copie du diplome ou attestation de reussite (Licence)',
+      required: true,
+    },
+    { key: 'master_releves', label: 'Releves des notes L1, L2 et L3', required: true },
+    {
+      key: 'master_classement',
+      label: 'Attestation de classement (si disponible)',
+      required: false,
+    },
+  ];
+
+  ingenieurRequiredDocuments: RequiredDocument[] = [
+    { key: 'ing_cin', label: 'Copie de la CIN', required: true },
+    { key: 'ing_bac', label: 'Copie du diplome du Baccalaureat', required: true },
+    {
+      key: 'ing_diplome',
+      label: 'Copie du diplome ou attestation du cycle preparatoire/licence',
+      required: true,
+    },
+    { key: 'ing_releves', label: 'Releves des notes (post-bac)', required: true },
+    { key: 'ing_classement', label: 'Attestation de classement (si disponible)', required: false },
   ];
 
   constructor(
@@ -95,6 +130,9 @@ export class CandidatureFormComponent implements OnInit {
       cin: [''],
       email: [''],
       telephone: [''],
+      etablissementOrigine: [''],
+      diplome: [''],
+      anneesRattrapage: ['0'],
       moyenneBac: [null],
       moyenneL1: [null],
       moyenneL2: [null],
@@ -145,6 +183,39 @@ export class CandidatureFormComponent implements OnInit {
     });
   }
 
+  get bspValue(): number {
+    const annees = Number(this.formData.anneesRattrapage || '0');
+    if (annees <= 0) {
+      return 0;
+    }
+    if (annees === 1) {
+      return 0.5;
+    }
+    return 1;
+  }
+
+  get currentRequiredDocuments(): RequiredDocument[] {
+    return this.typeCandidature === 'master'
+      ? this.masterRequiredDocuments
+      : this.ingenieurRequiredDocuments;
+  }
+
+  onDocumentChange(event: Event, key: string): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length > 0 ? input.files[0] : null;
+    this.uploadedDocuments[key] = file;
+  }
+
+  getDocumentName(key: string): string {
+    return this.uploadedDocuments[key]?.name || 'Aucun fichier selectionne';
+  }
+
+  private hasAllRequiredDocuments(): boolean {
+    return this.currentRequiredDocuments
+      .filter((doc) => doc.required)
+      .every((doc) => Boolean(this.uploadedDocuments[doc.key]));
+  }
+
   // Soumission du formulaire
   onSubmit(): void {
     this.errorMessage = '';
@@ -152,6 +223,12 @@ export class CandidatureFormComponent implements OnInit {
     // Validation de base
     if (!this.formData.prenom || !this.formData.nom || !this.formData.email || !this.formData.cin) {
       this.errorMessage = 'Veuillez remplir tous les champs obligatoires';
+      return;
+    }
+
+    if (!this.formData.etablissementOrigine || !this.formData.diplome) {
+      this.errorMessage =
+        'Veuillez renseigner les informations de diplome (etablissement et diplome).';
       return;
     }
 
@@ -182,6 +259,12 @@ export class CandidatureFormComponent implements OnInit {
       return;
     }
 
+    if (!this.hasAllRequiredDocuments()) {
+      this.errorMessage =
+        'Veuillez televerser tous les documents obligatoires dans la section diplome.';
+      return;
+    }
+
     if (!this.accepteCGU) {
       this.errorMessage = 'Veuillez accepter les conditions générales';
       return;
@@ -198,6 +281,19 @@ export class CandidatureFormComponent implements OnInit {
       email: this.formData.email,
       telephone: this.formData.telephone,
       type_candidature: this.typeCandidature,
+      etablissement_origine: this.formData.etablissementOrigine,
+      diplome_obtenu: this.formData.diplome,
+      annees_rattrapage: Number(this.formData.anneesRattrapage || '0'),
+      bsp: this.bspValue,
+      notes_academiques: {
+        moyenne_bac: this.formData.moyenneBac,
+        moyenne_l1: this.formData.moyenneL1,
+        moyenne_l2: this.formData.moyenneL2,
+        moyenne_l3: this.formData.moyenneL3,
+      },
+      documents_declares: Object.fromEntries(
+        Object.entries(this.uploadedDocuments).map(([key, file]) => [key, file ? file.name : null]),
+      ),
 
       // Vœux (pour Masters) OU Spécialité (pour Ingénieur)
       voeux:

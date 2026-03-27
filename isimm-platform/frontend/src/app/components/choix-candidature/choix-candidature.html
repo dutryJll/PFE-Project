@@ -3,7 +3,7 @@
   <div class="page-header">
     <div class="container">
       <h1>Choisissez votre type de candidature</h1>
-      <p>Sélectionnez le programme qui correspond à votre profil</p>
+      <p>Sélectionnez le programme qui correspond à votre profil et au règlement officiel.</p>
     </div>
   </div>
 
@@ -21,10 +21,19 @@
         </p>
 
         <ul class="features-list">
-          <li><i class="fas fa-check"></i> 6 Masters disponibles</li>
+          <li><i class="fas fa-check"></i> MPGL, MRGL, MPDS</li>
           <li><i class="fas fa-check"></i> Recherche et Professionnel</li>
           <li><i class="fas fa-check"></i> Choix de 3 vœux</li>
           <li><i class="fas fa-check"></i> Durée : 2 ans</li>
+          <li *ngIf="getTotalPlaces('mpgl') !== null">
+            <i class="fas fa-check"></i> MPGL: {{ getTotalPlaces('mpgl') }} places
+          </li>
+          <li *ngIf="getTotalPlaces('mrgl') !== null">
+            <i class="fas fa-check"></i> MRGL: {{ getTotalPlaces('mrgl') }} places
+          </li>
+          <li *ngIf="getTotalPlaces('mpds') !== null">
+            <i class="fas fa-check"></i> MPDS: {{ getTotalPlaces('mpds') }} places
+          </li>
         </ul>
 
         <div class="card-footer">
@@ -50,7 +59,7 @@
         </p>
 
         <ul class="features-list">
-          <li><i class="fas fa-check"></i> 3 Spécialités disponibles</li>
+          <li><i class="fas fa-check"></i> Admission selon règlement du concours</li>
           <li><i class="fas fa-check"></i> Génie Informatique</li>
           <li><i class="fas fa-check"></i> Génie Électrique</li>
           <li><i class="fas fa-check"></i> Durée : 3 ans</li>

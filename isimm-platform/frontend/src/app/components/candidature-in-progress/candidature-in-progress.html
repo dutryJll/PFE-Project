@@ -52,7 +52,7 @@
       </div>
 
       <div *ngIf="currentStep === 2" class="step-panel">
-        <h2>Diplômes</h2>
+        <h2>Diplômes et documents requis</h2>
         <div class="table-like" *ngFor="let d of diplomes; let i = index">
           <input
             type="text"
@@ -72,27 +72,26 @@
         <button type="button" class="btn-outline" (click)="addDiplomeRow()">
           + Ajouter diplôme
         </button>
+        <h3>Import des pièces justificatives</h3>
+        <p class="step-ok" *ngIf="hasAllRequiredDocumentsUploaded()">
+          ✅ Tous les documents obligatoires sont importés.
+        </p>
+        <div class="docs-upload-grid">
+          <article class="doc-upload-card" *ngFor="let doc of requiredDocumentFields">
+            <h3>{{ doc.label }}</h3>
+            <p>{{ doc.hint }}</p>
+            <input
+              type="file"
+              [attr.accept]="doc.accept"
+              [attr.multiple]="doc.multiple ? '' : null"
+              (change)="onRequiredDocumentChange(doc.key, $event)"
+            />
+            <small>{{ getUploadedDocumentNames(doc.key) }}</small>
+          </article>
+        </div>
       </div>
 
       <div *ngIf="currentStep === 3" class="step-panel">
-        <h2>Attestations</h2>
-        <div class="table-like" *ngFor="let a of attestations; let i = index">
-          <input
-            type="text"
-            [(ngModel)]="attestations[i]"
-            [name]="'att_' + i"
-            placeholder="Nom attestation"
-          />
-          <button type="button" class="btn-mini" (click)="removeAttestationRow(i)">
-            Supprimer
-          </button>
-        </div>
-        <button type="button" class="btn-outline" (click)="addAttestationRow()">
-          + Ajouter attestation
-        </button>
-      </div>
-
-      <div *ngIf="currentStep === 4" class="step-panel">
         <h2>Mon parcours</h2>
         <textarea
           rows="6"
@@ -102,7 +101,7 @@
         ></textarea>
       </div>
 
-      <div *ngIf="currentStep === 5" class="step-panel">
+      <div *ngIf="currentStep === 4" class="step-panel">
         <h2>Relevés de notes (tableau)</h2>
         <table class="notes-table">
           <thead>
@@ -129,7 +128,7 @@
         <button type="button" class="btn-outline" (click)="addReleveRow()">+ Ajouter ligne</button>
       </div>
 
-      <div *ngIf="currentStep === 6" class="step-panel">
+      <div *ngIf="currentStep === 5" class="step-panel">
         <h2>Revue & Soumission</h2>
         <p>Vérifiez vos informations puis confirmez.</p>
         <label class="checkbox-line">
@@ -154,13 +153,13 @@
         >
           Précédent
         </button>
-        <button type="button" class="btn-primary" *ngIf="currentStep < 6" (click)="nextStep()">
+        <button type="button" class="btn-primary" *ngIf="currentStep < 5" (click)="nextStep()">
           Suivant
         </button>
         <button
           type="button"
           class="btn-primary"
-          *ngIf="currentStep === 6"
+          *ngIf="currentStep === 5"
           [disabled]="isSubmitting"
           (click)="submitFinalCandidature()"
         >

@@ -84,6 +84,14 @@ class ConfigurationAppel(models.Model):
     
     capacite_accueil = models.IntegerField()
     capacite_liste_attente = models.IntegerField(default=50)
+
+    # Schema configurable du formulaire de depot dossier par master.
+    # Exemple:
+    # {
+    #   "required_fields": ["cin", "telephone"],
+    #   "required_documents": ["releve_notes", "diplome"]
+    # }
+    formulaire_commission_schema = models.JSONField(default=dict, blank=True)
     
     actif = models.BooleanField(default=True)
     

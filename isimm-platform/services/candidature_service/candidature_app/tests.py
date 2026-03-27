@@ -5,8 +5,15 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from .models import CandidatListe, Candidature, ListeAdmission, Master
-from .views import create_candidature, changer_statut_candidature, publier_liste
+from .models import CandidatListe, Candidature, ConfigurationAppel, FormuleScore, ListeAdmission, Master, Paiement
+from .views import (
+	changer_statut_candidature,
+	consulter_inscriptions_administratives,
+	create_candidature,
+	deposer_dossier_numerique,
+	formule_score_master,
+	publier_liste,
+)
 
 
 class CandidatureWorkflowTests(TestCase):
@@ -50,6 +57,23 @@ class CandidatureWorkflowTests(TestCase):
 			date_limite_candidature=date.today() + timedelta(days=30),
 			annee_universitaire='2025-2026',
 			actif=True,
+		)
+
+		self.configuration = ConfigurationAppel.objects.create(
+			master=self.master,
+			date_debut_visibilite=date.today() - timedelta(days=1),
+			date_fin_visibilite=date.today() + timedelta(days=30),
+			date_limite_preinscription=date.today() + timedelta(days=15),
+			date_limite_depot_dossier=date.today() + timedelta(days=20),
+			date_limite_paiement=date.today() + timedelta(days=30),
+			delai_modification_candidature_jours=7,
+			delai_depot_dossier_preselectionnes_jours=14,
+			capacite_accueil=20,
+			capacite_liste_attente=30,
+			formulaire_commission_schema={
+				'required_fields': ['cin', 'telephone'],
+				'required_documents': ['releve_notes', 'diplome'],
+			},
 		)
 
 	@patch('candidature_app.views.envoyer_email_confirmation_candidature')
@@ -131,3 +155,109 @@ class CandidatureWorkflowTests(TestCase):
 		self.assertTrue(liste.publiee)
 		self.assertIsNotNone(liste.date_publication)
 		mock_notifications.assert_called_once_with(liste)
+
+	def test_depot_dossier_refuse_si_statut_non_autorise(self):
+		candidature = Candidature.objects.create(
+			candidat=self.candidat,
+			master=self.master,
+			statut='soumis',
+		)
+
+		request = self.factory.post(
+			f'/api/candidatures/{candidature.id}/deposer-dossier/',
+			{
+				'formulaire': {
+					'cin': '12345678',
+					'telephone': '99111222',
+					'documents': ['releve_notes', 'diplome'],
+				}
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = deposer_dossier_numerique(request, candidature.id)
+
+		self.assertEqual(response.status_code, 403)
+
+	def test_depot_dossier_valide_avec_formulaire_commission(self):
+		candidature = Candidature.objects.create(
+			candidat=self.candidat,
+			master=self.master,
+			statut='preselectionne',
+		)
+
+		request = self.factory.post(
+			f'/api/candidatures/{candidature.id}/deposer-dossier/',
+			{
+				'formulaire': {
+					'cin': '12345678',
+					'telephone': '99111222',
+					'documents': ['releve_notes', 'diplome'],
+				}
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = deposer_dossier_numerique(request, candidature.id)
+
+		self.assertEqual(response.status_code, 200)
+		candidature.refresh_from_db()
+		self.assertEqual(candidature.statut, 'dossier_depose')
+		self.assertTrue(candidature.dossier_depose)
+
+	def test_formule_score_master_update_by_responsable(self):
+		request = self.factory.put(
+			f'/api/candidatures/masters/{self.master.id}/formule-score/',
+			{
+				'nom': 'Formule commission 2026',
+				'coef_moyenne_generale': '0.55',
+				'coef_moyenne_specialite': '0.35',
+				'coef_note_pfe': '0.10',
+				'bonus_mention_tres_bien': '2.00',
+				'bonus_mention_bien': '1.00',
+				'bonus_mention_assez_bien': '0.50',
+				'malus_redoublement': '-1.00',
+				'malus_dette': '-0.50',
+				'criteres_specifiques': {'experience_pro': {'coefficient': 0.2}},
+				'actif': True,
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.responsable)
+
+		response = formule_score_master(request, self.master.id)
+
+		self.assertEqual(response.status_code, 200)
+		formule = FormuleScore.objects.get(master=self.master)
+		self.assertEqual(str(formule.coef_moyenne_generale), '0.55')
+
+	def test_consulter_inscriptions_administratives_separe_finalisee_et_incomplete(self):
+		candidat2 = self.user_model.objects.create_user(
+			username='candidat2',
+			email='candidat2@example.com',
+			password='test12345',
+		)
+		candidat2.role = 'candidat'
+
+		c1 = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='selectionne')
+		c2 = Candidature.objects.create(candidat=candidat2, master=self.master, statut='selectionne')
+
+		Paiement.objects.create(
+			candidature=c1,
+			montant=100,
+			statut='paye',
+			reference_paiement='REF-1',
+			date_paiement=self.configuration.date_limite_paiement,
+		)
+
+		request = self.factory.get('/api/candidatures/inscriptions-administratives/')
+		force_authenticate(request, user=self.responsable)
+
+		response = consulter_inscriptions_administratives(request)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data['stats']['total'], 2)
+		self.assertEqual(response.data['stats']['finalisee'], 1)
+		self.assertEqual(response.data['stats']['incomplete'], 1)
