@@ -44,7 +44,8 @@ export class CreatePasswordComponent implements OnInit {
           this.verification = 'valid';
         } else {
           this.verification = 'invalid';
-          this.verificationErrorMessage = 'Lien invalide ou expiré';
+          this.verificationErrorMessage =
+            response?.error || "Ce lien de création de mot de passe n'est plus valide.";
         }
       },
       error: (error) => {

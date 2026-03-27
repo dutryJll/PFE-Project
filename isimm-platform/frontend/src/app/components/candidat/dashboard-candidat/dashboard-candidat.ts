@@ -581,7 +581,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   private loadActionPermissions(): void {
     this.authService.getMyEnabledActions().subscribe({
-      next: () => {
+      next: (actions: string[]) => {
+        // Fallback permissif: si l'API des actions est indisponible/vide,
+        // on conserve les permissions locales pour ne pas masquer le menu candidat.
+        if (!actions || actions.length === 0) {
+          console.warn('Aucune action distante chargee, conservation des permissions locales.');
+          return;
+        }
+
         this.actionPermissions = {
           preinscription: this.authService.hasMyAction('Préinscription'),
           consultationCandidature: this.authService.hasMyAction('Consultation de candidature'),

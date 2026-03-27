@@ -580,28 +580,40 @@ def verify_token(request, token):
         
         if not user:
             return Response(
-                {'error': 'Token invalide ou expiré'},
-                status=status.HTTP_404_NOT_FOUND
+                {
+                    'valid': False,
+                    'error': 'Token invalide ou expiré',
+                },
+                status=status.HTTP_200_OK,
             )
         
         # Un compte deja actif a deja finalise son mot de passe.
         if user.has_usable_password() and user.is_email_verified:
             return Response(
-                {'error': 'Ce lien a déjà été utilisé'},
-                status=status.HTTP_410_GONE
+                {
+                    'valid': False,
+                    'error': 'Ce lien a déjà été utilisé',
+                },
+                status=status.HTTP_200_OK,
             )
         
-        return Response({
-            'valid': True,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name
-        })
+        return Response(
+            {
+                'valid': True,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            },
+            status=status.HTTP_200_OK,
+        )
         
     except (ValueError, TypeError, AttributeError):
         return Response(
-            {'error': 'Format de token invalide'},
-            status=status.HTTP_400_BAD_REQUEST
+            {
+                'valid': False,
+                'error': 'Format de token invalide',
+            },
+            status=status.HTTP_200_OK,
         )
 
 
