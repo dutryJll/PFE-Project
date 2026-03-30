@@ -2,8 +2,18 @@
   <button class="btn-back" (click)="goBack()">← Retour</button>
 
   <div class="login-card">
+    <div class="header-mark">Admission 2026</div>
+    <div class="header-icon" aria-hidden="true">
+      <i class="fas fa-user-graduate"></i>
+    </div>
     <h2>Espace Candidat</h2>
     <p class="subtitle">Connectez-vous à votre compte</p>
+
+    <div class="entry-hints">
+      <span>Suivi du dossier</span>
+      <span>Documents</span>
+      <span>Réclamations</span>
+    </div>
 
     <div *ngIf="errorMessage" class="alert alert-danger">
       {{ errorMessage }}

@@ -12,6 +12,7 @@ export class CandidatureService {
 
   private getHeaders(includeJsonContentType: boolean = true): HttpHeaders {
     const token = localStorage.getItem('access_token');
+    console.log('🔐 CandidatureService.getHeaders() - token exists:', !!token);
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
     };
@@ -20,6 +21,9 @@ export class CandidatureService {
       headers['Content-Type'] = 'application/json';
     }
 
+    console.log('📤 Headers being sent:', {
+      Authorization: token ? `Bearer ${token.substring(0, 20)}...` : 'NO TOKEN',
+    });
     return new HttpHeaders(headers);
   }
 
@@ -30,6 +34,7 @@ export class CandidatureService {
 
   // Récupérer mes candidatures
   getMesCandidatures(): Observable<any> {
+    console.log('📤 GET /mes-candidatures/ appelé');
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 

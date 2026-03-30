@@ -169,21 +169,34 @@ export class AuthService {
       return of(Array.from(this.enabledActions));
     }
 
-    return this.http.get<MyActionsResponse>(`${this.apiUrl}/my-actions/`).pipe(
-      map((response) => (response.actions || []).map((item) => item.action_name || '')),
-      tap((actionNames) => {
-        this.enabledActions = new Set(
-          actionNames.filter((name) => !!name).map((name) => this.normalizeActionName(name)),
-        );
-        this.actionsLoaded = true;
-      }),
-      catchError((error: any) => {
-        console.warn('Actions indisponibles (fallback local permissif):', error?.status || error);
-        this.actionsLoaded = false;
-        this.enabledActions.clear();
-        return of([]);
-      }),
-    );
+    const token = this.getAccessToken();
+    if (!token) {
+      console.warn('⚠️ Pas de token - actions indisponibles');
+      this.actionsLoaded = false;
+      return throwError(() => new Error('No access token'));
+    }
+
+    return this.http
+      .get<MyActionsResponse>(`${this.apiUrl}/my-actions/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        map((response) => (response.actions || []).map((item) => item.action_name || '')),
+        tap((actionNames) => {
+          this.enabledActions = new Set(
+            actionNames.filter((name) => !!name).map((name) => this.normalizeActionName(name)),
+          );
+          this.actionsLoaded = true;
+          console.log('✅ Actions chargées:', this.enabledActions);
+        }),
+        catchError((error: any) => {
+          console.warn('Actions indisponibles (fallback local permissif):', error?.status || error);
+          this.actionsLoaded = false;
+          // Important: ne pas vider enabledActions ici.
+          // On relaie l'erreur pour que les guards/components appliquent le fallback permissif.
+          return throwError(() => error);
+        }),
+      );
   }
 
   hasMyAction(actionNames: string | string[]): boolean {

@@ -12,6 +12,11 @@ interface CandidatureLight {
   master_nom?: string;
 }
 
+interface MasterOption {
+  id: number;
+  nom: string;
+}
+
 @Component({
   selector: 'app-nouvelle-reclamation',
   standalone: true,
@@ -21,6 +26,7 @@ interface CandidatureLight {
 })
 export class NouvelleReclamationComponent implements OnInit {
   mesCandidatures: CandidatureLight[] = [];
+  masterOptions: MasterOption[] = [];
 
   formData: {
     master_id: string;
@@ -42,19 +48,142 @@ export class NouvelleReclamationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const token = this.authService.getAccessToken();
+    console.log('🔐 Token disponible?', !!token);
+    if (!token) {
+      console.warn('⚠️ Pas de token trouvé! Impossible de charger les candidatures');
+      this.masterOptions = [];
+      return;
+    }
+
+    console.log('📤 Appel getMesCandidatures() avec token...');
     this.candidatureService.getMesCandidatures().subscribe({
       next: (response: any) => {
+        console.log('📥 Réponse reçue:', response);
         const list = Array.isArray(response) ? response : response?.results || [];
-        this.mesCandidatures = list.map((item: any) => ({
-          id: Number(item?.id),
-          master_id: item?.master_id ?? item?.master,
-          master_nom: item?.master_nom ?? item?.master_name ?? 'Master',
-        }));
+        console.log('📋 Après parsing - candidatures count:', list.length);
+
+        this.mesCandidatures = list.map((item: any) => {
+          const masterId = this.extractMasterId(item);
+          console.log(
+            `  - Item ID ${item?.id}: master_id=${masterId}, master_nom=${item?.master_nom}`,
+          );
+          return {
+            id: Number(item?.id),
+            master_id: masterId,
+            master_nom: item?.master_nom ?? item?.master_name ?? 'Master',
+          };
+        });
+
+        console.log('📋 Candidatures chargées:', this.mesCandidatures.length, 'items');
+        console.log('📋 Détail candidatures:', JSON.stringify(this.mesCandidatures, null, 2));
+
+        this.buildMasterOptionsFromCandidatures();
+        console.log('✅ Master options extraites:', this.masterOptions.length, 'options');
+        console.log('✅ Master options détail:', JSON.stringify(this.masterOptions, null, 2));
       },
-      error: () => {
+      error: (err) => {
+        console.error(
+          '❌ Erreur chargement candidatures:',
+          'Status:',
+          err?.status,
+          'Message:',
+          err?.statusText,
+          'Body:',
+          err?.error,
+        );
         this.mesCandidatures = [];
+        this.masterOptions = [];
       },
     });
+  }
+
+  private extractMasterId(item: any): number | undefined {
+    const fromMasterId = Number(item?.master_id);
+    if (Number.isFinite(fromMasterId) && fromMasterId > 0) {
+      console.log(`    ✓ extractMasterId: found from master_id field = ${fromMasterId}`);
+      return fromMasterId;
+    }
+
+    const masterField = item?.master;
+    if (typeof masterField === 'number') {
+      console.log(`    ✓ extractMasterId: found from master field (number) = ${masterField}`);
+      return masterField;
+    }
+
+    if (masterField && typeof masterField === 'object') {
+      const nestedId = Number(masterField.id);
+      if (Number.isFinite(nestedId) && nestedId > 0) {
+        console.log(`    ✓ extractMasterId: found from master.id field = ${nestedId}`);
+        return nestedId;
+      }
+    }
+
+    console.log(`    ✗ extractMasterId: no valid master_id found in item`, item);
+    return undefined;
+  }
+
+  private buildMasterOptionsFromCandidatures(): void {
+    console.log('🔨 buildMasterOptionsFromCandidatures START');
+    const unique = new Map<number, string>();
+
+    for (const candidature of this.mesCandidatures) {
+      const masterId = Number(candidature.master_id);
+      console.log(
+        `  Processing candidature ID=${candidature.id}, masterId=${masterId}, master_nom=${candidature.master_nom}`,
+      );
+
+      if (!Number.isFinite(masterId) || masterId <= 0) {
+        console.log(`    → SKIPPED: masterId invalid (${masterId})`);
+        continue;
+      }
+
+      const label = (candidature.master_nom || 'Master').trim();
+      unique.set(masterId, label || 'Master');
+      console.log(`    → ADDED: Map[${masterId}] = "${label}"`);
+    }
+
+    this.masterOptions = Array.from(unique.entries()).map(([id, nom]) => ({ id, nom }));
+    console.log('🔨 buildMasterOptionsFromCandidatures END - found', unique.size, 'unique masters');
+  }
+
+  private loadMasterOptionsFromOffres(): void {
+    const token = this.authService.getAccessToken();
+
+    console.log("🔄 Chargement des offres d'inscription depuis l'API...");
+    this.http
+      .get<any>('http://localhost:8003/api/candidatures/offres-inscription/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (response) => {
+          console.log('✅ Réponse API offres:', response);
+          const offres = Array.isArray(response)
+            ? response
+            : response?.results || response?.data || [];
+          console.log('📋 Offres extraites:', offres);
+
+          const unique = new Map<number, string>();
+
+          for (const offre of offres) {
+            const id = Number(offre?.id);
+            if (!Number.isFinite(id) || id <= 0) {
+              console.warn('⚠️ ID invalide dans offre:', offre);
+              continue;
+            }
+
+            const nom = (offre?.titre || offre?.nom || 'Master').toString();
+            unique.set(id, nom);
+          }
+
+          this.masterOptions = Array.from(unique.entries()).map(([id, nom]) => ({ id, nom }));
+          console.log('✅ Master options finales:', this.masterOptions);
+        },
+        error: (err) => {
+          console.error('❌ Erreur chargement offres:', err);
+          this.masterOptions = [];
+        },
+      });
   }
 
   submit(): void {

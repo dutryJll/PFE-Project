@@ -263,15 +263,40 @@
 
     <div *ngIf="currentView === 'offres-inscription'" class="view-content">
       <div class="section-card">
-        <h2>🎓 Appels d'inscription - Masters & Cycle d'Ingénieur</h2>
-        <p>Consultez toutes les offres avec leur statut d'ouverture.</p>
+        <div class="offres-hero">
+          <div class="offres-hero-content">
+            <p class="offres-kicker">Admission 2026</p>
+            <h2>Appels d'inscription - Masters & Cycle d'Ingenieur</h2>
+            <p class="offres-subtitle">
+              Choisissez votre parcours, consultez le statut d'ouverture et postulez en quelques
+              clics.
+            </p>
+          </div>
+          <div class="offres-hero-stats">
+            <div class="hero-stat">
+              <span class="hero-stat-value">{{ offresInscription.length }}</span>
+              <span class="hero-stat-label">Offres total</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-value">{{ mastersRecherche().length }}</span>
+              <span class="hero-stat-label">Masters recherche</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-value">{{ mastersProfessionnels().length }}</span>
+              <span class="hero-stat-label">Masters pro</span>
+            </div>
+          </div>
+        </div>
 
         <div class="offres-category">
-          <h3 class="category-title"><i class="fas fa-flask"></i> Masters Recherche</h3>
+          <div class="category-head">
+            <h3 class="category-title"><i class="fas fa-flask"></i> Masters Recherche</h3>
+            <span class="category-count">{{ mastersRecherche().length }} offres</span>
+          </div>
           <div class="offres-grid">
             <div class="offre-card recherche" *ngFor="let offre of mastersRecherche()">
               <div class="offre-header recherche">
-                <div class="offre-badge">RECHERCHE</div>
+                <div class="offre-badge">Parcours Recherche</div>
                 <div class="offre-status" [ngClass]="offre.statut">
                   {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
                 </div>
@@ -314,11 +339,14 @@
         </div>
 
         <div class="offres-category">
-          <h3 class="category-title"><i class="fas fa-briefcase"></i> Masters Professionnels</h3>
+          <div class="category-head">
+            <h3 class="category-title"><i class="fas fa-briefcase"></i> Masters Professionnels</h3>
+            <span class="category-count">{{ mastersProfessionnels().length }} offres</span>
+          </div>
           <div class="offres-grid">
             <div class="offre-card professionnel" *ngFor="let offre of mastersProfessionnels()">
               <div class="offre-header professionnel">
-                <div class="offre-badge">PROFESSIONNEL</div>
+                <div class="offre-badge">Parcours Professionnel</div>
                 <div class="offre-status" [ngClass]="offre.statut">
                   {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
                 </div>
@@ -361,11 +389,14 @@
         </div>
 
         <div class="offres-category">
-          <h3 class="category-title"><i class="fas fa-laptop-code"></i> Cycle d'Ingénieur</h3>
+          <div class="category-head">
+            <h3 class="category-title"><i class="fas fa-laptop-code"></i> Cycle d'Ingenieur</h3>
+            <span class="category-count">{{ cyclesIngenieur().length }} offre</span>
+          </div>
           <div class="offres-grid cycle-grid">
             <div class="offre-card cycle-ingenieur" *ngFor="let offre of cyclesIngenieur()">
               <div class="offre-header cycle-ingenieur">
-                <div class="offre-badge">CYCLE 3 ANS</div>
+                <div class="offre-badge">Cycle 3 ans</div>
                 <div class="offre-status" [ngClass]="offre.statut">
                   {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
                 </div>
@@ -761,6 +792,10 @@
     <div *ngIf="currentView === 'importer'" class="view-content">
       <div class="section-card">
         <h2>📤 Importer un fichier</h2>
+        <p class="importer-subtitle">
+          Déposez chaque document requis dans son champ dédié. Formats acceptés: PDF, JPG, PNG (max
+          5 Mo).
+        </p>
 
         <div class="dossier-toolbar" *ngIf="selectedDossierNumber">
           <span class="selected-dossier-badge"
@@ -769,39 +804,68 @@
           <button class="btn-doc" (click)="switchView('mon-dossier')">Retour aux dossiers</button>
         </div>
 
-        <div
-          class="upload-zone"
-          (dragover)="onDragOver($event)"
-          (drop)="onDrop($event)"
-          (click)="fileInput.click()"
-        >
-          <i class="fas fa-cloud-upload-alt upload-icon"></i>
-          <h3>Glissez-déposez votre fichier ici</h3>
-          <p>ou cliquez pour parcourir vos fichiers</p>
-          <small>Formats acceptés : PDF, JPG, PNG (Max 5 Mo)</small>
-          <input
-            #fileInput
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            (change)="onFileSelected($event)"
-            style="display: none"
-          />
+        <div class="multi-upload-actions">
+          <button
+            type="button"
+            class="btn-primary"
+            [disabled]="selectedDocumentsCount === 0"
+            (click)="uploadAllSelectedDocuments()"
+          >
+            <i class="fas fa-upload"></i>
+            Envoyer tous les documents sélectionnés ({{ selectedDocumentsCount }})
+          </button>
         </div>
 
-        <div class="file-preview" *ngIf="fichierInscription">
-          <div class="file-info">
-            <i class="fas fa-file-pdf file-icon"></i>
-            <div class="file-details">
-              <strong>{{ fichierInscription.name }}</strong>
-              <small>{{ formatFileSize(fichierInscription.size) }}</small>
+        <div class="document-upload-grid">
+          <div class="document-upload-card" *ngFor="let doc of documentsRequis">
+            <div class="document-upload-head">
+              <div class="document-meta">
+                <i class="fas" [ngClass]="doc.icon"></i>
+                <div>
+                  <h3>{{ doc.nom }}</h3>
+                  <small *ngIf="doc.date_depot">Déposé le {{ doc.date_depot }}</small>
+                </div>
+              </div>
+              <span class="doc-state" [ngClass]="doc.depose ? 'depose' : 'manquant'">
+                {{ doc.depose ? 'Déposé' : 'À déposer' }}
+              </span>
             </div>
-            <button class="btn-remove" (click)="removeFichier()">
-              <i class="fas fa-times"></i>
-            </button>
+
+            <div
+              class="upload-zone compact"
+              (dragover)="onDragOver($event)"
+              (drop)="onDocumentDrop($event, doc)"
+              (click)="docInput.click()"
+            >
+              <i class="fas fa-cloud-upload-alt upload-icon"></i>
+              <h3>Glissez-déposez votre fichier ici</h3>
+              <p>ou cliquez pour parcourir vos fichiers</p>
+              <small>Formats acceptés : PDF, JPG, PNG (Max 5 Mo)</small>
+              <input
+                #docInput
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                (change)="onDocumentFileSelected($event, doc)"
+                style="display: none"
+              />
+            </div>
+
+            <div class="file-preview mini" *ngIf="selectedDocumentFiles[doc.id] as selectedFile">
+              <div class="file-info">
+                <i class="fas fa-file-pdf file-icon"></i>
+                <div class="file-details">
+                  <strong>{{ selectedFile.name }}</strong>
+                  <small>{{ formatFileSize(selectedFile.size) }}</small>
+                </div>
+                <button class="btn-remove" (click)="removeDocumentFile(doc.id)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <button class="btn-primary" (click)="uploadDocumentFile(doc)">
+                <i class="fas fa-upload"></i> Envoyer {{ doc.nom }}
+              </button>
+            </div>
           </div>
-          <button class="btn-primary" (click)="uploadFichier()">
-            <i class="fas fa-upload"></i> Envoyer le fichier
-          </button>
         </div>
       </div>
     </div>

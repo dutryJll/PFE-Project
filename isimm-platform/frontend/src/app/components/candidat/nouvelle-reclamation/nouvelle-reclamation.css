@@ -41,6 +41,11 @@
   color: #113a66;
 }
 
+.form-group .hint {
+  color: #6b7f95;
+  font-size: 0.84rem;
+}
+
 .form-group select,
 .form-group textarea {
   border: 1px solid #c8d8ea;

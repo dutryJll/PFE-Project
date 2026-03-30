@@ -10,10 +10,14 @@
         <label for="master">Master concerne *</label>
         <select id="master" name="master" [(ngModel)]="formData.master_id" required>
           <option value="">-- Selectionner un master --</option>
-          <option *ngFor="let candidature of mesCandidatures" [value]="candidature.master_id || ''">
-            {{ candidature.master_nom }}
+          <option *ngFor="let master of masterOptions" [value]="master.id">
+            {{ master.nom }}
           </option>
         </select>
+        <small class="hint" *ngIf="masterOptions.length === 0">
+          ⚠️ Aucun master disponible. Veuillez d'abord
+          <strong>effectuer une candidature</strong> pour pouvoir soumettre une réclamation.
+        </small>
       </div>
 
       <div class="form-group">

@@ -373,6 +373,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   };
 
   fichierInscription: File | null = null;
+  selectedDocumentFiles: Record<number, File | null> = {};
   fichiersHistorique: FichierHistorique[] = [
     { id: 1, nom: 'fiche_inscription_2026.pdf', date: '15/02/2026' },
     { id: 2, nom: 'releve_notes.pdf', date: '16/02/2026' },
@@ -1551,6 +1552,161 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  private isAllowedUploadFile(file: File): boolean {
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+    const extension = (file.name.split('.').pop() || '').toLowerCase();
+
+    if (!allowedExtensions.includes(extension)) {
+      alert('❌ Format non supporté. Utilisez PDF, JPG ou PNG.');
+      return false;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('❌ Fichier trop volumineux (max 5 Mo)');
+      return false;
+    }
+
+    return true;
+  }
+
+  onDocumentDrop(event: DragEvent, document: Document): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const file = files[0];
+    if (!this.isAllowedUploadFile(file)) {
+      return;
+    }
+
+    this.selectedDocumentFiles[document.id] = file;
+  }
+
+  onDocumentFileSelected(event: Event, document: Document): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!this.isAllowedUploadFile(file)) {
+      input.value = '';
+      return;
+    }
+
+    this.selectedDocumentFiles[document.id] = file;
+  }
+
+  removeDocumentFile(documentId: number): void {
+    this.selectedDocumentFiles[documentId] = null;
+  }
+
+  get selectedDocumentsCount(): number {
+    return this.documentsRequis.filter((doc) => !!this.selectedDocumentFiles[doc.id]).length;
+  }
+
+  uploadAllSelectedDocuments(): void {
+    const docsToUpload = this.documentsRequis.filter((doc) => !!this.selectedDocumentFiles[doc.id]);
+
+    if (!docsToUpload.length) {
+      this.toastService.show('Aucun document sélectionné.', 'warning');
+      return;
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    const totalCount = docsToUpload.length;
+
+    docsToUpload.forEach((doc) => {
+      this.uploadDocumentFile(
+        doc,
+        () => {
+          successCount++;
+          if (successCount + errorCount === totalCount) {
+            if (errorCount === 0) {
+              this.toastService.show(
+                `✅ ${successCount} document${successCount > 1 ? 's' : ''} envoyé${successCount > 1 ? 's' : ''} avec succès`,
+                'success',
+                3500,
+              );
+            } else {
+              this.toastService.show(
+                `⚠️ ${successCount} envoyé${successCount > 1 ? 's' : ''}, ${errorCount} échoué${errorCount > 1 ? 's' : ''}`,
+                'warning',
+                3500,
+              );
+            }
+          }
+        },
+        () => {
+          errorCount++;
+          if (successCount + errorCount === totalCount) {
+            if (errorCount === 0) {
+              this.toastService.show(
+                `✅ ${successCount} document${successCount > 1 ? 's' : ''} envoyé${successCount > 1 ? 's' : ''} avec succès`,
+                'success',
+                3500,
+              );
+            } else {
+              this.toastService.show(
+                `⚠️ ${successCount} envoyé${successCount > 1 ? 's' : ''}, ${errorCount} échoué${errorCount > 1 ? 's' : ''}`,
+                'warning',
+                3500,
+              );
+            }
+          }
+        },
+      );
+    });
+  }
+
+  uploadDocumentFile(document: Document, onSuccess?: () => void, onError?: () => void): void {
+    const selectedFile = this.selectedDocumentFiles[document.id];
+    if (!selectedFile) {
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    const formData = new FormData();
+    formData.append('fichier', selectedFile);
+    formData.append('document_type', document.nom);
+
+    if (this.selectedDossierNumber) {
+      formData.append('numero_dossier', this.selectedDossierNumber);
+    }
+
+    this.http
+      .post('http://localhost:8003/api/candidatures/upload-fichier/', formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          const now = new Date().toLocaleDateString('fr-FR');
+
+          document.depose = true;
+          document.date_depot = now;
+
+          this.fichiersHistorique.unshift({
+            id: Date.now(),
+            nom: selectedFile.name,
+            date: now,
+          });
+
+          this.selectedDocumentFiles[document.id] = null;
+          if (onSuccess) onSuccess();
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          if (onError) onError();
+        },
+      });
   }
 
   onDrop(event: DragEvent): void {
