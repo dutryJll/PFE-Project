@@ -59,11 +59,37 @@ export class GestionCommissionComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const token = this.authService.getAccessToken();
+    if (!token || !this.authService.getCurrentUser()) {
+      alert('Session expirée. Veuillez vous reconnecter.');
+      this.router.navigate(['/login-admin']);
+      return;
+    }
+
     this.loadMembres();
+  }
+
+  private mapUserToMembre(user: any): MembreCommission {
+    return {
+      id: user.id,
+      first_name: user.first_name ?? '',
+      last_name: user.last_name ?? '',
+      email: user.email ?? '',
+      specialite: user.specialite ?? 'Tous les masters',
+      grade: user.grade ?? 'Maître de conférences',
+      role: user.role,
+      statut: user.is_active ? 'actif' : 'suspendu',
+      date_creation: user.date_inscription ?? '',
+    };
   }
 
   loadMembres(): void {
     const token = this.authService.getAccessToken();
+    if (!token) {
+      alert('Session expirée. Veuillez vous reconnecter.');
+      this.router.navigate(['/login-admin']);
+      return;
+    }
 
     // ✅ CHARGER les membres depuis Django
     this.http
@@ -78,32 +104,41 @@ export class GestionCommissionComponent implements OnInit {
         },
         error: (error) => {
           console.error('❌ Erreur chargement membres:', error);
-          this.isUsingFallbackData = true;
-          // En cas d'erreur, utiliser des données de test
-          this.membres = [
-            {
-              id: 1,
-              first_name: 'Fatma',
-              last_name: 'Ben Ali',
-              email: 'fatma.ben@isimm.tn',
-              specialite: 'Tous les masters',
-              grade: 'Professeur',
-              role: 'responsable_commission',
-              statut: 'actif',
-              date_creation: '2026-01-15',
-            },
-            {
-              id: 2,
-              first_name: 'Ahmed',
-              last_name: 'Gharbi',
-              email: 'ahmed.gharbi@isimm.tn',
-              specialite: 'Master Génie Logiciel',
-              grade: 'Maître de conférences',
-              role: 'commission',
-              statut: 'actif',
-              date_creation: '2026-01-20',
-            },
-          ];
+
+          if (error?.status === 401) {
+            alert('Votre session admin a expiré. Merci de vous reconnecter.');
+            this.authService.logout();
+            this.router.navigate(['/login-admin']);
+            return;
+          }
+
+          // Fallback réel: récupérer tous les utilisateurs puis filtrer les rôles commission.
+          this.http
+            .get<any[]>('http://localhost:8001/api/auth/users/', {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .subscribe({
+              next: (users) => {
+                const membres = (users ?? [])
+                  .filter((u) => u?.role === 'commission' || u?.role === 'responsable_commission')
+                  .map((u) => this.mapUserToMembre(u));
+
+                this.isUsingFallbackData = false;
+                this.membres = membres;
+                console.log('✅ Membres chargés via fallback users:', this.membres);
+              },
+              error: (usersError) => {
+                console.error('❌ Erreur fallback users:', usersError);
+                if (usersError?.status === 401) {
+                  alert('Votre session admin a expiré. Merci de vous reconnecter.');
+                  this.authService.logout();
+                  this.router.navigate(['/login-admin']);
+                  return;
+                }
+                this.isUsingFallbackData = true;
+                this.membres = [];
+              },
+            });
         },
       });
   }
@@ -138,6 +173,22 @@ export class GestionCommissionComponent implements OnInit {
       return;
     }
 
+    const normalizedEmail = (this.nouveauMembre.email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      alert('Email invalide');
+      return;
+    }
+
+    this.nouveauMembre.email = normalizedEmail;
+
+    const dejaMembre = this.membres.some(
+      (m) => (m.email || '').trim().toLowerCase() === normalizedEmail,
+    );
+    if (dejaMembre) {
+      alert('Cet email est déjà utilisé par un membre de commission.');
+      return;
+    }
+
     const membre: MembreCommission = {
       id: this.membres.length + 1,
       ...this.nouveauMembre,
@@ -145,58 +196,91 @@ export class GestionCommissionComponent implements OnInit {
       date_creation: new Date().toISOString().split('T')[0],
     };
 
-    // ✅ Ajouter temporairement dans le tableau (pour affichage immédiat)
-    this.membres.push(membre);
-
     // ✅ ENVOYER à Django pour sauvegarde en base
     this.envoyerEmailActivation(membre);
-
-    this.fermerModal();
   }
 
   envoyerEmailActivation(membre: MembreCommission): void {
     console.log('📧 Envoi email activation à:', membre.email);
 
     const token = this.authService.getAccessToken();
+    if (!token) {
+      alert('Session expirée. Veuillez vous reconnecter.');
+      this.router.navigate(['/login-admin']);
+      return;
+    }
 
     this.http
-      .post(
-        'http://localhost:8001/api/auth/create-commission-member/',
-        {
-          email: membre.email,
-          first_name: membre.first_name,
-          last_name: membre.last_name,
-          specialite: membre.specialite,
-          grade: membre.grade,
-          role: membre.role,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      .get<any[]>('http://localhost:8001/api/auth/users/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
-        next: (response: any) => {
-          console.log('✅ Membre créé en base de données:', response);
-          alert(`✅ Membre ajouté avec succès !\n\n📧 Email d'activation envoyé à ${membre.email}`);
+        next: (users) => {
+          const normalizedEmail = (membre.email || '').trim().toLowerCase();
+          const existingUser = (users || []).find(
+            (u) => ((u?.email || '') as string).trim().toLowerCase() === normalizedEmail,
+          );
 
-          // ✅ Recharger les membres depuis la base
-          this.loadMembres();
+          if (existingUser?.role === 'admin') {
+            alert(
+              "Impossible d'ajouter cet email: il appartient déjà à un compte administrateur. Utilisez un autre email.",
+            );
+            return;
+          }
+
+          this.http
+            .post(
+              'http://localhost:8001/api/auth/create-commission-member/',
+              {
+                email: membre.email,
+                first_name: membre.first_name,
+                last_name: membre.last_name,
+                specialite: membre.specialite,
+                grade: membre.grade,
+                role: membre.role,
+              },
+              { headers: { Authorization: `Bearer ${token}` } },
+            )
+            .subscribe({
+              next: (response: any) => {
+                console.log('✅ Membre créé en base de données:', response);
+                const serverMessage = response?.message ?? '';
+                alert(
+                  `✅ Membre ajouté avec succès !\n\n📧 ${serverMessage || `Email d'activation envoyé à ${membre.email}`}`,
+                );
+
+                this.fermerModal();
+                this.loadMembres();
+              },
+              error: (error) => {
+                console.error('❌ Erreur:', error);
+
+                if (error.status === 0) {
+                  alert('⚠️ Backend non accessible. Vérifiez que Django tourne sur le port 8001.');
+                  return;
+                }
+
+                const backendError =
+                  error?.error?.error ||
+                  error?.error?.message ||
+                  (typeof error?.error === 'string' ? error.error : '');
+
+                const detail =
+                  backendError || error?.message || `HTTP ${error?.status || 'inconnu'}`;
+                alert(`⚠️ Création du membre échouée.\n${detail}`);
+              },
+            });
         },
         error: (error) => {
-          console.error('❌ Erreur:', error);
-
-          // ✅ RETIRER le membre du tableau car il n'a pas été créé
-          const index = this.membres.indexOf(membre);
-          if (index > -1) {
-            this.membres.splice(index, 1);
+          console.error('❌ Erreur chargement users avant création:', error);
+          if (error?.status === 401) {
+            alert('Votre session admin a expiré. Merci de vous reconnecter.');
+            this.authService.logout();
+            this.router.navigate(['/login-admin']);
+            return;
           }
 
-          // Afficher l'erreur détaillée
-          if (error.status === 0) {
-            alert('⚠️ Backend non accessible. Vérifiez que Django tourne sur le port 8001.');
-          } else if (error.error?.error) {
-            alert(`⚠️ ${error.error.error}`);
-          } else {
-            alert("⚠️ Erreur lors de l'envoi de l'email. Vérifiez la configuration Gmail.");
-          }
+          alert('⚠️ Impossible de valider cet email avant création. Réessayez.');
         },
       });
   }

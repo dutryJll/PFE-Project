@@ -10,12 +10,17 @@ export class CandidatureService {
 
   constructor(private http: HttpClient) {}
 
-  private getHeaders(): HttpHeaders {
+  private getHeaders(includeJsonContentType: boolean = true): HttpHeaders {
     const token = localStorage.getItem('access_token');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
+    const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
-    });
+    };
+
+    if (includeJsonContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    return new HttpHeaders(headers);
   }
 
   // Créer une candidature
@@ -30,22 +35,29 @@ export class CandidatureService {
 
   // Récupérer une candidature spécifique
   getCandidature(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/${id}/`, { headers: this.getHeaders() });
+    return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
   // Mettre à jour une candidature
   updateCandidature(id: number, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/`, data, { headers: this.getHeaders() });
+    return this.http.put(`${this.apiUrl}/${id}/modifier/`, data, { headers: this.getHeaders() });
   }
 
   // Récupérer tous les masters ouverts
   getMastersOuverts(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/masters-ouverts/`, { headers: this.getHeaders() });
+    return this.http.get(`${this.apiUrl}/masters/`, { headers: this.getHeaders() });
   }
 
   // POUR ADMIN/COMMISSION : Récupérer toutes les candidatures
   getAllCandidatures(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/`, { headers: this.getHeaders() });
+    return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
+  }
+
+  // Déposer ou ajuster le dossier numérique pour une candidature présélectionnée
+  deposerDossierNumerique(candidatureId: number, payload: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${candidatureId}/deposer-dossier/`, payload, {
+      headers: this.getHeaders(),
+    });
   }
 
   // Créer une réclamation

@@ -128,7 +128,7 @@ type ExportRow = Record<string, string | number | boolean | null | undefined>;
   styleUrl: './dashboard-admin.css',
 })
 export class DashboardAdminComponent implements OnInit {
-  adminLogoSrc: string = '/assets/images/logo-universite.png';
+  adminLogoSrc: string = '/images/logo-universite.png';
   currentUser: any = null;
   currentView: string = 'dashboard';
   currentDate: Date = new Date();
@@ -276,6 +276,14 @@ export class DashboardAdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    const token = this.authService.getAccessToken();
+
+    if (!token || !this.currentUser) {
+      alert('Session expirée. Veuillez vous reconnecter.');
+      this.router.navigate(['/login-admin']);
+      return;
+    }
+
     this.profileData = { ...this.currentUser };
     this.loadStats();
     this.loadUtilisateurs();
@@ -334,12 +342,12 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   onAdminLogoError(): void {
-    if (this.adminLogoSrc === '/assets/images/logo-universite.png') {
-      this.adminLogoSrc = '/assets/images/logo-isimm.png';
+    if (this.adminLogoSrc === '/images/logo-universite.png') {
+      this.adminLogoSrc = '/images/logo-isimm.png';
       return;
     }
 
-    if (this.adminLogoSrc === '/assets/images/logo-isimm.png') {
+    if (this.adminLogoSrc === '/images/logo-isimm.png') {
       this.adminLogoSrc = '/ISIMM_LOGO.png';
     }
   }

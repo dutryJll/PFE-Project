@@ -34,8 +34,12 @@ export class ModifierCandidatureComponent implements OnInit {
   loadCandidature(): void {
     this.candidatureService.getMesCandidatures().subscribe({
       next: (data: any) => {
-        this.candidature = data[0];
-        this.voeux = this.candidature?.voeux || [];
+        const candidatures = Array.isArray(data) ? data : [];
+        this.candidature =
+          candidatures.find((c: any) => c.peut_modifier === true) ?? candidatures[0] ?? null;
+
+        const voeuPrincipal = this.candidature?.master_nom;
+        this.voeux = voeuPrincipal ? [voeuPrincipal] : [''];
       },
       error: (error: any) => {
         console.error('Erreur:', error);
@@ -52,9 +56,34 @@ export class ModifierCandidatureComponent implements OnInit {
   }
 
   sauvegarder(): void {
-    console.log('Sauvegarde des vœux:', this.voeux);
-    // TODO: Appel API pour sauvegarder
-    this.router.navigate(['/candidat/dashboard']);
+    if (!this.candidature?.id) {
+      alert('❌ Aucune candidature trouvée.');
+      return;
+    }
+
+    if (!this.candidature?.peut_modifier) {
+      alert('❌ Cette candidature ne peut plus être modifiée (délai expiré ou statut verrouillé).');
+      return;
+    }
+
+    const firstNonEmptyIndex = this.voeux.findIndex((v) => !!v && v.trim().length > 0);
+    const choixPriorite = firstNonEmptyIndex >= 0 ? firstNonEmptyIndex + 1 : 1;
+
+    this.candidatureService
+      .updateCandidature(this.candidature.id, {
+        choix_priorite: choixPriorite,
+      })
+      .subscribe({
+        next: () => {
+          alert('✅ Modifications enregistrées avec succès.');
+          this.router.navigate(['/candidat/dashboard']);
+        },
+        error: (error: any) => {
+          console.error('Erreur sauvegarde candidature:', error);
+          const backendMessage = error?.error?.error;
+          alert(`❌ Erreur lors de la sauvegarde.${backendMessage ? `\n${backendMessage}` : ''}`);
+        },
+      });
   }
 
   getStatutClass(statut: string): string {

@@ -796,6 +796,86 @@ def deposer_dossier_numerique(request, candidature_id):
     )
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def ajuster_dossier_numerique(request, candidature_id):
+    """
+    Permet au candidat presélectionné d'ajuster son dossier avant expiration du délai.
+    """
+    try:
+        candidature = Candidature.objects.select_related('master', 'master__configuration').get(
+            id=candidature_id,
+            candidat=request.user,
+        )
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if candidature.statut not in {'preselectionne', 'en_attente_dossier', 'dossier_depose'}:
+        return Response(
+            {
+                'error': 'Ajustement dossier non autorise pour ce statut.',
+                'statut_actuel': candidature.statut,
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        configuration = candidature.master.configuration
+    except ConfigurationAppel.DoesNotExist:
+        return Response({'error': 'Configuration master introuvable.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not configuration.date_limite_depot_dossier:
+        return Response({'error': 'Date limite de depot dossier non configuree.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    today = timezone.now().date()
+    date_limite = configuration.date_limite_depot_dossier
+    if candidature.prolongation_delai and candidature.delai_depot_dossier:
+        date_limite = candidature.delai_depot_dossier
+
+    if today > date_limite:
+        return Response(
+            {
+                'error': 'Le delai d ajustement du dossier est expire.',
+                'date_limite': str(date_limite),
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    formulaire_payload = request.data.get('formulaire', {})
+    validation = _validate_formulaire_commission(configuration, formulaire_payload)
+    if not validation.get('ok'):
+        return Response(validation, status=status.HTTP_400_BAD_REQUEST)
+
+    diagnostic_ocr = verifier_concordance_dossier(candidature, formulaire_payload)
+
+    ancien_statut = candidature.statut
+    candidature.statut = 'dossier_depose'
+    candidature.dossier_depose = True
+    candidature.dossier_valide = bool(diagnostic_ocr.get('validation_auto'))
+    candidature.date_depot_dossier = timezone.now()
+    candidature.save(
+        update_fields=['statut', 'dossier_depose', 'dossier_valide', 'date_depot_dossier', 'updated_at']
+    )
+
+    candidature.ajouter_historique(
+        ancien_statut,
+        'dossier_depose',
+        request.user,
+        'Ajustement dossier numerique avant delai',
+    )
+
+    return Response(
+        {
+            'success': True,
+            'message': 'Dossier numerique ajuste avec succes.',
+            'candidature_id': candidature.id,
+            'statut': candidature.statut,
+            'date_depot_dossier': candidature.date_depot_dossier,
+            'ocr_diagnostic': diagnostic_ocr,
+        }
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def ocr_test_diagnostic(request):

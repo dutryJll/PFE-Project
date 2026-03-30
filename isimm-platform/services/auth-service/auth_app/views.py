@@ -10,7 +10,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from django.conf import settings
 from django.db import transaction
 import uuid
@@ -364,14 +364,38 @@ def create_commission_member(request):
             is_active=False
         )
 
-    # Générer un token unique
-    activation_token = uuid.uuid4()
+    # Générer ou réutiliser le token d'activation.
+    # Si le compte est déjà en attente d'activation, on conserve le même token
+    # pour éviter que les anciens emails deviennent invalides.
+    reuse_existing_token = (
+        bool(user.email_verification_token)
+        and not user.is_active
+        and not user.has_usable_password()
+    )
+
+    activation_token = user.email_verification_token if reuse_existing_token else uuid.uuid4()
     user.email_verification_token = activation_token
     user.save()
     
     # Préparer l'email
     role_display = 'Responsable de Commission' if role == 'responsable_commission' else 'Membre de Commission'
     activation_link = f"{settings.FRONTEND_URL}/create-password/{activation_token}"
+
+    # Vérification explicite de la configuration SMTP.
+    # Si SMTP est mal configuré, on bascule en backend console au lieu d'échouer.
+    email_mode = getattr(settings, 'EMAIL_MODE', 'console')
+    email_user = (getattr(settings, 'EMAIL_HOST_USER', '') or '').strip()
+    email_password = (getattr(settings, 'EMAIL_HOST_PASSWORD', '') or '').strip()
+    placeholder_passwords = {'votre_app_password', 'your_app_password', 'changeme', 'password'}
+    smtp_invalid = email_mode == 'smtp' and (
+        not email_user
+        or not email_password
+        or email_password.lower() in placeholder_passwords
+    )
+
+    email_backend_override = None
+    if smtp_invalid:
+        email_backend_override = 'django.core.mail.backends.console.EmailBackend'
     
     subject = '🎓 Bienvenue sur la plateforme ISIMM'
     message = f"""
@@ -408,18 +432,38 @@ L'équipe ISIMM
     """
     
     try:
+        connection = get_connection(backend=email_backend_override) if email_backend_override else None
         send_mail(
             subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
             [email],
             fail_silently=False,
+            connection=connection,
         )
         print(f"✅ Email d'activation envoyé à {email}")
-        return Response({
+        email_backend = getattr(settings, 'EMAIL_BACKEND', '')
+        is_console_backend = bool(email_backend_override) or 'console' in str(email_backend).lower()
+
+        response_payload = {
             'message': 'Membre créé avec succès. Email d\'activation envoyé.',
-            'user_id': user.id
-        }, status=status.HTTP_201_CREATED)
+            'user_id': user.id,
+            'email_mode': 'console' if email_backend_override else email_mode,
+        }
+
+        if is_console_backend:
+            if email_backend_override:
+                response_payload['message'] = (
+                    'Membre créé avec succès. SMTP invalide: bascule automatique en mode console. '
+                    'Le lien d activation est affiché dans les logs du serveur.'
+                )
+            else:
+                response_payload['message'] = (
+                    'Membre créé avec succès. Mode email=console: le lien est affiché '
+                    'dans les logs du serveur, aucun email réel n\'est envoyé.'
+                )
+
+        return Response(response_payload, status=status.HTTP_201_CREATED)
     except Exception as e:
         # Si l'email échoue, supprimer uniquement un nouvel utilisateur créé.
         if created_new_user:

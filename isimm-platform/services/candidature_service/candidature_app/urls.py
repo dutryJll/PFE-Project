@@ -19,6 +19,7 @@ urlpatterns = [
     path('masters/<int:master_id>/formule-score/', views.formule_score_master, name='formule_score_master'),
     path('masters/<int:master_id>/formulaire-commission/', views.formulaire_commission_master, name='formulaire_commission_master'),
     path('<int:candidature_id>/deposer-dossier/', views.deposer_dossier_numerique, name='deposer_dossier_numerique'),
+    path('<int:candidature_id>/ajuster-dossier/', views.ajuster_dossier_numerique, name='ajuster_dossier_numerique'),
     path('ocr/test/', views.ocr_test_diagnostic, name='ocr_test_diagnostic'),
     path('<int:candidature_id>/calculer-score/', views.calculer_score_candidature, name='calculer_score'),
     path('master/<int:master_id>/generer-listes/', views.generer_listes_admission, name='generer_listes'),

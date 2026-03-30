@@ -45,13 +45,15 @@ export class CreatePasswordComponent implements OnInit {
         } else {
           this.verification = 'invalid';
           this.verificationErrorMessage =
-            response?.error || "Ce lien de création de mot de passe n'est plus valide.";
+            response?.error ||
+            "Ce lien de création de mot de passe n'est plus valide. Utilisez le lien le plus récent reçu par email.";
         }
       },
       error: (error) => {
         this.verification = 'invalid';
         this.verificationErrorMessage =
-          error?.error?.error || "Ce lien de création de mot de passe n'est plus valide.";
+          error?.error?.error ||
+          "Ce lien de création de mot de passe n'est plus valide. Utilisez le lien le plus récent reçu par email.";
       },
     });
   }

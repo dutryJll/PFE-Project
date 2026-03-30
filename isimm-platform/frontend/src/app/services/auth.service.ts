@@ -35,6 +35,12 @@ export class AuthService {
     if (storedUser) {
       this.currentUserSubject.next(storedUser);
     }
+
+    // Nettoyage defensif au chargement si le token est expire.
+    if (!this.getAccessToken()) {
+      localStorage.removeItem('current_user');
+      this.currentUserSubject.next(null);
+    }
   }
 
   login(email: string, password: string): Observable<any> {
@@ -93,11 +99,45 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!localStorage.getItem('access_token');
+    return !!this.getAccessToken();
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      return null;
+    }
+
+    if (this.isTokenExpired(token)) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('current_user');
+      this.currentUserSubject.next(null);
+      return null;
+    }
+
+    return token;
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payloadPart = token.split('.')[1];
+      if (!payloadPart) {
+        return true;
+      }
+
+      const payloadJson = atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/'));
+      const payload = JSON.parse(payloadJson);
+      const exp = Number(payload?.exp);
+      if (!exp) {
+        return true;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      return exp <= now;
+    } catch {
+      return true;
+    }
   }
 
   refreshToken(): Observable<any> {

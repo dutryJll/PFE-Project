@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { CandidatureService } from '../../../services/candidature.service';
 
 @Component({
   selector: 'app-deposer-documents',
@@ -20,7 +21,10 @@ export class DeposerDocumentsComponent {
   photoPreview: string | null = null;
   documentsUploaded: number = 0;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private candidatureService: CandidatureService,
+  ) {}
 
   onFileSelected(event: any, type: string): void {
     const file = event.target.files[0];
@@ -80,17 +84,47 @@ export class DeposerDocumentsComponent {
       return;
     }
 
-    console.log('📤 Soumission des documents:', this.selectedFiles);
+    // Charger la candidature active, puis déposer le dossier sur l'API dédiée.
+    this.candidatureService.getMesCandidatures().subscribe({
+      next: (items: any) => {
+        const candidatures = Array.isArray(items) ? items : [];
+        const cible =
+          candidatures.find(
+            (c: any) => c.statut === 'preselectionne' || c.statut === 'en_attente_dossier',
+          ) ?? candidatures[0];
 
-    // TODO: Upload via API
-    const formData = new FormData();
-    Object.keys(this.selectedFiles).forEach((key) => {
-      if (this.selectedFiles[key]) {
-        formData.append(key, this.selectedFiles[key]!);
-      }
+        if (!cible?.id) {
+          alert('❌ Aucune candidature trouvée pour le dépôt de dossier.');
+          return;
+        }
+
+        const documents = Object.keys(this.selectedFiles).filter((k) => !!this.selectedFiles[k]);
+        const payload = {
+          formulaire: {
+            cin: this.selectedFiles['cin']?.name ?? 'cin',
+            telephone: '00000000',
+            documents,
+          },
+        };
+
+        this.candidatureService.deposerDossierNumerique(cible.id, payload).subscribe({
+          next: () => {
+            alert('✅ Dossier déposé avec succès !');
+            this.router.navigate(['/candidat/dashboard']);
+          },
+          error: (error: any) => {
+            console.error('Erreur dépôt dossier:', error);
+            const backendMessage = error?.error?.error;
+            alert(
+              `❌ Erreur lors du dépôt du dossier.${backendMessage ? `\n${backendMessage}` : ''}`,
+            );
+          },
+        });
+      },
+      error: (error: any) => {
+        console.error('Erreur chargement candidatures:', error);
+        alert('❌ Impossible de charger vos candidatures.');
+      },
     });
-
-    alert('Documents uploadés avec succès !');
-    this.router.navigate(['/candidat/dashboard']);
   }
 }

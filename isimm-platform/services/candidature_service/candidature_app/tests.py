@@ -3,15 +3,18 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from .models import CandidatListe, Candidature, ConfigurationAppel, FormuleScore, ListeAdmission, Master, Paiement
 from .views import (
+	ajuster_dossier_numerique,
 	changer_statut_candidature,
 	consulter_inscriptions_administratives,
 	create_candidature,
 	deposer_dossier_numerique,
 	formule_score_master,
+	modifier_candidature,
 	publier_liste,
 )
 
@@ -232,6 +235,65 @@ class CandidatureWorkflowTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		formule = FormuleScore.objects.get(master=self.master)
 		self.assertEqual(str(formule.coef_moyenne_generale), '0.55')
+
+	def test_modifier_candidature_updates_priorite_before_deadline(self):
+		candidature = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='soumis')
+
+		request = self.factory.put(
+			f'/api/candidatures/{candidature.id}/modifier/',
+			{'choix_priorite': 2},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = modifier_candidature(request, candidature.id)
+
+		self.assertEqual(response.status_code, 200)
+		candidature.refresh_from_db()
+		self.assertEqual(candidature.choix_priorite, 2)
+
+	def test_modifier_candidature_refused_after_deadline(self):
+		candidature = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='soumis')
+		candidature.date_limite_modification = timezone.now() - timedelta(days=1)
+		candidature.save(update_fields=['date_limite_modification'])
+
+		request = self.factory.put(
+			f'/api/candidatures/{candidature.id}/modifier/',
+			{'choix_priorite': 3},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = modifier_candidature(request, candidature.id)
+
+		self.assertEqual(response.status_code, 403)
+
+	def test_ajuster_dossier_refused_when_deadline_expired(self):
+		self.configuration.date_limite_depot_dossier = date.today() - timedelta(days=1)
+		self.configuration.save(update_fields=['date_limite_depot_dossier'])
+
+		candidature = Candidature.objects.create(
+			candidat=self.candidat,
+			master=self.master,
+			statut='dossier_depose',
+		)
+
+		request = self.factory.put(
+			f'/api/candidatures/{candidature.id}/ajuster-dossier/',
+			{
+				'formulaire': {
+					'cin': '12345678',
+					'telephone': '99111222',
+					'documents': ['releve_notes', 'diplome'],
+				}
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = ajuster_dossier_numerique(request, candidature.id)
+
+		self.assertEqual(response.status_code, 403)
 
 	def test_consulter_inscriptions_administratives_separe_finalisee_et_incomplete(self):
 		candidat2 = self.user_model.objects.create_user(
