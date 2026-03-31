@@ -9,19 +9,19 @@
 }
 
 :root {
-  --ink-900: #14213d;
-  --ink-700: #2f466b;
-  --ink-500: #5b7091;
+  --ink-900: #102744;
+  --ink-700: #2b4a72;
+  --ink-500: #5a7397;
   --surface: #ffffff;
-  --surface-soft: #f6f9ff;
-  --line: #dce6f5;
-  --cand-1: #00a8e8;
-  --cand-2: #007ea7;
-  --com-1: #1dd3b0;
-  --com-2: #17a589;
-  --adm-1: #ffb703;
-  --adm-2: #fb8500;
-  --shadow-main: 0 28px 58px rgba(4, 20, 40, 0.33);
+  --surface-soft: #f3f8ff;
+  --line: #d5e3f7;
+  --cand-1: #3b82f6;
+  --cand-2: #2563eb;
+  --com-1: #06b6d4;
+  --com-2: #0891b2;
+  --adm-1: #f59e0b;
+  --adm-2: #d97706;
+  --shadow-main: 0 30px 64px rgba(11, 35, 64, 0.28);
 }
 
 .login-page {
@@ -34,9 +34,9 @@
   justify-content: center;
   font-family: 'Manrope', 'Trebuchet MS', sans-serif;
   background:
-    radial-gradient(circle at 15% 22%, rgba(0, 168, 232, 0.25), rgba(0, 168, 232, 0) 45%),
-    radial-gradient(circle at 83% 86%, rgba(23, 165, 137, 0.25), rgba(23, 165, 137, 0) 42%),
-    linear-gradient(145deg, #0b1b33 0%, #102a47 60%, #0f2238 100%);
+    radial-gradient(circle at 15% 22%, rgba(59, 130, 246, 0.24), rgba(59, 130, 246, 0) 45%),
+    radial-gradient(circle at 83% 86%, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0) 42%),
+    linear-gradient(145deg, #102744 0%, #173a61 58%, #123151 100%);
 }
 
 .language-selector-wrapper {

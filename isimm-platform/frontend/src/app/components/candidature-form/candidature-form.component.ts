@@ -117,7 +117,7 @@ export class CandidatureFormComponent implements OnInit {
     // Récupérer le type depuis l'URL
     this.route.queryParams.subscribe((params) => {
       if (params['type']) {
-        this.typeCandidature = params['type']; // 'master' ou 'ingenieur'
+        this.typeCandidature = this.normalizeTypeParam(params['type']);
         console.log('🎯 Type reçu:', this.typeCandidature);
       }
     });
@@ -145,6 +145,15 @@ export class CandidatureFormComponent implements OnInit {
     });
 
     this.updateValidations();
+  }
+
+  private normalizeTypeParam(rawType: string): 'master' | 'ingenieur' {
+    const normalized = rawType
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    return normalized === 'ingenieur' ? 'ingenieur' : 'master';
   }
 
   // Mettre à jour les validations selon le type de candidature

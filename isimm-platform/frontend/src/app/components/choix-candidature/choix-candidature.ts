@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 interface ReferentielMasters {
   sections_masters?: Record<string, any>;
@@ -11,11 +13,12 @@ interface ReferentielMasters {
 @Component({
   selector: 'app-choix-candidature',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './choix-candidature.html',
   styleUrls: ['./choix-candidature.css'],
 })
 export class ChoixCandidatureComponent {
+  private readonly candidatureApiBase = environment.candidatureServiceUrl;
   referentielMasters: ReferentielMasters | null = null;
 
   constructor(
@@ -27,9 +30,7 @@ export class ChoixCandidatureComponent {
 
   loadReferentielMasters(): void {
     this.http
-      .get<ReferentielMasters>(
-        'http://localhost:8003/api/candidatures/masters/reglement-reference/',
-      )
+      .get<ReferentielMasters>(`${this.candidatureApiBase}/masters/reglement-reference/`)
       .subscribe({
         next: (data) => {
           this.referentielMasters = data;
@@ -50,7 +51,7 @@ export class ChoixCandidatureComponent {
 
     // Rediriger vers le formulaire avec le type en paramètre
     this.router.navigate(['/candidature'], {
-      queryParams: { type: type }, // 'master' ou 'ingenieur'
+      queryParams: { type: type === 'ingenieur' ? 'ingénieur' : type },
     });
   }
 }

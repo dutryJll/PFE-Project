@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-login-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './login-admin.component.html',
   styleUrl: './login-admin.component.css',
 })
@@ -24,7 +25,7 @@ export class LoginAdminComponent {
 
   onLogin() {
     if (!this.email || !this.password) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
+      this.errorMessage = 'login.admin.error.fill';
       return;
     }
 
@@ -41,12 +42,12 @@ export class LoginAdminComponent {
         if (userRole === 'admin') {
           this.router.navigate(['/admin/dashboard']);
         } else {
-          this.errorMessage = "Accès refusé. Vous n'êtes pas administrateur.";
+          this.errorMessage = 'login.admin.error.role';
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Email ou mot de passe incorrect';
+        this.errorMessage = 'login.admin.error.invalid';
       },
     });
   }

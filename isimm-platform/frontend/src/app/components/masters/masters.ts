@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 interface ReferentielMasters {
   metadata?: any;
@@ -14,11 +16,12 @@ interface ReferentielMasters {
 @Component({
   selector: 'app-masters',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, TranslatePipe],
   templateUrl: './masters.html',
   styleUrl: './masters.css',
 })
 export class MastersComponent implements OnInit {
+  private readonly candidatureApiBase = environment.candidatureServiceUrl;
   referentielMasters: ReferentielMasters | null = null;
   isLoadingReferentiel = false;
   referentielMessage = '';
@@ -91,9 +94,7 @@ export class MastersComponent implements OnInit {
     this.referentielMessage = '';
 
     this.http
-      .get<ReferentielMasters>(
-        'http://localhost:8003/api/candidatures/masters/reglement-reference/',
-      )
+      .get<ReferentielMasters>(`${this.candidatureApiBase}/masters/reglement-reference/`)
       .subscribe({
         next: (data) => {
           this.referentielMasters = data;
@@ -102,7 +103,7 @@ export class MastersComponent implements OnInit {
         error: (err) => {
           console.error('Erreur chargement référentiel masters:', err);
           this.referentielMessage =
-            'Impossible de charger les détails officiels des appels d inscription.';
+            'Impossible de charger les détails officiels des appels d inscription. Vérifiez que le service candidature est actif sur le port 8003.';
           this.isLoadingReferentiel = false;
         },
       });

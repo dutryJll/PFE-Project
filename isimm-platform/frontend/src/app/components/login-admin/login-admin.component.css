@@ -3,10 +3,10 @@
 }
 
 .login-admin-page {
-  --bg-start: #132038;
-  --bg-end: #0a1222;
-  --accent: #ffb703;
-  --accent-strong: #fb8500;
+  --bg-start: #1f2b46;
+  --bg-end: #121b2f;
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
   --ink: #1f2d45;
   min-height: 100vh;
   display: flex;
@@ -16,8 +16,8 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 14% 24%, rgba(251, 133, 0, 0.28), rgba(251, 133, 0, 0) 42%),
-    radial-gradient(circle at 86% 85%, rgba(255, 183, 3, 0.22), rgba(255, 183, 3, 0) 40%),
+    radial-gradient(circle at 14% 24%, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0) 42%),
+    radial-gradient(circle at 86% 85%, rgba(217, 119, 6, 0.22), rgba(217, 119, 6, 0) 40%),
     linear-gradient(145deg, var(--bg-start) 0%, var(--bg-end) 74%);
   font-family: 'Manrope', 'Trebuchet MS', sans-serif;
 }

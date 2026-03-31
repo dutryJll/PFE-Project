@@ -2,25 +2,27 @@
   <!-- Hero Section -->
   <section class="hero-section">
     <div class="hero-content">
-      <h1>🎓 Appels d'inscription - Masters & Cycle d'Ingénieur</h1>
-      <p>Consultez toutes les offres avec leur statut d'ouverture.</p>
-      <p class="hero-mini">Masters Recherche, Masters Professionnel, Cycle d'Ingénieur</p>
+      <h1>🎓 {{ 'masters.hero.title' | translate }}</h1>
+      <p>{{ 'masters.hero.subtitle' | translate }}</p>
+      <p class="hero-mini">{{ 'masters.hero.mini' | translate }}</p>
     </div>
   </section>
 
   <section class="appel-ref-section" *ngIf="referentielMasters as ref">
     <div class="appel-ref-card">
-      <h2>Référentiel officiel 2025/2026</h2>
+      <h2>{{ 'masters.referentiel.title' | translate }}</h2>
       <p>
-        <strong>Établissement:</strong> {{ ref.metadata?.etablissement }}
+        <strong>{{ 'masters.referentiel.school' | translate }}:</strong>
+        {{ ref.metadata?.etablissement }}
         <span> | </span>
-        <strong>Année:</strong> {{ ref.metadata?.annee_universitaire }}
+        <strong>{{ 'masters.referentiel.year' | translate }}:</strong>
+        {{ ref.metadata?.annee_universitaire }}
       </p>
     </div>
   </section>
 
   <section class="appel-ref-section" *ngIf="isLoadingReferentiel">
-    <div class="appel-ref-card">Chargement des détails officiels...</div>
+    <div class="appel-ref-card">{{ 'masters.referentiel.loading' | translate }}</div>
   </section>
 
   <section class="appel-ref-section" *ngIf="referentielMessage">
@@ -36,11 +38,13 @@
           <div class="icon-circle research-bg">
             <i class="fas fa-flask"></i>
           </div>
-          <div class="card-badge research-badge">Recherche</div>
+          <div class="card-badge research-badge">
+            {{ 'masters.card.research.badge' | translate }}
+          </div>
         </div>
-        <h3 class="card-title">Masters de Recherche</h3>
+        <h3 class="card-title">{{ 'masters.card.research.title' | translate }}</h3>
         <p class="card-description">
-          Programmes orientés recherche scientifique et innovation technologique
+          {{ 'masters.card.research.desc' | translate }}
         </p>
         <ul class="card-features">
           <li *ngFor="let master of mastersRecherche">
@@ -49,11 +53,14 @@
           </li>
           <li *ngIf="getTotalPlaces('mrgl') !== null">
             <span class="feature-icon research-icon"><i class="fas fa-bullseye"></i></span>
-            <span>Capacité officielle MRGL: {{ getTotalPlaces('mrgl') }} places</span>
+            <span>
+              {{ 'masters.capacity.mrgl' | translate }}: {{ getTotalPlaces('mrgl') }}
+              {{ 'masters.capacity.places' | translate }}
+            </span>
           </li>
         </ul>
         <button class="btn-card research-btn" [routerLink]="['/choisir-candidature']">
-          <span>Explorer</span>
+          <span>{{ 'masters.explore' | translate }}</span>
         </button>
       </div>
 
@@ -63,11 +70,13 @@
           <div class="icon-circle professional-bg">
             <i class="fas fa-briefcase"></i>
           </div>
-          <div class="card-badge professional-badge">Professionnel</div>
+          <div class="card-badge professional-badge">
+            {{ 'masters.card.professional.badge' | translate }}
+          </div>
         </div>
-        <h3 class="card-title">Masters Professionnels</h3>
+        <h3 class="card-title">{{ 'masters.card.professional.title' | translate }}</h3>
         <p class="card-description">
-          Formations axees sur les competences pratiques et l'insertion professionnelle
+          {{ 'masters.card.professional.desc' | translate }}
         </p>
         <ul class="card-features">
           <li *ngFor="let master of mastersProfessionnels">
@@ -76,15 +85,21 @@
           </li>
           <li *ngIf="getTotalPlaces('mpgl') !== null">
             <span class="feature-icon professional-icon"><i class="fas fa-bullseye"></i></span>
-            <span>Capacité officielle MPGL: {{ getTotalPlaces('mpgl') }} places</span>
+            <span>
+              {{ 'masters.capacity.mpgl' | translate }}: {{ getTotalPlaces('mpgl') }}
+              {{ 'masters.capacity.places' | translate }}
+            </span>
           </li>
           <li *ngIf="getTotalPlaces('mpds') !== null">
             <span class="feature-icon professional-icon"><i class="fas fa-bullseye"></i></span>
-            <span>Capacité officielle MPDS: {{ getTotalPlaces('mpds') }} places</span>
+            <span>
+              {{ 'masters.capacity.mpds' | translate }}: {{ getTotalPlaces('mpds') }}
+              {{ 'masters.capacity.places' | translate }}
+            </span>
           </li>
         </ul>
         <button class="btn-card professional-btn" [routerLink]="['/choisir-candidature']">
-          <span>Explorer</span>
+          <span>{{ 'masters.explore' | translate }}</span>
         </button>
       </div>
 
@@ -94,11 +109,13 @@
           <div class="icon-circle engineer-bg">
             <i class="fas fa-cog"></i>
           </div>
-          <div class="card-badge engineer-badge">Ingenieur</div>
+          <div class="card-badge engineer-badge">
+            {{ 'masters.card.engineer.badge' | translate }}
+          </div>
         </div>
-        <h3 class="card-title">Cycle d'Ingénieur</h3>
+        <h3 class="card-title">{{ 'masters.card.engineer.title' | translate }}</h3>
         <p class="card-description">
-          Formation complete en ingenierie avec specialisations variees
+          {{ 'masters.card.engineer.desc' | translate }}
         </p>
         <ul class="card-features">
           <li *ngFor="let ingenieur of cycleIngenieur">
@@ -107,11 +124,11 @@
           </li>
           <li>
             <span class="feature-icon engineer-icon"><i class="fas fa-info-circle"></i></span>
-            <span>Règlement concours appliqué selon référentiel officiel</span>
+            <span>{{ 'masters.engineer.rule' | translate }}</span>
           </li>
         </ul>
         <button class="btn-card engineer-btn" [routerLink]="['/choisir-candidature']">
-          <span>Explorer</span>
+          <span>{{ 'masters.explore' | translate }}</span>
         </button>
       </div>
     </div>
@@ -119,16 +136,14 @@
 
   <!-- Bottom CTA Section -->
   <section class="bottom-cta-section">
-    <h2>APPRENEZ À TOUT MOMENT, PARTOUT</h2>
+    <h2>{{ 'masters.bottom.title' | translate }}</h2>
     <p>
-      Chaque etudiant, accedez à la plateforme de votre universite avec votre compte institutionnel
-      pour consulter les ressources et activites pedagogiques depuis votre mobile, tablette ou
-      ordinateur.
+      {{ 'masters.bottom.desc' | translate }}
     </p>
   </section>
 
   <!-- Retour -->
   <div class="back-link">
-    <a [routerLink]="['/']">← Retour à l'accueil</a>
+    <a [routerLink]="['/']">← {{ 'masters.back' | translate }}</a>
   </div>
 </div>

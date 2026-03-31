@@ -1,4 +1,8 @@
-<div class="candidature-page">
+<div
+  class="candidature-page"
+  [class.engineer-theme]="typeCandidature === 'ingenieur'"
+  [class.master-theme]="typeCandidature === 'master'"
+>
   <div class="candidature-container">
     <div class="form-header">
       <h1>

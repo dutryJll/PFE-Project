@@ -1,60 +1,62 @@
 <div class="login-commission-page">
-  <button class="btn-back" (click)="goBack()">← Retour</button>
+  <button class="btn-back" (click)="goBack()">← {{ 'login.com.back' | translate }}</button>
 
   <div class="login-card">
-    <div class="header-mark">Espace Restreint</div>
+    <div class="header-mark">{{ 'login.com.mark' | translate }}</div>
     <div class="header-icon" aria-hidden="true">
       <i class="fas fa-users"></i>
     </div>
-    <h2>Espace Commission</h2>
-    <p class="subtitle">Connectez-vous avec vos identifiants</p>
+    <h2>{{ 'login.com.title' | translate }}</h2>
+    <p class="subtitle">{{ 'login.com.subtitle' | translate }}</p>
 
     <div class="entry-hints">
-      <span>Évaluation</span>
-      <span>Classement</span>
-      <span>Validation</span>
+      <span>{{ 'login.com.hint.eval' | translate }}</span>
+      <span>{{ 'login.com.hint.rank' | translate }}</span>
+      <span>{{ 'login.com.hint.valid' | translate }}</span>
     </div>
 
     <div class="info-box">
       <i class="fas fa-info-circle"></i>
-      <p>Vos identifiants vous ont été envoyés par email par l'administrateur</p>
+      <p>{{ 'login.com.info' | translate }}</p>
     </div>
 
     <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
+      {{ errorMessage | translate }}
     </div>
 
     <form (ngSubmit)="onLogin()">
       <div class="form-group">
-        <label>Nom d'utilisateur / Email</label>
+        <label>{{ 'login.com.username.label' | translate }}</label>
         <input
           type="text"
           [(ngModel)]="username"
           name="username"
-          placeholder="Entrez votre identifiant reçu par email"
+          [placeholder]="'login.com.username.placeholder' | translate"
           required
         />
       </div>
 
       <div class="form-group">
-        <label>Mot de passe</label>
+        <label>{{ 'login.com.password.label' | translate }}</label>
         <input
           type="password"
           [(ngModel)]="password"
           name="password"
-          placeholder="••••••••"
+          [placeholder]="'login.com.password.placeholder' | translate"
           required
         />
       </div>
 
       <button type="submit" class="btn-login" [disabled]="isLoading">
-        {{ isLoading ? 'Connexion...' : 'Se connecter' }}
+        {{ isLoading ? ('login.com.loading' | translate) : ('login.com.submit' | translate) }}
       </button>
     </form>
 
     <div class="help-box">
-      <p>Problème de connexion ?</p>
-      <p class="help-text">Contactez l'administrateur : <strong>admin@isimm.tn</strong></p>
+      <p>{{ 'login.com.help.title' | translate }}</p>
+      <p class="help-text">
+        {{ 'login.com.help.text' | translate }} <strong>admin@isimm.tn</strong>
+      </p>
     </div>
   </div>
 </div>

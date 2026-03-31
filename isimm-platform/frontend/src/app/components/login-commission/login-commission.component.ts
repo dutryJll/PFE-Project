@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-login-commission',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './login-commission.component.html',
   styleUrl: './login-commission.component.css',
 })
@@ -24,7 +25,7 @@ export class LoginCommissionComponent {
 
   onLogin() {
     if (!this.username || !this.password) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
+      this.errorMessage = 'login.com.error.fill';
       return;
     }
 
@@ -42,13 +43,12 @@ export class LoginCommissionComponent {
         if (userRole === 'commission' || userRole === 'responsable_commission') {
           this.router.navigate(['/commission/dashboard']);
         } else {
-          this.errorMessage =
-            "Ce compte n'est pas un compte commission. Veuillez contacter l'administrateur.";
+          this.errorMessage = 'login.com.error.role';
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Identifiants incorrects. Vérifiez vos informations reçues par email.';
+        this.errorMessage = 'login.com.error.invalid';
       },
     });
   }

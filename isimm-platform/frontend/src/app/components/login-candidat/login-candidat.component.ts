@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-login-candidat',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
   templateUrl: './login-candidat.component.html',
   styleUrl: './login-candidat.component.css',
 })
@@ -24,7 +25,7 @@ export class LoginCandidatComponent {
 
   onLogin() {
     if (!this.email || !this.password) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
+      this.errorMessage = 'login.candidat.error.fill';
       return;
     }
 
@@ -43,12 +44,12 @@ export class LoginCandidatComponent {
           // TODO: Appeler l'API pour vérifier
           this.router.navigate(['/candidat/dashboard']);
         } else {
-          this.errorMessage = "Ce compte n'est pas un compte candidat";
+          this.errorMessage = 'login.candidat.error.role';
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'Email ou mot de passe incorrect';
+        this.errorMessage = 'login.candidat.error.invalid';
       },
     });
   }

@@ -4,11 +4,11 @@
 /*=============== VARIABLES CSS ===============*/
 :root {
   /*========== Couleurs ISIMM Officielles ==========*/
-  --isimm-blue: #003d5b;
-  --isimm-blue-light: #00587a;
-  --isimm-orange: #ff8c42;
-  --isimm-orange-light: #ffb366;
-  --isimm-green: #2a9d8f;
+  --isimm-blue: #1d4e89;
+  --isimm-blue-light: #2563eb;
+  --isimm-orange: #f59e0b;
+  --isimm-orange-light: #fbbf24;
+  --isimm-green: #0d9488;
   --isimm-red: #e63946;
 
   /*========== Couleurs de base ==========*/
@@ -52,12 +52,7 @@ body {
   font-family: var(--body-font);
   font-size: var(--normal-font-size);
   color: var(--text-color);
-  background: linear-gradient(
-    135deg,
-    var(--isimm-blue) 0%,
-    var(--isimm-blue-light) 50%,
-    var(--isimm-blue) 100%
-  );
+  background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 55%, #ffffff 100%);
   min-height: 100vh;
 }
 

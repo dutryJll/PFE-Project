@@ -100,7 +100,8 @@ export const routes: Routes = [
   },
   {
     path: 'concours-ingenieur',
-    component: ConcoursIngenieurComponent,
+    redirectTo: 'masters',
+    pathMatch: 'full',
   },
   {
     path: 'choisir-candidature',

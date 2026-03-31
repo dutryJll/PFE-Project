@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LanguageSelectorComponent } from '../language-selector/language-selector';
+import { TranslatePipe } from '../../pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, LanguageSelectorComponent],
+  imports: [CommonModule, LanguageSelectorComponent, TranslatePipe],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

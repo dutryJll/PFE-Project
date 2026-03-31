@@ -1,49 +1,49 @@
 <div class="login-admin-page">
-  <button class="btn-back" (click)="goBack()">← Retour</button>
+  <button class="btn-back" (click)="goBack()">← {{ 'login.admin.back' | translate }}</button>
 
   <div class="login-card">
-    <div class="header-mark">Espace Sécurisé</div>
+    <div class="header-mark">{{ 'login.admin.mark' | translate }}</div>
     <div class="header-icon" aria-hidden="true">
       <i class="fas fa-cog"></i>
     </div>
-    <h2>Espace Administration</h2>
-    <p class="subtitle">Accès réservé aux administrateurs</p>
+    <h2>{{ 'login.admin.title.page' | translate }}</h2>
+    <p class="subtitle">{{ 'login.admin.subtitle' | translate }}</p>
 
     <div class="entry-hints">
-      <span>Utilisateurs</span>
-      <span>Paramètres</span>
-      <span>Contrôle</span>
+      <span>{{ 'login.admin.hint.users' | translate }}</span>
+      <span>{{ 'login.admin.hint.settings' | translate }}</span>
+      <span>{{ 'login.admin.hint.control' | translate }}</span>
     </div>
 
     <div class="warning-box">
       <i class="fas fa-shield-alt"></i>
-      <p>Accès sécurisé et surveillé</p>
+      <p>{{ 'login.admin.warning' | translate }}</p>
     </div>
 
     <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
+      {{ errorMessage | translate }}
     </div>
 
     <form (ngSubmit)="onLogin()">
       <div class="form-group">
-        <label>Email administrateur</label>
+        <label>{{ 'login.admin.email.label' | translate }}</label>
         <input
           type="email"
           [(ngModel)]="email"
           name="email"
-          placeholder="admin@isimm.tn"
+          [placeholder]="'login.admin.email.placeholder' | translate"
           required
           autocomplete="username"
         />
       </div>
 
       <div class="form-group">
-        <label>Mot de passe</label>
+        <label>{{ 'login.admin.password.label' | translate }}</label>
         <input
           type="password"
           [(ngModel)]="password"
           name="password"
-          placeholder="••••••••"
+          [placeholder]="'login.admin.password.placeholder' | translate"
           required
           autocomplete="current-password"
         />
@@ -51,13 +51,13 @@
 
       <button type="submit" class="btn-login" [disabled]="isLoading">
         <i class="fas fa-lock"></i>
-        {{ isLoading ? 'Vérification...' : "Accéder à l'administration" }}
+        {{ isLoading ? ('login.admin.loading' | translate) : ('login.admin.submit' | translate) }}
       </button>
     </form>
 
     <div class="security-note">
       <i class="fas fa-exclamation-triangle"></i>
-      <p>Toute tentative d'accès non autorisée sera enregistrée</p>
+      <p>{{ 'login.admin.note' | translate }}</p>
     </div>
   </div>
 </div>

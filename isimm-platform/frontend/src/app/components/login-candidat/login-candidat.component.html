@@ -1,58 +1,62 @@
 <div class="login-candidat-page">
-  <button class="btn-back" (click)="goBack()">← Retour</button>
+  <button class="btn-back" (click)="goBack()">← {{ 'login.candidat.back' | translate }}</button>
 
   <div class="login-card">
-    <div class="header-mark">Admission 2026</div>
+    <div class="header-mark">{{ 'login.candidat.mark' | translate }}</div>
     <div class="header-icon" aria-hidden="true">
       <i class="fas fa-user-graduate"></i>
     </div>
-    <h2>Espace Candidat</h2>
-    <p class="subtitle">Connectez-vous à votre compte</p>
+    <h2>{{ 'login.candidat.title' | translate }}</h2>
+    <p class="subtitle">{{ 'login.candidat.subtitle' | translate }}</p>
 
     <div class="entry-hints">
-      <span>Suivi du dossier</span>
-      <span>Documents</span>
-      <span>Réclamations</span>
+      <span>{{ 'login.candidat.hint.track' | translate }}</span>
+      <span>{{ 'login.candidat.hint.docs' | translate }}</span>
+      <span>{{ 'login.candidat.hint.claims' | translate }}</span>
     </div>
 
     <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
+      {{ errorMessage | translate }}
     </div>
 
     <form (ngSubmit)="onLogin()">
       <div class="form-group">
-        <label>Email</label>
+        <label>{{ 'login.candidat.email.label' | translate }}</label>
         <input
           type="email"
           [(ngModel)]="email"
           name="email"
-          placeholder="votre.email@example.com"
+          [placeholder]="'login.candidat.email.placeholder' | translate"
           required
         />
       </div>
 
       <div class="form-group">
-        <label>Mot de passe</label>
+        <label>{{ 'login.candidat.password.label' | translate }}</label>
         <input
           type="password"
           [(ngModel)]="password"
           name="password"
-          placeholder="••••••••"
+          [placeholder]="'login.candidat.password.placeholder' | translate"
           required
         />
       </div>
 
-      <a routerLink="/forgot-password" class="forgot-link">Mot de passe oublié ?</a>
+      <a routerLink="/forgot-password" class="forgot-link">{{
+        'login.candidat.forgot' | translate
+      }}</a>
 
       <button type="submit" class="btn-login" [disabled]="isLoading">
-        {{ isLoading ? 'Connexion...' : 'Se connecter' }}
+        {{
+          isLoading ? ('login.candidat.loading' | translate) : ('login.candidat.submit' | translate)
+        }}
       </button>
     </form>
 
     <div class="no-account">
-      <p>Vous n'avez pas encore postulé ?</p>
+      <p>{{ 'login.candidat.noapply' | translate }}</p>
       <button class="btn-postuler" (click)="goToPostulation()">
-        Postuler à un Master / Cycle Ingénieur
+        {{ 'login.candidat.postuler' | translate }}
       </button>
     </div>
   </div>

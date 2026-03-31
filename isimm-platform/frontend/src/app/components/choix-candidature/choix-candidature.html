@@ -2,8 +2,8 @@
   <!-- Header -->
   <div class="page-header">
     <div class="container">
-      <h1>Choisissez votre type de candidature</h1>
-      <p>Sélectionnez le programme qui correspond à votre profil et au règlement officiel.</p>
+      <h1>{{ 'choix.header.title' | translate }}</h1>
+      <p>{{ 'choix.header.subtitle' | translate }}</p>
     </div>
   </div>
 
@@ -15,16 +15,16 @@
         <div class="card-icon">
           <i class="fas fa-graduation-cap"></i>
         </div>
-        <h2>Candidater à un Master</h2>
+        <h2>{{ 'choix.master.title' | translate }}</h2>
         <p class="card-description">
-          Masters de recherche et professionnels en informatique, mathématiques et microélectronique
+          {{ 'choix.master.desc' | translate }}
         </p>
 
         <ul class="features-list">
-          <li><i class="fas fa-check"></i> MPGL, MRGL, MPDS</li>
-          <li><i class="fas fa-check"></i> Recherche et Professionnel</li>
-          <li><i class="fas fa-check"></i> Choix de 3 vœux</li>
-          <li><i class="fas fa-check"></i> Durée : 2 ans</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.master.feature.1' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.master.feature.2' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.master.feature.3' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.master.feature.4' | translate }}</li>
           <li *ngIf="getTotalPlaces('mpgl') !== null">
             <i class="fas fa-check"></i> MPGL: {{ getTotalPlaces('mpgl') }} places
           </li>
@@ -38,7 +38,7 @@
 
         <div class="card-footer">
           <button type="button" class="btn-choisir" (click)="choisirType('master')">
-            <span>Choisir Master</span>
+            <span>{{ 'choix.master.button' | translate }}</span>
             <i class="fas fa-arrow-right"></i>
           </button>
         </div>
@@ -49,25 +49,19 @@
         <div class="card-icon">
           <i class="fas fa-cogs"></i>
         </div>
-        <div class="badge-featured">
-          <i class="fas fa-star"></i>
-          Cycle d'Excellence
-        </div>
-        <h2>Candidater au Cycle Ingénieur</h2>
-        <p class="card-description">
-          Formation d'ingénieur en 3 ans avec 3 spécialités d'excellence
-        </p>
+        <h2>{{ 'choix.ing.title' | translate }}</h2>
+        <p class="card-description">{{ 'choix.ing.desc' | translate }}</p>
 
         <ul class="features-list">
-          <li><i class="fas fa-check"></i> Admission selon règlement du concours</li>
-          <li><i class="fas fa-check"></i> Génie Informatique</li>
-          <li><i class="fas fa-check"></i> Génie Électrique</li>
-          <li><i class="fas fa-check"></i> Durée : 3 ans</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.ing.feature.1' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.ing.feature.2' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.ing.feature.3' | translate }}</li>
+          <li><i class="fas fa-check"></i> {{ 'choix.ing.feature.4' | translate }}</li>
         </ul>
 
         <div class="card-footer">
           <button type="button" class="btn-choisir featured" (click)="choisirType('ingenieur')">
-            <span>Choisir Ingénieur</span>
+            <span>{{ 'choix.ing.button' | translate }}</span>
             <i class="fas fa-arrow-right"></i>
           </button>
         </div>
@@ -78,7 +72,7 @@
     <div class="back-link">
       <a [routerLink]="['/']">
         <i class="fas fa-arrow-left"></i>
-        Retour à l'accueil
+        {{ 'choix.back' | translate }}
       </a>
     </div>
   </div>
