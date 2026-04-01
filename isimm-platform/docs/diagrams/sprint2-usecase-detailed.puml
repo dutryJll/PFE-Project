@@ -1,0 +1,106 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Candidat" as C
+actor "Candidat preselectionne" as CP
+actor "Commission" as COM
+actor "Service Email" as MAIL
+
+CP --|> C
+
+rectangle "Plateforme ISIMM - Sprint 2 (Detail)" {
+
+  package "US 3.1 - Depot candidature" {
+    usecase "3.1 Postuler\nmaster/ingenieur" as UC31
+    usecase "Remplir formulaire" as UC311
+    usecase "Valider les champs" as UC312
+    usecase "Soumettre candidature" as UC313
+  }
+
+  package "US 3.2 - Modification candidature" {
+    usecase "3.2 Modifier candidature\navant delai" as UC32
+    usecase "Verifier delai\nde modification" as UC321
+    usecase "Mettre a jour\ncandidature" as UC322
+  }
+
+  package "US 3.3 - Suivi etat" {
+    usecase "3.3 Consulter etat\nde candidature" as UC33
+    usecase "Consulter historique\ndes etats" as UC331
+  }
+
+  package "US 3.4 - Notifications" {
+    usecase "3.4 Recevoir notification\nemail" as UC34
+    usecase "Declencher notification" as UC341
+    usecase "Envoyer email" as UC342
+    usecase "Tracer notification" as UC343
+  }
+
+  package "US 3.5 - Resultats" {
+    usecase "3.5 Consulter score\net classement" as UC35
+    usecase "Afficher score" as UC351
+    usecase "Afficher classement" as UC352
+  }
+
+  package "US 3.6 - Depot dossier" {
+    usecase "3.6 Deposer dossier\ncomplet" as UC36
+    usecase "Televerser pieces" as UC361
+    usecase "Verifier completude" as UC362
+    usecase "Verifier delai\nde depot" as UC363
+    usecase "Soumettre dossier" as UC364
+  }
+
+  package "US 3.7 - Ajustement dossier" {
+    usecase "3.7 Ajuster dossier\navant expiration" as UC37
+    usecase "Remplacer piece" as UC371
+    usecase "Supprimer piece" as UC372
+  }
+
+  package "Commission" {
+    usecase "Evaluer candidature" as UCC1
+    usecase "Changer etat candidature" as UCC2
+  }
+}
+
+C --> UC31
+C --> UC32
+C --> UC33
+C --> UC34
+C --> UC35
+CP --> UC36
+CP --> UC37
+COM --> UCC1
+COM --> UCC2
+MAIL --> UC342
+
+UC31 ..> UC311 : <<include>>
+UC31 ..> UC312 : <<include>>
+UC31 ..> UC313 : <<include>>
+
+UC32 ..> UC321 : <<include>>
+UC32 ..> UC322 : <<include>>
+
+UC33 ..> UC331 : <<include>>
+
+UC34 ..> UC342 : <<include>>
+UC34 ..> UC343 : <<include>>
+
+UC35 ..> UC351 : <<include>>
+UC35 ..> UC352 : <<include>>
+
+UC36 ..> UC361 : <<include>>
+UC36 ..> UC362 : <<include>>
+UC36 ..> UC363 : <<include>>
+UC36 ..> UC364 : <<include>>
+
+UC37 ..> UC371 : <<include>>
+UC37 ..> UC372 : <<include>>
+UC37 ..> UC363 : <<include>>
+
+UCC2 ..> UC341 : <<include>>
+UC341 ..> UC342 : <<include>>
+UC341 ..> UC343 : <<include>>
+UC34 ..> UC341 : <<extend>>
+
+@enduml

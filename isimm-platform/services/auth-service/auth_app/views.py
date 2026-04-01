@@ -305,6 +305,29 @@ def delete_user(request, user_id):
         )
 
 
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_detail_update(request, user_id):
+    """Consulter ou modifier un utilisateur (Admin)."""
+    if request.user.role != 'admin':
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ========================================
 # CRÉATION MEMBRE COMMISSION
 # ========================================

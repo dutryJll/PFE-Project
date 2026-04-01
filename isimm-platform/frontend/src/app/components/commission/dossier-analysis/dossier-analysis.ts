@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../services/auth.service';
 
 interface OCRAnomaly {
   type: string;
@@ -70,6 +71,7 @@ export class DossierAnalysisComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   analyzedCount = 0;
+  requiresLogin = false;
 
   searchTerm = '';
   selectedMasterFilter = 'all';
@@ -86,10 +88,19 @@ export class DossierAnalysisComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private router: Router,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.loadCandidatures();
+  }
+
+  goToDashboard(): void {
+    this.router.navigate(['/commission/dashboard']);
+  }
+
+  reconnect(): void {
+    this.authService.logout();
   }
 
   get totalDossiers(): number {
@@ -99,8 +110,18 @@ export class DossierAnalysisComponent implements OnInit {
   get filteredCandidatures(): Candidature[] {
     const search = this.searchTerm.trim().toLowerCase();
     return this.candidaturesList.filter((c) => {
+      const masterName = (c.master_nom || '').toLowerCase();
+      const isIngenieur =
+        masterName.includes('ingenieur') ||
+        masterName.includes('ingénieur') ||
+        masterName.includes('genie logiciel') ||
+        masterName.includes('génie logiciel');
+
       const matchMaster =
-        this.selectedMasterFilter === 'all' || c.master_nom === this.selectedMasterFilter;
+        this.selectedMasterFilter === 'all' ||
+        (this.selectedMasterFilter === 'ingenieur'
+          ? isIngenieur
+          : c.master_nom === this.selectedMasterFilter);
       if (!matchMaster) {
         return false;
       }
@@ -132,11 +153,10 @@ export class DossierAnalysisComponent implements OnInit {
   loadCandidatures(): void {
     this.isLoading = true;
     this.errorMessage = '';
+    this.requiresLogin = false;
 
     this.http
-      .get<
-        Candidature[] | { results: Candidature[] }
-      >(`${this.apiBaseUrl}/dossiers-ocr/`, this.buildAuthOptions())
+      .get<Candidature[] | { results: Candidature[] }>(`${this.apiBaseUrl}/dossiers-ocr/`)
       .subscribe({
         next: (data) => {
           const list = Array.isArray(data)
@@ -163,7 +183,11 @@ export class DossierAnalysisComponent implements OnInit {
         },
         error: (err) => {
           this.isLoading = false;
-          if (err?.status === 403) {
+          if (err?.status === 401) {
+            this.requiresLogin = true;
+            this.errorMessage =
+              'Session expirée ou invalide (401). Reconnectez-vous puis rechargez la page.';
+          } else if (err?.status === 403) {
             this.errorMessage =
               'Acces refuse (403). Verifiez votre session et reconnectez-vous en compte commission.';
           } else {
@@ -239,7 +263,13 @@ export class DossierAnalysisComponent implements OnInit {
         },
         error: (err) => {
           this.isAnalyzing = false;
-          this.errorMessage = "Erreur lors de l'analyse OCR: " + err.message;
+          if (err?.status === 401) {
+            this.requiresLogin = true;
+            this.errorMessage =
+              "Session expirée pendant l'analyse OCR. Reconnectez-vous puis relancez.";
+          } else {
+            this.errorMessage = "Erreur lors de l'analyse OCR: " + err.message;
+          }
           console.error('Erreur analyse OCR:', err);
         },
       });
@@ -301,7 +331,13 @@ export class DossierAnalysisComponent implements OnInit {
           setTimeout(() => this.loadCandidatures(), 1500);
         },
         error: (err) => {
-          this.errorMessage = 'Erreur validation dossier: ' + err.message;
+          if (err?.status === 401) {
+            this.requiresLogin = true;
+            this.errorMessage =
+              'Session expirée pendant la validation. Reconnectez-vous puis réessayez.';
+          } else {
+            this.errorMessage = 'Erreur validation dossier: ' + err.message;
+          }
         },
       });
   }
@@ -330,7 +366,13 @@ export class DossierAnalysisComponent implements OnInit {
           setTimeout(() => this.loadCandidatures(), 1500);
         },
         error: (err) => {
-          this.errorMessage = 'Erreur revision dossier: ' + err.message;
+          if (err?.status === 401) {
+            this.requiresLogin = true;
+            this.errorMessage =
+              'Session expirée pendant la révision. Reconnectez-vous puis réessayez.';
+          } else {
+            this.errorMessage = 'Erreur revision dossier: ' + err.message;
+          }
         },
       });
   }

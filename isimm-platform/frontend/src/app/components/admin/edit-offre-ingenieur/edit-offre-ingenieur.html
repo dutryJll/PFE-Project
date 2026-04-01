@@ -1,0 +1,71 @@
+<div class="offre-edit-page">
+  <div class="offre-edit-card">
+    <div class="card-header">
+      <button type="button" class="btn-back" (click)="goBack()">Retour</button>
+      <div>
+        <p class="eyebrow">Gestion du concours ingénieur</p>
+        <h1>{{ isCreateMode ? 'Ajouter une offre ingénieur' : 'Modifier une offre ingénieur' }}</h1>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="banner info">Chargement des informations...</div>
+    <div *ngIf="errorMessage" class="banner error">{{ errorMessage }}</div>
+    <div *ngIf="successMessage" class="banner success">{{ successMessage }}</div>
+
+    <form *ngIf="!isLoading" (ngSubmit)="saveOffre()" class="offre-form">
+      <label>
+        Titre de l'offre *
+        <input type="text" [(ngModel)]="offreForm.titre" name="titre" required />
+      </label>
+
+      <div class="grid-two">
+        <label>
+          Spécialité *
+          <input type="text" [(ngModel)]="offreForm.specialite" name="specialite" required />
+        </label>
+
+        <label>
+          Nombre de places *
+          <input type="number" [(ngModel)]="offreForm.places" name="places" required />
+        </label>
+      </div>
+
+      <div class="grid-two">
+        <label>
+          Date d'ouverture *
+          <input
+            type="date"
+            [(ngModel)]="offreForm.date_ouverture"
+            name="date_ouverture"
+            required
+          />
+        </label>
+
+        <label>
+          Date limite *
+          <input type="date" [(ngModel)]="offreForm.date_limite" name="date_limite" required />
+        </label>
+      </div>
+
+      <label>
+        Statut *
+        <select [(ngModel)]="offreForm.statut" name="statut" required>
+          <option value="ouvert">Ouvert</option>
+          <option value="ferme">Fermé</option>
+        </select>
+      </label>
+
+      <label>
+        Description
+        <textarea [(ngModel)]="offreForm.description" name="description" rows="4"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" (click)="goBack()">Annuler</button>
+        <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving ? 'Enregistrement...' : isCreateMode ? 'Ajouter' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

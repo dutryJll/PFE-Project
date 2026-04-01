@@ -290,18 +290,8 @@ export class GestionCommissionComponent implements OnInit {
   }
 
   editerMembre(membre: MembreCommission): void {
-    this.membreEnEdition = { ...membre };
-    this.isEditMode = true;
-    this.nouveauMembre = {
-      first_name: membre.first_name,
-      last_name: membre.last_name,
-      email: membre.email,
-      specialite: membre.specialite,
-      grade: membre.grade,
-      role: membre.role,
-    };
-    this.showModal = true;
     this.showActionsMenu = null;
+    this.router.navigate(['/admin/gestion-commission', membre.id, 'edit']);
   }
 
   sauvegarderModification(): void {

@@ -1,0 +1,45 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Candidat" as C
+actor "Candidat preselectionne" as CP
+actor "Commission" as COM
+actor "Service Email" as MAIL
+
+CP --|> C
+
+rectangle "Plateforme ISIMM - Sprint 2" {
+  usecase "3.1 Deposer candidature\n(master/concours ingenieur)" as UC31
+  usecase "3.2 Modifier candidature\navant date limite" as UC32
+  usecase "3.3 Consulter etat\nde candidature" as UC33
+  usecase "3.4 Recevoir notification\nemail de changement d'etat" as UC34
+  usecase "3.5 Consulter score\net classement" as UC35
+  usecase "3.6 Deposer dossier complet\ndans le delai" as UC36
+  usecase "3.7 Ajuster dossier\navant expiration" as UC37
+  usecase "Mettre a jour l'etat\nde candidature" as UC38
+}
+
+C --> UC31
+C --> UC32
+C --> UC33
+C --> UC34
+C --> UC35
+
+CP --> UC36
+CP --> UC37
+
+COM --> UC38
+UC38 --> UC34
+MAIL --> UC34
+
+note bottom of UC31
+Backlog Sprint 2 - US 3.1
+end note
+
+note bottom of UC37
+Backlog Sprint 2 - US 3.7
+end note
+
+@enduml

@@ -1,0 +1,114 @@
+@startuml
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+
+package "Auth Service" {
+  class User {
+    +id: int
+    +email: string
+    +username: string
+    +first_name: string
+    +last_name: string
+    +password: string
+    +role: RoleChoice
+    +is_active: boolean
+    +is_email_verified: boolean
+    +email_verification_token: UUID
+    +reset_password_token: UUID?
+    +reset_password_expire: datetime?
+    +phone: string?
+    +address: text?
+    +date_of_birth: date?
+    +date_inscription: datetime
+    +derniere_connexion: datetime?
+    --
+    +__str__(): string
+  }
+
+  class Role {
+    +id: int
+    +nom: string
+    +description: text
+    +est_systeme: boolean
+    +actif: boolean
+    +created_at: datetime
+    +updated_at: datetime
+    --
+    +__str__(): string
+  }
+
+  class Permission {
+    +id: int
+    +code: string
+    +nom: string
+    +description: text
+    +module: string
+    --
+    +__str__(): string
+  }
+
+  class ActionRole {
+    +id: int
+    +action_no: int
+    +action_name: string
+    +target_role: RoleChoice
+    +enabled: boolean
+    +description: text
+    +created_at: datetime
+    +updated_at: datetime
+  }
+
+  class ActionLog {
+    +id: int
+    +action: string
+    +module: string
+    +description: text
+    +ip_address: string?
+    +user_agent: text?
+    +succes: boolean
+    +details: json
+    +timestamp: datetime
+  }
+}
+
+package "User Service" {
+  class UserProfile {
+    +id: int
+    +auth_user_id: int <<unique>>
+    +email: string <<unique>>
+    +username: string
+    +role: RoleChoice
+    +first_name: string
+    +last_name: string
+    +cin: string?
+    +telephone: string?
+    +date_naissance: date?
+    +adresse: text?
+    +ville: string?
+    +code_postal: string?
+    +created_at: datetime
+    +updated_at: datetime
+    --
+    +get_full_name(): string
+  }
+}
+
+Role "0..*" -- "0..*" Permission : permissions
+ActionLog "0..*" --> "0..1" User : user
+
+UserProfile ..> User : sync via auth_user_id (logical link)
+ActionRole ..> User : target_role uses User.ROLE_CHOICES
+
+note right of User
+role is currently a string choice,
+not a foreign key to Role.
+end note
+
+note bottom of Role
+This model manages permissions,
+but User is not directly linked to it.
+end note
+
+@enduml

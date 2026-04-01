@@ -1,7 +1,7 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
@@ -87,6 +87,18 @@ interface ProcesVerbal {
   nb_admis: number;
   nb_rejetes: number;
   statut: string;
+}
+
+interface CommissionMember {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  role: 'responsable' | 'evaluateur' | 'observateur';
+  statut: 'actif' | 'inactif';
+  date_inscription: string;
+  master_rattachement?: string;
 }
 
 type CommissionView =
@@ -185,6 +197,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   // Filtres principaux
   filtreSpecialite: 'actuel' | 'ancien' = 'actuel';
+  filtreConcours: 'actuel' | 'ancien' = 'actuel';
   filtreSpecialiteActive: string = '';
   filtreStatut: string = '';
   typeListe: 'preselection' | 'selection' = 'preselection';
@@ -366,11 +379,72 @@ export class DashboardCommissionComponent implements OnInit {
     },
   ];
 
+  // Membres
+  membres: CommissionMember[] = [
+    {
+      id: 1,
+      nom: 'Ben Ali',
+      prenom: 'Mohamed',
+      email: 'm.benali@isimm.rnu.tn',
+      telephone: '+216 98 123 456',
+      role: 'responsable',
+      statut: 'actif',
+      date_inscription: '2025-01-15',
+      master_rattachement: 'Master Génie Logiciel',
+    },
+    {
+      id: 2,
+      nom: 'Gharbi',
+      prenom: 'Fatma',
+      email: 'f.gharbi@isimm.rnu.tn',
+      telephone: '+216 98 234 567',
+      role: 'evaluateur',
+      statut: 'actif',
+      date_inscription: '2025-02-01',
+      master_rattachement: 'Master Data Science',
+    },
+    {
+      id: 3,
+      nom: 'Trabelsi',
+      prenom: 'Ahmed',
+      email: 'a.trabelsi@isimm.rnu.tn',
+      telephone: '+216 98 345 678',
+      role: 'evaluateur',
+      statut: 'actif',
+      date_inscription: '2025-02-10',
+    },
+    {
+      id: 4,
+      nom: 'Jmour',
+      prenom: 'Sana',
+      email: 's.jmour@isimm.rnu.tn',
+      telephone: '+216 98 456 789',
+      role: 'observateur',
+      statut: 'inactif',
+      date_inscription: '2024-11-20',
+    },
+  ];
+  membresFiltres: CommissionMember[] = [];
+  rechercheMembres: string = '';
+  filtrRoleMembre: string = '';
+  filtreStatutMembre: string = '';
+
+  // Statistiques
+  filtreStatPeriode: 'jour' | 'semaine' | 'mois' | 'annee' = 'mois';
+  statMasterExportFormat: string = 'pdf';
+
   // Modal avis
   showModalAvis: boolean = false;
   candidatureSelectionnee: Candidature | null = null;
   avisText: string = '';
   avisRecommandation: string = 'favorable';
+
+  // Modal changement statut
+  showModalStatut: boolean = false;
+  candidatureStatutSelectionnee: Candidature | null = null;
+  statusOptions: string[] = [];
+  statusSelection: string = '';
+  statusRejectReason: string = '';
 
   // Modal OCR
   showModalOCR: boolean = false;
@@ -378,42 +452,43 @@ export class DashboardCommissionComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
+    const requestedView = this.route.snapshot.queryParamMap.get('view') as CommissionView | null;
+    if (requestedView && this.canAccessView(requestedView)) {
+      this.filtreStatutMembre = '';
+      // Statistiques
+      this.filtreStatPeriode = 'mois';
+      this.statMasterExportFormat = 'pdf';
+    }
+
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
     this.loadMastersForConfiguration();
+    this.loadMembers();
   }
 
   loadMastersForConfiguration(): void {
-    const token = this.authService.getAccessToken();
-    if (!token) {
-      return;
-    }
-
-    this.http
-      .get<any[]>('http://localhost:8003/api/candidatures/masters/', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .subscribe({
-        next: (masters) => {
-          this.masterOptions = (masters || []).map((m) => ({ id: Number(m.id), nom: m.nom }));
-          if (!this.selectedConfigMasterId && this.masterOptions.length > 0) {
-            this.selectedConfigMasterId = this.masterOptions[0].id;
-            this.onConfigMasterChange();
-          }
-        },
-        error: (error) => {
-          console.error('Erreur chargement masters:', error);
-        },
-      });
+    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/').subscribe({
+      next: (masters) => {
+        this.masterOptions = (masters || []).map((m) => ({ id: Number(m.id), nom: m.nom }));
+        if (!this.selectedConfigMasterId && this.masterOptions.length > 0) {
+          this.selectedConfigMasterId = this.masterOptions[0].id;
+          this.onConfigMasterChange();
+        }
+      },
+      error: (error) => {
+        console.error('Erreur chargement masters:', error);
+      },
+    });
   }
 
   onConfigMasterChange(): void {
@@ -766,7 +841,65 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    alert('Créer un nouveau PV de délibération');
+    if (!this.masterOptions.length) {
+      this.toastService.show('Aucun master disponible pour créer un PV.', 'warning');
+      return;
+    }
+
+    let masterId = this.selectedConfigMasterId;
+    if (!masterId) {
+      masterId = this.masterOptions[0].id;
+    }
+
+    const selectedMaster = this.masterOptions.find((m) => m.id === masterId);
+    if (!selectedMaster) {
+      this.toastService.show('Master invalide pour la création du PV.', 'error');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    this.http
+      .post<any>(
+        `http://localhost:8003/api/candidatures/master/${masterId}/generer-listes/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response) => {
+          const existingIndex = this.procesVerbaux.findIndex(
+            (pv) => pv.master_nom === selectedMaster.nom && pv.statut !== 'publie',
+          );
+
+          const pv: ProcesVerbal = {
+            id: Number(response?.id ?? Date.now()),
+            titre:
+              response?.titre ||
+              `Délibération ${selectedMaster.nom} - Session ${new Date().getFullYear()}`,
+            date_reunion:
+              response?.date_reunion ||
+              response?.date_creation ||
+              new Date().toISOString().slice(0, 10),
+            master_nom: response?.master_nom || selectedMaster.nom,
+            nb_participants: Number(response?.nb_participants ?? 0),
+            nb_candidatures: Number(response?.nb_candidatures ?? response?.total_candidats ?? 0),
+            nb_admis: Number(response?.nb_admis ?? response?.admis ?? 0),
+            nb_rejetes: Number(response?.nb_rejetes ?? response?.rejetes ?? 0),
+            statut: response?.statut || 'brouillon',
+          };
+
+          if (existingIndex >= 0) {
+            this.procesVerbaux[existingIndex] = pv;
+          } else {
+            this.procesVerbaux.unshift(pv);
+          }
+
+          this.toastService.show('PV généré avec succès.', 'success');
+        },
+        error: (error) => {
+          console.error('Erreur création PV:', error);
+          this.toastService.show('Erreur lors de la génération du PV.', 'error');
+        },
+      });
   }
 
   voirPV(pv: ProcesVerbal): void {
@@ -838,6 +971,24 @@ export class DashboardCommissionComponent implements OnInit {
     return this.candidatures.filter((c) => c.dossier_depose).length;
   }
 
+  get validationValidatedCount(): number {
+    return this.candidaturesAvecDossier.filter(
+      (c) => c.statut === 'dossier_depose' || c.statut === 'selectionne' || c.statut === 'inscrit',
+    ).length;
+  }
+
+  get validationRejectedCount(): number {
+    return this.candidaturesAvecDossier.filter((c) => c.statut === 'rejete').length;
+  }
+
+  get validationPendingCount(): number {
+    return (
+      this.candidaturesAvecDossier.length -
+      this.validationValidatedCount -
+      this.validationRejectedCount
+    );
+  }
+
   switchView(view: CommissionView): void {
     if (!this.canAccessView(view)) {
       this.notifyActionBlocked("Cette section n'est pas active pour votre rôle.");
@@ -894,8 +1045,21 @@ export class DashboardCommissionComponent implements OnInit {
     this.switchView('candidatures');
   }
 
+  getConcoursStatut(concours: Concours): 'actuel' | 'ancien' {
+    const year = Number(concours.annee);
+    const currentYear = new Date().getFullYear();
+
+    if (!Number.isNaN(year) && year < currentYear) {
+      return 'ancien';
+    }
+
+    return 'actuel';
+  }
+
   getConcoursIngenieur(): Concours[] {
-    return this.concoursIngenieur;
+    return this.concoursIngenieur.filter(
+      (concours) => this.getConcoursStatut(concours) === this.filtreConcours,
+    );
   }
 
   consulterConcours(concours: Concours): void {
@@ -1052,37 +1216,81 @@ export class DashboardCommissionComponent implements OnInit {
     return Array.from(allowed);
   }
 
-  changerStatut(candidature: Candidature): void {
+  getStatusDisplayLabel(statut: string): string {
+    const labels: Record<string, string> = {
+      soumis: 'Soumis',
+      sous_examen: 'Sous examen',
+      preselectionne: 'Présélectionné',
+      en_attente_dossier: 'En attente dossier',
+      dossier_depose: 'Dossier déposé',
+      dossier_non_depose: 'Dossier non déposé',
+      en_attente: 'En attente',
+      selectionne: 'Sélectionné',
+      rejete: 'Rejeté',
+      annule: 'Annulé',
+      inscrit: 'Inscrit',
+    };
+
+    return labels[statut] || statut;
+  }
+
+  ouvrirModalStatut(candidature: Candidature): void {
     if (!this.actionPermissions.verifierDossiers) {
       this.notifyActionBlocked("Changement de statut désactivé par l'administration.");
       return;
     }
 
-    if (!candidature.nouveau_statut) {
-      alert('❌ Veuillez sélectionner un statut');
-      // Vérifier que la transition est autorisée
-      const authorized = this.getAuthorizedStatutTransitions(candidature);
-      if (!authorized.includes(candidature.nouveau_statut!)) {
-        alert(`❌ Transition non autorisée: ${candidature.statut} → ${candidature.nouveau_statut}`);
-        candidature.nouveau_statut = '';
-        return;
-      }
+    const authorized = this.getAuthorizedStatutTransitions(candidature);
+    if (authorized.length === 0) {
+      alert('Aucune transition de statut autorisée pour cette candidature.');
+      return;
+    }
 
+    this.candidatureStatutSelectionnee = candidature;
+    this.statusOptions = authorized;
+    this.statusSelection =
+      candidature.nouveau_statut && authorized.includes(candidature.nouveau_statut)
+        ? candidature.nouveau_statut
+        : authorized[0];
+    this.statusRejectReason = '';
+    this.showModalStatut = true;
+    this.closeActionMenu();
+  }
+
+  fermerModalStatut(): void {
+    this.showModalStatut = false;
+    this.candidatureStatutSelectionnee = null;
+    this.statusOptions = [];
+    this.statusSelection = '';
+    this.statusRejectReason = '';
+  }
+
+  changerStatut(candidature: Candidature): void {
+    this.ouvrirModalStatut(candidature);
+  }
+
+  confirmerChangementStatut(): void {
+    if (!this.candidatureStatutSelectionnee) {
+      return;
+    }
+
+    const candidature = this.candidatureStatutSelectionnee;
+    candidature.nouveau_statut = this.statusSelection;
+
+    const authorized = this.getAuthorizedStatutTransitions(candidature);
+    if (!authorized.includes(candidature.nouveau_statut!)) {
+      alert(`❌ Transition non autorisée: ${candidature.statut} → ${candidature.nouveau_statut}`);
       return;
     }
 
     let motif_rejet = '';
 
     if (candidature.nouveau_statut === 'rejete') {
-      motif_rejet = prompt('Motif du rejet :') || '';
+      motif_rejet = this.statusRejectReason.trim();
       if (!motif_rejet) {
         alert('❌ Le motif de rejet est obligatoire');
         return;
       }
-    }
-
-    if (!confirm(`Confirmer le changement de statut vers "${candidature.nouveau_statut}" ?`)) {
-      return;
     }
 
     const token = this.authService.getAccessToken();
@@ -1098,13 +1306,14 @@ export class DashboardCommissionComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          alert('✅ Statut changé avec succès !');
+          this.toastService.show('Statut changé avec succès.', 'success');
           candidature.statut = candidature.nouveau_statut!;
           candidature.nouveau_statut = '';
+          this.fermerModalStatut();
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors du changement de statut');
+          this.toastService.show('Erreur lors du changement de statut.', 'error');
         },
       });
   }
@@ -1326,6 +1535,60 @@ export class DashboardCommissionComponent implements OnInit {
           },
         });
     }
+  }
+
+  // ========================================
+  // MEMBRES
+  // ========================================
+  loadMembers(): void {
+    // Charge les membres depuis l'API ou initialise avec les données mockées
+    this.membresFiltres = [...this.membres];
+  }
+
+  filtrerMembres(): void {
+    this.membresFiltres = this.membres.filter((membre) => {
+      // Filtre par recherche (nom, email)
+      if (this.rechercheMembres) {
+        const recherche = this.rechercheMembres.toLowerCase();
+        const matchNom = `${membre.prenom} ${membre.nom}`.toLowerCase().includes(recherche);
+        const matchEmail = membre.email.toLowerCase().includes(recherche);
+        const matchTelephone = membre.telephone.toLowerCase().includes(recherche);
+
+        if (!matchNom && !matchEmail && !matchTelephone) {
+          return false;
+        }
+      }
+
+      // Filtre par rôle
+      if (this.filtrRoleMembre && membre.role !== this.filtrRoleMembre) {
+        return false;
+      }
+
+      // Filtre par statut
+      if (this.filtreStatutMembre && membre.statut !== this.filtreStatutMembre) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  reinitialiserFiltresMembres(): void {
+    this.rechercheMembres = '';
+    this.filtrRoleMembre = '';
+    this.filtreStatutMembre = '';
+    this.membresFiltres = [...this.membres];
+  }
+
+  toggleStatutMembre(membre: CommissionMember): void {
+    membre.statut = membre.statut === 'actif' ? 'inactif' : 'actif';
+    this.toastService.show(`${membre.prenom} ${membre.nom} - Statut: ${membre.statut}`, 'success');
+  }
+
+  voirProfilMembre(membre: CommissionMember): void {
+    alert(
+      `👤 Profil\n\n${membre.prenom} ${membre.nom}\nRôle: ${membre.role}\nEmail: ${membre.email}\nTéléphone: ${membre.telephone}`,
+    );
   }
 
   // ========================================

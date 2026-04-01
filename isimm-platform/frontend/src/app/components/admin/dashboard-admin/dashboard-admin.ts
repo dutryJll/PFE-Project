@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import * as XLSX from 'xlsx';
@@ -164,6 +164,10 @@ export class DashboardAdminComponent implements OnInit {
   selectedConcoursIdForReglement: number | null = null;
   reglementApplyMessage: string = '';
   candidaturesList: Candidature[] = [];
+  candidatureSearchTerm: string = '';
+  candidatureSpecialiteFilter: string = '';
+  candidatureStatutFilter: string = '';
+  reportPeriod: '7j' | '30j' | 'semestre' | 'annee' = '30j';
   commissions: any[] = [];
 
   // Administration Système
@@ -257,19 +261,12 @@ export class DashboardAdminComponent implements OnInit {
   };
 
   showModalMaster: boolean = false;
-  showModalOffreIngenieur: boolean = false;
-  nouvelleOffreIngenieur: OffreIngenieur = {
-    id: 0,
-    titre: '',
-    specialite: '',
-    places: 0,
-    date_limite: '',
-    statut: 'ouvert',
-    description: '',
-  };
+  showCandidatureDetailModal: boolean = false;
+  selectedCandidature: Candidature | null = null;
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private http: HttpClient,
     private authService: AuthService,
   ) {}
@@ -282,6 +279,11 @@ export class DashboardAdminComponent implements OnInit {
       alert('Session expirée. Veuillez vous reconnecter.');
       this.router.navigate(['/login-admin']);
       return;
+    }
+
+    const requestedView = this.route.snapshot.queryParamMap.get('view');
+    if (requestedView) {
+      this.currentView = requestedView;
     }
 
     this.profileData = { ...this.currentUser };
@@ -418,28 +420,41 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   loadMasters(): void {
-    this.mastersList = [
-      {
-        id: 1,
-        nom: 'Master Recherche Génie Logiciel',
-        type: 'recherche',
-        description: 'Formation en recherche en génie logiciel',
-        places: 30,
-        date_limite: '2026-03-30',
-        statut: 'ouvert',
-        specialite: 'Informatique',
+    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/').subscribe({
+      next: (masters) => {
+        this.mastersList = (masters || []).map((m) => ({
+          id: Number(m.id),
+          nom: m.nom || '',
+          type: m.type_master === 'professionnel' ? 'professionnel' : 'recherche',
+          description: m.description || '',
+          places: Number(m.places_disponibles ?? m.places ?? 0),
+          date_limite: m.date_limite_candidature || m.date_limite || '',
+          statut: m.statut === 'ferme' ? 'ferme' : 'ouvert',
+          specialite: m.specialite || '',
+        }));
       },
-      {
-        id: 2,
-        nom: 'Master Professionnel Data Science',
-        type: 'professionnel',
-        description: 'Formation professionnelle en science des données',
-        places: 25,
-        date_limite: '2026-04-15',
-        statut: 'ouvert',
-        specialite: 'Informatique',
+      error: (error) => {
+        console.error('Erreur chargement masters:', error);
+        this.mastersList = [
+          {
+            id: 1,
+            nom: 'Master Recherche Génie Logiciel',
+            type: 'recherche',
+            description: 'Formation en recherche en génie logiciel',
+            places: 30,
+            date_limite: '2026-03-30',
+            statut: 'ouvert',
+            specialite: 'Informatique',
+          },
+        ];
       },
-    ];
+    });
+  }
+
+  voirMaster(master: Master): void {
+    this.point13Message =
+      `ℹ️ Master: ${master.nom} | Type: ${master.type} | Spécialité: ${master.specialite} | ` +
+      `Places: ${master.places} | Date limite: ${master.date_limite}`;
   }
 
   executerSelectionMaster(master: Master): void {
@@ -560,6 +575,76 @@ export class DashboardAdminComponent implements OnInit {
         date_soumission: '2026-02-16',
       },
     ];
+  }
+
+  get specialitesCandidatures(): string[] {
+    return Array.from(
+      new Set((this.candidaturesList || []).map((c) => c.specialite || '').filter((s) => !!s)),
+    ).sort((a, b) => a.localeCompare(b));
+  }
+
+  get candidaturesFiltrees(): Candidature[] {
+    const search = this.candidatureSearchTerm.trim().toLowerCase();
+
+    return (this.candidaturesList || []).filter((c) => {
+      if (this.candidatureSpecialiteFilter && c.specialite !== this.candidatureSpecialiteFilter) {
+        return false;
+      }
+
+      if (this.candidatureStatutFilter && c.statut !== this.candidatureStatutFilter) {
+        return false;
+      }
+
+      if (!search) {
+        return true;
+      }
+
+      return (
+        c.numero.toLowerCase().includes(search) ||
+        c.candidat_nom.toLowerCase().includes(search) ||
+        c.master_nom.toLowerCase().includes(search)
+      );
+    });
+  }
+
+  get candidaturesSelectionneesCount(): number {
+    return this.candidaturesFiltrees.filter((c) => c.statut === 'selectionne').length;
+  }
+
+  get candidaturesEnAttenteCount(): number {
+    return this.candidaturesFiltrees.filter((c) => c.statut === 'en_attente').length;
+  }
+
+  get candidaturesRejeteesCount(): number {
+    return this.candidaturesFiltrees.filter((c) => c.statut === 'rejete').length;
+  }
+
+  get reportStatusBreakdown(): Array<{ key: string; count: number }> {
+    const counters: Record<string, number> = {
+      selectionne: 0,
+      en_attente: 0,
+      rejete: 0,
+      soumis: 0,
+    };
+
+    for (const candidature of this.candidaturesList) {
+      if (typeof counters[candidature.statut] === 'number') {
+        counters[candidature.statut] += 1;
+      }
+    }
+
+    return Object.entries(counters).map(([key, count]) => ({ key, count }));
+  }
+
+  get reportTopMasters(): Array<{ master: string; count: number }> {
+    const byMaster = new Map<string, number>();
+    for (const candidature of this.candidaturesList) {
+      byMaster.set(candidature.master_nom, (byMaster.get(candidature.master_nom) || 0) + 1);
+    }
+
+    return Array.from(byMaster.entries())
+      .map(([master, count]) => ({ master, count }))
+      .sort((a, b) => b.count - a.count);
   }
 
   loadLogs(): void {
@@ -705,7 +790,7 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   downloadCandidaturesFile(): void {
-    const rows: ExportRow[] = this.candidaturesList.map((c) => ({
+    const rows: ExportRow[] = this.candidaturesFiltrees.map((c) => ({
       numero: c.numero,
       candidat: c.candidat_nom,
       email: c.candidat_email,
@@ -889,7 +974,8 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   modifierUtilisateur(user: Utilisateur): void {
-    alert(`Modifier ${user.first_name} ${user.last_name}`);
+    this.closeUserMenu();
+    this.router.navigate(['/admin/users', user.id, 'edit']);
   }
 
   supprimerUtilisateur(user: Utilisateur): void {
@@ -942,7 +1028,7 @@ export class DashboardAdminComponent implements OnInit {
             id: c.id,
             backend_id: c.id,
             titre: c.nom,
-            specialite: c.description || 'Cycle Ingenieur',
+            specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ingenieur',
             places: c.places_disponibles,
             date_limite: c.date_cloture,
             statut: c.actif ? 'ouvert' : 'ferme',
@@ -1183,77 +1269,90 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   ajouterOffreIngenieur(): void {
-    this.nouvelleOffreIngenieur = {
-      id: 0,
-      titre: '',
-      specialite: '',
-      places: 0,
-      date_limite: '',
-      statut: 'ouvert',
-      description: '',
-    };
-    this.showModalOffreIngenieur = true;
+    this.router.navigate(['/admin/offres-ingenieur/new']);
   }
 
   modifierOffreIngenieur(offre: OffreIngenieur): void {
-    this.nouvelleOffreIngenieur = { ...offre };
-    this.showModalOffreIngenieur = true;
-  }
-
-  fermerModalOffreIngenieur(): void {
-    this.showModalOffreIngenieur = false;
-  }
-
-  enregistrerOffreIngenieur(): void {
-    const item = this.nouvelleOffreIngenieur;
-    if (!item.titre || !item.specialite || !item.places || !item.date_limite) {
-      alert('❌ Veuillez remplir les champs obligatoires');
+    const targetId = offre.backend_id || offre.id;
+    if (!targetId) {
+      alert('❌ Offre invalide');
       return;
     }
-
-    if (item.id) {
-      const idx = this.offresIngenieurList.findIndex((o) => o.id === item.id);
-      if (idx !== -1) {
-        this.offresIngenieurList[idx] = { ...item };
-      }
-      alert('✅ Offre mise à jour');
-    } else {
-      const nextId = this.offresIngenieurList.length
-        ? Math.max(...this.offresIngenieurList.map((o) => o.id)) + 1
-        : 1;
-      this.offresIngenieurList.unshift({ ...item, id: nextId });
-      alert('✅ Offre ajoutée');
-    }
-
-    this.showModalOffreIngenieur = false;
+    this.router.navigate(['/admin/offres-ingenieur', targetId, 'edit']);
   }
 
   toggleStatutOffreIngenieur(offre: OffreIngenieur): void {
-    offre.statut = offre.statut === 'ouvert' ? 'ferme' : 'ouvert';
+    const nextStatut = offre.statut === 'ouvert' ? 'ferme' : 'ouvert';
+    const backendId = offre.backend_id || offre.id;
+
+    if (!backendId || !this.concoursIngenieurApiAvailable) {
+      offre.statut = nextStatut;
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    this.http
+      .patch(
+        `http://localhost:8003/api/candidatures/concours/${backendId}/admin/`,
+        { actif: nextStatut === 'ouvert' },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          offre.statut = nextStatut;
+        },
+        error: (error) => {
+          console.error('Erreur changement statut offre:', error);
+          alert('❌ Impossible de modifier le statut de cette offre.');
+        },
+      });
   }
 
   supprimerOffreIngenieur(offre: OffreIngenieur): void {
     if (!confirm(`Supprimer l'offre "${offre.titre}" ?`)) {
       return;
     }
-    this.offresIngenieurList = this.offresIngenieurList.filter((o) => o.id !== offre.id);
+
+    const backendId = offre.backend_id || offre.id;
+
+    if (!backendId || !this.concoursIngenieurApiAvailable) {
+      this.offresIngenieurList = this.offresIngenieurList.filter((o) => o.id !== offre.id);
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    this.http
+      .delete(`http://localhost:8003/api/candidatures/concours/${backendId}/admin/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          this.offresIngenieurList = this.offresIngenieurList.filter(
+            (o) => (o.backend_id || o.id) !== backendId,
+          );
+        },
+        error: (error) => {
+          console.error('Erreur suppression offre:', error);
+          alert('❌ Erreur lors de la suppression de cette offre.');
+        },
+      });
   }
 
   // ========================================
   // GESTION MASTERS
   // ========================================
   ajouterMaster(): void {
-    this.nouveauMaster = {
-      id: 0,
-      nom: '',
-      type: 'recherche',
-      description: '',
-      places: 0,
-      date_limite: '',
-      statut: 'ouvert',
-      specialite: '',
-    };
-    this.showModalMaster = true;
+    this.router.navigate(['/admin/masters/new']);
   }
 
   enregistrerMaster(): void {
@@ -1262,11 +1361,61 @@ export class DashboardAdminComponent implements OnInit {
       return;
     }
 
-    this.nouveauMaster.id = Date.now();
-    this.mastersList.push({ ...this.nouveauMaster });
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
 
-    alert('✅ Master ajouté avec succès');
-    this.showModalMaster = false;
+    const payload = {
+      nom: this.nouveauMaster.nom,
+      type_master: this.nouveauMaster.type,
+      description: this.nouveauMaster.description,
+      specialite: this.nouveauMaster.specialite,
+      places_disponibles: this.nouveauMaster.places,
+      date_limite_candidature: this.nouveauMaster.date_limite,
+      actif: this.nouveauMaster.statut === 'ouvert',
+      annee_universitaire: '2025/2026',
+    };
+
+    if (this.nouveauMaster.id) {
+      this.http
+        .patch(
+          `http://localhost:8003/api/candidatures/masters/${this.nouveauMaster.id}/`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        )
+        .subscribe({
+          next: () => {
+            alert('✅ Master modifié avec succès');
+            this.showModalMaster = false;
+            this.loadMasters();
+          },
+          error: (error) => {
+            console.error('Erreur modification master:', error);
+            alert('❌ Erreur lors de la modification du master');
+          },
+        });
+      return;
+    }
+
+    this.http
+      .post('http://localhost:8003/api/candidatures/masters/admin/', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          alert('✅ Master ajouté avec succès');
+          this.showModalMaster = false;
+          this.loadMasters();
+        },
+        error: (error) => {
+          console.error('Erreur création master:', error);
+          alert('❌ Erreur lors de la création du master');
+        },
+      });
   }
 
   fermerModalMaster(): void {
@@ -1274,17 +1423,31 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   modifierMaster(master: Master): void {
-    this.nouveauMaster = { ...master };
-    this.showModalMaster = true;
+    this.router.navigate(['/admin/masters', master.id, 'edit']);
   }
 
   supprimerMaster(master: Master): void {
     if (confirm(`Supprimer le master "${master.nom}" ?`)) {
-      const index = this.mastersList.findIndex((m) => m.id === master.id);
-      if (index !== -1) {
-        this.mastersList.splice(index, 1);
-        alert('✅ Master supprimé');
+      const token = this.authService.getAccessToken();
+      if (!token) {
+        alert('❌ Session expirée. Veuillez vous reconnecter.');
+        return;
       }
+
+      this.http
+        .delete(`http://localhost:8003/api/candidatures/masters/${master.id}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .subscribe({
+          next: () => {
+            alert('✅ Master supprimé');
+            this.loadMasters();
+          },
+          error: (error) => {
+            console.error('Erreur suppression master:', error);
+            alert('❌ Erreur lors de la suppression du master');
+          },
+        });
     }
   }
 
@@ -1344,7 +1507,13 @@ export class DashboardAdminComponent implements OnInit {
   // CANDIDATURES
   // ========================================
   voirCandidature(candidature: Candidature): void {
-    alert(`Voir détails de la candidature ${candidature.numero}`);
+    this.selectedCandidature = candidature;
+    this.showCandidatureDetailModal = true;
+  }
+
+  fermerModalCandidature(): void {
+    this.showCandidatureDetailModal = false;
+    this.selectedCandidature = null;
   }
 
   getStatutLabel(statut: string): string {
@@ -1520,6 +1689,8 @@ export class DashboardAdminComponent implements OnInit {
       },
     });
 
+    this.persistActionRoleMatrix();
+
     this.newActionName = '';
     this.newActionDescription = '';
     this.newActionRoles = {
@@ -1536,11 +1707,13 @@ export class DashboardAdminComponent implements OnInit {
     }
 
     this.actionRoleMatrix = this.actionRoleMatrix.filter((a) => a.action_no !== actionNo);
+    this.persistActionRoleMatrix();
   }
 
   toggleRoleForAction(action: ActionMatrixRow, role: RoleKey, event: Event): void {
     const input = event.target as HTMLInputElement;
     action.roles[role] = input.checked;
+    this.persistActionRoleMatrix();
   }
 
   toggleNewActionRole(role: RoleKey, event: Event): void {
@@ -1549,8 +1722,14 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   saveActionRoleMatrix(): void {
+    this.persistActionRoleMatrix(true);
+  }
+
+  private persistActionRoleMatrix(showSuccessMessage: boolean = false): void {
     if (!this.actionRoleMatrix.length) {
-      alert('Ajoutez au moins une action avant de sauvegarder');
+      if (showSuccessMessage) {
+        alert('Ajoutez au moins une action avant de sauvegarder');
+      }
       return;
     }
 
@@ -1570,7 +1749,9 @@ export class DashboardAdminComponent implements OnInit {
       })
       .subscribe({
         next: (response: any) => {
-          alert('✅ Matrice des actions enregistrée avec succès');
+          if (showSuccessMessage) {
+            alert('✅ Matrice des actions enregistrée avec succès');
+          }
           this.actionRoleMatrix = (response.actions || this.actionRoleMatrix).map((row: any) => ({
             action_no: row.action_no,
             action_name: row.action_name,
@@ -1585,7 +1766,9 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur sauvegarde matrice:', error);
-          alert("❌ Erreur lors de l'enregistrement de la matrice");
+          if (showSuccessMessage) {
+            alert("❌ Erreur lors de l'enregistrement de la matrice");
+          }
         },
       });
   }
@@ -1603,11 +1786,53 @@ export class DashboardAdminComponent implements OnInit {
   // ========================================
 
   genererRapport(): void {
-    alert('Générer un rapport');
+    const rows: ExportRow[] = this.candidaturesList.map((c) => ({
+      numero: c.numero,
+      candidat: c.candidat_nom,
+      master: c.master_nom,
+      score: c.score,
+      statut: this.getStatutLabel(c.statut),
+      date_soumission: c.date_soumission,
+      periode: this.reportPeriod,
+    }));
+
+    void this.exportRows(
+      rows,
+      'pdf',
+      `rapport-candidatures-${this.reportPeriod}`,
+      'Rapport candidatures',
+    );
   }
 
   exporterDonnees(): void {
-    alert('Exporter les données');
+    const rows: ExportRow[] = this.candidaturesList.map((c) => ({
+      numero: c.numero,
+      candidat: c.candidat_nom,
+      email: c.candidat_email,
+      master: c.master_nom,
+      specialite: c.specialite,
+      score: c.score,
+      statut: this.getStatutLabel(c.statut),
+      date_soumission: c.date_soumission,
+    }));
+
+    void this.exportRows(
+      rows,
+      'ods',
+      `candidatures-donnees-${this.reportPeriod}`,
+      'Export candidatures',
+    );
+  }
+
+  getReportStatusClass(statut: string): string {
+    const map: Record<string, string> = {
+      selectionne: 'status-selectionne',
+      en_attente: 'status-en-attente',
+      rejete: 'status-rejete',
+      soumis: 'status-soumis',
+    };
+
+    return map[statut] || '';
   }
 
   logout(): void {

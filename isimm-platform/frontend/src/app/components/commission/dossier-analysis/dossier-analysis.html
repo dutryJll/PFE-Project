@@ -1,6 +1,12 @@
 <div class="dossier-analysis-page">
   <div class="analysis-container">
     <header class="analysis-header">
+      <div class="analysis-header-top">
+        <button class="btn-back-dashboard" (click)="goToDashboard()">
+          <i class="fas fa-arrow-left"></i>
+          Retour au dashboard
+        </button>
+      </div>
       <h1>📋 Analyse des Dossiers - Diagnostic OCR/IA</h1>
       <p>
         Analysez les dossiers déposés avec assistance OCR/IA pour validation rapide ou révision
@@ -25,6 +31,13 @@
 
     <!-- Messages d'erreur/succès -->
     <div *ngIf="errorMessage" class="alert alert-error">❌ {{ errorMessage }}</div>
+    <div *ngIf="requiresLogin" class="auth-help-box">
+      <p>Votre session n'est plus valide. Reconnectez-vous pour continuer.</p>
+      <button type="button" class="btn-reconnect" (click)="reconnect()">
+        <i class="fas fa-sign-in-alt"></i>
+        Se reconnecter
+      </button>
+    </div>
     <div *ngIf="successMessage" class="alert alert-success">✅ {{ successMessage }}</div>
 
     <div class="analysis-layout">
@@ -46,6 +59,7 @@
           />
           <select [(ngModel)]="selectedMasterFilter">
             <option value="all">Tous les masters</option>
+            <option value="ingenieur">Cycle Ingénieur</option>
             <option *ngFor="let m of uniqueMasters" [value]="m">{{ m }}</option>
           </select>
         </div>

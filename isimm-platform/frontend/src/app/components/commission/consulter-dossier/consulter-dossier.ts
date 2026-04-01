@@ -283,6 +283,8 @@ export class ConsulterDossierComponent implements OnInit {
   }
 
   retour(): void {
-    this.router.navigate(['/commission/candidatures']);
+    this.router.navigate(['/commission/dashboard'], {
+      queryParams: { view: 'candidatures' },
+    });
   }
 }

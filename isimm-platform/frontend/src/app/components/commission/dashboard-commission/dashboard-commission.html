@@ -36,21 +36,21 @@
 
       <a
         class="nav-item"
+        [class.active]="currentView === 'concours-ingenieur'"
+        (click)="switchView('concours-ingenieur')"
+      >
+        <i class="fas fa-graduation-cap"></i>
+        <span>Concours Cycle d'Ingénieur</span>
+      </a>
+
+      <a
+        class="nav-item"
         *ngIf="isResponsable"
         [class.active]="currentView === 'configuration-appels'"
         (click)="switchView('configuration-appels')"
       >
         <i class="fas fa-calendar-check"></i>
         <span>Configuration des appels</span>
-      </a>
-
-      <a
-        class="nav-item"
-        [class.active]="currentView === 'concours-ingenieur'"
-        (click)="switchView('concours-ingenieur')"
-      >
-        <i class="fas fa-graduation-cap"></i>
-        <span>Concours Cycle d'Ingénieur</span>
       </a>
 
       <!-- ÉVALUATION -->
@@ -409,10 +409,13 @@
     </div>
 
     <!-- ✅ LES MASTERS -->
-    <div *ngIf="currentView === 'masters'" class="view-content">
+    <div *ngIf="currentView === 'masters'" class="view-content masters-view">
       <div class="section-card">
         <div class="masters-header">
-          <h2>📚 Les Masters</h2>
+          <div class="masters-title-group">
+            <h2>📚 Les Masters</h2>
+            <p class="masters-subtitle">Suivi des candidatures et des dossiers par spécialité</p>
+          </div>
           <div class="filter-tabs">
             <button
               class="filter-tab"
@@ -438,16 +441,16 @@
               <span class="master-badge" [class]="spec.statut">{{ spec.statut }}</span>
             </div>
             <div class="master-stats">
-              <div class="stat-item">
+              <div class="stat-item stat-candidatures">
                 <i class="fas fa-file-alt"></i>
                 <span>{{ spec.nb_candidatures }} candidatures</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item stat-dossiers">
                 <i class="fas fa-folder-open"></i>
                 <span>{{ spec.nb_dossiers }} dossiers déposés</span>
               </div>
             </div>
-            <button class="btn-primary" (click)="consulterSpecialite(spec)">
+            <button class="btn-primary btn-consulter" (click)="consulterSpecialite(spec)">
               <i class="fas fa-eye"></i> Consulter
             </button>
           </div>
@@ -571,11 +574,29 @@
     </div>
 
     <!-- ✅ CONCOURS CYCLE D'INGÉNIEUR -->
-    <div *ngIf="currentView === 'concours-ingenieur'" class="view-content">
+    <div *ngIf="currentView === 'concours-ingenieur'" class="view-content concours-view">
       <div class="section-card">
         <div class="concours-header">
-          <h2>🎓 Concours Cycle d'Ingénieur</h2>
-          <p class="concours-subtitle">Candidatures pour les programmes de cycle ingénieur</p>
+          <div class="concours-title-group">
+            <h2>🎓 Concours Cycle d'Ingénieur</h2>
+            <p class="concours-subtitle">Candidatures pour les programmes de cycle ingénieur</p>
+          </div>
+          <div class="filter-tabs">
+            <button
+              class="filter-tab"
+              [class.active]="filtreConcours === 'actuel'"
+              (click)="filtreConcours = 'actuel'"
+            >
+              Actuel
+            </button>
+            <button
+              class="filter-tab"
+              [class.active]="filtreConcours === 'ancien'"
+              (click)="filtreConcours = 'ancien'"
+            >
+              Ancien
+            </button>
+          </div>
         </div>
 
         <div class="concours-grid">
@@ -585,20 +606,20 @@
               <span class="concours-badge">{{ concours.annee }}</span>
             </div>
             <div class="concours-card-stats">
-              <div class="stat-item">
+              <div class="stat-item stat-candidatures">
                 <i class="fas fa-file-alt"></i>
                 <span>{{ concours.nb_candidatures }} candidatures</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item stat-acceptes">
                 <i class="fas fa-check-circle"></i>
                 <span>{{ concours.nb_acceptes }} acceptés</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item stat-refuses">
                 <i class="fas fa-times-circle"></i>
                 <span>{{ concours.nb_refuses }} refusés</span>
               </div>
             </div>
-            <button class="btn-primary" (click)="consulterConcours(concours)">
+            <button class="btn-primary btn-consulter" (click)="consulterConcours(concours)">
               <i class="fas fa-eye"></i> Consulter
             </button>
           </div>
@@ -615,10 +636,8 @@
         <div class="candidatures-header">
           <h2>📋 Gestion des candidatures</h2>
         </div>
-
-        <!-- FILTRES AVANCÉS -->
-        <div class="filters-advanced">
-          <div class="filter-row">
+        <div class="filters-section">
+          <div class="filters-grid">
             <div class="filter-item">
               <label class="filter-label">Concours</label>
               <select class="filter-select" [(ngModel)]="filtres.concours">
@@ -661,15 +680,15 @@
                 (input)="appliquerFiltres()"
               />
             </div>
+          </div>
 
-            <div class="filter-actions">
-              <button class="btn-filter" (click)="appliquerFiltres()">
-                <i class="fas fa-search"></i> Rechercher
-              </button>
-              <button class="btn-reset" (click)="resetFiltres()">
-                <i class="fas fa-redo"></i> Réinitialiser
-              </button>
-            </div>
+          <div class="filter-actions">
+            <button class="btn-filter" (click)="appliquerFiltres()">
+              <i class="fas fa-search"></i> Rechercher
+            </button>
+            <button class="btn-reset" (click)="resetFiltres()">
+              <i class="fas fa-redo"></i> Réinitialiser
+            </button>
           </div>
         </div>
 
@@ -762,7 +781,7 @@
                       <button
                         class="action-menu-item"
                         *ngIf="actionPermissions.verifierDossiers"
-                        (click)="changerStatut(candidature)"
+                        (click)="ouvrirModalStatut(candidature)"
                       >
                         <i class="fas fa-exchange-alt"></i>
                         <span>Changer statut</span>
@@ -789,11 +808,35 @@
     <!-- ✅ VALIDER DOSSIERS -->
     <div
       *ngIf="currentView === 'valider-dossier' && actionPermissions.verifierDossiers"
-      class="view-content"
+      class="view-content validation-view"
     >
       <div class="section-card">
-        <h2>✅ Validation des dossiers</h2>
-        <div class="table-container">
+        <div class="validation-header">
+          <div>
+            <h2>✅ Validation des dossiers</h2>
+            <p class="validation-subtitle">
+              Étude de dossier de candidature et décision de validation par la commission
+            </p>
+          </div>
+          <span class="validation-counter">{{ candidaturesAvecDossier.length }} dossiers</span>
+        </div>
+
+        <div class="validation-kpi-grid">
+          <div class="validation-kpi-card">
+            <span class="kpi-label">À traiter</span>
+            <strong class="kpi-value">{{ validationPendingCount }}</strong>
+          </div>
+          <div class="validation-kpi-card success">
+            <span class="kpi-label">Validés</span>
+            <strong class="kpi-value">{{ validationValidatedCount }}</strong>
+          </div>
+          <div class="validation-kpi-card danger">
+            <span class="kpi-label">Rejetés</span>
+            <strong class="kpi-value">{{ validationRejectedCount }}</strong>
+          </div>
+        </div>
+
+        <div class="table-container validation-table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
@@ -805,25 +848,37 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let candidature of candidaturesAvecDossier">
+              <tr *ngFor="let candidature of candidaturesAvecDossier" class="validation-row">
                 <td>
                   <strong>{{ candidature.candidat_nom }}</strong>
                 </td>
                 <td>{{ candidature.specialite }}</td>
                 <td>{{ currentDate | date: 'dd/MM/yyyy' }}</td>
                 <td>
-                  <span class="statut-badge badge-en_attente">En attente</span>
+                  <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
+                    {{ getStatusDisplayLabel(candidature.statut) }}
+                  </span>
                 </td>
                 <td>
-                  <button class="btn-action voir" (click)="voirDossier(candidature)">
-                    <i class="fas fa-eye"></i> Voir
-                  </button>
-                  <button class="btn-action" style="background: #d1fae5; color: #065f46">
-                    <i class="fas fa-check"></i> Valider
-                  </button>
-                  <button class="btn-action" style="background: #fee2e2; color: #991b1b">
-                    <i class="fas fa-times"></i> Rejeter
-                  </button>
+                  <div class="validation-actions">
+                    <button class="btn-action voir" (click)="voirDossier(candidature)">
+                      <i class="fas fa-eye"></i> Voir
+                    </button>
+                    <button
+                      class="btn-action action-validate"
+                      (click)="
+                        candidature.nouveau_statut = 'dossier_depose'; changerStatut(candidature)
+                      "
+                    >
+                      <i class="fas fa-check"></i> Valider
+                    </button>
+                    <button
+                      class="btn-action action-reject"
+                      (click)="candidature.nouveau_statut = 'rejete'; changerStatut(candidature)"
+                    >
+                      <i class="fas fa-times"></i> Rejeter
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -870,7 +925,7 @@
                 </td>
                 <td>
                   <button class="btn-action voir" (click)="voirDossier(candidature)">
-                    <i class="fas fa-eye"></i> Consulter
+                    <i class="fas fa-eye"></i> Voir
                   </button>
                 </td>
               </tr>
@@ -932,7 +987,11 @@
               <option value="pdf">PDF</option>
               <option value="xlsx">Excel</option>
             </select>
-            <button class="btn-download" (click)="exportListes()">
+            <button
+              class="btn-download"
+              [disabled]="getListesByType().length === 0"
+              (click)="exportListes()"
+            >
               <i class="fas fa-download"></i> Télécharger
             </button>
           </div>
@@ -1185,17 +1244,364 @@
       "
       class="view-content"
     >
-      <div class="section-card">
-        <h2>📊 Statistiques détaillées</h2>
-        <p>Graphiques et analyses à implémenter</p>
+      <!-- Header -->
+      <div class="section-card stats-header">
+        <h2>📊 Statistiques et rapports</h2>
+        <p class="section-subtitle">Vue d'ensemble des performances et analyses détaillées</p>
+      </div>
+
+      <!-- Filtres -->
+      <div class="section-card stats-filters">
+        <div class="filter-group-inline">
+          <label><i class="fas fa-calendar-alt"></i> Période</label>
+          <select [(ngModel)]="filtreStatPeriode" class="filter-select-small">
+            <option value="jour">Dernier jour</option>
+            <option value="semaine">Dernière semaine</option>
+            <option value="mois">Dernier mois</option>
+            <option value="annee">Cette année</option>
+          </select>
+        </div>
+        <div class="filter-group-inline">
+          <label><i class="fas fa-file-export"></i> Exporter</label>
+          <select [(ngModel)]="statMasterExportFormat" class="filter-select-small">
+            <option value="pdf">PDF</option>
+            <option value="xlsx">Excel</option>
+            <option value="csv">CSV</option>
+          </select>
+          <button class="btn-export"><i class="fas fa-download"></i> Télécharger</button>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+          <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
+          <div class="kpi-content">
+            <div class="kpi-value">{{ candidatures.length }}</div>
+            <div class="kpi-label">Candidatures reçues</div>
+            <div class="kpi-trend"><i class="fas fa-arrow-up"></i> +12%</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-success">
+          <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
+          <div class="kpi-content">
+            <div class="kpi-value">42</div>
+            <div class="kpi-label">Dossiers déposés</div>
+            <div class="kpi-trend"><i class="fas fa-check-circle"></i> 93%</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-info">
+          <div class="kpi-icon"><i class="fas fa-graduation-cap"></i></div>
+          <div class="kpi-content">
+            <div class="kpi-value">{{ concoursIngenieur.length }}</div>
+            <div class="kpi-label">Concours actifs</div>
+            <div class="kpi-trend"><i class="fas fa-bar-chart"></i> 2</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+          <div class="kpi-content">
+            <div class="kpi-value">12</div>
+            <div class="kpi-label">En attente</div>
+            <div class="kpi-trend"><i class="fas fa-exclamation"></i> À traiter</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master Stats -->
+      <div class="section-card stats-card-header">
+        <h3><i class="fas fa-book"></i> Performances par Master</h3>
+        <p>Statistiques détaillées pour chaque programme</p>
+      </div>
+      <div class="section-card stats-table-container">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Master</th>
+              <th>Candidats</th>
+              <th>Dossiers</th>
+              <th>Admis</th>
+              <th>Refusés</th>
+              <th>Taux</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let sp of specialites">
+              <td class="cell-name">
+                <strong>{{ sp.nom }}</strong>
+              </td>
+              <td class="cell-number">{{ sp.nb_candidatures }}</td>
+              <td class="cell-number">{{ sp.nb_dossiers }}</td>
+              <td class="cell-number success">25</td>
+              <td class="cell-number danger">8</td>
+              <td>
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="75"></div>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" [class]="'status-' + sp.statut">{{
+                  sp.statut === 'actuel' ? 'Actuel' : 'Ancien'
+                }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Distribution & Timeline -->
+      <div class="stats-row-2">
+        <div class="section-card stats-distribution">
+          <h3><i class="fas fa-pie-chart"></i> Distribution des Statuts</h3>
+          <div class="distribution-grid">
+            <div class="distribution-item">
+              <div class="dist-circle soumis"><span>35</span></div>
+              <p>Soumis</p>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-circle preselectionne"><span>28</span></div>
+              <p>Présélectionnés</p>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-circle etude"><span>22</span></div>
+              <p>En étude</p>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-circle selectionne"><span>45</span></div>
+              <p>Sélectionnés</p>
+            </div>
+            <div class="distribution-item">
+              <div class="dist-circle rejete"><span>18</span></div>
+              <p>Rejetés</p>
+            </div>
+          </div>
+        </div>
+        <div class="section-card stats-timeline">
+          <h3><i class="fas fa-history"></i> Activité Récente</h3>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker success"></div>
+              <div class="timeline-content">
+                <strong>PV publié</strong>
+                <p>Master Génie Logiciel - Il y a 2 jours</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker info"></div>
+              <div class="timeline-content">
+                <strong>40 dossiers traités</strong>
+                <p>Master Data Science - Il y a 5 jours</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker warning"></div>
+              <div class="timeline-content">
+                <strong>Délai limite</strong>
+                <p>Dépôt de dossiers - Dans 3 jours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports -->
+      <div class="section-card stats-reports">
+        <h3><i class="fas fa-file-pdf"></i> Rapports Disponibles</h3>
+        <div class="reports-grid">
+          <div class="report-card">
+            <div class="report-icon"><i class="fas fa-users"></i></div>
+            <h4>Rapport Candidats</h4>
+            <p>Synthèse complète des candidatures</p>
+            <button class="btn-report"><i class="fas fa-download"></i> PDF</button>
+          </div>
+          <div class="report-card">
+            <div class="report-icon"><i class="fas fa-chart-bar"></i></div>
+            <h4>Rapport Performances</h4>
+            <p>Analyses détaillées par master</p>
+            <button class="btn-report"><i class="fas fa-download"></i> Excel</button>
+          </div>
+          <div class="report-card">
+            <div class="report-icon"><i class="fas fa-tasks"></i></div>
+            <h4>Rapport Dossiers</h4>
+            <p>État d'avancement des dossiers</p>
+            <button class="btn-report"><i class="fas fa-download"></i> PDF</button>
+          </div>
+          <div class="report-card">
+            <div class="report-icon"><i class="fas fa-graduation-cap"></i></div>
+            <h4>Rapport Délibérations</h4>
+            <p>Procès-verbaux des commissions</p>
+            <button class="btn-report"><i class="fas fa-download"></i> PDF</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- ✅ MEMBRES (RESPONSABLE) -->
     <div *ngIf="currentView === 'membres' && isResponsable" class="view-content">
-      <div class="section-card">
-        <h2>👥 Membres de la commission</h2>
-        <p>Gestion des membres - À implémenter</p>
+      <!-- Header -->
+      <div class="section-card membres-header">
+        <div class="membres-header-top">
+          <h2>👥 Membres de la commission</h2>
+          <span class="badge-count-lg">{{ membresFiltres.length }} / {{ membres.length }}</span>
+        </div>
+        <p class="section-subtitle">Gestion des membres avec rôles et statuts</p>
+      </div>
+
+      <!-- Filtres & Recherche -->
+      <div class="section-card membres-filters">
+        <div class="filter-row">
+          <div class="filter-group">
+            <label for="searchMembers"> <i class="fas fa-search"></i> Recherche </label>
+            <input
+              id="searchMembers"
+              type="text"
+              class="filter-input"
+              placeholder="Nom, email ou téléphone..."
+              [(ngModel)]="rechercheMembres"
+              (input)="filtrerMembres()"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label for="filterRole"> <i class="fas fa-user-tag"></i> Rôle </label>
+            <select
+              id="filterRole"
+              class="filter-select"
+              [(ngModel)]="filtrRoleMembre"
+              (change)="filtrerMembres()"
+            >
+              <option value="">Tous les rôles</option>
+              <option value="responsable">Responsable</option>
+              <option value="evaluateur">Évaluateur</option>
+              <option value="observateur">Observateur</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="filterStatus"> <i class="fas fa-toggle-on"></i> Statut </label>
+            <select
+              class="filter-select"
+              [(ngModel)]="filtreStatutMembre"
+              (change)="filtrerMembres()"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="actif">Actif</option>
+              <option value="inactif">Inactif</option>
+            </select>
+          </div>
+
+          <button class="btn-reset" (click)="reinitialiserFiltresMembres()">
+            <i class="fas fa-redo-alt"></i> Réinitialiser
+          </button>
+        </div>
+      </div>
+
+      <!-- Tableau des Membres -->
+      <div class="section-card membres-table-container">
+        <div *ngIf="membresFiltres.length > 0; else noMembers" class="table-responsive">
+          <table class="membres-table">
+            <thead>
+              <tr>
+                <th>Nom & Prénom</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Rôle</th>
+                <th>Master</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let membre of membresFiltres"
+                [class.inactive]="membre.statut === 'inactif'"
+              >
+                <td class="cell-name">
+                  <div class="member-name">
+                    <div class="member-avatar">
+                      {{ membre.prenom | slice: 0 : 1 | uppercase
+                      }}{{ membre.nom | slice: 0 : 1 | uppercase }}
+                    </div>
+                    <div>
+                      <strong>{{ membre.prenom }} {{ membre.nom }}</strong>
+                      <small class="role-badge" [class]="'role-' + membre.role">
+                        {{
+                          membre.role === 'responsable'
+                            ? '👤 Responsable'
+                            : membre.role === 'evaluateur'
+                              ? '📋 Évaluateur'
+                              : '👁️ Observateur'
+                        }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+                <td class="cell-email">
+                  <a href="mailto:{{ membre.email }}">{{ membre.email }}</a>
+                </td>
+                <td class="cell-phone">
+                  <a href="tel:{{ membre.telephone }}">{{ membre.telephone }}</a>
+                </td>
+                <td class="cell-role">
+                  <span class="role-tag" [class]="'role-' + membre.role">{{
+                    membre.role === 'responsable'
+                      ? 'Responsable'
+                      : membre.role === 'evaluateur'
+                        ? 'Évaluateur'
+                        : 'Observateur'
+                  }}</span>
+                </td>
+                <td class="cell-master">
+                  {{ membre.master_rattachement || '—' }}
+                </td>
+                <td class="cell-status">
+                  <span class="status-badge" [class]="'status-' + membre.statut">
+                    <i
+                      class="fas"
+                      [class]="membre.statut === 'actif' ? 'fa-check-circle' : 'fa-times-circle'"
+                    ></i>
+                    {{ membre.statut | uppercase }}
+                  </span>
+                </td>
+                <td class="cell-date">
+                  <small>{{ membre.date_inscription }}</small>
+                </td>
+                <td class="cell-actions">
+                  <div class="action-buttons">
+                    <button
+                      class="btn-icon"
+                      [class.btn-activate]="membre.statut === 'inactif'"
+                      [class.btn-deactivate]="membre.statut === 'actif'"
+                      [title]="membre.statut === 'actif' ? 'Désactiver' : 'Activer'"
+                      (click)="toggleStatutMembre(membre)"
+                    >
+                      <i
+                        class="fas"
+                        [class]="membre.statut === 'actif' ? 'fa-ban' : 'fa-check'"
+                      ></i>
+                    </button>
+                    <button
+                      class="btn-icon btn-info"
+                      title="Voir profil"
+                      (click)="voirProfilMembre(membre)"
+                    >
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #noMembers>
+          <div class="empty-state">
+            <i class="fas fa-users"></i>
+            <p>Aucun membre ne correspond à vos critères</p>
+          </div>
+        </ng-template>
       </div>
     </div>
   </main>
@@ -1281,6 +1687,52 @@
             [disabled]="!fichierOCR"
           >
             <i class="fas fa-robot"></i> Lancer l'analyse
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL STATUT -->
+  <div *ngIf="showModalStatut" class="modal-overlay" (click)="fermerModalStatut()">
+    <div class="modal-content status-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>🔄 Changer le statut</h2>
+        <button class="btn-close" (click)="fermerModalStatut()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="status-candidat-summary">
+          <strong>{{ candidatureStatutSelectionnee?.candidat_nom }}</strong>
+          <span>{{ candidatureStatutSelectionnee?.specialite }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Nouveau statut</label>
+          <select [(ngModel)]="statusSelection" name="statusSelection" required>
+            <option *ngFor="let status of statusOptions" [value]="status">
+              {{ getStatusDisplayLabel(status) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="statusSelection === 'rejete'">
+          <label>Motif du rejet *</label>
+          <textarea
+            [(ngModel)]="statusRejectReason"
+            name="statusRejectReason"
+            rows="3"
+            placeholder="Précisez le motif du rejet"
+            required
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fermerModalStatut()">Annuler</button>
+          <button type="button" class="btn-primary" (click)="confirmerChangementStatut()">
+            <i class="fas fa-check"></i> Confirmer
           </button>
         </div>
       </div>

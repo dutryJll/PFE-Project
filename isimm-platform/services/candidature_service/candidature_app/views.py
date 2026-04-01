@@ -400,19 +400,160 @@ def offres_inscription(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def lister_masters(request):
-    masters = Master.objects.filter(actif=True).order_by('nom')
-    payload = [
+    try:
+        today = timezone.now().date()
+        masters = list(Master.objects.filter(actif=True).order_by('nom'))
+
+        payload = []
+        for m in masters:
+            date_limite = getattr(m, 'date_limite_candidature', None)
+            statut = 'ferme'
+            if date_limite:
+                statut = 'ouvert' if date_limite >= today else 'ferme'
+
+            payload.append(
+                {
+                    'id': m.id,
+                    'nom': m.nom,
+                    'specialite': m.specialite,
+                    'type_master': m.type_master,
+                    'description': m.description,
+                    'places_disponibles': m.places_disponibles,
+                    'statut': statut,
+                    'date_limite_candidature': date_limite,
+                    'annee_universitaire': m.annee_universitaire,
+                }
+            )
+
+        return Response(payload)
+    except OperationalError as exc:
+        logger.exception('Schema candidature indisponible pour masters: %s', exc)
+        return Response(
+            {
+                'results': [],
+                'warning': 'Base candidature non initialisee correctement (schema masters indisponible).',
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as exc:
+        logger.exception('Erreur inattendue lister_masters: %s', exc)
+        return Response(
+            {
+                'results': [],
+                'warning': 'Impossible de charger les masters pour le moment.',
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def creer_master_admin(request):
+    """Creer un master (admin uniquement)."""
+    if getattr(request.user, 'role', None) != 'admin':
+        return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data or {}
+
+    nom = data.get('nom')
+    type_master = data.get('type_master')
+    specialite = data.get('specialite')
+    date_limite_candidature = data.get('date_limite_candidature')
+    places_disponibles = data.get('places_disponibles')
+
+    if not nom or not type_master or not specialite or not date_limite_candidature:
+        return Response(
+            {'error': 'Champs obligatoires manquants (nom, type_master, specialite, date_limite_candidature).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        places_int = int(places_disponibles)
+    except (TypeError, ValueError):
+        return Response({'error': 'places_disponibles invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    master = Master.objects.create(
+        nom=nom,
+        type_master=type_master,
+        description=data.get('description', ''),
+        specialite=specialite,
+        places_disponibles=places_int,
+        date_limite_candidature=date_limite_candidature,
+        annee_universitaire=data.get('annee_universitaire', '2025/2026'),
+        actif=bool(data.get('actif', True)),
+    )
+
+    return Response(
         {
-            'id': m.id,
-            'nom': m.nom,
-            'specialite': m.specialite,
-            'type_master': m.type_master,
-            'date_limite_candidature': m.date_limite_candidature,
-            'annee_universitaire': m.annee_universitaire,
-        }
-        for m in masters
-    ]
-    return Response(payload)
+            'id': master.id,
+            'nom': master.nom,
+            'type_master': master.type_master,
+            'description': master.description,
+            'specialite': master.specialite,
+            'places_disponibles': master.places_disponibles,
+            'date_limite_candidature': master.date_limite_candidature,
+            'annee_universitaire': master.annee_universitaire,
+            'actif': master.actif,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def modifier_supprimer_master_admin(request, master_id):
+    """Modifier/Supprimer (soft delete) un master (admin uniquement)."""
+    if getattr(request.user, 'role', None) != 'admin':
+        return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        master.actif = False
+        master.save(update_fields=['actif', 'updated_at'])
+        return Response({'message': 'Master supprime avec succes (desactive).'}, status=status.HTTP_200_OK)
+
+    data = request.data or {}
+
+    if 'nom' in data:
+        master.nom = data.get('nom') or master.nom
+    if 'type_master' in data:
+        master.type_master = data.get('type_master') or master.type_master
+    if 'description' in data:
+        master.description = data.get('description') or ''
+    if 'specialite' in data:
+        master.specialite = data.get('specialite') or master.specialite
+    if 'places_disponibles' in data:
+        try:
+            master.places_disponibles = int(data.get('places_disponibles'))
+        except (TypeError, ValueError):
+            return Response({'error': 'places_disponibles invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+    if 'date_limite_candidature' in data:
+        master.date_limite_candidature = data.get('date_limite_candidature')
+    if 'annee_universitaire' in data:
+        master.annee_universitaire = data.get('annee_universitaire') or master.annee_universitaire
+    if 'actif' in data:
+        master.actif = bool(data.get('actif'))
+
+    master.save()
+
+    return Response(
+        {
+            'id': master.id,
+            'nom': master.nom,
+            'type_master': master.type_master,
+            'description': master.description,
+            'specialite': master.specialite,
+            'places_disponibles': master.places_disponibles,
+            'date_limite_candidature': master.date_limite_candidature,
+            'annee_universitaire': master.annee_universitaire,
+            'actif': master.actif,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])
@@ -446,11 +587,30 @@ def mes_dossiers(request):
 def lister_dossiers_ocr(request):
     """Retourne les dossiers deposes a analyser par la commission (OCR)."""
     try:
-        candidatures = (
+        candidatures_qs = (
             Candidature.objects.select_related('candidat', 'master')
             .filter(dossier_depose=True)
             .order_by('-date_depot_dossier', '-updated_at')
         )
+
+        # Forcer l'evaluation ici pour capturer toutes les erreurs SQL/runtime
+        candidatures = list(candidatures_qs)
+
+        payload = []
+        for c in candidatures:
+            payload.append(
+                {
+                    'id': c.id,
+                    'candidat_nom': f"{getattr(c.candidat, 'first_name', '')} {getattr(c.candidat, 'last_name', '')}".strip(),
+                    'email': getattr(c.candidat, 'email', ''),
+                    'master_nom': c.master.nom if c.master else '',
+                    'statut': c.statut,
+                    'date_depot_dossier': c.date_depot_dossier,
+                    'score': c.score,
+                }
+            )
+
+        return Response(payload)
     except OperationalError as exc:
         logger.exception('Schema candidature indisponible pour dossiers-ocr: %s', exc)
         return Response(
@@ -460,22 +620,15 @@ def lister_dossiers_ocr(request):
             },
             status=status.HTTP_200_OK,
         )
-
-    payload = []
-    for c in candidatures:
-        payload.append(
+    except Exception as exc:
+        logger.exception('Erreur inattendue dossiers-ocr: %s', exc)
+        return Response(
             {
-                'id': c.id,
-                'candidat_nom': f"{getattr(c.candidat, 'first_name', '')} {getattr(c.candidat, 'last_name', '')}".strip(),
-                'email': getattr(c.candidat, 'email', ''),
-                'master_nom': c.master.nom if c.master else '',
-                'statut': c.statut,
-                'date_depot_dossier': c.date_depot_dossier,
-                'score': c.score,
-            }
+                'results': [],
+                'warning': 'Impossible de charger les dossiers OCR pour le moment.',
+            },
+            status=status.HTTP_200_OK,
         )
-
-    return Response(payload)
 
 
 @api_view(['PUT'])
@@ -1302,6 +1455,137 @@ def lister_concours(request):
         for concours in qs
     ]
     return Response(payload)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def creer_concours_admin(request):
+    """Creer une offre de concours (admin uniquement)."""
+    if getattr(request.user, 'role', None) != 'admin':
+        return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data or {}
+    nom = data.get('nom')
+    date_ouverture = data.get('date_ouverture')
+    date_cloture = data.get('date_cloture')
+    places_disponibles = data.get('places_disponibles')
+    type_concours = data.get('type_concours', 'ingenieur')
+
+    if not nom or not date_ouverture or not date_cloture:
+        return Response(
+            {'error': 'Champs obligatoires manquants (nom, date_ouverture, date_cloture).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if type_concours not in {'master', 'ingenieur'}:
+        return Response({'error': 'type_concours invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        places_int = int(places_disponibles)
+    except (TypeError, ValueError):
+        return Response({'error': 'places_disponibles invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    conditions_admission = data.get('conditions_admission')
+    if not isinstance(conditions_admission, dict):
+        conditions_admission = {}
+
+    specialite = data.get('specialite')
+    if specialite:
+        conditions_admission['specialite'] = specialite
+
+    concours = Concours.objects.create(
+        nom=nom,
+        description=data.get('description', ''),
+        type_concours=type_concours,
+        date_ouverture=date_ouverture,
+        date_cloture=date_cloture,
+        places_disponibles=places_int,
+        actif=bool(data.get('actif', True)),
+        conditions_admission=conditions_admission,
+    )
+
+    return Response(
+        {
+            'id': concours.id,
+            'nom': concours.nom,
+            'description': concours.description,
+            'type_concours': concours.type_concours,
+            'date_ouverture': concours.date_ouverture,
+            'date_cloture': concours.date_cloture,
+            'places_disponibles': concours.places_disponibles,
+            'actif': concours.actif,
+            'conditions_admission': concours.conditions_admission,
+            'specialite': concours.conditions_admission.get('specialite', ''),
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def modifier_supprimer_concours_admin(request, concours_id):
+    """Modifier/Supprimer une offre de concours (admin uniquement)."""
+    if getattr(request.user, 'role', None) != 'admin':
+        return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        concours = Concours.objects.get(id=concours_id)
+    except Concours.DoesNotExist:
+        return Response({'error': 'Concours introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        concours.delete()
+        return Response({'message': 'Concours supprime avec succes.'}, status=status.HTTP_200_OK)
+
+    data = request.data or {}
+
+    if 'nom' in data:
+        concours.nom = data.get('nom') or concours.nom
+    if 'description' in data:
+        concours.description = data.get('description') or ''
+    if 'type_concours' in data and data.get('type_concours') in {'master', 'ingenieur'}:
+        concours.type_concours = data.get('type_concours')
+    if 'date_ouverture' in data:
+        concours.date_ouverture = data.get('date_ouverture')
+    if 'date_cloture' in data:
+        concours.date_cloture = data.get('date_cloture')
+    if 'places_disponibles' in data:
+        try:
+            concours.places_disponibles = int(data.get('places_disponibles'))
+        except (TypeError, ValueError):
+            return Response({'error': 'places_disponibles invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+    if 'actif' in data:
+        concours.actif = bool(data.get('actif'))
+
+    if 'conditions_admission' in data and isinstance(data.get('conditions_admission'), dict):
+        concours.conditions_admission = data.get('conditions_admission')
+
+    if 'specialite' in data:
+        payload_conditions = dict(concours.conditions_admission or {})
+        specialite = data.get('specialite')
+        if specialite:
+            payload_conditions['specialite'] = specialite
+        else:
+            payload_conditions.pop('specialite', None)
+        concours.conditions_admission = payload_conditions
+
+    concours.save()
+
+    return Response(
+        {
+            'id': concours.id,
+            'nom': concours.nom,
+            'description': concours.description,
+            'type_concours': concours.type_concours,
+            'date_ouverture': concours.date_ouverture,
+            'date_cloture': concours.date_cloture,
+            'places_disponibles': concours.places_disponibles,
+            'actif': concours.actif,
+            'conditions_admission': concours.conditions_admission,
+            'specialite': (concours.conditions_admission or {}).get('specialite', ''),
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])

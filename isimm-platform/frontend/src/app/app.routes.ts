@@ -41,6 +41,10 @@ import { GuideEtudiantComponent } from './components/guide-etudiant/guide-etudia
 // ========================================
 import { ListeCandidatures } from './components/admin/liste-candidatures/liste-candidatures';
 import { DashboardAdminComponent } from './components/admin/dashboard-admin/dashboard-admin';
+import { EditUserComponent } from './components/admin/edit-user/edit-user';
+import { EditMasterComponent } from './components/admin/edit-master/edit-master';
+import { EditOffreIngenieurComponent } from './components/admin/edit-offre-ingenieur/edit-offre-ingenieur';
+import { EditCommissionMemberComponent } from './components/admin/edit-commission-member/edit-commission-member';
 
 // ========================================
 // COMMISSION COMPONENTS
@@ -279,8 +283,44 @@ export const routes: Routes = [
     data: { roles: ['admin'] },
   },
   {
+    path: 'admin/gestion-commission/:id/edit',
+    component: EditCommissionMemberComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
     path: 'admin/candidatures',
     component: ListeCandidatures,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/users/:id/edit',
+    component: EditUserComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/masters/new',
+    component: EditMasterComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/masters/:id/edit',
+    component: EditMasterComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/offres-ingenieur/new',
+    component: EditOffreIngenieurComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/offres-ingenieur/:id/edit',
+    component: EditOffreIngenieurComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['admin'] },
   },

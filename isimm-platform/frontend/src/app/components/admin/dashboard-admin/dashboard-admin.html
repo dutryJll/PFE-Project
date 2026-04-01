@@ -294,6 +294,10 @@
           <div class="reglement-header">
             <h3>📘 Règlement officiel concours ingénieur</h3>
             <div class="reglement-actions">
+              <button class="btn-secondary btn-refresh-ref" (click)="loadReglementReference()">
+                <i class="fas fa-sync-alt"></i>
+                Actualiser
+              </button>
               <select [(ngModel)]="selectedConcoursIdForReglement">
                 <option [ngValue]="null">Sélectionner un concours</option>
                 <option
@@ -424,7 +428,7 @@
         <div class="reglement-panel masters-ref-panel">
           <div class="reglement-header">
             <h3>📘 Référentiel officiel Masters 2025/2026</h3>
-            <button class="btn-secondary" (click)="loadReferentielMasters()">
+            <button class="btn-secondary btn-refresh-ref" (click)="loadReferentielMasters()">
               <i class="fas fa-sync-alt"></i>
               Actualiser
             </button>
@@ -579,7 +583,9 @@
                   <span class="status-badge" [class]="master.statut">{{ master.statut }}</span>
                 </td>
                 <td>
-                  <button class="btn-action voir"><i class="fas fa-eye"></i></button>
+                  <button class="btn-action voir" title="Voir détails" (click)="voirMaster(master)">
+                    <i class="fas fa-eye"></i>
+                  </button>
                   <button
                     class="btn-action voir"
                     title="Générer la liste définitive (tri score desc, voeux 1-2-3)"
@@ -622,21 +628,49 @@
 
     <!-- ✅ GESTION CANDIDATURES -->
     <div *ngIf="currentView === 'candidatures'" class="view-content">
-      <div class="section-card">
-        <h2>📋 Toutes les candidatures</h2>
+      <div class="section-card candidatures-card">
+        <div class="candidatures-header">
+          <div>
+            <h2>📋 Toutes les candidatures</h2>
+            <p class="candidatures-subtitle">
+              Suivez les dossiers par spécialité, statut et score avec un filtrage rapide.
+            </p>
+          </div>
+          <div class="candidatures-kpis">
+            <span class="candidatures-kpi total">{{ candidaturesFiltrees.length }} affichées</span>
+            <span class="candidatures-kpi ok"
+              >{{ candidaturesSelectionneesCount }} sélectionnées</span
+            >
+            <span class="candidatures-kpi wait">{{ candidaturesEnAttenteCount }} en attente</span>
+            <span class="candidatures-kpi ko">{{ candidaturesRejeteesCount }} rejetées</span>
+          </div>
+        </div>
 
         <div class="filters-bar">
-          <select class="filter-select">
+          <div class="search-box candidature-search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              [(ngModel)]="candidatureSearchTerm"
+              placeholder="Rechercher: numéro, candidat, master..."
+            />
+          </div>
+
+          <select class="filter-select" [(ngModel)]="candidatureSpecialiteFilter">
             <option value="">Toutes les spécialités</option>
-            <option>Informatique</option>
-            <option>Électronique</option>
+            <option *ngFor="let specialite of specialitesCandidatures" [value]="specialite">
+              {{ specialite }}
+            </option>
           </select>
-          <select class="filter-select">
+
+          <select class="filter-select" [(ngModel)]="candidatureStatutFilter">
             <option value="">Tous les statuts</option>
-            <option>Accepté</option>
-            <option>En attente</option>
-            <option>Rejeté</option>
+            <option value="selectionne">Sélectionné</option>
+            <option value="en_attente">En attente</option>
+            <option value="rejete">Rejeté</option>
+            <option value="soumis">Soumis</option>
           </select>
+
           <div class="download-box">
             <label>Download table data as</label>
             <select [(ngModel)]="candidaturesExportFormat">
@@ -665,7 +699,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let candidature of candidaturesList">
+              <tr *ngFor="let candidature of candidaturesFiltrees">
                 <td>
                   <strong>{{ candidature.numero }}</strong>
                 </td>
@@ -683,7 +717,13 @@
                 <td>
                   <button class="btn-action voir" (click)="voirCandidature(candidature)">
                     <i class="fas fa-eye"></i>
+                    Consulter
                   </button>
+                </td>
+              </tr>
+              <tr *ngIf="candidaturesFiltrees.length === 0">
+                <td colspan="7" class="empty-candidatures-row">
+                  Aucune candidature ne correspond aux filtres sélectionnés.
                 </td>
               </tr>
             </tbody>
@@ -693,22 +733,28 @@
     </div>
 
     <!-- ✅ PARAMÈTRES -->
-    <div *ngIf="currentView === 'parametres'" class="view-content">
-      <div class="section-card">
-        <div class="section-header">
-          <h2>🛡️ Administration du site</h2>
-          <button class="btn-primary" (click)="saveActionRoleMatrix()">
+    <div *ngIf="currentView === 'parametres'" class="view-content admin-site-view">
+      <div class="section-card admin-site-card">
+        <div class="section-header admin-site-header">
+          <div>
+            <h2>🛡️ Administration du site</h2>
+            <p class="admin-site-subtitle">
+              Attribuez précisément les fonctionnalités à chaque type d'utilisateur (candidat,
+              commission, responsable commission, administrateur).
+            </p>
+          </div>
+          <button class="btn-primary btn-save-matrix" (click)="saveActionRoleMatrix()">
             <i class="fas fa-save"></i>
             Enregistrer la matrice
           </button>
         </div>
 
-        <p class="admin-site-subtitle">
-          Attribuez précisément les fonctionnalités à chaque type d'utilisateur (candidat,
-          commission, responsable commission, administrateur).
-        </p>
-
         <form class="action-form" (ngSubmit)="addAction()">
+          <div class="action-form-title">
+            <h3>Nouvelle action</h3>
+            <span>Définissez les droits par rôle</span>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label>Nom d'action *</label>
@@ -717,6 +763,7 @@
                 [(ngModel)]="newActionName"
                 name="newActionName"
                 placeholder="Ex: Validation dossier"
+                class="action-input action-input-primary"
                 required
               />
             </div>
@@ -727,6 +774,7 @@
                 [(ngModel)]="newActionDescription"
                 name="newActionDescription"
                 placeholder="Description courte (optionnelle)"
+                class="action-input action-input-secondary"
               />
             </div>
           </div>
@@ -746,6 +794,10 @@
             <i class="fas fa-plus"></i>
             Ajouter action
           </button>
+          <p class="action-auto-save-note">
+            Les modifications sont enregistrées automatiquement après ajout, suppression ou
+            changement de rôle.
+          </p>
         </form>
 
         <div class="table-container action-matrix-table">
@@ -761,7 +813,9 @@
             </thead>
             <tbody>
               <tr *ngFor="let action of actionRoleMatrix">
-                <td>#{{ action.action_no }}</td>
+                <td>
+                  <span class="action-no-chip">#{{ action.action_no }}</span>
+                </td>
                 <td>
                   <div class="action-name">{{ action.action_name }}</div>
                   <small *ngIf="action.description">{{ action.description }}</small>
@@ -785,11 +839,14 @@
         </div>
       </div>
 
-      <div class="section-card">
+      <div class="section-card admin-summary-card">
         <h2>📌 Résumé des fonctionnalités par utilisateur</h2>
         <div class="role-summary-grid">
           <div class="role-summary-card" *ngFor="let role of roleColumns">
-            <h3>{{ role.label }}</h3>
+            <div class="role-summary-head">
+              <h3>{{ role.label }}</h3>
+              <span class="role-count-pill">{{ getRoleActions(role.key).length }}</span>
+            </div>
             <p class="role-count">{{ getRoleActions(role.key).length }} fonctionnalités actives</p>
             <ul>
               <li *ngFor="let actionName of getRoleActions(role.key)">
@@ -802,16 +859,81 @@
     </div>
 
     <!-- ✅ RAPPORTS -->
-    <div *ngIf="currentView === 'rapports'" class="view-content">
-      <div class="section-card">
-        <h2>📊 Rapports et statistiques</h2>
-        <div class="rapports-actions">
-          <button class="btn-primary" (click)="genererRapport()">
-            <i class="fas fa-file-pdf"></i> Générer rapport PDF
-          </button>
-          <button class="btn-primary" (click)="exporterDonnees()">
-            <i class="fas fa-file-excel"></i> Exporter données Excel
-          </button>
+    <div *ngIf="currentView === 'rapports'" class="view-content rapports-view">
+      <div class="section-card rapports-hero-card">
+        <div class="rapports-hero-head">
+          <div>
+            <h2>📊 Rapports et statistiques</h2>
+            <p class="rapports-subtitle">
+              Suivi global des candidatures, tendances par master et synthèse rapide exportable.
+            </p>
+          </div>
+
+          <div class="rapports-controls">
+            <select
+              [(ngModel)]="reportPeriod"
+              class="filter-select rapports-select"
+              aria-label="Période des rapports"
+            >
+              <option value="7j">Derniers 7 jours</option>
+              <option value="30j">Derniers 30 jours</option>
+              <option value="semestre">Ce semestre</option>
+              <option value="annee">Cette année</option>
+            </select>
+
+            <button class="btn-primary" (click)="genererRapport()">
+              <i class="fas fa-file-pdf"></i>
+              Générer rapport PDF
+            </button>
+
+            <button class="btn-primary" (click)="exporterDonnees()">
+              <i class="fas fa-file-excel"></i>
+              Exporter données Excel
+            </button>
+          </div>
+        </div>
+
+        <div class="rapports-kpi-grid">
+          <div class="rapports-kpi-card total">
+            <span class="label">Total candidatures</span>
+            <strong>{{ candidaturesList.length }}</strong>
+          </div>
+          <div class="rapports-kpi-card accepted">
+            <span class="label">Sélectionnées</span>
+            <strong>{{ candidaturesSelectionneesCount }}</strong>
+          </div>
+          <div class="rapports-kpi-card pending">
+            <span class="label">En attente</span>
+            <strong>{{ candidaturesEnAttenteCount }}</strong>
+          </div>
+          <div class="rapports-kpi-card rejected">
+            <span class="label">Rejetées</span>
+            <strong>{{ candidaturesRejeteesCount }}</strong>
+          </div>
+        </div>
+
+        <div class="rapports-panels">
+          <div class="rapports-panel">
+            <h3>Répartition par statut</h3>
+            <div class="statut-list">
+              <div class="statut-row" *ngFor="let item of reportStatusBreakdown">
+                <span class="statut-label" [ngClass]="getReportStatusClass(item.key)">
+                  {{ getStatutLabel(item.key) }}
+                </span>
+                <strong>{{ item.count }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="rapports-panel">
+            <h3>Top masters (volume)</h3>
+            <div class="master-list">
+              <div class="master-row" *ngFor="let item of reportTopMasters">
+                <span>{{ item.master }}</span>
+                <strong>{{ item.count }}</strong>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -961,7 +1083,13 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2>{{ nouveauMaster.id ? 'Modifier' : 'Ajouter' }} un Master</h2>
-        <button class="btn-close" (click)="fermerModalMaster()">
+        <button
+          class="btn-close"
+          type="button"
+          aria-label="Fermer la fenêtre"
+          title="Fermer"
+          (click)="fermerModalMaster()"
+        >
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -1032,86 +1160,41 @@
     </div>
   </div>
 
-  <!-- ✅ MODAL OFFRE INGÉNIEUR -->
-  <div *ngIf="showModalOffreIngenieur" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>{{ nouvelleOffreIngenieur.id ? 'Modifier' : 'Ajouter' }} une offre ingénieur</h2>
-        <button class="btn-close" (click)="fermerModalOffreIngenieur()">
+  <!-- ✅ MODAL DÉTAIL CANDIDATURE -->
+  <div *ngIf="showCandidatureDetailModal && selectedCandidature" class="candidature-detail-overlay">
+    <div class="candidature-detail-modal">
+      <div class="candidature-detail-header">
+        <h2>Détails candidature</h2>
+        <button
+          class="btn-close"
+          type="button"
+          aria-label="Fermer les détails"
+          title="Fermer"
+          (click)="fermerModalCandidature()"
+        >
           <i class="fas fa-times"></i>
         </button>
       </div>
 
-      <div class="modal-body">
-        <form (ngSubmit)="enregistrerOffreIngenieur()">
-          <div class="form-group">
-            <label>Titre de l'offre *</label>
-            <input
-              type="text"
-              [(ngModel)]="nouvelleOffreIngenieur.titre"
-              name="offre_titre"
-              required
-            />
-          </div>
+      <div class="candidature-detail-body">
+        <p><strong>N° Candidature:</strong> {{ selectedCandidature.numero }}</p>
+        <p><strong>Candidat:</strong> {{ selectedCandidature.candidat_nom }}</p>
+        <p><strong>Email:</strong> {{ selectedCandidature.candidat_email }}</p>
+        <p><strong>Master:</strong> {{ selectedCandidature.master_nom }}</p>
+        <p><strong>Spécialité:</strong> {{ selectedCandidature.specialite }}</p>
+        <p><strong>Score:</strong> {{ selectedCandidature.score }}</p>
+        <p><strong>Statut:</strong> {{ getStatutLabel(selectedCandidature.statut) }}</p>
+        <p>
+          <strong>Date de soumission:</strong>
+          {{ selectedCandidature.date_soumission | date: 'dd/MM/yyyy' }}
+        </p>
+      </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Spécialité *</label>
-              <input
-                type="text"
-                [(ngModel)]="nouvelleOffreIngenieur.specialite"
-                name="offre_specialite"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label>Places *</label>
-              <input
-                type="number"
-                [(ngModel)]="nouvelleOffreIngenieur.places"
-                name="offre_places"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Date limite *</label>
-              <input
-                type="date"
-                [(ngModel)]="nouvelleOffreIngenieur.date_limite"
-                name="offre_date_limite"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label>Statut *</label>
-              <select [(ngModel)]="nouvelleOffreIngenieur.statut" name="offre_statut" required>
-                <option value="ouvert">Ouvert</option>
-                <option value="ferme">Fermé</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              [(ngModel)]="nouvelleOffreIngenieur.description"
-              name="offre_description"
-              rows="3"
-            ></textarea>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" (click)="fermerModalOffreIngenieur()">
-              Annuler
-            </button>
-            <button type="submit" class="btn-primary">
-              <i class="fas fa-save"></i> Enregistrer
-            </button>
-          </div>
-        </form>
+      <div class="candidature-detail-footer">
+        <button class="btn-secondary btn-close-candidature" (click)="fermerModalCandidature()">
+          <i class="fas fa-check-circle"></i>
+          Fermer
+        </button>
       </div>
     </div>
   </div>
