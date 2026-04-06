@@ -14,6 +14,7 @@ interface OffreIngenieurForm {
   date_limite: string;
   statut: 'ouvert' | 'ferme';
   description: string;
+  document_officiel_pdf_url?: string | null;
 }
 
 @Component({
@@ -30,6 +31,7 @@ export class EditOffreIngenieurComponent implements OnInit {
   isSaving = false;
   errorMessage = '';
   successMessage = '';
+  selectedPdfFile: File | null = null;
 
   offreForm: OffreIngenieurForm = {
     id: 0,
@@ -40,6 +42,7 @@ export class EditOffreIngenieurComponent implements OnInit {
     date_limite: '',
     statut: 'ouvert',
     description: '',
+    document_officiel_pdf_url: null,
   };
 
   constructor(
@@ -63,6 +66,7 @@ export class EditOffreIngenieurComponent implements OnInit {
         date_limite: '',
         statut: 'ouvert',
         description: '',
+        document_officiel_pdf_url: null,
       };
       return;
     }
@@ -109,6 +113,7 @@ export class EditOffreIngenieurComponent implements OnInit {
             date_limite: item.date_cloture || '',
             statut: item.actif ? 'ouvert' : 'ferme',
             description: item.description || '',
+            document_officiel_pdf_url: item.document_officiel_pdf_url || null,
           };
 
           this.isLoading = false;
@@ -146,6 +151,11 @@ export class EditOffreIngenieurComponent implements OnInit {
       actif: this.offreForm.statut === 'ouvert',
     };
 
+    if (this.selectedPdfFile && !this.isCreateMode) {
+      this.saveOffreWithPdf(payload);
+      return;
+    }
+
     if (this.isCreateMode) {
       this.http
         .post('http://localhost:8003/api/candidatures/concours/admin/', payload, {
@@ -154,6 +164,10 @@ export class EditOffreIngenieurComponent implements OnInit {
         .subscribe({
           next: (created: any) => {
             this.successMessage = 'Offre ingénieur ajoutée avec succès.';
+            if (this.selectedPdfFile && created?.id) {
+              this.uploadPdfAfterCreate(Number(created.id));
+              return;
+            }
             this.isSaving = false;
             const newId = Number(created?.id);
             if (newId) {
@@ -183,11 +197,99 @@ export class EditOffreIngenieurComponent implements OnInit {
         next: () => {
           this.successMessage = 'Offre ingénieur modifiée avec succès.';
           this.isSaving = false;
+          this.selectedPdfFile = null;
         },
         error: (error) => {
           this.errorMessage =
             error?.error?.error || "Erreur lors de la modification de l'offre ingénieur.";
           this.isSaving = false;
+        },
+      });
+  }
+
+  onPdfSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length > 0 ? input.files[0] : null;
+
+    if (!file) {
+      this.selectedPdfFile = null;
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      this.errorMessage = 'Seuls les fichiers PDF sont acceptés.';
+      this.selectedPdfFile = null;
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.errorMessage = 'Fichier trop volumineux (max 10 MB).';
+      this.selectedPdfFile = null;
+      return;
+    }
+
+    this.errorMessage = '';
+    this.selectedPdfFile = file;
+  }
+
+  private saveOffreWithPdf(payload: any): void {
+    if (!this.offreId || !this.selectedPdfFile) {
+      this.errorMessage = 'Impossible de televerser le PDF pour cette offre.';
+      this.isSaving = false;
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      formData.append(key, String(value ?? ''));
+    });
+    formData.append('document_officiel_pdf', this.selectedPdfFile);
+
+    this.http
+      .patch(`http://localhost:8003/api/candidatures/concours/${this.offreId}/admin/`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (updated: any) => {
+          this.successMessage = 'Offre ingénieur modifiée avec succès (PDF inclus).';
+          this.offreForm.document_officiel_pdf_url = updated?.document_officiel_pdf_url || null;
+          this.selectedPdfFile = null;
+          this.isSaving = false;
+        },
+        error: (error) => {
+          this.errorMessage =
+            error?.error?.error || "Erreur lors de la sauvegarde de l'offre ingénieur.";
+          this.isSaving = false;
+        },
+      });
+  }
+
+  private uploadPdfAfterCreate(concoursId: number): void {
+    if (!this.selectedPdfFile) {
+      this.isSaving = false;
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    const formData = new FormData();
+    formData.append('document_officiel_pdf', this.selectedPdfFile);
+
+    this.http
+      .patch(`http://localhost:8003/api/candidatures/concours/${concoursId}/admin/`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          this.selectedPdfFile = null;
+          this.isSaving = false;
+          this.router.navigate(['/admin/offres-ingenieur', concoursId, 'edit']);
+        },
+        error: () => {
+          this.errorMessage =
+            'Offre créée mais échec du téléversement PDF. Vous pouvez le refaire en mode modification.';
+          this.isSaving = false;
+          this.router.navigate(['/admin/offres-ingenieur', concoursId, 'edit']);
         },
       });
   }

@@ -3,8 +3,13 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from .models import Candidature
-from .emails import envoyer_email_changement_statut
+from .models import Candidature, Notification
+from .emails import envoyer_email_changement_statut, envoyer_rappel_deadline_j3
+from .notifications import (
+    envoyer_rappels_j3_preinscription,
+    envoyer_rappels_j1_depot_dossier,
+    sync_preinscription_open_notifications,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -139,3 +144,115 @@ def verifier_paiements_listes_actives():
         
         if resultats['places_liberees'] > 0:
             VerificationPaiementService.generer_liste_suivante_si_necessaire(liste)
+
+
+@shared_task
+def verifier_deadlines_j3():
+    """
+    Cree les notifications J-3 (et en-dessous) pour les candidats selectionnes/preselectionnes
+    et envoie un email de rappel une seule fois par candidature+deadline.
+    """
+    now = timezone.now()
+    limite = now + timedelta(days=3)
+
+    candidatures = Candidature.objects.select_related('candidat', 'master').filter(
+        statut__in=['selectionne', 'preselectionne'],
+        date_limite_modification__isnull=False,
+        date_limite_modification__gte=now,
+        date_limite_modification__lte=limite,
+    )
+
+    created_notifications = 0
+    sent_emails = 0
+
+    for candidature in candidatures:
+        delta = candidature.date_limite_modification - now
+        jours_restants = max(0, int((delta.total_seconds() + 86399) // 86400))
+        dedup_key = (
+            f"deadline-j3-{candidature.id}-"
+            f"{candidature.date_limite_modification.date().isoformat()}"
+        )
+
+        notification, created = Notification.objects.get_or_create(
+            user=candidature.candidat,
+            dedup_key=dedup_key,
+            defaults={
+                'titre': 'Deadline proche',
+                'message': (
+                    f"Votre candidature {candidature.numero} ({candidature.master.nom}) "
+                    f"arrive a echeance dans {jours_restants} jour(s)."
+                ),
+                'type': 'warning',
+                'lue': False,
+            },
+        )
+
+        if created:
+            created_notifications += 1
+            try:
+                envoyer_rappel_deadline_j3(candidature, jours_restants)
+                sent_emails += 1
+            except Exception:
+                logger.exception(
+                    "Erreur envoi email rappel J-3 candidature=%s",
+                    candidature.id,
+                )
+        else:
+            # Si deja creee mais non lue, on conserve l'etat. Pas de re-envoi email.
+            notification.message = (
+                f"Votre candidature {candidature.numero} ({candidature.master.nom}) "
+                f"arrive a echeance dans {jours_restants} jour(s)."
+            )
+            notification.save(update_fields=['message'])
+
+    logger.info(
+        "Tache J-3 terminee: notifications_creees=%s emails_envoyes=%s",
+        created_notifications,
+        sent_emails,
+    )
+    return {
+        'notifications_creees': created_notifications,
+        'emails_envoyes': sent_emails,
+    }
+
+
+@shared_task
+def envoyer_rappels_j3_tous():
+    """
+    Tâche Celery pour envoyer les rappels J-3 avant deadline préinscription.
+    À exécuter quotidiennement via Celery Beat.
+    """
+    try:
+        envoyer_rappels_j3_preinscription()
+        return {'status': 'success', 'task': 'envoyer_rappels_j3_preinscription'}
+    except Exception as e:
+        logger.exception("Erreur tâche envoyer_rappels_j3_preinscription: %s", e)
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def envoyer_rappels_j1_tous():
+    """
+    Tâche Celery pour envoyer les rappels J-1 avant deadline dépôt dossier.
+    À exécuter quotidiennement via Celery Beat.
+    """
+    try:
+        envoyer_rappels_j1_depot_dossier()
+        return {'status': 'success', 'task': 'envoyer_rappels_j1_depot_dossier'}
+    except Exception as e:
+        logger.exception("Erreur tâche envoyer_rappels_j1_depot_dossier: %s", e)
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def sync_offres_ouvertes_tous():
+    """
+    Tâche Celery pour notifier les candidats des offres ouvertes.
+    À exécuter quotidiennement via Celery Beat.
+    """
+    try:
+        sync_preinscription_open_notifications()
+        return {'status': 'success', 'task': 'sync_preinscription_open_notifications'}
+    except Exception as e:
+        logger.exception("Erreur tâche sync_preinscription_open_notifications: %s", e)
+        return {'status': 'error', 'error': str(e)}

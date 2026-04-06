@@ -1,0 +1,157 @@
+@startuml
+!define ARROWCOLOR #3498db
+!define SUCCESSCOLOR #27ae60
+!define ERRORCOLOR #e74c3c
+!define WAITCOLOR #f39c12
+!define NEUTRALCOLOR #34495e
+
+skinparam stateFontColor white
+skinparam stateBackgroundColor #34495e
+skinparam stateArrowColor #3498db
+skinparam state {
+  BackgroundColor #34495e
+  BorderColor #2c3e50
+  ArrowColor #3498db
+  FontColor white
+}
+
+title Sprint 2 - Workflows de Suivi de Candidature\n(Tous les Scénarios)
+
+state "PREINSCRIT" as S1 <<start>>
+
+state "Évaluation\nPrésélection" as S2
+
+state "NON PRÉSÉLECTIONNÉ\n(REJETÉ)" as S3_FAIL <<end>>
+
+state "PRÉSÉLECTIONNÉ" as S3
+
+state "Contrôle\nDépôt Dossier" as S4
+
+state "DOSSIER NON DÉPOSÉ\n(REJETÉ)" as S5_FAIL <<end>>
+
+state "DOSSIER COMPLET\nDÉPOSÉ" as S5
+
+state "Évaluation\nSélection" as S6
+
+state "CANDIDATURE\nREJETÉE" as S7_FAIL <<end>>
+
+state "EN ATTENTE\nDE SÉLECTION" as S6_WAIT
+
+state "CANDIDATURE\nSÉLECTIONNÉE" as S7
+
+state "Vérification\nPaiement" as S8
+
+state "INSCRIPTION\nNON CONFIRMÉE\n(REJETÉ)" as S9_FAIL <<end>>
+
+state "INSCRIPTION\nCONFIRMÉE ✓" as S9_SUCCESS <<end>>
+
+state "NON ADMIS\n(REJETÉ)" as S10_FAIL <<end>>
+
+' ========== FLUX 1: Chemin Complet de Succès ==========
+S1 --> S2: Soumission candidature
+
+S2 --> S3: ✓ Présélectionné\n(Résultats publiés)
+
+S3 --> S4: Vérification délai\n& pièces requises
+
+S4 --> S5: ✓ Dossier déposé\navant date limite
+
+S5 --> S6: Dossier validé\npar commission
+
+S6 --> S7: ✓ Sélectionné\n(Admis)
+
+S7 --> S8: Notification résultats
+
+S8 --> S9_SUCCESS: ✓ Paiement effectué\nInscription confirmée
+
+' ========== FLUX 2: Non Présélectionné (ÉCHEC PRÉCOCE) ==========
+S2 --> S3_FAIL: ✗ Non présélectionné\n(Fin du processus)
+
+' ========== FLUX 3: Dossier Non Déposé (ÉCHEC) ==========
+S4 --> S5_FAIL: ✗ Dossier NON déposé\nDélai dépassé
+
+' ========== FLUX 4: Rejet lors Sélection ==========
+S6 --> S7_FAIL: ✗ Non sélectionné\nEvaluation négative
+
+' ========== FLUX 5: En Attente -> Sélectionné -> Succès ==========
+S6 -.-> S6_WAIT: ① États intermédiaires\n(liste en attente)
+
+S6_WAIT --> S7: ✓ Promotion de\nla liste d'attente
+
+' ========== FLUX 6: En Attente -> Non Admis ==========
+S6_WAIT --> S10_FAIL: ✗ Non promu\nde la liste d'attente
+
+' ========== FLUX 7: Pas de Paiement -> Rejet ==========
+S8 --> S9_FAIL: ✗ Pas de paiement\nDélai dépassé
+
+' ========== Légende & Explications ==========
+
+note top of S1
+  **ÉTAPE 1 - PRÉINSCRIPTION**
+  Candidat soumet sa candidature
+  sur l'offre (Master/Cycle Ingénieur)
+end note
+
+note top of S2
+  **ÉTAPE 2 - PRÉSÉLECTION**
+  Commission évalue sur dossier initial
+  (CV, notes, diplômes)
+end note
+
+note top of S3_FAIL
+  **SCÉNARIO 2** (En Rouge)
+  Non présélectionné → Fin du processus
+  Candidat ne peut pas continuer
+end note
+
+note top of S5
+  **ÉTAPE 3 - DÉPÔT DOSSIER**
+  Candidat présélectionné dépose
+  dossier complet (pièces requises)
+end note
+
+note top of S5_FAIL
+  **SCÉNARIO 3** (En Rouge)
+  Dossier NON déposé = Fin
+  Délai expiré → Automatiquement rejeté
+end note
+
+note top of S7
+  **ÉTAPE 4 - SÉLECTION FINALE**
+  Commission note et classe
+  les candidatures par score
+end note
+
+note top of S6_WAIT
+  **ÉTAPE 5 - LISTE D'ATTENTE**
+  SCÉNARIO 4: Peut être promu
+  via liste d'attente si désistement
+end note
+
+note top of S9_SUCCESS
+  **ÉTAPE 6 - INSCRIPTION CONFIRMÉE ✓**
+  Paiement reçu = Inscription validée
+  Candidat admis pour l'année
+end note
+
+note top of S9_FAIL
+  **ÉCHEC PAR DÉFAUT DE PAIEMENT**
+  Inscription non confirmée = Rejet
+  Allocation accordée aux suivants
+end note
+
+note bottom
+  **COULEURS DES ÉTATS:**
+  🟢 SUCCÈS (Vert) - Inscription confirmée
+  🔴 REJET (Rouge) - Candidature échouée
+  🟡 ATTENTE (Orange) - En cours d'évaluation
+  ⚪ NEUTRE (Gris) - États normaux
+  
+  **LÉGENDE DES TRANSITIONS:**
+  ✓ = Condition remplie → Transiton possible
+  ✗ = Condition non remplie → Rejet
+  ← , → = Flux linéaire principal
+  - - → = Flux alternatif / d'attente
+end note
+
+@enduml

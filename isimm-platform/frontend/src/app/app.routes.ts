@@ -35,6 +35,7 @@ import { DeposerDocumentsComponent } from './components/candidat/deposer-documen
 import { ChoixCandidatureComponent } from './components/choix-candidature/choix-candidature';
 import { NouvelleReclamationComponent } from './components/candidat/nouvelle-reclamation/nouvelle-reclamation';
 import { GuideEtudiantComponent } from './components/guide-etudiant/guide-etudiant';
+import { PreinscriptionDetailComponent } from './components/preinscription-detail/preinscription-detail.component';
 
 // ========================================
 // ADMIN COMPONENTS
@@ -122,6 +123,10 @@ export const routes: Routes = [
   {
     path: 'guide-etudiant',
     component: GuideEtudiantComponent,
+  },
+  {
+    path: 'preinscription/detail/:code',
+    component: PreinscriptionDetailComponent,
   },
 
   // ========================================

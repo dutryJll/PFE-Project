@@ -84,6 +84,10 @@ class ConfigurationAppel(models.Model):
     
     capacite_accueil = models.IntegerField()
     capacite_liste_attente = models.IntegerField(default=50)
+    capacite_interne = models.IntegerField(default=0)
+    capacite_externe = models.IntegerField(default=0)
+    document_officiel_pdf = models.FileField(upload_to='offres/', null=True, blank=True)
+    est_cache = models.BooleanField(default=False)
 
     # Schema configurable du formulaire de depot dossier par master.
     # Exemple:
@@ -250,6 +254,38 @@ class Candidature(models.Model):
     
     def est_dans_corbeille(self):
         return self.statut == 'annule' and self.annule_par_candidat
+
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('info', 'Information'),
+        ('success', 'Succès'),
+        ('warning', 'Avertissement'),
+        ('danger', 'Danger'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    titre = models.CharField(max_length=255)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='info')
+    lue = models.BooleanField(default=False)
+    dedup_key = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'dedup_key'],
+                name='unique_notification_dedup_per_user',
+            )
+        ]
+        indexes = [
+            models.Index(fields=['user', 'lue', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} - {self.titre}"
 
 
 class FormuleScore(models.Model):
@@ -505,6 +541,7 @@ class Concours(models.Model):
     
     places_disponibles = models.IntegerField()
     actif = models.BooleanField(default=True)
+    document_officiel_pdf = models.FileField(upload_to='offres/', null=True, blank=True)
     
     conditions_admission = models.JSONField(default=dict)
     

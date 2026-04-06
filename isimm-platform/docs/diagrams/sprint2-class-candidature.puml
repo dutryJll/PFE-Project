@@ -1,0 +1,241 @@
+@startuml
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam backgroundColor #f5f5f5
+
+package "Sprint 2 - Candidature" #DDEBF7 {
+
+  enum EtatCandidature {
+    BROUILLON
+    SOUMISE
+    PRESELECTIONNEE
+    NON_PRESELECTIONNEE
+    DOSSIER_COMPLET
+    DOSSIER_INCOMPLET
+    DOSSIER_NON_DEPOSE
+    SELECTIONNEE
+    EN_ATTENTE_SELECTION
+    EN_ATTENTE_PAIEMENT
+    INSCRIPTION_CONFIRMEE
+    INSCRIPTION_NON_CONFIRMEE
+    ADMISE
+    NON_ADMISE
+    REJETEE
+    ANNULEE
+  }
+
+  enum TypeFormation {
+    MASTER_PROFESSIONNEL
+    MASTER_RECHERCHE
+    CYCLE_INGENIEUR
+  }
+
+  enum TypePiece {
+    CIN
+    DIPLOME
+    RELEVE_NOTES
+    CERTIFICAT_LANGUE
+    CV
+    PHOTO
+    LETTRE_MOTIVATION
+    AUTRE
+  }
+
+  enum StatutDossier {
+    INCOMPLET
+    COMPLET
+    VALIDE
+    REJETE
+  }
+
+  class Candidat {
+    +id: int
+    +auth_user_id: int
+    +cin: string
+    +nom: string
+    +prenom: string
+    +email: string
+    +telephone: string
+    +date_inscription: datetime
+    +profil_complet: boolean
+    --
+    +creerCandidature(formation): Candidature
+    +modifierCandidature(id): void
+    +consulterEtat(id): EtatCandidature
+    +consulterScoreClassement(id): ScoreClassement
+    +deposerDossier(id): DossierNumerique
+    +getHistoriqueCandidatures(): Candidature[]
+  }
+
+  class FormationOffre {
+    +id: int
+    +code: string
+    +intitule: string
+    +type: TypeFormation
+    +annee_universitaire: string
+    +capacite_total: int
+    +capacite_isimm: int
+    +capacite_externe: int
+    +date_ouverture: date
+    +date_limite_candidature: date
+    +date_limite_dossier: date
+    +places_disponibles: int
+    --
+    +estOuverte(): boolean
+    +calculerDelaiFermeture(): int
+  }
+
+  class Candidature {
+    +id: int
+    +numero_candidature: string
+    +candidat_id: int
+    +formation_id: int
+    +date_creation: datetime
+    +date_soumission: datetime
+    +date_derniere_modification: datetime
+    +etat: EtatCandidature
+    +choix_priorite: int (1-3)
+    +score_final: decimal
+    +rang_classement: int
+    --
+    +soumettre(): boolean
+    +mettreAJour(donnees): void
+    +verifierDelaiModification(): boolean
+    +verifierDelaiDossier(): boolean
+    +annuler(): void
+  }
+
+  class DossierNumerique {
+    +id: int
+    +candidature_id: int
+    +date_depot: datetime
+    +date_derniere_modif: datetime
+    +statut: StatutDossier
+    +pourcentage_completion: int
+    +commentaire_admin: text
+    --
+    +calculerCompletude(): int
+    +validerDossier(): boolean
+    +rejecterDossier(motif): void
+    +ajouterPiece(fichier): PieceJointe
+  }
+
+  class PieceJointe {
+    +id: int
+    +dossier_id: int
+    +type_piece: TypePiece
+    +nom_fichier: string
+    +chemin_stockage: string
+    +taille_ko: int
+    +hash_fichier: string
+    +uploaded_at: datetime
+    +valide: boolean
+    --
+    +remplacer(nouveauFichier): void
+    +supprimer(): void
+    +validerFormat(): boolean
+  }
+
+  class HistoriqueEtat {
+    +id: int
+    +candidature_id: int
+    +ancien_etat: EtatCandidature
+    +nouvel_etat: EtatCandidature
+    +date_changement: datetime
+    +initiateur_id: int
+    +initiateur_role: string
+    +commentaire: text
+    --
+    +enregistrerChangement(): void
+  }
+
+  class Evaluation {
+    +id: int
+    +candidature_id: int
+    +date_evaluation: datetime
+    +note_dossier: decimal (0-20)
+    +note_bonus: decimal (0-5)
+    +score_total: decimal
+    +criteres_evaluation: json
+    +recommandation: string (ADMIS|ATTENTE|REJETE)
+    --
+    +calculerScore(): decimal
+    +genererRapport(): string
+  }
+
+  class ScoreClassement {
+    +id: int
+    +candidature_id: int
+    +formation_id: int
+    +score_final: decimal
+    +rang: int
+    +rang_en_attente: int
+    +publie_le: datetime
+    +statut_final: string
+    --
+    +calculerRang(): int
+    +determinerAdmission(): boolean
+  }
+
+  class Notification {
+    +id: int
+    +candidat_id: int
+    +type: string (ETAT|RESULTAT|DEPOT|RAPPEL)
+    +sujet: string
+    +contenu: text
+    +date_creation: datetime
+    +date_envoi: datetime
+    +statut_envoi: string (ENVOYE|ECHEC)
+    +lue: boolean
+    --
+    +envoyer(): boolean
+    +marquerCommeEchouee(raison): void
+  }
+}
+
+Candidat "1" -- "0..*" Candidature : postuler a
+Candidat "1" -- "0..*" Notification : destintaire
+FormationOffre "1" -- "0..*" Candidature : reception de
+Candidature "1" *-- "0..1" DossierNumerique : contient
+Candidature "1" *-- "0..*" HistoriqueEtat : genere
+Candidature "1" o-- "0..1" Evaluation : sujet de
+Candidature "1" o-- "0..1" ScoreClassement : resultat de
+DossierNumerique "1" *-- "1..*" PieceJointe : composee de
+Notification "0..*" --> "1" Candidature : concerne
+
+note right of Candidature
+  **Flux Sprint 2 - 4 Scénarios Majeurs :**
+  
+  📌 SCÉNARIO 1 (Succès Complet):
+  Préinscrit → Présélectionné → Dossier déposé
+  → Sélectionné → Inscription confirmée ✓
+  
+  📌 SCÉNARIO 2 (Échec Précoce):
+  Préinscrit → NON PRÉSÉLECTIONNÉ (STOP)
+  Fin du processus, ne continue pas
+  
+  📌 SCÉNARIO 3 (Dossier NON déposé):
+  Préinscrit → Présélectionné → Dossier NON
+  déposé avant délai → Rejeté
+  
+  📌 SCÉNARIO 4 (En Attente):
+  Préinscrit → Présélectionné → Dossier déposé
+  → EN ATTENTE ou SÉLECTIONNÉ → Inscription
+  confirmée OU NON ADMIS
+  
+  Voir: sprint2-suivi-workflow.puml
+end note
+
+note top of FormationOffre
+  Référence les offres d'inscription
+  (Masters Prof/Recherche, Cycle Ingénieur)
+end note
+
+note bottom of DossierNumerique
+  Validation: pièces requises,
+  formats acceptés, délais respect
+end note
+
+@enduml

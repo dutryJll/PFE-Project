@@ -127,6 +127,155 @@
   margin-bottom: 1rem;
 }
 
+.rejection-block {
+  margin-top: 1rem;
+  border: 1px solid #f9c6c6;
+  background: #fff6f6;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.rejection-block h3 {
+  margin: 0 0 0.4rem;
+  color: #8b1f1f;
+  font-size: 1rem;
+}
+
+.rejection-block p {
+  margin: 0;
+  color: #7a2d2d;
+}
+
+.progress-card {
+  margin-top: 1.2rem;
+  border: 1px solid #d4dfec;
+  border-radius: 6px;
+  padding: 1rem 1rem 0.9rem;
+  background: #fff;
+}
+
+.progress-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.progress-card-head h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #17324d;
+}
+
+.progress-meta {
+  margin-bottom: 0.7rem;
+}
+
+.progress-master {
+  margin: 0;
+  color: #18334d;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.progress-number {
+  margin: 0.15rem 0 0;
+  color: #4f657d;
+  font-weight: 600;
+}
+
+.history-link {
+  border: none;
+  background: transparent;
+  color: #0f4f7a;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.progress-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: flex-start;
+  column-gap: 0.65rem;
+}
+
+.progress-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 44px;
+}
+
+.progress-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid #95a7be;
+  margin-top: 2px;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.progress-check {
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.progress-connector {
+  width: 2px;
+  height: 26px;
+  background: #a6bbcd;
+  margin-top: 4px;
+}
+
+.progress-text p {
+  margin: 0.05rem 0 0;
+  color: #22384f;
+  font-weight: 500;
+}
+
+.progress-text small {
+  color: #526c88;
+}
+
+.state-done {
+  background: #1abc9c !important;
+  border-color: #16a085 !important;
+  box-shadow: 0 0 8px rgba(26, 188, 156, 0.5);
+}
+
+.state-current {
+  background: #ffffff !important;
+  border-color: #1abc9c !important;
+  border-width: 3px !important;
+  box-shadow: 0 0 8px rgba(26, 188, 156, 0.4);
+}
+
+.state-pending {
+  background: #ecf0f1 !important;
+  border-color: #bdc3c7 !important;
+}
+
+.state-rejected {
+  background: #e74c3c !important;
+  border-color: #c0392b !important;
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+}
+
 .btn-back {
   margin-top: 1rem;
   border: none;

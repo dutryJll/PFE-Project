@@ -1,0 +1,144 @@
+.detail-page {
+  min-height: 100vh;
+  padding: 2rem 1.2rem 3rem;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(44, 123, 229, 0.15), transparent 36%),
+    radial-gradient(circle at 92% 88%, rgba(0, 153, 102, 0.12), transparent 40%), #f4f7fb;
+  color: #1b2a3a;
+  font-family: 'Manrope', 'Trebuchet MS', sans-serif;
+}
+
+.detail-header {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(140deg, #0f375d, #1b5a8f);
+  color: #fff;
+  border-radius: 18px;
+  padding: 1.4rem 1.4rem;
+  box-shadow: 0 14px 32px rgba(12, 45, 75, 0.28);
+}
+
+.detail-header h1 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
+}
+
+.detail-header p {
+  margin: 0.3rem 0;
+  line-height: 1.55;
+}
+
+.meta {
+  opacity: 0.92;
+  font-weight: 700;
+}
+
+.detail-tools,
+.detail-description,
+.dates-card,
+.table-card {
+  max-width: 1100px;
+  margin: 1rem auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1rem;
+  border: 1px solid #dbe6f2;
+  box-shadow: 0 10px 22px rgba(20, 50, 80, 0.08);
+}
+
+.detail-tools {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-back,
+.btn-pdf {
+  text-decoration: none;
+  border-radius: 9px;
+  padding: 0.56rem 0.9rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.btn-back {
+  background: #ecf3fb;
+  border-color: #c5d9ee;
+  color: #0f3f6b;
+}
+
+.btn-pdf {
+  background: #0e8f5a;
+  color: #fff;
+}
+
+.pdf-status {
+  color: #4c5e71;
+  font-size: 0.92rem;
+}
+
+.pdf-status.warning {
+  color: #aa5500;
+}
+
+.dates-card h2,
+.table-card h2 {
+  margin: 0 0 0.8rem;
+  font-size: 1.2rem;
+  color: #123f66;
+}
+
+.dates-card ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.dates-card li {
+  margin-bottom: 0.35rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th,
+td {
+  border: 1px solid #aab8c6;
+  padding: 0.58rem;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+th {
+  background: #eff5fb;
+  color: #0d3559;
+  font-weight: 800;
+}
+
+.not-found {
+  max-width: 900px;
+}
+
+@media (max-width: 768px) {
+  .detail-page {
+    padding: 1rem 0.6rem 2rem;
+  }
+
+  .detail-header,
+  .detail-tools,
+  .detail-description,
+  .dates-card,
+  .table-card {
+    border-radius: 12px;
+    padding: 0.85rem;
+  }
+}

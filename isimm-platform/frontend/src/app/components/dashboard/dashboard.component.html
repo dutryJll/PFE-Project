@@ -13,7 +13,13 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a [routerLink]="['/dashboard']" class="nav-item active"> <span>📊</span> Tableau de bord </a>
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'dashboard'"
+        (click)="switchView('dashboard')"
+      >
+        <span>📊</span> Tableau de bord
+      </a>
       <a [routerLink]="['/mes-candidatures']" class="nav-item">
         <span>📋</span> Mes candidatures
       </a>
@@ -23,6 +29,14 @@
       </a>
       <a [routerLink]="['/masters']" class="nav-item"> <span>🎓</span> Offres de Masters </a>
       <a [routerLink]="['/profile']" class="nav-item"> <span>👤</span> Mon Profil </a>
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'notifications'"
+        (click)="switchView('notifications')"
+      >
+        <span>🔔</span> Notifications
+        <span class="badge-count" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
+      </a>
       <a (click)="logout()" class="nav-item logout"> <span>🚪</span> Déconnexion </a>
     </nav>
   </aside>
@@ -30,91 +44,128 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="content-header">
-      <h1>Mon Tableau de Bord</h1>
+      <h1>{{ currentView === 'notifications' ? 'Mes notifications' : 'Mon Tableau de Bord' }}</h1>
       <button class="btn-deconnexion" (click)="logout()">Se déconnecter</button>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #e3f2fd">
-          <span style="font-size: 2rem">✓</span>
+    <div *ngIf="currentView === 'dashboard'">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #e3f2fd">
+            <span style="font-size: 2rem">✓</span>
+          </div>
+          <div class="stat-content">
+            <h3>STATUT DU DOSSIER</h3>
+            <p class="stat-value">En attente</p>
+          </div>
         </div>
-        <div class="stat-content">
-          <h3>STATUT DU DOSSIER</h3>
-          <p class="stat-value">En attente</p>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #fff3e0">
+            <span style="font-size: 2rem">🎯</span>
+          </div>
+          <div class="stat-content">
+            <h3>NOMBRE DE VŒUX</h3>
+            <p class="stat-value">0 / 3</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #fce4ec">
+            <span style="font-size: 2rem">📄</span>
+          </div>
+          <div class="stat-content">
+            <h3>DOCUMENTS VÉRIFIÉS</h3>
+            <p class="stat-value">0 / 5</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #e8f5e9">
+            <span style="font-size: 2rem">📊</span>
+          </div>
+          <div class="stat-content">
+            <h3>SCORE CALCULÉ</h3>
+            <p class="stat-value">-- / 20</p>
+          </div>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #fff3e0">
-          <span style="font-size: 2rem">🎯</span>
-        </div>
-        <div class="stat-content">
-          <h3>NOMBRE DE VŒUX</h3>
-          <p class="stat-value">0 / 3</p>
-        </div>
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <div class="welcome-icon">🎓</div>
+        <h2>Bienvenue sur votre espace candidat</h2>
+        <p>Commencez votre candidature</p>
+        <p class="welcome-description">
+          Pour postuler aux concours Masters ou Cycle Ingénieur de l'ISIMM, veuillez cliquer sur le
+          bouton ci-dessous pour démarrer votre candidature.
+        </p>
+        <a [routerLink]="['/choisir-candidature']" class="btn-start"> Commencer une candidature </a>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #fce4ec">
-          <span style="font-size: 2rem">📄</span>
-        </div>
-        <div class="stat-content">
-          <h3>DOCUMENTS VÉRIFIÉS</h3>
-          <p class="stat-value">0 / 5</p>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon" style="background: #e8f5e9">
-          <span style="font-size: 2rem">📊</span>
-        </div>
-        <div class="stat-content">
-          <h3>SCORE CALCULÉ</h3>
-          <p class="stat-value">-- / 20</p>
+      <!-- Instructions -->
+      <div class="instructions-section">
+        <h3>📌 Prochaines étapes</h3>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h4>Candidater</h4>
+              <p>Remplissez le formulaire de candidature et choisissez vos vœux</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h4>Déposer les documents</h4>
+              <p>Téléversez tous les documents requis (CIN, relevés, diplôme, etc.)</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h4>Suivi de candidature</h4>
+              <p>Consultez le statut, le score et le classement de votre candidature</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Welcome Section -->
-    <div class="welcome-section">
-      <div class="welcome-icon">🎓</div>
-      <h2>Bienvenue sur votre espace candidat</h2>
-      <p>Commencez votre candidature</p>
-      <p class="welcome-description">
-        Pour postuler aux concours Masters ou Cycle Ingénieur de l'ISIMM, veuillez cliquer sur le
-        bouton ci-dessous pour démarrer votre candidature.
-      </p>
-      <a [routerLink]="['/choisir-candidature']" class="btn-start"> Commencer une candidature </a>
-    </div>
-
-    <!-- Instructions -->
-    <div class="instructions-section">
-      <h3>📌 Prochaines étapes</h3>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>Candidater</h4>
-            <p>Remplissez le formulaire de candidature et choisissez vos vœux</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>Déposer les documents</h4>
-            <p>Téléversez tous les documents requis (CIN, relevés, diplôme, etc.)</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>Suivi de candidature</h4>
-            <p>Consultez le statut, le score et le classement de votre candidature</p>
-          </div>
-        </div>
+    <div *ngIf="currentView === 'notifications'" class="notifications-panel">
+      <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+        <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
+          ✓ Marquer tous comme lus
+        </button>
       </div>
+
+      <div
+        class="notifications-list"
+        *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
+      >
+        <article
+          class="notification-card"
+          *ngFor="let notification of getNotificationsFiltrees()"
+          [class.unread]="!notification.lue"
+          (click)="marquerNotificationCommeLue(notification.id)"
+        >
+          <div class="notification-head">
+            <strong>{{ notification.titre }}</strong>
+            <span class="notification-type" [ngClass]="'type-' + notification.type">
+              {{ notification.type }}
+            </span>
+          </div>
+          <p>{{ notification.message }}</p>
+          <small>{{ notification.date | date: 'dd/MM/yyyy HH:mm' }}</small>
+        </article>
+      </div>
+
+      <ng-template #noNotifications>
+        <div class="empty-state">
+          <p>Aucune notification pour le moment.</p>
+        </div>
+      </ng-template>
     </div>
   </main>
 </div>

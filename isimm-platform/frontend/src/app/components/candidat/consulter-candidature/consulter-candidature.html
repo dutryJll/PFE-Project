@@ -25,11 +25,11 @@
       <div class="detail-top-row">
         <span class="tag">{{ selectedCandidature.type_candidature | titlecase }}</span>
         <span class="status-pill" [ngClass]="statusClass(selectedCandidature.statut)">
-          {{ selectedCandidature.statut | titlecase }}
+          {{ statusLabel(selectedCandidature.statut) }}
         </span>
       </div>
 
-      <h2>Candidature #{{ selectedCandidature.numero || selectedCandidature.id }}</h2>
+      <h2>Candidature #{{ selectedCandidature.numero || '2603-00001-GL' }}</h2>
 
       <div class="detail-grid">
         <div class="info-block">
@@ -42,7 +42,10 @@
 
         <div class="info-block">
           <h3>Informations académiques</h3>
-          <p><strong>Formation:</strong> {{ selectedCandidature.master_nom || '-' }}</p>
+          <p>
+            <strong>Formation:</strong>
+            {{ selectedCandidature.master_nom || 'Master Recherche Génie Logiciel' }}
+          </p>
           <p><strong>Spécialité:</strong> {{ selectedCandidature.specialite || '-' }}</p>
           <p><strong>Type:</strong> {{ selectedCandidature.type_candidature || '-' }}</p>
           <p>
@@ -55,16 +58,21 @@
       <div class="detail-kpis">
         <div class="kpi-card">
           <span>Numero</span>
-          <strong>{{ selectedCandidature.numero || selectedCandidature.id }}</strong>
+          <strong>{{ selectedCandidature.numero || '2603-00001-GL' }}</strong>
         </div>
         <div class="kpi-card">
           <span>Score</span>
-          <strong>{{ selectedCandidature.score || '--' }}/20</strong>
+          <strong>{{ selectedCandidature.score || '--' }}</strong>
         </div>
         <div class="kpi-card">
           <span>Statut</span>
-          <strong>{{ selectedCandidature.statut | titlecase }}</strong>
+          <strong>{{ statusLabel(selectedCandidature.statut) }}</strong>
         </div>
+      </div>
+
+      <div class="rejection-block" *ngIf="selectedCandidature.motif_rejet">
+        <h3>Motif de rejet</h3>
+        <p>{{ selectedCandidature.motif_rejet }}</p>
       </div>
     </article>
 
@@ -72,10 +80,39 @@
       <h3>Résumé</h3>
       <div class="score-box">
         <span>Score</span>
-        <strong>{{ selectedCandidature.score || '--' }}/20</strong>
+        <strong>{{ selectedCandidature.score || '--' }}</strong>
       </div>
       <p class="helper-text">Le statut est mis à jour automatiquement après étude de dossier.</p>
       <button class="btn-primary" (click)="retourDashboard()">Retour au dashboard</button>
+
+      <section class="progress-card" *ngIf="progressSteps.length > 0">
+        <div class="progress-card-head">
+          <h4>Suivi des candidatures</h4>
+          <button class="history-link" (click)="retourDashboard()">Voir historique</button>
+        </div>
+
+        <div class="progress-meta">
+          <p class="progress-master">
+            {{ selectedCandidature.master_nom || 'Master Recherche Génie Logiciel' }}
+          </p>
+          <p class="progress-number">{{ selectedCandidature.numero || '2603-00001-GL' }}</p>
+        </div>
+
+        <div class="progress-list">
+          <div class="progress-item" *ngFor="let step of progressSteps; let last = last">
+            <div class="progress-rail">
+              <div class="progress-marker" [ngClass]="'state-' + step.state">
+                <span class="progress-check" *ngIf="step.state === 'done'">✓</span>
+              </div>
+              <div class="progress-connector" *ngIf="!last"></div>
+            </div>
+            <div class="progress-text">
+              <p>{{ step.label }}</p>
+              <small *ngIf="step.hint">{{ step.hint }}</small>
+            </div>
+          </div>
+        </div>
+      </section>
     </aside>
   </section>
 
@@ -87,7 +124,7 @@
         <p><strong>Formation:</strong> {{ candidature.master_nom || '--' }}</p>
         <p><strong>Type:</strong> {{ candidature.type_candidature }}</p>
         <p><strong>Statut:</strong> {{ candidature.statut }}</p>
-        <p><strong>Score:</strong> {{ candidature.score || '--' }}/20</p>
+        <p><strong>Score:</strong> {{ candidature.score || '--' }}</p>
         <button class="btn-primary" (click)="voirDetails(candidature)">Consulter détail</button>
       </div>
     </div>

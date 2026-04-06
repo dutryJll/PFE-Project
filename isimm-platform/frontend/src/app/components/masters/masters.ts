@@ -13,6 +13,20 @@ interface ReferentielMasters {
   [key: string]: any;
 }
 
+interface MasterOffer {
+  id: number;
+  titre?: string;
+  master_nom: string;
+  type: string;
+  specialite: string;
+  statut: string;
+  capacite_total: number;
+  capacite_interne: number;
+  capacite_externe: number;
+  document_officiel_pdf_url?: string | null;
+  [key: string]: any;
+}
+
 @Component({
   selector: 'app-masters',
   standalone: true,
@@ -25,6 +39,10 @@ export class MastersComponent implements OnInit {
   referentielMasters: ReferentielMasters | null = null;
   isLoadingReferentiel = false;
   referentielMessage = '';
+
+  // Map to store PDF URLs by formation code (mpgl, mpds, mrgl, mrmi, mp3i, ing_info_gl)
+  masterPdfUrls: Map<string, string> = new Map();
+  isLoadingOffers = false;
 
   mastersRecherche = [
     {
@@ -55,6 +73,15 @@ export class MastersComponent implements OnInit {
       prerequis: 'Licence',
       debouches: 'Data analyst, data scientist, IA appliquee',
     },
+    {
+      id: 5,
+      titre: 'Master Professionnel en Ingenierie en Instrumentation Industrielle (MP3I)',
+      description:
+        'Formation professionnelle en instrumentation industrielle avec capacites officielles.',
+      duree: '2 ans',
+      prerequis: 'Licence',
+      debouches: 'Instrumentation, automatismes, industrie 4.0',
+    },
   ];
 
   // ✅ NOUVEAU : Cycle Ingénieur
@@ -83,6 +110,7 @@ export class MastersComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadReferentielMasters();
+    this.loadMasterOffersWithPdfs();
     console.log('✅ Masters page loaded');
     console.log('🎓 Masters Recherche:', this.mastersRecherche);
     console.log('💼 Masters Professionnels:', this.mastersProfessionnels);
@@ -107,6 +135,70 @@ export class MastersComponent implements OnInit {
           this.isLoadingReferentiel = false;
         },
       });
+  }
+
+  loadMasterOffersWithPdfs(): void {
+    this.isLoadingOffers = true;
+
+    // Load public offers (visible to candidates)
+    this.http.get<MasterOffer[]>(`${this.candidatureApiBase}/offres-inscription/`).subscribe({
+      next: (offers) => {
+        offers.forEach((offer) => {
+          if (!offer.document_officiel_pdf_url) {
+            return;
+          }
+
+          const code = this.resolveOfferCode(offer);
+          if (code) {
+            this.masterPdfUrls.set(code, offer.document_officiel_pdf_url);
+          }
+        });
+        this.isLoadingOffers = false;
+        console.log('✅ PDF URLs loaded for offers');
+      },
+      error: (err) => {
+        console.error('Erreur chargement offres:', err);
+        this.isLoadingOffers = false;
+      },
+    });
+  }
+
+  private resolveOfferCode(offer: MasterOffer): string | null {
+    const haystack =
+      `${offer.titre || ''} ${offer.master_nom || ''} ${offer.specialite || ''} ${offer.type || ''}`.toLowerCase();
+
+    if (haystack.includes('science') && haystack.includes('donnee')) return 'mpds';
+    if (haystack.includes('micro') && haystack.includes('instrument')) return 'mrmi';
+    if (haystack.includes('instrumentation') || haystack.includes('3i')) return 'mp3i';
+    if (haystack.includes('recherche') && haystack.includes('genie logiciel')) return 'mrgl';
+    if (haystack.includes('ingenieur') && haystack.includes('informatique')) return 'ing_info_gl';
+    if (haystack.includes('ingenierie logicielle') || haystack.includes('mpgl')) return 'mpgl';
+
+    return null;
+  }
+
+  getPdfUrlForCode(code: string): string | null {
+    return this.masterPdfUrls.get(code) || null;
+  }
+
+  hasPdfForCodes(codes: string[]): boolean {
+    return codes.some((code) => !!this.masterPdfUrls.get(code));
+  }
+
+  downloadOfficialDocument(code: string): void {
+    const pdfUrl = this.masterPdfUrls.get(code);
+    if (!pdfUrl) {
+      console.warn('Pas de document PDF disponible pour ce master');
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   getSection(code: string): any {

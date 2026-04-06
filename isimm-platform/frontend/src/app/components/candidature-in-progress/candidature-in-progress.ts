@@ -11,19 +11,11 @@ interface DiplomeRow {
   annee: string;
 }
 
-interface ReleveRow {
-  semestre: string;
-  module: string;
-  note: string;
-}
+type FormationCode = 'MPGL' | 'MPDS' | 'MP3I' | 'MRGL' | 'MRMI' | 'ING_INFO_GL' | 'ING_EM';
 
-interface RequiredDocumentField {
-  key: string;
+interface SummaryLine {
   label: string;
-  hint: string;
-  accept: string;
-  multiple?: boolean;
-  required?: boolean;
+  value: string;
 }
 
 @Component({
@@ -50,76 +42,123 @@ export class CandidatureInProgressComponent implements OnInit {
     cin: '',
   };
 
+  formationOptions: Array<{ code: FormationCode; label: string }> = [
+    { code: 'MPGL', label: 'Mastère Professionnel en Génie logiciel (GL)' },
+    { code: 'MPDS', label: 'Mastère Professionnel en sciences de données (DS)' },
+    {
+      code: 'MP3I',
+      label: 'Mastère Professionnel en Ingénieries en Instrumentation industrielle (3I)',
+    },
+    { code: 'MRGL', label: 'Mastère Recherche en Génie logiciel (MRGL)' },
+    { code: 'MRMI', label: 'Mastère Recherche en micro-électronique et instrumentation' },
+    {
+      code: 'ING_INFO_GL',
+      label: 'Ingénieur en sciences Appliquées et Technologie : Informatique, Génie logiciel',
+    },
+    {
+      code: 'ING_EM',
+      label: 'Ingénieur en sciences Appliquées et Technologie : Electronique, Microélectronique',
+    },
+  ];
+
+  diplomeOptions: string[] = [
+    'Licence en Informatique',
+    "Licence en Sciences de l'Informatique",
+    'Licence en Informatique de Gestion',
+    'Licence en Data Science',
+    'Licence en Electronique',
+    'Licence en Electrotechnique',
+    'Licence en Instrumentation et Metrologie',
+    'Licence TIC : RIoT',
+    'Maitrise en Informatique',
+    'Premiere annee Ingenieur Electronique/Instrumentation',
+    'Deuxieme annee cycle preparatoire integre informatique ISIMM',
+    'Troisieme annee licence scientifique/technique (LMD)',
+    'Autre diplome',
+  ];
+
+  selectedFormation: FormationCode | '' = '';
+  selectedDiplome = '';
+  mpGlDs = {
+    etablissementOrigine: '',
+    diplomeReference: '',
+  };
   diplomes: DiplomeRow[] = [{ intitule: '', etablissement: '', annee: '' }];
-  parcoursDescription = '';
-  releves: ReleveRow[] = [{ semestre: 'S1', module: '', note: '' }];
+
+  mrglParcours: 'licence' | 'maitrise' = 'licence';
+  mrmiParcours: 'cas1' | 'cas2' = 'cas1';
+  ingParcours: 'cas1' | 'cas2' = 'cas1';
+
+  academic = {
+    commun: {
+      session: 'principale',
+      redoublements: '',
+    },
+    glDs: {
+      moy1: '',
+      moy2: '',
+      moy3: '',
+    },
+    i3: {
+      moyBac: '',
+      moyL1: '',
+      moyL2: '',
+      moyL3: '',
+    },
+    mrglLicence: {
+      moy1: '',
+      moy2: '',
+      moy3: '',
+      moyBac: '',
+      noteMathBac: '',
+      bonusLangue: '',
+      bonusAnneeDiplome: '',
+    },
+    mrglMaitrise: {
+      moy1: '',
+      moy2: '',
+      moy3: '',
+      moy4: '',
+      moyBac: '',
+      noteMathBac: '',
+      bonusLangue: '',
+    },
+    mrmiCas1: {
+      moyBac: '',
+      moyL1: '',
+      moyL2: '',
+      moyL3: '',
+    },
+    mrmiCas2: {
+      moyIng1: '',
+      sMalus: '-1',
+      prPenalite: '-2',
+      equivalence80: false,
+    },
+    ingCas1: {
+      moy1: '',
+      moy2: '',
+      sessionAnnee1: 'principale',
+      sessionAnnee2: 'principale',
+    },
+    ingCas2: {
+      m1: '',
+      m2: '',
+      m3: '',
+      r1: '',
+      r2: '',
+    },
+  };
+
   confirmation = false;
 
   isSubmitting = false;
 
-  requiredDocumentFields: RequiredDocumentField[] = [
-    {
-      key: 'demande_candidature',
-      label: 'Demande de candidature',
-      hint: 'Formulaire joint au communique',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      required: true,
-    },
-    {
-      key: 'fiche_candidature_signee',
-      label: 'Fiche de candidature signee',
-      hint: 'Fiche imprimee depuis le site',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      required: true,
-    },
-    {
-      key: 'cv',
-      label: 'CV (1 page)',
-      hint: 'Adresse, telephone, email',
-      accept: '.pdf,.doc,.docx',
-      required: true,
-    },
-    {
-      key: 'cin',
-      label: 'Copie CIN',
-      hint: 'Carte identite nationale',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      required: true,
-    },
-    {
-      key: 'diplomes',
-      label: 'Copies diplomes (bac inclus)',
-      hint: 'Vous pouvez importer plusieurs fichiers',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      multiple: true,
-      required: true,
-    },
-    {
-      key: 'releves_notes',
-      label: 'Copies releves de notes (bac inclus)',
-      hint: 'Un ou plusieurs fichiers',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      multiple: true,
-      required: true,
-    },
-    {
-      key: 'justificatifs_report',
-      label: 'Justificatifs report/reorientation',
-      hint: 'Facultatif, selon votre situation',
-      accept: '.pdf,.jpg,.jpeg,.png',
-      multiple: true,
-      required: false,
-    },
-  ];
-
-  uploadedRequiredDocuments: Record<string, File[]> = {};
-
   steps = [
     { no: 1, label: 'Informations personnelles' },
-    { no: 2, label: 'Diplômes et documents requis' },
-    { no: 3, label: 'Mon parcours' },
-    { no: 4, label: 'Relevés de notes (tableau)' },
-    { no: 5, label: 'Revue & Soumission' },
+    { no: 2, label: 'Diplôme et formation' },
+    { no: 3, label: 'Note et moyenne' },
+    { no: 4, label: 'Synthèse et validation' },
   ];
 
   constructor(
@@ -153,6 +192,12 @@ export class CandidatureInProgressComponent implements OnInit {
       this.offreId = offerId ? Number(offerId) : null;
       this.candidatureId = candidatureId ? Number(candidatureId) : null;
       this.titreOffre = title || '';
+
+      const matched = this.formationOptions.find((item) => (title || '').includes(item.label));
+      this.selectedFormation = matched?.code || '';
+      if (this.selectedFormation) {
+        this.syncParcoursByFormation();
+      }
 
       if (this.isStep1AutoValid()) {
         this.maxUnlockedStep = Math.max(this.maxUnlockedStep, 2);
@@ -194,21 +239,24 @@ export class CandidatureInProgressComponent implements OnInit {
     }
 
     if (this.currentStep === 2) {
-      const diplomeOk = this.diplomes.some(
-        (d) => !!d.intitule.trim() && !!d.etablissement.trim() && !!d.annee.trim(),
-      );
-      return diplomeOk && this.hasAllRequiredDocumentsUploaded();
+      const diplomeOk = this.diplomes.some((d) => !!d.etablissement.trim() && !!d.annee.trim());
+      const hasBase = !!this.selectedFormation && !!this.selectedDiplome && diplomeOk;
+      if (!hasBase) {
+        return false;
+      }
+
+      if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
+        return !!this.mpGlDs.etablissementOrigine.trim() && !!this.mpGlDs.diplomeReference.trim();
+      }
+
+      return true;
     }
 
     if (this.currentStep === 3) {
-      return !!this.parcoursDescription.trim();
+      return this.isStep3Valid();
     }
 
     if (this.currentStep === 4) {
-      return this.releves.some((r) => !!r.module.trim() && !!r.note.trim());
-    }
-
-    if (this.currentStep === 5) {
       return this.confirmation;
     }
 
@@ -222,7 +270,7 @@ export class CandidatureInProgressComponent implements OnInit {
   }
 
   addDiplomeRow(): void {
-    this.diplomes.push({ intitule: '', etablissement: '', annee: '' });
+    this.diplomes.push({ intitule: this.selectedDiplome || '', etablissement: '', annee: '' });
   }
 
   removeDiplomeRow(index: number): void {
@@ -231,39 +279,247 @@ export class CandidatureInProgressComponent implements OnInit {
     }
   }
 
-  onRequiredDocumentChange(key: string, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = input.files ? Array.from(input.files) : [];
-    this.uploadedRequiredDocuments[key] = files;
+  onDiplomeSelectionChange(): void {
+    this.diplomes = this.diplomes.map((item) => ({
+      ...item,
+      intitule: this.selectedDiplome,
+    }));
   }
 
-  getUploadedDocumentNames(key: string): string {
-    const files = this.uploadedRequiredDocuments[key] || [];
-    if (!files.length) {
-      return 'Aucun fichier importé';
+  onFormationSelectionChange(): void {
+    this.syncParcoursByFormation();
+  }
+
+  getSelectedFormationLabel(): string {
+    return this.formationOptions.find((item) => item.code === this.selectedFormation)?.label || '-';
+  }
+
+  private syncParcoursByFormation(): void {
+    if (this.selectedFormation === 'MRGL') {
+      this.mrglParcours = 'licence';
     }
-    return files.map((f) => f.name).join(', ');
-  }
 
-  hasAllRequiredDocumentsUploaded(): boolean {
-    const requiredKeys = this.requiredDocumentFields.filter((d) => d.required).map((d) => d.key);
-
-    return requiredKeys.every((key) => (this.uploadedRequiredDocuments[key] || []).length > 0);
-  }
-
-  addReleveRow(): void {
-    this.releves.push({ semestre: `S${this.releves.length + 1}`, module: '', note: '' });
-  }
-
-  removeReleveRow(index: number): void {
-    if (this.releves.length > 1) {
-      this.releves.splice(index, 1);
+    if (this.selectedFormation === 'MRMI') {
+      this.mrmiParcours = 'cas1';
     }
+
+    if (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') {
+      this.ingParcours = 'cas1';
+    }
+  }
+
+  private hasValues(values: Array<string | number | boolean>): boolean {
+    return values.every((value) => {
+      if (typeof value === 'boolean') {
+        return value;
+      }
+      return String(value ?? '').trim() !== '';
+    });
+  }
+
+  private isStep3Valid(): boolean {
+    const commonValid = this.hasValues([
+      this.academic.commun.session,
+      this.academic.commun.redoublements,
+    ]);
+
+    if (!this.selectedFormation || !commonValid) {
+      return false;
+    }
+
+    if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
+      return this.hasValues([
+        this.academic.glDs.moy1,
+        this.academic.glDs.moy2,
+        this.academic.glDs.moy3,
+      ]);
+    }
+
+    if (this.selectedFormation === 'MP3I') {
+      return this.hasValues([
+        this.academic.i3.moyBac,
+        this.academic.i3.moyL1,
+        this.academic.i3.moyL2,
+        this.academic.i3.moyL3,
+      ]);
+    }
+
+    if (this.selectedFormation === 'MRGL') {
+      if (this.mrglParcours === 'licence') {
+        return this.hasValues([
+          this.academic.mrglLicence.moy1,
+          this.academic.mrglLicence.moy2,
+          this.academic.mrglLicence.moy3,
+          this.academic.mrglLicence.moyBac,
+          this.academic.mrglLicence.noteMathBac,
+          this.academic.mrglLicence.bonusLangue,
+          this.academic.mrglLicence.bonusAnneeDiplome,
+        ]);
+      }
+
+      return this.hasValues([
+        this.academic.mrglMaitrise.moy1,
+        this.academic.mrglMaitrise.moy2,
+        this.academic.mrglMaitrise.moy3,
+        this.academic.mrglMaitrise.moy4,
+        this.academic.mrglMaitrise.moyBac,
+        this.academic.mrglMaitrise.noteMathBac,
+        this.academic.mrglMaitrise.bonusLangue,
+      ]);
+    }
+
+    if (this.selectedFormation === 'MRMI') {
+      if (this.mrmiParcours === 'cas1') {
+        const redoublements = Number(this.academic.commun.redoublements || 0);
+        return (
+          redoublements <= 1 &&
+          this.hasValues([
+            this.academic.mrmiCas1.moyBac,
+            this.academic.mrmiCas1.moyL1,
+            this.academic.mrmiCas1.moyL2,
+            this.academic.mrmiCas1.moyL3,
+          ])
+        );
+      }
+
+      return this.hasValues([
+        this.academic.mrmiCas2.moyIng1,
+        this.academic.mrmiCas2.sMalus,
+        this.academic.mrmiCas2.prPenalite,
+        this.academic.mrmiCas2.equivalence80,
+      ]);
+    }
+
+    if (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') {
+      if (this.ingParcours === 'cas1') {
+        return this.hasValues([
+          this.academic.ingCas1.moy1,
+          this.academic.ingCas1.moy2,
+          this.academic.ingCas1.sessionAnnee1,
+          this.academic.ingCas1.sessionAnnee2,
+        ]);
+      }
+
+      return this.hasValues([
+        this.academic.ingCas2.m1,
+        this.academic.ingCas2.m2,
+        this.academic.ingCas2.m3,
+        this.academic.ingCas2.r1,
+        this.academic.ingCas2.r2,
+      ]);
+    }
+
+    return false;
+  }
+
+  getSyntheseAcademiqueLines(): SummaryLine[] {
+    const lines: SummaryLine[] = [
+      { label: 'Session de reussite', value: this.academic.commun.session },
+      { label: 'Nombre de redoublements', value: this.academic.commun.redoublements || '-' },
+    ];
+
+    if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
+      lines.unshift(
+        {
+          label: "Etablissement d'origine",
+          value: this.mpGlDs.etablissementOrigine || '-',
+        },
+        {
+          label: 'Diplome (profil)',
+          value: this.mpGlDs.diplomeReference || '-',
+        },
+      );
+    }
+
+    if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
+      lines.push(
+        { label: 'Moyenne 1ere annee', value: this.academic.glDs.moy1 },
+        { label: 'Moyenne 2eme annee', value: this.academic.glDs.moy2 },
+        { label: 'Moyenne 3eme annee', value: this.academic.glDs.moy3 },
+      );
+    } else if (this.selectedFormation === 'MP3I') {
+      lines.push(
+        { label: 'Moy Bac', value: this.academic.i3.moyBac },
+        { label: 'Moy L1', value: this.academic.i3.moyL1 },
+        { label: 'Moy L2', value: this.academic.i3.moyL2 },
+        { label: 'Moy L3', value: this.academic.i3.moyL3 },
+      );
+    } else if (this.selectedFormation === 'MRGL' && this.mrglParcours === 'licence') {
+      lines.push(
+        { label: 'Parcours', value: 'Licence' },
+        { label: 'Moy 1ere annee', value: this.academic.mrglLicence.moy1 },
+        { label: 'Moy 2eme annee', value: this.academic.mrglLicence.moy2 },
+        { label: 'Moy 3eme annee', value: this.academic.mrglLicence.moy3 },
+        { label: 'Moy Bac', value: this.academic.mrglLicence.moyBac },
+        { label: 'Note Math Bac', value: this.academic.mrglLicence.noteMathBac },
+        { label: 'Bonus Langue', value: this.academic.mrglLicence.bonusLangue },
+        { label: 'Bonus Annee Diplome', value: this.academic.mrglLicence.bonusAnneeDiplome },
+      );
+    } else if (this.selectedFormation === 'MRGL' && this.mrglParcours === 'maitrise') {
+      lines.push(
+        { label: 'Parcours', value: 'Maitrise' },
+        { label: 'Moy 1ere annee', value: this.academic.mrglMaitrise.moy1 },
+        { label: 'Moy 2eme annee', value: this.academic.mrglMaitrise.moy2 },
+        { label: 'Moy 3eme annee', value: this.academic.mrglMaitrise.moy3 },
+        { label: 'Moy 4eme annee', value: this.academic.mrglMaitrise.moy4 },
+        { label: 'Moy Bac', value: this.academic.mrglMaitrise.moyBac },
+        { label: 'Note Math Bac', value: this.academic.mrglMaitrise.noteMathBac },
+        { label: 'Bonus Langue', value: this.academic.mrglMaitrise.bonusLangue },
+      );
+    } else if (this.selectedFormation === 'MRMI' && this.mrmiParcours === 'cas1') {
+      lines.push(
+        { label: 'Parcours', value: 'Cas 1 (Licence)' },
+        { label: 'Moy Bac', value: this.academic.mrmiCas1.moyBac },
+        { label: 'Moy L1', value: this.academic.mrmiCas1.moyL1 },
+        { label: 'Moy L2', value: this.academic.mrmiCas1.moyL2 },
+        { label: 'Moy L3', value: this.academic.mrmiCas1.moyL3 },
+      );
+    } else if (this.selectedFormation === 'MRMI' && this.mrmiParcours === 'cas2') {
+      lines.push(
+        { label: 'Parcours', value: 'Cas 2 (Ingenieur)' },
+        { label: 'Moyenne ING1', value: this.academic.mrmiCas2.moyIng1 },
+        { label: 'S (malus)', value: this.academic.mrmiCas2.sMalus },
+        { label: 'PR (penalite)', value: this.academic.mrmiCas2.prPenalite },
+        {
+          label: 'Equivalence 80% cursus',
+          value: this.academic.mrmiCas2.equivalence80 ? 'Oui' : 'Non',
+        },
+      );
+    } else if (
+      (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') &&
+      this.ingParcours === 'cas1'
+    ) {
+      lines.push(
+        { label: 'Parcours', value: 'Cas 1 (Cycle preparatoire integre)' },
+        { label: 'Moyenne Annee 1', value: this.academic.ingCas1.moy1 },
+        { label: 'Session Annee 1', value: this.academic.ingCas1.sessionAnnee1 },
+        { label: 'Moyenne Annee 2', value: this.academic.ingCas1.moy2 },
+        { label: 'Session Annee 2', value: this.academic.ingCas1.sessionAnnee2 },
+      );
+    } else if (
+      (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') &&
+      this.ingParcours === 'cas2'
+    ) {
+      lines.push(
+        { label: 'Parcours', value: 'Cas 2 (Licence LMD)' },
+        { label: 'M1', value: this.academic.ingCas2.m1 },
+        { label: 'M2', value: this.academic.ingCas2.m2 },
+        { label: 'M3', value: this.academic.ingCas2.m3 },
+        { label: 'R1', value: this.academic.ingCas2.r1 },
+        { label: 'R2', value: this.academic.ingCas2.r2 },
+      );
+    }
+
+    return lines;
+  }
+
+  cancel(): void {
+    this.router.navigate(['/candidat/dashboard'], { queryParams: { view: 'offres-inscription' } });
   }
 
   submitFinalCandidature(): void {
     if (!this.isCurrentStepValid()) {
-      alert('❌ Veuillez confirmer la revue avant de soumettre.');
+      alert('❌ Veuillez accepter la confirmation avant de soumettre.');
       return;
     }
 
@@ -284,7 +540,28 @@ export class CandidatureInProgressComponent implements OnInit {
     this.http
       .post(
         'http://localhost:8003/api/candidatures/create/',
-        { master_id: this.offreId },
+        {
+          master_id: this.offreId,
+          formation_code: this.selectedFormation,
+          selected_diplome: this.selectedDiplome,
+          etablissement_origine: this.mpGlDs.etablissementOrigine,
+          diplome_reference: this.mpGlDs.diplomeReference,
+          diplomes: this.diplomes,
+          academic_data: {
+            common: this.academic.commun,
+            glDs: this.academic.glDs,
+            i3: this.academic.i3,
+            mrglParcours: this.mrglParcours,
+            mrglLicence: this.academic.mrglLicence,
+            mrglMaitrise: this.academic.mrglMaitrise,
+            mrmiParcours: this.mrmiParcours,
+            mrmiCas1: this.academic.mrmiCas1,
+            mrmiCas2: this.academic.mrmiCas2,
+            ingParcours: this.ingParcours,
+            ingCas1: this.academic.ingCas1,
+            ingCas2: this.academic.ingCas2,
+          },
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       )
       .subscribe({

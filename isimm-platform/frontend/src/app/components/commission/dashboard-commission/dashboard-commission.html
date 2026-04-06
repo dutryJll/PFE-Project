@@ -27,30 +27,12 @@
 
       <a
         class="nav-item"
-        [class.active]="currentView === 'masters'"
-        (click)="switchView('masters')"
-      >
-        <i class="fas fa-book"></i>
-        <span>Les Masters</span>
-      </a>
-
-      <a
-        class="nav-item"
-        [class.active]="currentView === 'concours-ingenieur'"
-        (click)="switchView('concours-ingenieur')"
-      >
-        <i class="fas fa-graduation-cap"></i>
-        <span>Concours Cycle d'Ingénieur</span>
-      </a>
-
-      <a
-        class="nav-item"
         *ngIf="isResponsable"
         [class.active]="currentView === 'configuration-appels'"
         (click)="switchView('configuration-appels')"
       >
         <i class="fas fa-calendar-check"></i>
-        <span>Configuration des appels</span>
+        <span>Offre de préinscription</span>
       </a>
 
       <!-- ÉVALUATION -->
@@ -89,6 +71,19 @@
       >
         <i class="fas fa-folder-open"></i>
         <span>Tous les dossiers soumis</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'candidatures-responsable'"
+        (click)="switchView('candidatures-responsable')"
+      >
+        <i class="fas fa-list-ul"></i>
+        <span>Liste des candidatures</span>
+        <span class="badge-count" *ngIf="candidaturesResponsable.length > 0">
+          {{ candidaturesResponsable.length }}
+        </span>
       </a>
 
       <a
@@ -166,6 +161,29 @@
         <span>Membres de la commission</span>
       </a>
 
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'notifications'"
+        (click)="switchView('notifications')"
+      >
+        <i class="fas fa-bell"></i>
+        <span>Notifications</span>
+        <span class="badge-count" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
+      </a>
+
+      <a
+        class="nav-item"
+        *ngIf="isResponsable"
+        [class.active]="currentView === 'notifications-responsable'"
+        (click)="switchView('notifications-responsable')"
+      >
+        <i class="fas fa-bell"></i>
+        <span>Notifications responsable</span>
+        <span class="badge-danger" *ngIf="responsibleDeadlineSoonCount > 0">
+          {{ responsibleDeadlineSoonCount }} proche(s)
+        </span>
+      </a>
+
       <div class="nav-divider"></div>
 
       <a class="nav-item logout" (click)="logout()">
@@ -233,6 +251,24 @@
         </div>
       </div>
 
+      <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
+        <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
+        <p class="role-features-subtitle">
+          Ces actions sont disponibles dans la plateforme selon votre profil.
+        </p>
+        <div class="role-actions-list">
+          <button
+            type="button"
+            class="role-action-chip role-action-link"
+            *ngFor="let actionName of customRoleActions"
+            (click)="openCustomRoleAction(actionName)"
+            [title]="actionName"
+          >
+            {{ actionName }}
+          </button>
+        </div>
+      </div>
+
       <div class="section-card">
         <h2>📊 Activités récentes</h2>
         <div class="activites-list">
@@ -264,6 +300,62 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentView === 'notifications'" class="view-content">
+      <div class="section-card">
+        <div class="candidatures-header">
+          <h2>🔔 Notifications</h2>
+          <p class="subtitle">Toutes vos alertes système et métier.</p>
+        </div>
+
+        <div class="notifications-filters">
+          <select [(ngModel)]="filtreNotificationType">
+            <option value="">Tous les types</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+            <option value="danger">Danger</option>
+          </select>
+          <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
+          <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+          <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
+            Reinitialiser
+          </button>
+        </div>
+
+        <div
+          class="notifications-list"
+          *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
+        >
+          <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+            <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
+              ✓ Marquer tous comme lus
+            </button>
+          </div>
+          <article
+            class="notification-card"
+            *ngFor="let notification of getNotificationsFiltrees()"
+            [class.unread]="!notification.lue"
+            (click)="marquerNotificationCommeLue(notification.id)"
+          >
+            <div class="notification-head">
+              <strong>{{ notification.titre }}</strong>
+              <span class="notification-type" [ngClass]="'type-' + notification.type">
+                {{ notification.type }}
+              </span>
+            </div>
+            <p>{{ notification.message }}</p>
+            <small>{{ notification.date | date: 'dd/MM/yyyy HH:mm' }}</small>
+          </article>
+        </div>
+
+        <ng-template #noNotifications>
+          <div class="empty-reclamations">
+            <p>Aucune notification pour le moment.</p>
+          </div>
+        </ng-template>
       </div>
     </div>
 
@@ -459,122 +551,759 @@
     </div>
 
     <div *ngIf="currentView === 'configuration-appels' && isResponsable" class="view-content">
-      <div class="section-card">
-        <h2>⚙️ Configuration des Appels à candidatures</h2>
-        <p>
-          Définissez la visibilité de l'appel et les délais de chaque étape: préinscription, dépôt
-          du dossier et paiement.
-        </p>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Master concerné</label>
-            <select [(ngModel)]="selectedConfigMasterId" (change)="onConfigMasterChange()">
-              <option [ngValue]="null">Sélectionnez un master</option>
-              <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
-            </select>
+      <div class="section-card offer-management-shell">
+        <div class="offer-management-hero">
+          <div class="offer-management-copy">
+            <p class="offres-kicker">Espace responsable</p>
+            <h2>Offre de préinscription</h2>
+            <p>
+              Centralisez ici la publication de l'appel, le calendrier, les capacités, la
+              description et le PDF officiel signé.
+            </p>
+          </div>
+          <div class="offer-hero-cards">
+            <div class="hero-mini-card">
+              <span>Offres publiées</span>
+              <strong>{{ offresPreinscription.length }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span>Offre active</span>
+              <strong>{{ getSelectedConfigurationMasterLabel() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span>Visibilité</span>
+              <strong>{{ configurationAppel.est_cache ? 'Cachée' : 'Visible' }}</strong>
+            </div>
           </div>
         </div>
 
-        <div *ngIf="configLoading" class="empty-state">Chargement de la configuration...</div>
+        <div class="section-subcard">
+          <div class="subcard-head">
+            <h3>Liste des offres de préinscription</h3>
+            <button type="button" class="btn-outline" (click)="loadOffresPreinscription()">
+              Actualiser
+            </button>
+          </div>
 
-        <form *ngIf="!configLoading" (ngSubmit)="saveConfigurationAppel()">
+          <div class="offers-table-wrap" *ngIf="offresPreinscription.length > 0; else noOffers">
+            <table class="offers-table">
+              <thead>
+                <tr>
+                  <th>Offre</th>
+                  <th>Spécialité</th>
+                  <th>Visibilité</th>
+                  <th>Statut</th>
+                  <th>Capacité</th>
+                  <th>PDF signé</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let offre of offresPreinscription">
+                  <td>
+                    <strong>{{ offre.titre }}</strong>
+                    <div class="muted-line">
+                      {{ offre.type === 'cycle_ingenieur' ? 'Cycle Ingénieur' : 'Master' }}
+                    </div>
+                  </td>
+                  <td>{{ offre.specialite }}</td>
+                  <td>
+                    <span
+                      class="badge-status"
+                      [class.badge-hidden]="offre.est_cache"
+                      [class.badge-visible]="!offre.est_cache"
+                    >
+                      {{ offre.est_cache ? 'Cachée' : 'Visible' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="badge-status"
+                      [class.badge-open]="offre.statut === 'ouvert'"
+                      [class.badge-closed]="offre.statut === 'ferme'"
+                    >
+                      {{ offre.statut === 'ouvert' ? 'Ouverte' : 'Fermée' }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{{ offre.places }}</strong>
+                    <div class="muted-line">
+                      Int: {{ offre.capacite_interne || 0 }} | Ext:
+                      {{ offre.capacite_externe || 0 }}
+                    </div>
+                  </td>
+                  <td>
+                    <a
+                      *ngIf="offre.document_officiel_pdf_url"
+                      [href]="offre.document_officiel_pdf_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ouvrir le PDF
+                    </a>
+                    <span *ngIf="!offre.document_officiel_pdf_url">-</span>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn-mini" (click)="selectionnerOffre(offre)">Éditer</button>
+                      <button
+                        class="btn-mini"
+                        *ngIf="offre.statut === 'ferme'"
+                        (click)="ouvrirFermerOffre(offre, true)"
+                      >
+                        Ouvrir
+                      </button>
+                      <button
+                        class="btn-mini"
+                        *ngIf="offre.statut === 'ouvert'"
+                        (click)="ouvrirFermerOffre(offre, false)"
+                      >
+                        Fermer
+                      </button>
+                      <button
+                        class="btn-mini"
+                        *ngIf="!offre.est_cache"
+                        (click)="basculerEtatOffre(offre, true)"
+                      >
+                        Cacher
+                      </button>
+                      <button
+                        class="btn-mini"
+                        *ngIf="offre.est_cache"
+                        (click)="basculerEtatOffre(offre, false)"
+                      >
+                        Afficher
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noOffers>
+            <div class="empty-state">Aucune offre de préinscription disponible.</div>
+          </ng-template>
+        </div>
+
+        <div class="section-subcard">
+          <div class="subcard-head">
+            <div>
+              <h3>Créer une nouvelle offre</h3>
+              <p class="muted-line">
+                Renseigne le master, sa description, son calendrier, ses capacités et son PDF signé.
+              </p>
+            </div>
+            <button type="button" class="btn-outline" (click)="loadMastersForConfiguration()">
+              Recharger les masters
+            </button>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
-              <label>Date début visibilité</label>
-              <input
-                type="date"
-                [(ngModel)]="configurationAppel.date_debut_visibilite"
-                name="date_debut_visibilite"
-                required
-              />
+              <label>Nom du master</label>
+              <input type="text" [(ngModel)]="nouvelleOffre.nom" name="nouvelle_offre_nom" />
             </div>
             <div class="form-group">
-              <label>Date fin visibilité</label>
-              <input
-                type="date"
-                [(ngModel)]="configurationAppel.date_fin_visibilite"
-                name="date_fin_visibilite"
-                required
-              />
+              <label>Type</label>
+              <select [(ngModel)]="nouvelleOffre.type_master" name="nouvelle_offre_type">
+                <option value="recherche">Recherche</option>
+                <option value="professionnel">Professionnel</option>
+              </select>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Date limite préinscription</label>
+              <label>Spécialité</label>
               <input
-                type="date"
-                [(ngModel)]="configurationAppel.date_limite_preinscription"
-                name="date_limite_preinscription"
-                required
+                type="text"
+                [(ngModel)]="nouvelleOffre.specialite"
+                name="nouvelle_offre_spec"
               />
             </div>
             <div class="form-group">
-              <label>Date limite dépôt dossier</label>
-              <input
-                type="date"
-                [(ngModel)]="configurationAppel.date_limite_depot_dossier"
-                name="date_limite_depot_dossier"
-              />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Date limite paiement</label>
-              <input
-                type="date"
-                [(ngModel)]="configurationAppel.date_limite_paiement"
-                name="date_limite_paiement"
-              />
-            </div>
-            <div class="form-group">
-              <label>Délai modification candidature (jours)</label>
+              <label>Capacité totale</label>
               <input
                 type="number"
                 min="0"
-                [(ngModel)]="configurationAppel.delai_modification_candidature_jours"
-                name="delai_modification_candidature_jours"
-                required
+                [(ngModel)]="nouvelleOffre.places_disponibles"
+                name="nouvelle_offre_places"
               />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Délai dépôt dossier présélectionnés (jours)</label>
+              <label>Année universitaire</label>
               <input
-                type="number"
-                min="0"
-                [(ngModel)]="configurationAppel.delai_depot_dossier_preselectionnes_jours"
-                name="delai_depot_dossier_preselectionnes_jours"
-                required
+                type="text"
+                [(ngModel)]="nouvelleOffre.annee_universitaire"
+                name="nouvelle_offre_annee"
+                placeholder="2026/2027"
               />
             </div>
-            <div class="form-group checkbox-group">
-              <label>
-                <input type="checkbox" [(ngModel)]="configurationAppel.actif" name="config_actif" />
-                Appel actif
-              </label>
+            <div class="form-group">
+              <label>Date limite candidature</label>
+              <input
+                type="date"
+                [(ngModel)]="nouvelleOffre.date_limite_candidature"
+                name="nouvelle_offre_date"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Description</label>
+              <textarea
+                rows="4"
+                [(ngModel)]="nouvelleOffre.description"
+                name="nouvelle_offre_desc"
+              ></textarea>
             </div>
           </div>
 
           <div class="profile-actions">
             <button
-              type="submit"
+              type="button"
               class="btn-primary"
-              [disabled]="configSaving || !selectedConfigMasterId"
+              (click)="creerNouvelleOffrePreinscription()"
+              [disabled]="creationOffreLoading"
             >
-              {{ configSaving ? 'Enregistrement...' : 'Enregistrer la configuration' }}
+              {{ creationOffreLoading ? 'Création...' : "Créer l'offre" }}
             </button>
           </div>
-        </form>
+        </div>
+
+        <div class="section-subcard">
+          <div class="subcard-head">
+            <div>
+              <h3>Paramètres de publication</h3>
+              <p class="muted-line">
+                Sélectionne un master pour ouvrir/fermer, masquer/afficher et publier le PDF signé.
+              </p>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Offre concernée</label>
+              <select [(ngModel)]="selectedConfigMasterId" (change)="onConfigMasterChange()">
+                <option [ngValue]="null">Sélectionnez un master</option>
+                <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>État de publication</label>
+              <div class="toggle-row">
+                <label class="checkbox-line">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="configurationAppel.actif"
+                    name="config_actif"
+                  />
+                  Appel actif
+                </label>
+                <label class="checkbox-line">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="configurationAppel.est_cache"
+                    name="config_cache"
+                  />
+                  Visible uniquement pour la commission
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="offer-preview-box" *ngIf="selectedConfigMasterId">
+            <div class="subcard-head">
+              <h3>Calendrier et capacités essentielles</h3>
+              <span class="muted-line">{{ getSelectedConfigurationMasterLabel() }}</span>
+            </div>
+
+            <div class="offers-table-wrap">
+              <table class="offers-table offer-preview-table">
+                <thead>
+                  <tr>
+                    <th>Capacité Totale</th>
+                    <th>Établissement d'origine</th>
+                    <th>Capacité</th>
+                    <th>Type de Diplôme</th>
+                    <th>Dates Importantes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of getOffreCalendarPreviewRows()">
+                    <td>{{ row.capaciteTotale }}</td>
+                    <td>{{ row.etablissementOrigine }}</td>
+                    <td>{{ row.capacite }}</td>
+                    <td>{{ row.typeDiplome }}</td>
+                    <td>{{ row.datesImportantes }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="configLoading" class="empty-state">Chargement de la configuration...</div>
+
+          <form *ngIf="!configLoading" (ngSubmit)="saveConfigurationAppel()">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Date début visibilité</label>
+                <input
+                  type="date"
+                  [(ngModel)]="configurationAppel.date_debut_visibilite"
+                  name="date_debut_visibilite"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Date fin visibilité</label>
+                <input
+                  type="date"
+                  [(ngModel)]="configurationAppel.date_fin_visibilite"
+                  name="date_fin_visibilite"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Date limite préinscription</label>
+                <input
+                  type="date"
+                  [(ngModel)]="configurationAppel.date_limite_preinscription"
+                  name="date_limite_preinscription"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Date limite dépôt dossier</label>
+                <input
+                  type="date"
+                  [(ngModel)]="configurationAppel.date_limite_depot_dossier"
+                  name="date_limite_depot_dossier"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Date limite paiement</label>
+                <input
+                  type="date"
+                  [(ngModel)]="configurationAppel.date_limite_paiement"
+                  name="date_limite_paiement"
+                />
+              </div>
+              <div class="form-group">
+                <label>Délai modification candidature (jours)</label>
+                <input
+                  type="number"
+                  min="0"
+                  [(ngModel)]="configurationAppel.delai_modification_candidature_jours"
+                  name="delai_modification_candidature_jours"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Délai dépôt dossier présélectionnés (jours)</label>
+                <input
+                  type="number"
+                  min="0"
+                  [(ngModel)]="configurationAppel.delai_depot_dossier_preselectionnes_jours"
+                  name="delai_depot_dossier_preselectionnes_jours"
+                  required
+                />
+              </div>
+              <div class="form-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="configurationAppel.actif"
+                    name="config_actif_legacy"
+                  />
+                  Appel actif
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label>Description de l'offre</label>
+                <textarea
+                  rows="4"
+                  [(ngModel)]="offreEditForm.description"
+                  name="offre_description"
+                  placeholder="Décris ici les conditions d'accès, le calendrier, les documents et les informations essentielles."
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Capacité interne (places)</label>
+                <input
+                  type="number"
+                  min="0"
+                  [(ngModel)]="configurationAppel.capacite_interne"
+                  name="capacite_interne"
+                />
+              </div>
+              <div class="form-group">
+                <label>Capacité externe (places)</label>
+                <input
+                  type="number"
+                  min="0"
+                  [(ngModel)]="configurationAppel.capacite_externe"
+                  name="capacite_externe"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="configurationAppel.est_cache"
+                    name="est_cache"
+                  />
+                  Masquer l'offre (visible uniquement pour les responsables)
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label>Télécharger le document officiel PDF</label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  (change)="uploadConfigurationPdf($event)"
+                  name="pdf_upload"
+                />
+                <small>Format: PDF, Taille maximum: 10 MB</small>
+              </div>
+            </div>
+
+            <div *ngIf="configurationAppel.document_officiel_pdf_url" class="form-row">
+              <div class="form-group">
+                <label>Document actuellement chargé</label>
+                <a
+                  [href]="configurationAppel.document_officiel_pdf_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Ouvrir le PDF signé</a
+                >
+              </div>
+            </div>
+
+            <div class="profile-actions">
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="configSaving || !selectedConfigMasterId"
+              >
+                {{ configSaving ? 'Enregistrement...' : 'Enregistrer la configuration' }}
+              </button>
+            </div>
+          </form>
+
+          <div class="section-subcard" style="margin-top: 1rem" *ngIf="offreEditionMode">
+            <h3>Édition rapide de l'offre sélectionnée</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nom du master</label>
+                <input type="text" [(ngModel)]="offreEditForm.nom" name="edit_nom" />
+              </div>
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="offreEditForm.type_master" name="edit_type">
+                  <option value="recherche">Recherche</option>
+                  <option value="professionnel">Professionnel</option>
+                </select>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button
+                type="button"
+                class="btn-primary"
+                (click)="enregistrerEditionOffre()"
+                [disabled]="editingOffreLoading"
+              >
+                {{ editingOffreLoading ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+              </button>
+            </div>
+            <div class="section-subcard" style="margin-top: 1rem">
+              <h3>Téléverser le PDF officiel de cette offre</h3>
+              <input type="file" accept="application/pdf" (change)="uploadOfferPdf($event)" />
+              <small *ngIf="offreEditForm.document_officiel_pdf_url">
+                PDF actuel:
+                <a [href]="offreEditForm.document_officiel_pdf_url" target="_blank">ouvrir</a>
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-subcard" style="margin-top: 1rem">
+          <h2>📂 Candidatures du responsable</h2>
+          <div class="filters-section">
+            <div class="filters-grid">
+              <div class="filter-item">
+                <label class="filter-label">Master</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="selectedMasterForCandidatures"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option [ngValue]="'all'">Tous les masters</option>
+                  <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Type</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.concours"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous</option>
+                  <option value="masters">Master</option>
+                  <option value="ingenieur">Ingénieur</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Statut</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.statut"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="soumis">Soumis</option>
+                  <option value="sous_examen">En analyse</option>
+                  <option value="preselectionne">Présélectionné</option>
+                  <option value="dossier_depose">Dossier déposé</option>
+                  <option value="selectionne">Sélectionné</option>
+                  <option value="rejete">Rejeté</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Recherche</label>
+                <input
+                  class="filter-input"
+                  type="text"
+                  [(ngModel)]="filtres.recherche"
+                  (input)="appliquerFiltresResponsable()"
+                  placeholder="Nom, CIN, Email..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="split-dashboard">
+            <div class="split-panel">
+              <h3>Masters</h3>
+              <div class="mini-cards">
+                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
+                  <ng-container *ngIf="c.type_concours === 'masters'">
+                    <strong>{{ c.numero }}</strong>
+                    <span>{{ c.candidat_nom }}</span>
+                    <small>{{ c.specialite }}</small>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+            <div class="split-panel">
+              <h3>Cycle Ingénieur</h3>
+              <div class="mini-cards">
+                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
+                  <ng-container *ngIf="c.type_concours === 'ingenieur'">
+                    <strong>{{ c.numero }}</strong>
+                    <span>{{ c.candidat_nom }}</span>
+                    <small>{{ c.specialite }}</small>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isCurrentView('candidatures-responsable') && isResponsable" class="view-content">
+        <div class="section-card">
+          <div class="candidatures-header">
+            <h2>📂 Liste des candidatures (Master + Ingénieur)</h2>
+            <p class="subtitle">Suivi des candidatures par master et par cycle ingénieur.</p>
+          </div>
+
+          <div class="filters-section">
+            <div class="filters-grid">
+              <div class="filter-item">
+                <label class="filter-label">Master</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="selectedMasterForCandidatures"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option [ngValue]="'all'">Tous les masters</option>
+                  <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Type</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.concours"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous</option>
+                  <option value="masters">Master</option>
+                  <option value="ingenieur">Ingénieur</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Statut</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.statut"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="soumis">Soumis</option>
+                  <option value="sous_examen">En analyse</option>
+                  <option value="preselectionne">Présélectionné</option>
+                  <option value="dossier_depose">Dossier déposé</option>
+                  <option value="selectionne">Sélectionné</option>
+                  <option value="rejete">Rejeté</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Recherche</label>
+                <input
+                  class="filter-input"
+                  type="text"
+                  [(ngModel)]="filtres.recherche"
+                  (input)="appliquerFiltresResponsable()"
+                  placeholder="Nom, CIN, Email..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="split-dashboard">
+            <div class="split-panel">
+              <h3>Masters</h3>
+              <div class="mini-cards">
+                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
+                  <ng-container *ngIf="c.type_concours === 'masters'">
+                    <strong>{{ c.numero }}</strong>
+                    <span>{{ c.candidat_nom }}</span>
+                    <small>{{ c.specialite }}</small>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+            <div class="split-panel">
+              <h3>Cycle Ingénieur</h3>
+              <div class="mini-cards">
+                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
+                  <ng-container *ngIf="c.type_concours === 'ingenieur'">
+                    <strong>{{ c.numero }}</strong>
+                    <span>{{ c.candidat_nom }}</span>
+                    <small>{{ c.specialite }}</small>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isCurrentView('notifications-responsable') && isResponsable" class="view-content">
+        <div class="section-card">
+          <div class="candidatures-header">
+            <h2>🔔 Notifications responsable</h2>
+            <p class="subtitle">Deadlines des masters que vous gérez.</p>
+          </div>
+
+          <div
+            class="section-subcard"
+            *ngIf="responsibleDeadlineSoonCount > 0"
+            style="margin-bottom: 1rem"
+          >
+            <h3>Deadlines proches (J-3 à J0)</h3>
+            <div class="mini-cards">
+              <div class="mini-card" *ngFor="let item of responsibleDeadlineSoonItems">
+                <strong>{{ item.master_nom }}</strong>
+                <span>{{ item.deadline_type }}</span>
+                <small>{{ item.days_left }} jour(s) restant(s)</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="filters-section">
+            <div class="filters-grid">
+              <div class="filter-item">
+                <label class="filter-label">Type de deadline</label>
+                <select class="filter-select" [(ngModel)]="filtreResponsibleNotificationType">
+                  <option value="">Tous</option>
+                  <option value="info">Info</option>
+                  <option value="warning">Alerte</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Statut offre</label>
+                <select class="filter-select" [(ngModel)]="filtreResponsibleNotificationStatut">
+                  <option value="">Tous</option>
+                  <option value="ouvert">Ouverte</option>
+                  <option value="ferme">Fermée</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="notifications-list"
+            *ngIf="responsibleNotificationsFiltered.length > 0; else noResponsibleNotifications"
+          >
+            <article
+              class="notification-card"
+              *ngFor="let item of responsibleNotificationsFiltered"
+            >
+              <div class="notification-head">
+                <strong>{{ item.master_nom }} - {{ item.deadline_type }}</strong>
+                <span class="notification-type" [ngClass]="'type-' + item.type">
+                  {{ item.days_left >= 0 ? item.days_left + ' j' : 'dépassé' }}
+                </span>
+              </div>
+              <p>{{ item.message }}</p>
+              <small
+                >Deadline: {{ item.deadline_date | date: 'dd/MM/yyyy' }} | {{ item.statut }}</small
+              >
+            </article>
+          </div>
+
+          <ng-template #noResponsibleNotifications>
+            <div class="empty-reclamations">
+              <p>Aucune deadline responsable pour le moment.</p>
+            </div>
+          </ng-template>
+        </div>
       </div>
     </div>
 
     <!-- ✅ CONCOURS CYCLE D'INGÉNIEUR -->
-    <div *ngIf="currentView === 'concours-ingenieur'" class="view-content concours-view">
+    <div *ngIf="isCurrentView('concours-ingenieur')" class="view-content concours-view">
       <div class="section-card">
         <div class="concours-header">
           <div class="concours-title-group">
@@ -603,7 +1332,6 @@
           <div class="concours-card" *ngFor="let concours of getConcoursIngenieur()">
             <div class="concours-card-header">
               <h3>{{ concours.nom }}</h3>
-              <span class="concours-badge">{{ concours.annee }}</span>
             </div>
             <div class="concours-card-stats">
               <div class="stat-item stat-candidatures">

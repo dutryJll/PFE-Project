@@ -18,6 +18,9 @@ interface Candidature {
   specialite?: string;
   score?: number;
   statut: string;
+  statut_inscription?: string;
+  dossier_depose?: boolean;
+  motif_rejet?: string;
   date_soumission: string;
   selected?: boolean;
   ocr_analyse?: {
@@ -29,6 +32,14 @@ interface Candidature {
       confiance_globale: number;
     };
   };
+}
+
+type ProgressStepState = 'done' | 'current' | 'pending' | 'rejected';
+
+interface ProgressStep {
+  label: string;
+  state: ProgressStepState;
+  hint?: string;
 }
 
 @Component({
@@ -43,6 +54,7 @@ export class ConsulterCandidaturesComponent implements OnInit {
   candidaturesFiltrees: Candidature[] = [];
   selectedCandidature: Candidature | null = null;
   detailRequested: boolean = false;
+  demoMode: boolean = false; // Mode aperçu pour tests
 
   // ✅ UTILISER UN OBJET filtres AU LIEU DE VARIABLES SÉPARÉES
   filtres = {
@@ -58,6 +70,26 @@ export class ConsulterCandidaturesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // DEMO MODE: Activer toujours le mode démo pour avoir un aperçu de travail
+    this.demoMode = true;
+    this.detailRequested = true;
+    this.selectedCandidature = {
+      id: 1,
+      first_name: 'Jean',
+      last_name: 'Dupont',
+      cin: '12345678',
+      email: 'jean.dupont@email.com',
+      numero: '2603-00001-GL',
+      master_nom: 'Master Recherche Génie Logiciel',
+      type: 'master',
+      type_candidature: 'master',
+      score: 85,
+      statut: 'preselectionne',
+      date_soumission: new Date().toISOString(),
+    };
+
+    // Code original commenté - réactiver une fois les tests terminés
+    /*
     this.route.paramMap.subscribe((params) => {
       const idParam = params.get('id');
       if (!idParam) {
@@ -77,6 +109,7 @@ export class ConsulterCandidaturesComponent implements OnInit {
       this.detailRequested = true;
       this.loadCandidatureDetail(id);
     });
+    */
   }
 
   loadCandidatures(): void {
@@ -95,6 +128,12 @@ export class ConsulterCandidaturesComponent implements OnInit {
   loadCandidatureDetail(id: number): void {
     this.candidatureService.getCandidature(id).subscribe({
       next: (data: any) => {
+        if (Array.isArray(data)) {
+          const found = data.find((item: any) => Number(item?.id) === id);
+          this.selectedCandidature = found ? this.normalizeCandidature(found) : null;
+          return;
+        }
+
         this.selectedCandidature = this.normalizeCandidature(data);
       },
       error: () => {
@@ -132,8 +171,180 @@ export class ConsulterCandidaturesComponent implements OnInit {
       specialite: item?.specialite || '',
       score: item?.score,
       statut: item?.statut || 'en_cours',
+      statut_inscription: item?.statut_inscription || '',
+      dossier_depose: !!item?.dossier_depose,
+      motif_rejet: item?.motif_rejet || '',
       date_soumission: item?.date_soumission || '',
     };
+  }
+
+  get progressSteps(): ProgressStep[] {
+    // MODE DÉMO: Afficher aperçu avec Préinscription et Présélection terminées
+    if (this.demoMode) {
+      return [
+        { label: 'Préinscription', state: 'done' },
+        { label: 'Présélection', state: 'done' },
+        { label: 'Dépôt de dossier', state: 'current', hint: 'En attente de dépôt' },
+        { label: 'Sélection de candidature', state: 'pending' },
+        { label: 'Confirmation inscription en ligne', state: 'pending' },
+      ];
+    }
+    return this.buildProgressSteps(this.selectedCandidature);
+  }
+
+  private buildProgressSteps(candidature: Candidature | null): ProgressStep[] {
+    if (!candidature) {
+      return [];
+    }
+
+    const statut = (candidature.statut || '').toLowerCase();
+    const statutInscription = (candidature.statut_inscription || '').toLowerCase();
+    const motifRejet = (candidature.motif_rejet || '').toLowerCase();
+
+    const hasDossierDepose =
+      !!candidature.dossier_depose ||
+      ['dossier_depose', 'en_attente', 'selectionne', 'inscrit'].includes(statut);
+
+    const reachedPreselection =
+      [
+        'preselectionne',
+        'en_attente_dossier',
+        'dossier_non_depose',
+        'dossier_depose',
+        'en_attente',
+        'selectionne',
+        'inscrit',
+      ].includes(statut) || hasDossierDepose;
+
+    const isRejected = statut === 'rejete';
+    const mentionsDossierIssue =
+      motifRejet.includes('dossier') ||
+      motifRejet.includes('piece') ||
+      motifRejet.includes('pièce');
+    const mentionsNonAdmis = motifRejet.includes('non admis') || motifRejet.includes('non_admis');
+
+    const rejectedBeforePreselection = isRejected && !reachedPreselection && !hasDossierDepose;
+    if (rejectedBeforePreselection) {
+      return [
+        { label: 'Préinscription', state: 'done' },
+        { label: 'Non présélectionné', state: 'rejected' },
+      ];
+    }
+
+    const dossierMissingPath =
+      statut === 'dossier_non_depose' || (isRejected && !hasDossierDepose && mentionsDossierIssue);
+    if (dossierMissingPath) {
+      return [
+        { label: 'Préinscription', state: 'done' },
+        { label: 'Présélection', state: 'done' },
+        { label: 'Dépôt de dossier', state: 'rejected', hint: 'Dossier non déposé' },
+        {
+          label: 'Candidature rejetée',
+          state: isRejected ? 'rejected' : 'pending',
+        },
+      ];
+    }
+
+    if (statut === 'soumis') {
+      return [
+        { label: 'Préinscription', state: 'done' },
+        { label: 'Présélection', state: 'pending' },
+      ];
+    }
+
+    if (statut === 'sous_examen') {
+      return [
+        { label: 'Préinscription', state: 'done' },
+        { label: 'Présélection', state: 'current', hint: 'En cours de traitement' },
+      ];
+    }
+
+    const preselectedDone =
+      [
+        'preselectionne',
+        'en_attente_dossier',
+        'dossier_depose',
+        'en_attente',
+        'selectionne',
+        'inscrit',
+      ].includes(statut) || hasDossierDepose;
+    const dossierDone =
+      ['dossier_depose', 'en_attente', 'selectionne', 'inscrit'].includes(statut) ||
+      hasDossierDepose;
+    const selectedDone = ['selectionne', 'inscrit'].includes(statut);
+    const selectedWaiting = [
+      'dossier_depose',
+      'en_attente',
+      'preselectionne',
+      'en_attente_dossier',
+    ].includes(statut);
+    const inscriptionConfirmed = statut === 'inscrit' || statutInscription === 'valide';
+    const inscriptionKnownButNotConfirmed =
+      !!statutInscription &&
+      ['en_attente', 'paiement_soumis', 'refuse'].includes(statutInscription);
+
+    const steps: ProgressStep[] = [
+      { label: 'Préinscription', state: 'done' },
+      { label: 'Présélection', state: preselectedDone ? 'done' : 'pending' },
+      {
+        label: 'Dépôt de dossier',
+        state: dossierDone ? 'done' : preselectedDone ? 'current' : 'pending',
+      },
+      {
+        label: 'Sélection de candidature',
+        state: selectedDone ? 'done' : selectedWaiting ? 'current' : 'pending',
+        hint: selectedDone
+          ? undefined
+          : selectedWaiting
+            ? 'En attente de décision finale'
+            : undefined,
+      },
+    ];
+
+    if (inscriptionConfirmed) {
+      steps.push({ label: 'Confirmation inscription en ligne', state: 'done' });
+      return steps;
+    }
+
+    if (isRejected) {
+      const rejectionLabel = mentionsNonAdmis ? 'Non admis' : 'Candidature rejetée';
+      if (selectedDone || inscriptionKnownButNotConfirmed || mentionsNonAdmis) {
+        steps.push({ label: 'Confirmation inscription en ligne', state: 'rejected' });
+        steps.push({ label: rejectionLabel, state: 'rejected' });
+      } else {
+        steps.push({ label: rejectionLabel, state: 'rejected' });
+      }
+      return steps;
+    }
+
+    if (selectedDone || selectedWaiting || inscriptionKnownButNotConfirmed) {
+      steps.push({
+        label: 'Confirmation inscription en ligne',
+        state: selectedDone || inscriptionKnownButNotConfirmed ? 'current' : 'pending',
+        hint: 'En attente de paiement/validation',
+      });
+    }
+
+    return steps;
+  }
+
+  statusLabel(statut: string): string {
+    const labels: Record<string, string> = {
+      soumis: 'Soumis',
+      annule: 'Annulé',
+      sous_examen: 'Sous examen',
+      rejete: 'Rejeté',
+      preselectionne: 'Présélectionné',
+      en_attente_dossier: 'En attente de dossier',
+      dossier_non_depose: 'Dossier non déposé',
+      dossier_depose: 'Dossier déposé',
+      en_attente: 'En attente',
+      selectionne: 'Sélectionné',
+      inscrit: 'Inscription confirmée',
+    };
+
+    const key = (statut || '').toLowerCase();
+    return labels[key] || statut || '-';
   }
 
   appliquerFiltres(): void {
@@ -253,10 +464,15 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
 
   statusClass(statut: string): string {
     const value = (statut || '').toLowerCase();
-    if (value.includes('rej')) {
+    if (value.includes('rej') || value.includes('annul')) {
       return 'status-rejected';
     }
-    if (value.includes('valid') || value.includes('accept') || value.includes('select')) {
+    if (
+      value.includes('inscrit') ||
+      value.includes('valid') ||
+      value.includes('accept') ||
+      value.includes('select')
+    ) {
       return 'status-approved';
     }
     return 'status-pending';

@@ -83,6 +83,16 @@
         <span>Mon Profil</span>
       </a>
 
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'notifications'"
+        (click)="switchView('notifications')"
+      >
+        <i class="fas fa-bell"></i>
+        <span>Notifications</span>
+        <span class="badge-count" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
+      </a>
+
       <div class="nav-divider"></div>
 
       <a class="nav-item logout" (click)="logout()">
@@ -150,6 +160,24 @@
         </div>
       </div>
 
+      <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
+        <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
+        <p class="role-features-subtitle">
+          Ces actions sont disponibles selon votre profil administrateur.
+        </p>
+        <div class="role-actions-list">
+          <button
+            type="button"
+            class="role-action-chip role-action-link"
+            *ngFor="let actionName of customRoleActions"
+            (click)="openCustomRoleAction(actionName)"
+            [title]="actionName"
+          >
+            {{ actionName }}
+          </button>
+        </div>
+      </div>
+
       <!-- Activités récentes -->
       <div class="section-card">
         <h2>📊 Activités récentes</h2>
@@ -182,6 +210,59 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentView === 'notifications'" class="view-content">
+      <div class="section-card">
+        <div class="section-header">
+          <h2>🔔 Notifications</h2>
+        </div>
+
+        <div class="notifications-filters">
+          <select [(ngModel)]="filtreNotificationType">
+            <option value="">Tous les types</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+            <option value="danger">Danger</option>
+          </select>
+          <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
+          <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+          <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
+            Reinitialiser
+          </button>
+        </div>
+
+        <div
+          class="notifications-list"
+          *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
+        >
+          <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+            <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
+              ✓ Marquer tous comme lus
+            </button>
+          </div>
+          <article
+            class="notification-card"
+            *ngFor="let notification of getNotificationsFiltrees()"
+            [class.unread]="!notification.lue"
+            (click)="marquerNotificationCommeLue(notification.id)"
+          >
+            <div class="notification-head">
+              <strong>{{ notification.titre }}</strong>
+              <span class="notification-type" [ngClass]="'type-' + notification.type">
+                {{ notification.type }}
+              </span>
+            </div>
+            <p>{{ notification.message }}</p>
+            <small>{{ notification.date | date: 'dd/MM/yyyy HH:mm' }}</small>
+          </article>
+        </div>
+
+        <ng-template #noNotifications>
+          <p>Aucune notification pour le moment.</p>
+        </ng-template>
       </div>
     </div>
 
@@ -1074,6 +1155,17 @@
             </div>
           </form>
         </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentView === 'actions-personnalisees'" class="view-content">
+      <div class="section-card">
+        <h2>🧩 Action personnalisée</h2>
+        <p>
+          Action sélectionnée:
+          <strong>{{ selectedCustomActionName || 'Aucune action sélectionnée' }}</strong>
+        </p>
+        <p>Cette action est active pour votre rôle. Vous pouvez la lier à une vue métier dédiée.</p>
       </div>
     </div>
   </main>

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import * as XLSX from 'xlsx';
@@ -16,6 +17,7 @@ interface Candidature {
   master?: number;
   master_id?: number;
   statut: string;
+  motif_rejet?: string;
   date_soumission: string;
   etat_candidature?: string;
   dossier_valide: boolean;
@@ -30,6 +32,14 @@ interface Candidature {
   date_limite_modification?: string;
   peut_modifier?: boolean;
   jours_restants?: number;
+}
+
+type WorkflowStageState = 'done' | 'current' | 'pending' | 'rejected';
+
+interface WorkflowStage {
+  label: string;
+  state: WorkflowStageState;
+  hint?: string;
 }
 
 interface Master {
@@ -53,6 +63,7 @@ interface Offre {
   date_limite: string;
   places?: number;
   statut: 'ouvert' | 'ferme';
+  document_officiel_pdf_url?: string | null;
 }
 
 interface DossierCandidature {
@@ -65,6 +76,16 @@ interface DossierCandidature {
   dossier_depose?: boolean;
   dossier_valide?: boolean;
   date_soumission?: string;
+}
+
+interface DossierPreferenceForm {
+  nom_prenom: string;
+  etablissement_origine: string;
+  diplome: string;
+  choix_1: string;
+  choix_2: string;
+  choix_3: string;
+  numero_dossier_reserve_administration: string;
 }
 
 interface Document {
@@ -87,10 +108,27 @@ interface Reclamation {
   reponse?: string | null;
 }
 
+interface NotificationItem {
+  id: number;
+  titre: string;
+  message: string;
+  date: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+  lue: boolean;
+}
+
 interface FichierHistorique {
   nom: string;
   date: string;
   id: number;
+}
+
+interface OffreDetailRow {
+  capaciteAccueilleTotale: string;
+  etablissementOrigine: string;
+  capaciteAccueille: string;
+  typeDiplome: string;
+  datesImportantes: string;
 }
 
 // ✅ CORRECTION - Interface HistoriqueItem complète
@@ -123,6 +161,7 @@ type CandidatView =
   | 'suivi'
   | 'historique'
   | 'reclamations'
+  | 'notifications'
   | 'importer';
 
 interface CandidatActionPermissions {
@@ -132,6 +171,14 @@ interface CandidatActionPermissions {
   depotDossier: boolean;
   suiviCandidature: boolean;
   deposerReclamation: boolean;
+}
+
+function normalizeActionLabel(value: string): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 @Component({
@@ -151,9 +198,21 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   // ✅ AJOUT - Filtre année pour historique
   filtreAnnee: string = '';
   selectedDossierNumber: string | null = null;
+  dossierPreferenceForm: DossierPreferenceForm = {
+    nom_prenom: '',
+    etablissement_origine: 'ISIMM',
+    diplome: '',
+    choix_1: '',
+    choix_2: '',
+    choix_3: '',
+    numero_dossier_reserve_administration: '',
+  };
   selectedCandidatureForInscription: Candidature | null = null;
   openActionMenuId: number | null = null;
   inscriptionExportFormat: ExportFormat = 'pdf';
+  notificationsNonLues = 0;
+  isWorkflowMockMode = false;
+  isPreferenceFormDemoMode = false;
   showEditCandidatureModal: boolean = false;
   selectedCandidatureForEdit: Candidature | null = null;
   editChoixPriorite: number = 1;
@@ -161,6 +220,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   wizardCurrentStep: number = 1;
   wizardMaxAllowedStep: number = 1;
   wizardOffre: Offre | null = null;
+  selectedOffreDetail: Offre | null = null;
   wizardData: {
     type: string;
     titre: string;
@@ -187,6 +247,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   private countdownTimerId: ReturnType<typeof setInterval> | null = null;
   private ws: WebSocket | null = null;
   private reconnectTimerId: ReturnType<typeof setTimeout> | null = null;
+  private queryParamsSub: Subscription | null = null;
   private readonly wsReconnectDelayMs = 3000;
 
   mesCandidatures: Candidature[] = [
@@ -236,68 +297,73 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   ];
 
   offresInscription: Offre[] = [
-    // Masters Recherche
     {
       id: 1,
-      titre: 'Master Recherche - Génie Logiciel',
+      titre: 'Mastère Professionnel en Génie logiciel(GL)',
       type: 'master',
-      sous_type: 'recherche',
-      description:
-        'Master Recherche en Génie Logiciel - Formation approfondie en développement et architecture logicielle',
-      date_limite: '2026-03-31',
-      places: 30,
+      sous_type: 'professionnel',
+      description: 'Formation professionnelle orientée ingénierie logicielle.',
+      date_limite: '2026-07-22',
+      places: 35,
       statut: 'ouvert',
     },
     {
       id: 2,
-      titre: 'Master Recherche - Intelligence Artificielle',
+      titre: 'Mastère Professionnel en sciences de données(DS)',
       type: 'master',
-      sous_type: 'recherche',
-      description: 'Spécialisation en IA, Machine Learning et applications avancées',
-      date_limite: '2026-04-15',
-      places: 25,
+      sous_type: 'professionnel',
+      description: 'Formation professionnelle en sciences de données.',
+      date_limite: '2026-07-22',
+      places: 35,
       statut: 'ouvert',
     },
     {
       id: 3,
-      titre: 'Master Recherche - Réseaux et Télécommunications',
-      type: 'master',
-      sous_type: 'recherche',
-      description: 'Technologies des réseaux, protocoles modernes et télécommunications',
-      date_limite: '2026-04-20',
-      places: 20,
-      statut: 'ferme',
-    },
-    // Masters Professionnels
-    {
-      id: 4,
-      titre: 'Master Professionnel - Génie Logiciel',
+      titre: 'Mastère Professionnel en Ingénieries en Instrumentation industrielle (3I)',
       type: 'master',
       sous_type: 'professionnel',
-      description: "Master Professionnel orienté vers l'industrie et les métiers du développement",
-      date_limite: '2026-03-31',
-      places: 40,
+      description: 'Formation professionnelle en instrumentation industrielle.',
+      date_limite: '2026-07-22',
+      places: 30,
+      statut: 'ouvert',
+    },
+    {
+      id: 4,
+      titre: 'Mastère Recherche en Génie logiciel(MRGL)',
+      type: 'master',
+      sous_type: 'recherche',
+      description: 'Mastère recherche en génie logiciel.',
+      date_limite: '2026-07-22',
+      places: 30,
       statut: 'ouvert',
     },
     {
       id: 5,
-      titre: 'Master Professionnel - Infrastructure et Cloud',
+      titre: 'Mastère Recherche en micro-électronique et instrumentation',
       type: 'master',
-      sous_type: 'professionnel',
-      description: 'Gestion des infrastructures, Cloud Computing et DevOps',
-      date_limite: '2026-04-10',
+      sous_type: 'recherche',
+      description: 'Mastère recherche en micro-électronique et instrumentation.',
+      date_limite: '2026-07-22',
       places: 30,
       statut: 'ouvert',
     },
-    // Cycle Ingénieur
     {
       id: 6,
-      titre: "Cycle d'Ingénieur en Informatique",
+      titre: 'Ingénieur en sciences Appliquées et Technologie : Informatique, Génie logiciel',
       type: 'cycle_ingenieur',
-      specialite: 'Génie Logiciel',
-      description:
-        "Cycle 3 ans - Formation d'ingénieur en informatique spécialisée en Génie Logiciel",
-      date_limite: '2026-05-31',
+      specialite: 'Informatique, Génie logiciel',
+      description: 'Cycle ingénieur en informatique et génie logiciel.',
+      date_limite: '2026-07-22',
+      places: 50,
+      statut: 'ouvert',
+    },
+    {
+      id: 7,
+      titre: 'Ingénieur en sciences Appliquées et Technologie : Electronique, Microélectronique',
+      type: 'cycle_ingenieur',
+      specialite: 'Electronique, Microélectronique',
+      description: 'Cycle ingénieur en électronique et microélectronique.',
+      date_limite: '2026-07-22',
       places: 50,
       statut: 'ouvert',
     },
@@ -323,6 +389,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       date_soumission: '2026-02-12',
     },
   ];
+
+  notificationsCandidat: NotificationItem[] = [];
+  filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationDateDebut: string = '';
+  filtreNotificationDateFin: string = '';
 
   documentsRequis: Document[] = [
     {
@@ -440,6 +511,26 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     suiviCandidature: true,
     deposerReclamation: true,
   };
+  customRoleActions: string[] = [];
+  private readonly customActionViewMap: Record<string, CandidatView> = {
+    [normalizeActionLabel('Préinscription')]: 'offres-inscription',
+    [normalizeActionLabel('Consultation de candidature')]: 'candidatures',
+    [normalizeActionLabel('Dépôt de dossier')]: 'mon-dossier',
+    [normalizeActionLabel('Consultation de dossier')]: 'mon-dossier',
+    [normalizeActionLabel('Suivi de candidature')]: 'suivi',
+    [normalizeActionLabel('Déposer réclamation')]: 'reclamations',
+    [normalizeActionLabel('Historique des candidatures')]: 'historique',
+    [normalizeActionLabel('Inscription en ligne')]: 'inscription',
+    [normalizeActionLabel('Mon profil')]: 'profil',
+  };
+  private readonly knownActionNameSet = new Set<string>([
+    normalizeActionLabel('Préinscription'),
+    normalizeActionLabel('Consultation de candidature'),
+    normalizeActionLabel('Consultation de dossier'),
+    normalizeActionLabel('Dépôt de dossier'),
+    normalizeActionLabel('Suivi de candidature'),
+    normalizeActionLabel('Déposer réclamation'),
+  ]);
 
   constructor(
     private route: ActivatedRoute,
@@ -452,21 +543,66 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
+    this.initializeDossierPreferenceForm();
 
     const requestedView = this.route.snapshot.queryParamMap.get('view') as CandidatView | null;
+    const workflowMockMode = this.route.snapshot.queryParamMap.get('workflowMock') === '1';
     if (requestedView && this.canAccessView(requestedView)) {
       this.currentView = requestedView;
+    }
+
+    this.queryParamsSub = this.route.queryParamMap.subscribe((params) => {
+      const isMock = params.get('workflowMock') === '1';
+      const isPreferenceFormDemo = params.get('preferenceFormDemo') === '1';
+      const viewParam = params.get('view') as CandidatView | null;
+
+      this.isPreferenceFormDemoMode = isPreferenceFormDemo;
+      if (this.isPreferenceFormDemoMode) {
+        this.prefillPreferenceFormDemoValues();
+      }
+
+      if (isMock) {
+        this.isWorkflowMockMode = true;
+        this.mesCandidatures = this.buildWorkflowMockCandidatures();
+        this.currentView = 'suivi';
+        return;
+      }
+
+      if (this.isWorkflowMockMode) {
+        this.isWorkflowMockMode = false;
+        this.loadMesCandidatures();
+        this.loadMesDossiers();
+        this.loadNotifications();
+      }
+
+      if (viewParam && this.canAccessView(viewParam)) {
+        this.currentView = viewParam;
+      }
+    });
+
+    if (workflowMockMode) {
+      this.isWorkflowMockMode = true;
+      this.mesCandidatures = this.buildWorkflowMockCandidatures();
+      this.currentView = 'suivi';
+      this.loadActionPermissions();
+      this.startCountdownClock();
+      return;
     }
 
     this.loadActionPermissions();
     this.loadMesCandidatures();
     this.loadOffresInscription();
     this.loadMesDossiers();
+    this.loadNotifications();
     this.startCountdownClock();
     this.connectStatusWebSocket();
   }
 
   ngOnDestroy(): void {
+    if (this.queryParamsSub) {
+      this.queryParamsSub.unsubscribe();
+      this.queryParamsSub = null;
+    }
     this.stopCountdownClock();
     this.disconnectStatusWebSocket();
   }
@@ -522,6 +658,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
         this.loadMesCandidatures();
         this.loadMesDossiers();
+        this.loadNotifications();
       } catch (error) {
         console.warn('Message WebSocket invalide:', error);
       }
@@ -580,9 +717,23 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.currentView = view;
   }
 
+  openCustomRoleAction(actionName: string): void {
+    const normalized = normalizeActionLabel(actionName);
+    const target = this.customActionViewMap[normalized];
+
+    if (!target) {
+      this.notifyActionBlocked(`Action non mappée: ${actionName}`);
+      return;
+    }
+
+    this.switchView(target);
+  }
+
   private loadActionPermissions(): void {
     this.authService.getMyEnabledActions().subscribe({
       next: (actions: string[]) => {
+        this.customRoleActions = this.extractCustomRoleActions(actions || []);
+
         // Fallback permissif: si l'API des actions est indisponible/vide,
         // on conserve les permissions locales pour ne pas masquer le menu candidat.
         if (!actions || actions.length === 0) {
@@ -604,13 +755,40 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         }
       },
       error: () => {
+        this.customRoleActions = [];
         console.warn('Permissions indisponibles, maintien du mode permissif local.');
       },
     });
   }
 
+  private extractCustomRoleActions(actions: string[]): string[] {
+    const unique = new Set<string>();
+    const custom: string[] = [];
+
+    (actions || []).forEach((name) => {
+      const cleaned = (name || '').trim();
+      if (!cleaned) {
+        return;
+      }
+
+      const normalized = normalizeActionLabel(cleaned);
+      if (this.knownActionNameSet.has(normalized) || unique.has(normalized)) {
+        return;
+      }
+
+      unique.add(normalized);
+      custom.push(cleaned);
+    });
+
+    return custom;
+  }
+
   canAccessView(view: CandidatView): boolean {
     if (view === 'dashboard' || view === 'profil') {
+      return true;
+    }
+
+    if (view === 'notifications') {
       return true;
     }
 
@@ -645,10 +823,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const titles: any = {
       dashboard: 'Tableau de bord',
       profil: 'Mon Profil',
-      'offres-inscription': "Offres d'inscription",
-      candidatures: 'Mes Candidatures',
-      'mon-dossier': 'Mon Dossier',
-      reclamations: 'Mes Réclamations',
+      'offres-inscription': 'Préinscription',
+      candidatures: 'Candidatures',
+      'mon-dossier': 'Dossiers de candidature',
+      reclamations: 'Réclamation',
+      notifications: 'Notifications',
       importer: 'Importer un fichier',
       inscription: 'Inscription en ligne',
       suivi: 'Suivi de candidature',
@@ -709,7 +888,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
             annee_universitaire: item.annee_universitaire ?? this.currentAcademicYear(),
             jours_restants: item.jours_restants ?? 0,
             peut_modifier: item.peut_modifier ?? false,
+            statut_inscription: item.statut_inscription ?? '',
+            motif_rejet: item.motif_rejet ?? '',
           }));
+          this.loadNotifications();
         },
         error: (error) => {
           console.error('Erreur chargement candidatures:', error);
@@ -739,7 +921,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
             date_limite: offre.date_limite,
             places: offre.places,
             statut: offre.statut,
+            document_officiel_pdf_url: offre.document_officiel_pdf_url || null,
           }));
+          this.loadNotifications();
         },
         error: (error) => {
           console.error('Erreur chargement offres:', error);
@@ -765,6 +949,112 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           console.error('Erreur chargement dossiers:', error);
         },
       });
+  }
+
+  private loadNotifications(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<NotificationItem[]>('http://localhost:8003/api/candidatures/mes-notifications/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (data) => {
+          this.notificationsCandidat = data || [];
+          this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur chargement notifications:', error);
+          this.notificationsCandidat = [];
+          this.notificationsNonLues = 0;
+        },
+      });
+  }
+
+  marquerNotificationCommeLue(notificationId: number): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/notifications/${notificationId}/mark-read/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) =>
+            notification.id === notificationId ? { ...notification, lue: true } : notification,
+          );
+          this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notification lue:', error);
+        },
+      });
+  }
+
+  marquerToutesNotificationsCommeLues(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        'http://localhost:8003/api/candidatures/notifications/mark-all-read/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) => ({
+            ...notification,
+            lue: true,
+          }));
+          this.notificationsNonLues = 0;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notifications lues:', error);
+        },
+      });
+  }
+
+  getNotificationsFiltrees(): NotificationItem[] {
+    return this.notificationsCandidat.filter((notification) => {
+      if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
+        return false;
+      }
+
+      const notificationDate = new Date(notification.date);
+
+      if (this.filtreNotificationDateDebut) {
+        const dateDebut = new Date(`${this.filtreNotificationDateDebut}T00:00:00`);
+        if (notificationDate < dateDebut) {
+          return false;
+        }
+      }
+
+      if (this.filtreNotificationDateFin) {
+        const dateFin = new Date(`${this.filtreNotificationDateFin}T23:59:59`);
+        if (notificationDate > dateFin) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  reinitialiserFiltresNotifications(): void {
+    this.filtreNotificationType = '';
+    this.filtreNotificationDateDebut = '';
+    this.filtreNotificationDateFin = '';
   }
 
   // ✅ AJOUT - Méthode chargerHistorique
@@ -1040,6 +1330,65 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return `${start}/${start + 1}`;
   }
 
+  private buildWorkflowMockCandidatures(): Candidature[] {
+    const today = new Date().toISOString();
+    return [
+      {
+        id: 9001,
+        numero: 'SIM-001',
+        master_nom: 'Scenario 1 - Paiement non confirme puis rejet',
+        master_id: 1,
+        statut: 'rejete',
+        date_soumission: today,
+        etat_candidature: 'Rejeté',
+        dossier_valide: true,
+        date_depot_dossier: today,
+        dossier_depose: true,
+        statut_inscription: 'non_confirme',
+        motif_rejet: 'Paiement non valide sur inscription en ligne',
+      },
+      {
+        id: 9002,
+        numero: 'SIM-002',
+        master_nom: 'Scenario 2 - Non presélectionné',
+        master_id: 2,
+        statut: 'non_preselectionne',
+        date_soumission: today,
+        etat_candidature: 'Non présélectionné',
+        dossier_valide: false,
+        dossier_depose: false,
+        date_depot_dossier: '',
+      },
+      {
+        id: 9003,
+        numero: 'SIM-003',
+        master_nom: 'Scenario 3 - Dossier non depose',
+        master_id: 3,
+        statut: 'dossier_non_depose',
+        date_soumission: today,
+        etat_candidature: 'Rejeté',
+        dossier_valide: false,
+        dossier_depose: false,
+        date_depot_dossier: '',
+        motif_rejet: 'Dossier de candidature non depose avant delai',
+      },
+      {
+        id: 9004,
+        numero: 'SIM-004',
+        master_nom: 'Scenario 4 - Sélectionnée (en attente) / Non admis',
+        master_id: 4,
+        statut: 'non_admis',
+        date_soumission: today,
+        etat_candidature: 'Non admis',
+        dossier_valide: true,
+        dossier_depose: true,
+        date_depot_dossier: today,
+        statut_inscription: 'en_attente',
+        motif_rejet: 'non admis',
+      },
+    ];
+  }
+
   candidaturesMaster(): Candidature[] {
     return this.mesCandidatures.filter((c) => !this.isCycleIngenieur(c));
   }
@@ -1079,6 +1428,139 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       { key: 'selection', label: 'Sélection de candidature', done: selected },
       { key: 'confirmation', label: 'Confirmation inscription en ligne', done: confirmed },
     ];
+  }
+
+  workflowTimeline(candidature: Candidature): WorkflowStage[] {
+    const statut = (candidature.statut || '').toLowerCase();
+    const statutInscription = (candidature.statut_inscription || '').toLowerCase();
+    const motifRejet = (candidature.motif_rejet || '').toLowerCase();
+
+    const hasDossier =
+      !!candidature.dossier_depose ||
+      ['dossier_depose', 'en_attente', 'selectionne', 'inscrit'].includes(statut);
+    const hasPreselection =
+      [
+        'preselectionne',
+        'non_preselectionne',
+        'non_preselectionnee',
+        'en_attente_dossier',
+        'dossier_non_depose',
+        'dossier_depose',
+        'en_attente',
+        'en_attente_selection',
+        'selectionne',
+        'inscrit',
+      ].includes(statut) || hasDossier;
+
+    const isRejected = ['rejete', 'rejetee'].includes(statut);
+    const isNonAdmis =
+      ['non_admis', 'non_admise'].includes(statut) || motifRejet.includes('non admis');
+    const isSelected = ['selectionne', 'inscrit'].includes(statut);
+    const isSelectionWaiting = ['en_attente', 'en_attente_selection'].includes(statut);
+    const inscriptionConfirmed = statut === 'inscrit' || statutInscription === 'valide';
+    const inscriptionNotConfirmed = [
+      'non_confirme',
+      'non_confirmee',
+      'non confirme',
+      'non confirmee',
+      'rejete',
+      'rejetee',
+      'echec',
+      'refuse',
+    ].includes(statutInscription);
+    const paymentOrInscriptionIssue =
+      motifRejet.includes('paiement') || motifRejet.includes('inscription');
+    const wasSelectedBeforeRejection =
+      isRejected && hasDossier && (inscriptionNotConfirmed || paymentOrInscriptionIssue);
+    const inscriptionPending = isSelected && !inscriptionConfirmed;
+
+    if (
+      ['non_preselectionne', 'non_preselectionnee'].includes(statut) ||
+      (isRejected && !hasPreselection)
+    ) {
+      return [
+        { label: 'Préinscrit', state: 'done' },
+        { label: 'Non présélectionné', state: 'rejected' },
+      ];
+    }
+
+    if (
+      statut === 'dossier_non_depose' ||
+      (isRejected && !hasDossier && motifRejet.includes('dossier'))
+    ) {
+      return [
+        { label: 'Préinscrit', state: 'done' },
+        { label: 'Présélectionné', state: 'done' },
+        { label: 'Dossier de candidature non déposé', state: 'rejected' },
+        { label: 'Candidature rejetée', state: 'rejected' },
+      ];
+    }
+
+    if (statut === 'soumis') {
+      return [
+        { label: 'Préinscrit', state: 'done' },
+        { label: 'Présélectionné', state: 'pending' },
+      ];
+    }
+
+    if (statut === 'sous_examen') {
+      return [
+        { label: 'Préinscrit', state: 'done' },
+        { label: 'Présélectionné', state: 'current', hint: 'En cours de vérification' },
+      ];
+    }
+
+    const steps: WorkflowStage[] = [
+      { label: 'Préinscrit', state: 'done' },
+      { label: 'Présélectionné', state: hasPreselection ? 'done' : 'pending' },
+      {
+        label: 'Dossier de candidature déposé',
+        state: hasDossier ? 'done' : hasPreselection ? 'current' : 'pending',
+      },
+      {
+        label: isSelectionWaiting
+          ? 'Candidature sélectionnée (en attente)'
+          : 'Candidature sélectionnée',
+        state: isSelected
+          ? 'done'
+          : isSelectionWaiting
+            ? 'current'
+            : hasDossier
+              ? 'current'
+              : 'pending',
+        hint:
+          (isSelected || isSelectionWaiting) && !inscriptionConfirmed
+            ? 'En attente de confirmation d’inscription'
+            : undefined,
+      },
+    ];
+
+    if (inscriptionConfirmed) {
+      steps.push({ label: 'Inscription en ligne confirmée', state: 'done' });
+      return steps;
+    }
+
+    if (isNonAdmis) {
+      steps.push({ label: 'Non admis', state: 'rejected' });
+      return steps;
+    }
+
+    if (isRejected) {
+      if (
+        (hasPreselection && hasDossier && (inscriptionNotConfirmed || paymentOrInscriptionIssue)) ||
+        (isSelected && !inscriptionConfirmed)
+      ) {
+        steps.push({ label: 'Inscription en ligne non confirmée', state: 'rejected' });
+      }
+      steps.push({ label: 'Candidature rejetée', state: 'rejected' });
+      return steps;
+    }
+
+    if (inscriptionPending) {
+      steps.push({ label: 'Inscription en ligne non confirmée', state: 'current' });
+    }
+
+    return steps;
   }
 
   canAccessInscriptionEtape(candidature: Candidature): boolean {
@@ -1299,15 +1781,247 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.selectedDossierNumber = numeroDossier;
+    this.syncDossierPreferenceFormFromSelection();
     this.switchView('importer');
   }
 
   resetSelectionDossier(): void {
     this.selectedDossierNumber = null;
+    this.dossierPreferenceForm.numero_dossier_reserve_administration = '';
+  }
+
+  private initializeDossierPreferenceForm(): void {
+    const firstName = this.profileData?.first_name || this.currentUser?.first_name || '';
+    const lastName = this.profileData?.last_name || this.currentUser?.last_name || '';
+    this.dossierPreferenceForm.nom_prenom = `${firstName} ${lastName}`.trim();
+    this.dossierPreferenceForm.etablissement_origine =
+      this.profileData?.etablissement_origine || this.dossierPreferenceForm.etablissement_origine;
+    this.syncDossierPreferenceFormFromSelection();
+  }
+
+  private syncDossierPreferenceFormFromSelection(): void {
+    this.dossierPreferenceForm.numero_dossier_reserve_administration =
+      this.selectedDossierNumber || '';
   }
 
   voirDetails(candidature: Candidature): void {
-    alert(`Voir détails de ${candidature.master_nom}`);
+    this.selectedOffreDetail =
+      this.offresInscription.find((offre) => offre.titre === candidature.master_nom) || null;
+    this.currentView = 'offres-inscription';
+  }
+
+  ouvrirDetailOffre(offre: Offre): void {
+    const code = this.getPreinscriptionDetailCode(offre);
+    if (!code) {
+      this.toastService.show('Aucun detail configure pour cette offre.', 'warning');
+      return;
+    }
+
+    this.router.navigate(['/preinscription/detail', code]);
+  }
+
+  fermerDetailOffre(): void {
+    this.selectedOffreDetail = null;
+  }
+
+  private getPreinscriptionDetailCode(offre: Offre): string | null {
+    const title = (offre?.titre || '').toLowerCase();
+    const desc = (offre?.description || '').toLowerCase();
+    const specialite = (offre?.specialite || '').toLowerCase();
+    const haystack = `${title} ${desc} ${specialite}`;
+
+    if (haystack.includes('science') && haystack.includes('donnee')) return 'mpds';
+    if (haystack.includes('instrumentation') && haystack.includes('industri')) return 'mp3i';
+    if (haystack.includes('micro') && haystack.includes('instrument')) return 'mrmi';
+    if (haystack.includes('recherche') && haystack.includes('genie logiciel')) return 'mrgl';
+    if (
+      haystack.includes('cycle') &&
+      haystack.includes('ingenieur') &&
+      haystack.includes('informatique')
+    ) {
+      return 'ing_info_gl';
+    }
+    if (haystack.includes('ingenieur') && haystack.includes('microelectronique')) return 'ing_em';
+    if (haystack.includes('ingenieur') && haystack.includes('electronique')) return 'ing_em';
+    if (haystack.includes('genie logiciel') || haystack.includes('ingenierie logicielle'))
+      return 'mpgl';
+
+    return null;
+  }
+
+  get acceptedMastersForPreference(): Candidature[] {
+    return this.mesCandidatures.filter((c) => ['selectionne', 'inscrit'].includes(c.statut));
+  }
+
+  shouldShowPreferenceForm(): boolean {
+    if (this.isPreferenceFormDemoMode) {
+      return true;
+    }
+    return !!this.selectedDossierNumber && this.acceptedMastersForPreference.length > 1;
+  }
+
+  getPreferenceMasterOptions(): Array<{ value: string; label: string }> {
+    const allowedCodes = new Set(['mpgl', 'mrgl', 'mpds']);
+    const options = this.offresInscription
+      .map((offre) => ({ value: this.getPreinscriptionDetailCode(offre), label: offre.titre }))
+      .filter(
+        (item): item is { value: string; label: string } =>
+          !!item.value && allowedCodes.has(item.value),
+      );
+
+    if (options.length > 0) {
+      return options;
+    }
+
+    return [
+      { value: 'mpgl', label: 'Mastère Professionnel en Génie logiciel(GL)' },
+      { value: 'mrgl', label: 'Mastère Recherche en Génie logiciel(MRGL)' },
+      { value: 'mpds', label: 'Mastère Professionnel en sciences de données(DS)' },
+    ];
+  }
+
+  activerExemplePreferenceForm(): void {
+    this.isPreferenceFormDemoMode = true;
+    this.prefillPreferenceFormDemoValues();
+  }
+
+  desactiverExemplePreferenceForm(): void {
+    this.isPreferenceFormDemoMode = false;
+  }
+
+  private prefillPreferenceFormDemoValues(): void {
+    if (!this.selectedDossierNumber) {
+      this.selectedDossierNumber =
+        this.dossiersCandidature[0]?.numero_dossier ||
+        this.dossierPreferenceForm.numero_dossier_reserve_administration;
+    }
+
+    this.syncDossierPreferenceFormFromSelection();
+
+    const options = this.getPreferenceMasterOptions().map((opt) => opt.value);
+    if (!this.dossierPreferenceForm.choix_1 && options[0]) {
+      this.dossierPreferenceForm.choix_1 = options[0];
+    }
+    if (!this.dossierPreferenceForm.choix_2 && options[1]) {
+      this.dossierPreferenceForm.choix_2 = options[1];
+    }
+    if (!this.dossierPreferenceForm.choix_3 && options[2]) {
+      this.dossierPreferenceForm.choix_3 = options[2];
+    }
+  }
+
+  submitDossierPreferenceForm(): void {
+    if (!this.shouldShowPreferenceForm()) {
+      this.notifyActionBlocked(
+        'Le formulaire de choix apparaît seulement si plusieurs masters sont acceptés.',
+      );
+      return;
+    }
+
+    const dossier = this.dossiersCandidature.find(
+      (item) => item.numero_dossier === this.selectedDossierNumber,
+    );
+
+    if (!dossier) {
+      this.toastService.show('Dossier sélectionné introuvable.', 'warning');
+      return;
+    }
+
+    const requiredValues = [
+      this.dossierPreferenceForm.nom_prenom,
+      this.dossierPreferenceForm.etablissement_origine,
+      this.dossierPreferenceForm.diplome,
+      this.dossierPreferenceForm.choix_1,
+      this.dossierPreferenceForm.choix_2,
+      this.dossierPreferenceForm.choix_3,
+      this.dossierPreferenceForm.numero_dossier_reserve_administration,
+    ];
+
+    if (requiredValues.some((value) => !String(value || '').trim())) {
+      this.toastService.show('Veuillez remplir tout le formulaire de choix.', 'warning');
+      return;
+    }
+
+    const choiceValues = [
+      this.dossierPreferenceForm.choix_1,
+      this.dossierPreferenceForm.choix_2,
+      this.dossierPreferenceForm.choix_3,
+    ].map((value) => String(value).trim().toUpperCase());
+
+    if (new Set(choiceValues).size !== choiceValues.length) {
+      this.toastService.show('Les choix 1, 2 et 3 doivent être différents.', 'warning');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    const payload = {
+      formulaire: {
+        ...this.dossierPreferenceForm,
+        choix_1: choiceValues[0],
+        choix_2: choiceValues[1],
+        choix_3: choiceValues[2],
+        documents: this.documentsRequis.filter((doc) => doc.depose).map((doc) => doc.nom),
+      },
+    };
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/${dossier.candidature_id}/deposer-dossier/`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('✅ Formulaire de choix enregistré et dossier déposé.', 'success');
+          this.loadMesCandidatures();
+          this.loadMesDossiers();
+        },
+        error: (error) => {
+          console.error('Erreur dépôt dossier avec choix:', error);
+          this.toastService.show(
+            error?.error?.error || '❌ Erreur lors du dépôt du dossier avec choix.',
+            'error',
+          );
+        },
+      });
+  }
+
+  getDetailRowsForOffre(offre: Offre): OffreDetailRow[] {
+    const title = (offre?.titre || '').toLowerCase();
+
+    if (title.includes('génie logiciel') || title.includes('genie logiciel')) {
+      return [
+        {
+          capaciteAccueilleTotale: '35',
+          etablissementOrigine: "Institut Supérieur de l'Informatique et des Mathématiques (ISIMM)",
+          capaciteAccueille: '30',
+          typeDiplome: 'Licence en Sciences de l' + 'Informatique',
+          datesImportantes: 'Inscription sur le site web : www.isimm.rnu.tn/public/formulaires',
+        },
+        {
+          capaciteAccueilleTotale: '35',
+          etablissementOrigine: 'Autres établissements',
+          capaciteAccueille: '05',
+          typeDiplome:
+            'Licence en Sciences de l' + 'Informatique ou en Informatique de Gestion (uniquement)',
+          datesImportantes:
+            'Du jour de la publication de cet avis jusqu au 22 juillet 2025. Proclamation de la liste des étudiants présélectionnés : Le 28 juillet 2025. Dépôt des dossiers numériques : Du 28 juillet au 31 juillet 2025. Proclamation de la liste finale : Le 08 août 2025.',
+        },
+      ];
+    }
+
+    return [
+      {
+        capaciteAccueilleTotale: String(offre.places || 0),
+        etablissementOrigine: 'ISIMM',
+        capaciteAccueille: String(offre.places || 0),
+        typeDiplome:
+          offre.type === 'cycle_ingenieur' ? 'Cycle préparatoire / ingénieur' : 'Licence',
+        datesImportantes: `Date limite : ${new Date(offre.date_limite).toLocaleDateString('fr-FR')}`,
+      },
+    ];
   }
 
   gererDossier(candidature: Candidature): void {

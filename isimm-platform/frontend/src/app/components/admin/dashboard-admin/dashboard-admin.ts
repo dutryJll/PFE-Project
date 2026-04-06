@@ -116,9 +116,26 @@ interface ActionMatrixRow {
   };
 }
 
+interface NotificationItem {
+  id: number;
+  titre: string;
+  message: string;
+  date: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+  lue: boolean;
+}
+
 type RoleKey = 'candidat' | 'commission' | 'responsable_commission' | 'admin';
 type ExportFormat = 'csv' | 'json' | 'ods' | 'pdf';
 type ExportRow = Record<string, string | number | boolean | null | undefined>;
+
+function normalizeActionLabel(value: string): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
 
 @Component({
   selector: 'app-dashboard-admin',
@@ -132,6 +149,7 @@ export class DashboardAdminComponent implements OnInit {
   currentUser: any = null;
   currentView: string = 'dashboard';
   currentDate: Date = new Date();
+  selectedCustomActionName: string = '';
 
   // Données statistiques
   statsData = {
@@ -140,6 +158,12 @@ export class DashboardAdminComponent implements OnInit {
     admis: 0,
     membresCommission: 0,
   };
+
+  notificationsCandidat: NotificationItem[] = [];
+  notificationsNonLues: number = 0;
+  filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationDateDebut: string = '';
+  filtreNotificationDateFin: string = '';
 
   // Listes
   utilisateursList: Utilisateur[] = [];
@@ -227,6 +251,15 @@ export class DashboardAdminComponent implements OnInit {
     responsable_commission: false,
     admin: false,
   };
+  customRoleActions: string[] = [];
+  private readonly knownActionNameSet = new Set<string>([
+    normalizeActionLabel('Gestion des utilisateurs'),
+    normalizeActionLabel('Gestion des masters'),
+    normalizeActionLabel("Gestion concours d'ingénieur"),
+    normalizeActionLabel('Gestion des candidatures'),
+    normalizeActionLabel('Administration du site'),
+    normalizeActionLabel('Rapports'),
+  ]);
 
   filtresLogs: any = {
     module: '',
@@ -295,6 +328,147 @@ export class DashboardAdminComponent implements OnInit {
     this.loadOffresIngenieur();
     this.loadLogs();
     this.loadActionRoleMatrix();
+    this.loadActionPermissions();
+    this.loadNotifications();
+  }
+
+  private loadNotifications(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<NotificationItem[]>('http://localhost:8003/api/candidatures/mes-notifications/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (data) => {
+          this.notificationsCandidat = data || [];
+          this.notificationsNonLues = this.notificationsCandidat.filter((n) => !n.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur chargement notifications admin:', error);
+          this.notificationsCandidat = [];
+          this.notificationsNonLues = 0;
+        },
+      });
+  }
+
+  marquerNotificationCommeLue(notificationId: number): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/notifications/${notificationId}/mark-read/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) =>
+            notification.id === notificationId ? { ...notification, lue: true } : notification,
+          );
+          this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notification admin:', error);
+        },
+      });
+  }
+
+  marquerToutesNotificationsCommeLues(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        'http://localhost:8003/api/candidatures/notifications/mark-all-read/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) => ({
+            ...notification,
+            lue: true,
+          }));
+          this.notificationsNonLues = 0;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notifications lues:', error);
+        },
+      });
+  }
+
+  getNotificationsFiltrees(): NotificationItem[] {
+    return this.notificationsCandidat.filter((notification) => {
+      if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
+        return false;
+      }
+
+      const notificationDate = new Date(notification.date);
+
+      if (this.filtreNotificationDateDebut) {
+        const dateDebut = new Date(`${this.filtreNotificationDateDebut}T00:00:00`);
+        if (notificationDate < dateDebut) {
+          return false;
+        }
+      }
+
+      if (this.filtreNotificationDateFin) {
+        const dateFin = new Date(`${this.filtreNotificationDateFin}T23:59:59`);
+        if (notificationDate > dateFin) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  reinitialiserFiltresNotifications(): void {
+    this.filtreNotificationType = '';
+    this.filtreNotificationDateDebut = '';
+    this.filtreNotificationDateFin = '';
+  }
+
+  private loadActionPermissions(): void {
+    this.authService.getMyEnabledActions().subscribe({
+      next: (actions: string[]) => {
+        this.customRoleActions = this.extractCustomRoleActions(actions || []);
+      },
+      error: () => {
+        this.customRoleActions = [];
+      },
+    });
+  }
+
+  private extractCustomRoleActions(actions: string[]): string[] {
+    const unique = new Set<string>();
+    const custom: string[] = [];
+
+    (actions || []).forEach((name) => {
+      const cleaned = (name || '').trim();
+      if (!cleaned) {
+        return;
+      }
+
+      const normalized = normalizeActionLabel(cleaned);
+      if (this.knownActionNameSet.has(normalized) || unique.has(normalized)) {
+        return;
+      }
+
+      unique.add(normalized);
+      custom.push(cleaned);
+    });
+
+    return custom;
   }
 
   // ========================================
@@ -306,7 +480,57 @@ export class DashboardAdminComponent implements OnInit {
       this.loadLogs();
     } else if (view === 'commissions') {
       this.loadCommissions();
+    } else if (view === 'notifications') {
+      this.loadNotifications();
     }
+  }
+
+  openCustomRoleAction(actionName: string): void {
+    this.selectedCustomActionName = actionName;
+    const target = this.resolveActionTargetView(actionName);
+    this.switchView(target || 'actions-personnalisees');
+  }
+
+  private resolveActionTargetView(actionName: string): string | null {
+    const normalized = normalizeActionLabel(actionName);
+
+    if (normalized.includes('utilisateur')) {
+      return 'utilisateurs';
+    }
+
+    if (normalized.includes('master')) {
+      return 'masters';
+    }
+
+    if (normalized.includes('concours')) {
+      return 'concours-ingenieur';
+    }
+
+    if (normalized.includes('candidature')) {
+      return 'candidatures';
+    }
+
+    if (
+      normalized.includes('administration') ||
+      normalized.includes('parametre') ||
+      normalized.includes('matrice')
+    ) {
+      return 'parametres';
+    }
+
+    if (normalized.includes('rapport') || normalized.includes('statistique')) {
+      return 'rapports';
+    }
+
+    if (normalized.includes('journal') || normalized.includes('log')) {
+      return 'logs';
+    }
+
+    if (normalized.includes('profil')) {
+      return 'profil';
+    }
+
+    return null;
   }
 
   loadCommissions(): void {
@@ -339,6 +563,8 @@ export class DashboardAdminComponent implements OnInit {
       parametres: 'Administration du site',
       rapports: 'Rapports',
       profil: 'Mon Profil',
+      notifications: 'Notifications',
+      'actions-personnalisees': 'Action personnalisée',
     };
     return titles[this.currentView] || 'Tableau de bord';
   }

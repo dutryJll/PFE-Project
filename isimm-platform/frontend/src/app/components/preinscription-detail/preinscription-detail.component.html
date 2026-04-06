@@ -1,0 +1,68 @@
+<div class="detail-page" *ngIf="detail as d; else notFound">
+  <header class="detail-header">
+    <h1>{{ d.title }}</h1>
+    <p>{{ d.intro }}</p>
+    <p *ngIf="d.annee" class="meta">Annee universitaire {{ d.annee }}</p>
+  </header>
+
+  <section class="detail-tools">
+    <a
+      class="btn-back"
+      [routerLink]="['/candidat/dashboard']"
+      [queryParams]="{ view: 'offres-inscription' }"
+      >Retour aux offres</a
+    >
+
+    <a *ngIf="pdfUrl" class="btn-pdf" [href]="pdfUrl" target="_blank" rel="noopener noreferrer">
+      Telecharger le PDF officiel signe
+    </a>
+
+    <span *ngIf="isLoadingOffer" class="pdf-status">Chargement du PDF officiel...</span>
+    <span *ngIf="!isLoadingOffer && !pdfUrl" class="pdf-status warning">
+      Aucun PDF officiel signe publie pour cette offre.
+    </span>
+  </section>
+
+  <section *ngIf="d.description" class="detail-description">
+    {{ d.description }}
+  </section>
+
+  <section *ngIf="d.importantDates?.length" class="dates-card">
+    <h2>Dates importantes</h2>
+    <ul>
+      <li *ngFor="let dateLine of d.importantDates">{{ dateLine }}</li>
+    </ul>
+  </section>
+
+  <section *ngIf="d.table" class="table-card">
+    <h2>{{ d.tableTitle || 'Details' }}</h2>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th *ngFor="let h of d.table.headers">{{ h }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of d.table.rows">
+            <td *ngFor="let col of row" [innerText]="col"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<ng-template #notFound>
+  <div class="detail-page not-found">
+    <h1>Detail introuvable</h1>
+    <p>Le code de formation demande est inconnu.</p>
+    <a
+      class="btn-back"
+      [routerLink]="['/candidat/dashboard']"
+      [queryParams]="{ view: 'offres-inscription' }"
+      >Retour aux offres</a
+    >
+  </div>
+</ng-template>

@@ -8,6 +8,7 @@ from .models import (
     FormuleScore,
     ListeAdmission,
     Master,
+    Notification,
 )
 
 User = get_user_model()
@@ -74,6 +75,7 @@ class ConfigurationAppelSerializer(serializers.ModelSerializer):
     master_nom = serializers.CharField(source='master.nom', read_only=True)
     est_visible = serializers.SerializerMethodField()
     peut_candidater = serializers.SerializerMethodField()
+    document_officiel_pdf_url = serializers.SerializerMethodField()
 
     class Meta:
         model = ConfigurationAppel
@@ -84,6 +86,14 @@ class ConfigurationAppelSerializer(serializers.ModelSerializer):
 
     def get_peut_candidater(self, obj):
         return obj.peut_candidater()
+
+    def get_document_officiel_pdf_url(self, obj):
+        if not obj.document_officiel_pdf:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.document_officiel_pdf.url)
+        return obj.document_officiel_pdf.url
 
 
 class FormuleScoreSerializer(serializers.ModelSerializer):
@@ -106,3 +116,11 @@ class ListeAdmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListeAdmission
         fields = '__all__'
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    date = serializers.DateTimeField(source='created_at', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = ['id', 'titre', 'message', 'type', 'lue', 'date']

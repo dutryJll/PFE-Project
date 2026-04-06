@@ -60,6 +60,19 @@
         <textarea [(ngModel)]="offreForm.description" name="description" rows="4"></textarea>
       </label>
 
+      <label>
+        PDF officiel signe (appel d offre)
+        <input type="file" accept=".pdf" (change)="onPdfSelected($event)" />
+      </label>
+
+      <p *ngIf="selectedPdfFile">PDF selectionne: {{ selectedPdfFile.name }}</p>
+      <p *ngIf="offreForm.document_officiel_pdf_url">
+        PDF actuel:
+        <a [href]="offreForm.document_officiel_pdf_url" target="_blank" rel="noopener noreferrer">
+          Ouvrir le document officiel
+        </a>
+      </p>
+
       <div class="actions">
         <button type="button" class="btn-secondary" (click)="goBack()">Annuler</button>
         <button type="submit" class="btn-primary" [disabled]="isSaving">

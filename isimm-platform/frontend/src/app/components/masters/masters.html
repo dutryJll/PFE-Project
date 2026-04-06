@@ -59,9 +59,25 @@
             </span>
           </li>
         </ul>
-        <button class="btn-card research-btn" [routerLink]="['/choisir-candidature']">
-          <span>{{ 'masters.explore' | translate }}</span>
-        </button>
+        <div class="card-actions">
+          <button class="btn-card research-btn" [routerLink]="['/choisir-candidature']">
+            <span>{{ 'masters.explore' | translate }}</span>
+          </button>
+          <button class="btn-card research-btn" [routerLink]="['/preinscription/detail/mrgl']">
+            <span>Detail MRGL</span>
+          </button>
+          <button class="btn-card research-btn" [routerLink]="['/preinscription/detail/mrmi']">
+            <span>Detail MRMI</span>
+          </button>
+          <button
+            *ngIf="getPdfUrlForCode('mrgl') || getPdfUrlForCode('mrmi')"
+            class="btn-card research-btn pdf-btn"
+            (click)="downloadOfficialDocument(getPdfUrlForCode('mrgl') ? 'mrgl' : 'mrmi')"
+            title="Télécharger le document officiel d'appel à candidatures"
+          >
+            <span>📄 {{ 'masters.download_pdf' | translate }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Masters Professionnels -->
@@ -98,9 +114,32 @@
             </span>
           </li>
         </ul>
-        <button class="btn-card professional-btn" [routerLink]="['/choisir-candidature']">
-          <span>{{ 'masters.explore' | translate }}</span>
-        </button>
+        <div class="card-actions">
+          <button class="btn-card professional-btn" [routerLink]="['/choisir-candidature']">
+            <span>{{ 'masters.explore' | translate }}</span>
+          </button>
+          <button class="btn-card professional-btn" [routerLink]="['/preinscription/detail/mpgl']">
+            <span>Detail MPGL</span>
+          </button>
+          <button class="btn-card professional-btn" [routerLink]="['/preinscription/detail/mpds']">
+            <span>Detail MPDS</span>
+          </button>
+          <button class="btn-card professional-btn" [routerLink]="['/preinscription/detail/mp3i']">
+            <span>Detail MP3I</span>
+          </button>
+          <button
+            *ngIf="hasPdfForCodes(['mpgl', 'mpds', 'mp3i'])"
+            class="btn-card professional-btn pdf-btn"
+            (click)="
+              downloadOfficialDocument(
+                getPdfUrlForCode('mpgl') ? 'mpgl' : getPdfUrlForCode('mpds') ? 'mpds' : 'mp3i'
+              )
+            "
+            title="Télécharger le document officiel d'appel à candidatures"
+          >
+            <span>📄 {{ 'masters.download_pdf' | translate }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Cycle Ingenieurs -->
@@ -127,9 +166,25 @@
             <span>{{ 'masters.engineer.rule' | translate }}</span>
           </li>
         </ul>
-        <button class="btn-card engineer-btn" [routerLink]="['/choisir-candidature']">
-          <span>{{ 'masters.explore' | translate }}</span>
-        </button>
+        <div class="card-actions">
+          <button class="btn-card engineer-btn" [routerLink]="['/choisir-candidature']">
+            <span>{{ 'masters.explore' | translate }}</span>
+          </button>
+          <button
+            class="btn-card engineer-btn"
+            [routerLink]="['/preinscription/detail/ing_info_gl']"
+          >
+            <span>Detail Ingenieur</span>
+          </button>
+          <button
+            *ngIf="getPdfUrlForCode('ing_info_gl')"
+            class="btn-card engineer-btn pdf-btn"
+            (click)="downloadOfficialDocument('ing_info_gl')"
+            title="Télécharger le document officiel d'appel à candidatures"
+          >
+            <span>📄 {{ 'masters.download_pdf' | translate }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>

@@ -28,7 +28,7 @@
         (click)="switchView('offres-inscription')"
       >
         <i class="fas fa-door-open"></i>
-        <span>Offres d'inscription</span>
+        <span>Préinscription</span>
       </a>
 
       <a
@@ -38,7 +38,7 @@
         (click)="switchView('candidatures')"
       >
         <i class="fas fa-file-alt"></i>
-        <span>Mes Candidatures</span>
+        <span>Candidatures</span>
       </a>
 
       <a
@@ -48,7 +48,7 @@
         (click)="switchView('mon-dossier')"
       >
         <i class="fas fa-folder"></i>
-        <span>Dossier de candidature</span>
+        <span>Dossiers de candidature</span>
       </a>
 
       <a
@@ -88,7 +88,17 @@
         (click)="switchView('reclamations')"
       >
         <i class="fas fa-exclamation-circle"></i>
-        <span>Mes Réclamations</span>
+        <span>Réclamation</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'notifications'"
+        (click)="switchView('notifications')"
+      >
+        <i class="fas fa-bell"></i>
+        <span>Notifications</span>
+        <span class="badge-count" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
       </a>
 
       <div class="nav-divider"></div>
@@ -126,7 +136,7 @@
           </div>
           <div class="stat-details">
             <h3>{{ mesCandidatures.length }}</h3>
-            <p>Mes candidatures</p>
+            <p>Candidatures</p>
           </div>
         </div>
         <div class="stat-card">
@@ -146,6 +156,24 @@
             <h3>{{ dossiersCandidature.length }}</h3>
             <p>Dossiers</p>
           </div>
+        </div>
+      </div>
+
+      <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
+        <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
+        <p class="role-features-subtitle">
+          Ces actions sont disponibles dans la plateforme selon votre profil candidat.
+        </p>
+        <div class="role-actions-list">
+          <button
+            type="button"
+            class="role-action-chip role-action-link"
+            *ngFor="let actionName of customRoleActions"
+            (click)="openCustomRoleAction(actionName)"
+            [title]="actionName"
+          >
+            {{ actionName }}
+          </button>
         </div>
       </div>
 
@@ -310,11 +338,27 @@
                     ><span>Limite : {{ offre.date_limite | date: 'dd/MM/yyyy' }}</span>
                   </div>
                   <div class="info-item">
-                    <i class="fas fa-users"></i><span>Places : {{ offre.places }}</span>
+                    <i class="fas fa-users"></i><span>Capacité d'accueil : {{ offre.places }}</span>
+                  </div>
+                </div>
+                <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
+                  <div class="info-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <a
+                      [href]="offre.document_officiel_pdf_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF officiel signé
+                    </a>
                   </div>
                 </div>
               </div>
               <div class="offre-actions">
+                <button class="btn-secondary" type="button" (click)="ouvrirDetailOffre(offre)">
+                  <i class="fas fa-eye"></i>
+                  Consulter détail
+                </button>
                 <button
                   class="btn-postuler"
                   [disabled]="
@@ -360,7 +404,19 @@
                     ><span>Limite : {{ offre.date_limite | date: 'dd/MM/yyyy' }}</span>
                   </div>
                   <div class="info-item">
-                    <i class="fas fa-users"></i><span>Places : {{ offre.places }}</span>
+                    <i class="fas fa-users"></i><span>Capacité d'accueil : {{ offre.places }}</span>
+                  </div>
+                </div>
+                <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
+                  <div class="info-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <a
+                      [href]="offre.document_officiel_pdf_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF officiel signé
+                    </a>
                   </div>
                 </div>
               </div>
@@ -405,6 +461,18 @@
                 <h4>{{ offre.titre }}</h4>
                 <p class="offre-specialite">Spécialité : {{ offre.specialite }}</p>
                 <p class="offre-description">{{ offre.description }}</p>
+                <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
+                  <div class="info-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <a
+                      [href]="offre.document_officiel_pdf_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      PDF officiel signé
+                    </a>
+                  </div>
+                </div>
               </div>
               <div class="offre-actions">
                 <button
@@ -435,7 +503,7 @@
     <div *ngIf="currentView === 'candidatures'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>📋 Mes candidatures</h2>
+          <h2>📋 Candidatures</h2>
           <button
             class="btn-primary"
             *ngIf="actionPermissions.preinscription"
@@ -478,9 +546,10 @@
                 <td>{{ candidature.date_soumission | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ candidature.dossier_depose ? 'Déposé' : 'Non déposé' }}</td>
                 <td>
-                  <strong class="score-highlight" *ngIf="candidature.score"
-                    >{{ candidature.score }}/20</strong
-                  ><span *ngIf="!candidature.score">-</span>
+                  <strong class="score-highlight" *ngIf="candidature.score">{{
+                    candidature.score
+                  }}</strong>
+                  <span *ngIf="!candidature.score">-</span>
                 </td>
                 <td>
                   <span class="classement-badge" *ngIf="candidature.classement"
@@ -575,9 +644,10 @@
                 <td>{{ candidature.date_soumission | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ candidature.dossier_depose ? 'Déposé' : 'Non déposé' }}</td>
                 <td>
-                  <strong class="score-highlight" *ngIf="candidature.score"
-                    >{{ candidature.score }}/20</strong
-                  ><span *ngIf="!candidature.score">-</span>
+                  <strong class="score-highlight" *ngIf="candidature.score">{{
+                    candidature.score
+                  }}</strong>
+                  <span *ngIf="!candidature.score">-</span>
                 </td>
                 <td>
                   <span class="classement-badge" *ngIf="candidature.classement"
@@ -643,7 +713,7 @@
 
     <div *ngIf="currentView === 'mon-dossier'" class="view-content">
       <div class="section-card">
-        <h2>📁 Mon Dossier de Candidature</h2>
+        <h2>📁 Dossiers de candidature</h2>
         <p>Consultez vos dossiers via leur numéro lié à la candidature</p>
 
         <div class="dossier-toolbar">
@@ -707,7 +777,7 @@
         <div class="section-header section-header-export">
           <h2>💳 Inscription en ligne</h2>
           <div class="download-box">
-            <label for="inscriptionExportFormat">Download table data as</label>
+            <label for="inscriptionExportFormat">Download as</label>
             <select
               id="inscriptionExportFormat"
               [(ngModel)]="inscriptionExportFormat"
@@ -804,6 +874,103 @@
           <button class="btn-doc" (click)="switchView('mon-dossier')">Retour aux dossiers</button>
         </div>
 
+        <div class="section-card" *ngIf="!shouldShowPreferenceForm()">
+          <h3>Exemple du formulaire de choix</h3>
+          <p class="subtitle">
+            Le formulaire s'affiche automatiquement quand plusieurs masters sont acceptés et un
+            dossier est sélectionné.
+          </p>
+          <div class="profile-actions">
+            <button type="button" class="btn-primary" (click)="activerExemplePreferenceForm()">
+              Afficher un exemple maintenant
+            </button>
+          </div>
+        </div>
+
+        <div class="section-card" *ngIf="shouldShowPreferenceForm()">
+          <h3>Candidature pour le master en informatique</h3>
+          <p class="subtitle">
+            Choix par ordre de préférence - Candidature en Master (MPGL, MRGL ou MPDS)
+          </p>
+
+          <div class="profile-actions" *ngIf="isPreferenceFormDemoMode">
+            <button type="button" class="btn-doc" (click)="desactiverExemplePreferenceForm()">
+              Quitter l'exemple
+            </button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom et prénom</label>
+              <input
+                type="text"
+                [(ngModel)]="dossierPreferenceForm.nom_prenom"
+                name="pref_nom_prenom"
+              />
+            </div>
+            <div class="form-group">
+              <label>Num_dossier</label>
+              <input
+                type="text"
+                [(ngModel)]="dossierPreferenceForm.numero_dossier_reserve_administration"
+                name="pref_num_dossier"
+                placeholder="Num_dossier"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Établissement d'origine</label>
+              <input
+                type="text"
+                [(ngModel)]="dossierPreferenceForm.etablissement_origine"
+                name="pref_etablissement"
+              />
+            </div>
+            <div class="form-group">
+              <label>Type de diplôme</label>
+              <input type="text" [(ngModel)]="dossierPreferenceForm.diplome" name="pref_diplome" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Choix 1</label>
+              <select [(ngModel)]="dossierPreferenceForm.choix_1" name="pref_choix_1">
+                <option value="">Sélectionner</option>
+                <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
+                  {{ opt.value.toUpperCase() }} - {{ opt.label }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Choix 2</label>
+              <select [(ngModel)]="dossierPreferenceForm.choix_2" name="pref_choix_2">
+                <option value="">Sélectionner</option>
+                <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
+                  {{ opt.value.toUpperCase() }} - {{ opt.label }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Choix 3</label>
+              <select [(ngModel)]="dossierPreferenceForm.choix_3" name="pref_choix_3">
+                <option value="">Sélectionner</option>
+                <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
+                  {{ opt.value.toUpperCase() }} - {{ opt.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button type="button" class="btn-primary" (click)="submitDossierPreferenceForm()">
+              Enregistrer le formulaire de choix
+            </button>
+          </div>
+        </div>
+
         <div class="multi-upload-actions">
           <button
             type="button"
@@ -873,24 +1040,35 @@
     <div *ngIf="currentView === 'suivi'" class="view-content">
       <div class="section-card">
         <h2>🧭 Suivi de candidature</h2>
+        <div *ngIf="isWorkflowMockMode" class="simulation-banner">
+          Mode simulation actif: 4 scénarios de test sont affichés (avec états en rouge).
+        </div>
 
         <div class="suivi-layout">
           <div class="suivi-col">
-            <h3>Suivi de mes candidatures</h3>
+            <h3>Suivi des candidatures</h3>
             <div class="suivi-card" *ngFor="let candidature of mesCandidatures">
               <div class="suivi-head">
                 <strong>{{ candidature.master_nom }}</strong>
                 <span>{{ candidature.numero }}</span>
               </div>
-              <div class="workflow-row">
+              <div class="timeline-card">
                 <div
-                  class="workflow-step"
-                  *ngFor="let step of workflowSteps(candidature)"
-                  [class.done]="step.done"
+                  class="timeline-item"
+                  *ngFor="let step of workflowTimeline(candidature); let last = last"
                 >
-                  <span class="step-check">{{ step.done ? '✓' : '○' }}</span>
-                  <span class="step-label">{{ step.label }}</span>
+                  <div class="timeline-marker" [ngClass]="'state-' + step.state">
+                    <span *ngIf="step.state === 'current'" class="timeline-core"></span>
+                  </div>
+                  <div class="timeline-line" *ngIf="!last"></div>
+                  <div class="timeline-content">
+                    <p>{{ step.label }}</p>
+                    <small *ngIf="step.hint">{{ step.hint }}</small>
+                  </div>
                 </div>
+              </div>
+              <div class="workflow-note" *ngIf="candidature.motif_rejet">
+                Motif: {{ candidature.motif_rejet }}
               </div>
             </div>
           </div>
@@ -946,7 +1124,7 @@
 
     <div *ngIf="currentView === 'reclamations'" class="view-content">
       <div class="section-card">
-        <h2>📢 Mes Réclamations (Tableau)</h2>
+        <h2>📢 Réclamation</h2>
         <button
           class="btn-nouvelle-reclamation"
           *ngIf="actionPermissions.deposerReclamation"
@@ -992,7 +1170,112 @@
         </ng-template>
       </div>
     </div>
+
+    <div *ngIf="currentView === 'notifications'" class="view-content">
+      <div class="section-card">
+        <div class="candidatures-header">
+          <h2>🔔 Notifications</h2>
+          <p class="subtitle">Toutes vos alertes de préinscription, candidature et réclamation.</p>
+        </div>
+
+        <div class="notifications-filters">
+          <select [(ngModel)]="filtreNotificationType">
+            <option value="">Tous les types</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+            <option value="danger">Danger</option>
+          </select>
+          <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
+          <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+          <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
+            Reinitialiser
+          </button>
+        </div>
+
+        <div
+          class="notifications-list"
+          *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
+        >
+          <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+            <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
+              ✓ Marquer tous comme lus
+            </button>
+          </div>
+          <article
+            class="notification-card"
+            *ngFor="let notification of getNotificationsFiltrees()"
+            [class.unread]="!notification.lue"
+            (click)="marquerNotificationCommeLue(notification.id)"
+          >
+            <div class="notification-head">
+              <strong>{{ notification.titre }}</strong>
+              <span class="notification-type" [ngClass]="'type-' + notification.type">
+                {{ notification.type }}
+              </span>
+            </div>
+            <p>{{ notification.message }}</p>
+            <small>{{ notification.date | date: 'dd/MM/yyyy HH:mm' }}</small>
+          </article>
+        </div>
+
+        <ng-template #noNotifications>
+          <div class="empty-reclamations">
+            <p>Aucune notification pour le moment.</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
   </main>
+
+  <div
+    *ngIf="selectedOffreDetail"
+    class="modal-overlay detail-offre-overlay"
+    (click)="fermerDetailOffre()"
+  >
+    <div class="modal-content detail-offre-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Consulter détail</h2>
+        <button class="btn-close" (click)="fermerDetailOffre()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="detail-offre-block">
+        <div class="detail-offre-hero">
+          <h3>{{ selectedOffreDetail.titre }}</h3>
+          <p>{{ selectedOffreDetail.description }}</p>
+        </div>
+
+        <div class="detail-table-wrap">
+          <table class="candidatures-table detail-table">
+            <thead>
+              <tr>
+                <th>Capacité d'accueil totale</th>
+                <th>Établissement d'origine</th>
+                <th>Capacité d'accueil</th>
+                <th>Type de diplôme</th>
+                <th>Dates importantes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of getDetailRowsForOffre(selectedOffreDetail)">
+                <td>{{ row.capaciteAccueilleTotale }}</td>
+                <td>{{ row.etablissementOrigine }}</td>
+                <td>{{ row.capaciteAccueille }}</td>
+                <td>{{ row.typeDiplome }}</td>
+                <td>{{ row.datesImportantes }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-outline" (click)="fermerDetailOffre()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div *ngIf="showEditCandidatureModal" class="modal-overlay" (click)="fermerModalModification()">
     <div class="modal-content" (click)="$event.stopPropagation()">

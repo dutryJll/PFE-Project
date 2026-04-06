@@ -155,3 +155,29 @@ def envoyer_email_inscription_validee(inscription):
     )
 
     return True
+
+
+def envoyer_rappel_deadline_j3(candidature, jours_restants):
+    """Email de rappel a J-3 (ou moins) avant la deadline de modification/depot."""
+    candidat = candidature.candidat
+    master = candidature.master
+
+    subject = f"Rappel deadline: {jours_restants} jour(s) restant(s) - {master.nom}"
+    message = (
+        f"Bonjour {candidat.get_full_name() or candidat.username},\n\n"
+        f"Votre candidature {candidature.numero} ({master.nom}) arrive bientot a echeance.\n"
+        f"Il vous reste {jours_restants} jour(s) avant la deadline.\n"
+        "Merci de finaliser vos actions dans les delais.\n\n"
+        "Cordialement,\n"
+        "ISIMM Admission"
+    )
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[candidat.email],
+        fail_silently=False,
+    )
+
+    return True

@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.utils import OperationalError
+from django.db import IntegrityError
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -18,6 +19,7 @@ from rest_framework.response import Response
 from .models import (
     Candidature,
     CandidatListe,
+    MembreCommission,
     Concours,
     ConfigurationAppel,
     DonneesAcademiques,
@@ -25,6 +27,7 @@ from .models import (
     ListeAdmission,
     Master,
     InscriptionEnLigne,
+    Notification,
 )
 from .services import (
     GestionListesService,
@@ -37,6 +40,7 @@ from .serializers import (
     CandidatureSerializer,
     ConfigurationAppelSerializer,
     FormuleScoreSerializer,
+    NotificationSerializer,
     UserUpdateSerializer,
 )
 from .emails import (
@@ -312,6 +316,141 @@ def create_candidature(request):
 
     candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
 
+    # Sauvegarde detaillee des donnees de preinscription (etape 3) si presente.
+    academic_data = request.data.get('academic_data')
+    formation_code = request.data.get('formation_code')
+    selected_diplome = request.data.get('selected_diplome')
+    etablissement_origine = request.data.get('etablissement_origine')
+    diplome_reference = request.data.get('diplome_reference')
+    diplomes = request.data.get('diplomes')
+
+    if isinstance(academic_data, dict):
+        def _as_float(value, default=0.0):
+            try:
+                if value is None or value == '':
+                    return float(default)
+                return float(value)
+            except (TypeError, ValueError):
+                return float(default)
+
+        def _avg(values):
+            cleaned = [_as_float(v, None) for v in values]
+            cleaned = [v for v in cleaned if v is not None]
+            if not cleaned:
+                return 0.0
+            return sum(cleaned) / len(cleaned)
+
+        common = academic_data.get('common', {}) if isinstance(academic_data.get('common'), dict) else {}
+        gl_ds = academic_data.get('glDs', {}) if isinstance(academic_data.get('glDs'), dict) else {}
+        i3 = academic_data.get('i3', {}) if isinstance(academic_data.get('i3'), dict) else {}
+        mrgl_licence = (
+            academic_data.get('mrglLicence', {})
+            if isinstance(academic_data.get('mrglLicence'), dict)
+            else {}
+        )
+        mrgl_maitrise = (
+            academic_data.get('mrglMaitrise', {})
+            if isinstance(academic_data.get('mrglMaitrise'), dict)
+            else {}
+        )
+        mrmi_cas1 = (
+            academic_data.get('mrmiCas1', {})
+            if isinstance(academic_data.get('mrmiCas1'), dict)
+            else {}
+        )
+        mrmi_cas2 = (
+            academic_data.get('mrmiCas2', {})
+            if isinstance(academic_data.get('mrmiCas2'), dict)
+            else {}
+        )
+        ing_cas1 = (
+            academic_data.get('ingCas1', {})
+            if isinstance(academic_data.get('ingCas1'), dict)
+            else {}
+        )
+        ing_cas2 = (
+            academic_data.get('ingCas2', {})
+            if isinstance(academic_data.get('ingCas2'), dict)
+            else {}
+        )
+
+        moyenne_generale = 0.0
+        moyenne_specialite = 0.0
+
+        if formation_code in ['MPGL', 'MPDS']:
+            moyenne_generale = _avg([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')])
+            moyenne_specialite = moyenne_generale
+        elif formation_code == 'MP3I':
+            moyenne_generale = _avg([i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')])
+            moyenne_specialite = _as_float(i3.get('moyBac'), moyenne_generale)
+        elif formation_code == 'MRGL':
+            parcours = academic_data.get('mrglParcours', 'licence')
+            if parcours == 'licence':
+                moyenne_generale = _avg(
+                    [mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')]
+                )
+                moyenne_specialite = _as_float(mrgl_licence.get('moyBac'), moyenne_generale)
+            else:
+                moyenne_generale = _avg(
+                    [
+                        mrgl_maitrise.get('moy1'),
+                        mrgl_maitrise.get('moy2'),
+                        mrgl_maitrise.get('moy3'),
+                        mrgl_maitrise.get('moy4'),
+                    ]
+                )
+                moyenne_specialite = _as_float(mrgl_maitrise.get('moyBac'), moyenne_generale)
+        elif formation_code == 'MRMI':
+            parcours = academic_data.get('mrmiParcours', 'cas1')
+            if parcours == 'cas1':
+                moyenne_generale = _avg(
+                    [mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')]
+                )
+                moyenne_specialite = _as_float(mrmi_cas1.get('moyBac'), moyenne_generale)
+            else:
+                moyenne_generale = _as_float(mrmi_cas2.get('moyIng1'), 0.0)
+                moyenne_specialite = moyenne_generale
+        elif formation_code in ['ING_INFO_GL', 'ING_EM']:
+            parcours = academic_data.get('ingParcours', 'cas1')
+            if parcours == 'cas1':
+                moyenne_generale = _avg([ing_cas1.get('moy1'), ing_cas1.get('moy2')])
+            else:
+                moyenne_generale = _avg([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')])
+            moyenne_specialite = moyenne_generale
+
+        redoublements = common.get('redoublements', 0)
+        try:
+            nb_redoublements = int(redoublements)
+        except (TypeError, ValueError):
+            nb_redoublements = 0
+
+        DonneesAcademiques.objects.update_or_create(
+            candidature=candidature,
+            defaults={
+                'moyenne_generale': round(moyenne_generale, 2),
+                'moyenne_specialite': round(moyenne_specialite, 2),
+                'nb_redoublements': nb_redoublements,
+                'nb_dettes': 0,
+                'notes_detaillees': {
+                    'source': 'preinscription_step3',
+                    'formation_code': formation_code,
+                    'selected_diplome': selected_diplome,
+                    'etablissement_origine': etablissement_origine,
+                    'diplome_reference': diplome_reference,
+                    'diplomes': diplomes if isinstance(diplomes, list) else [],
+                    'session_reussite': common.get('session'),
+                    'payload': academic_data,
+                },
+            },
+        )
+
+    Notification.objects.create(
+        user=request.user,
+        titre='Candidature créée',
+        message=f"Votre candidature {candidature.numero} pour {master.nom} a été enregistrée.",
+        type='success',
+    )
+
     try:
         envoyer_email_confirmation_candidature(candidature)
     except Exception as exc:
@@ -319,6 +458,144 @@ def create_candidature(request):
 
     serializer = CandidatureSerializer(candidature)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+def _safe_create_notification(user, titre, message, notif_type='info', dedup_key=None):
+    if dedup_key:
+        try:
+            Notification.objects.create(
+                user=user,
+                titre=titre,
+                message=message,
+                type=notif_type,
+                dedup_key=dedup_key,
+            )
+            return
+        except IntegrityError:
+            return
+
+    Notification.objects.create(
+        user=user,
+        titre=titre,
+        message=message,
+        type=notif_type,
+    )
+
+
+def _sync_system_notifications_for_user(user):
+    today = timezone.now().date()
+
+    if getattr(user, 'role', None) == 'candidat':
+        offres_ouvertes = Master.objects.filter(actif=True, date_limite_candidature__gte=today).count()
+        if offres_ouvertes > 0:
+            _safe_create_notification(
+                user=user,
+                titre='Préinscription ouverte',
+                message=f"{offres_ouvertes} appel(s) de préinscription sont actuellement ouverts.",
+                notif_type='info',
+                dedup_key=f"preinscription-open-{today.isoformat()}",
+            )
+
+        candidatures = Candidature.objects.filter(candidat=user).select_related('master')
+        for candidature in candidatures:
+            if candidature.statut == 'selectionne':
+                _safe_create_notification(
+                    user=user,
+                    titre='Candidature sélectionnée',
+                    message=(
+                        f"Votre candidature {candidature.numero} pour {candidature.master.nom} "
+                        "a été sélectionnée."
+                    ),
+                    notif_type='success',
+                    dedup_key=f"status-{candidature.id}-selectionne",
+                )
+            elif candidature.statut == 'preselectionne':
+                _safe_create_notification(
+                    user=user,
+                    titre='Présélection disponible',
+                    message=f"Votre candidature {candidature.numero} est présélectionnée.",
+                    notif_type='info',
+                    dedup_key=f"status-{candidature.id}-preselectionne",
+                )
+
+    if getattr(user, 'role', None) in ['responsable_commission', 'commission', 'admin']:
+        configs_qs = ConfigurationAppel.objects.filter(actif=True).select_related('master')
+
+        if getattr(user, 'role', None) in ['responsable_commission', 'commission']:
+            master_ids = list(
+                MembreCommission.objects.filter(user=user, actif=True, commission__actif=True).values_list(
+                    'commission__master_id', flat=True
+                )
+            )
+            configs_qs = configs_qs.filter(master_id__in=master_ids)
+
+        for config in configs_qs:
+            if config.date_limite_depot_dossier:
+                jours_depot = (config.date_limite_depot_dossier - today).days
+                if jours_depot in [7, 3, 1, 0]:
+                    _safe_create_notification(
+                        user=user,
+                        titre='Deadline étude de dossier proche',
+                        message=(
+                            f"Master {config.master.nom}: deadline dépôt dossier dans {jours_depot} jour(s) "
+                            f"(date limite: {config.date_limite_depot_dossier})."
+                        ),
+                        notif_type='warning',
+                        dedup_key=f"deadline-depot-{config.master_id}-{config.date_limite_depot_dossier}",
+                    )
+
+            if config.date_limite_preinscription:
+                jours_preinscription = (config.date_limite_preinscription - today).days
+                if jours_preinscription in [7, 3, 1, 0]:
+                    _safe_create_notification(
+                        user=user,
+                        titre='Deadline préinscription proche',
+                        message=(
+                            f"Master {config.master.nom}: deadline préinscription dans {jours_preinscription} jour(s) "
+                            f"(date limite: {config.date_limite_preinscription})."
+                        ),
+                        notif_type='warning',
+                        dedup_key=f"deadline-preinscription-{config.master_id}-{config.date_limite_preinscription}",
+                    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mes_notifications(request):
+    _sync_system_notifications_for_user(request.user)
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    serializer = NotificationSerializer(notifications, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def marquer_toutes_notifications_lues(request):
+    """Mark all unread notifications as read for the current user."""
+    unread_count = Notification.objects.filter(
+        user=request.user,
+        lue=False
+    ).update(lue=True)
+    
+    return Response({
+        'success': True,
+        'notifications_updated': unread_count
+    })
+
+
+def marquer_notification_lue(request, notification_id):
+    try:
+        notification = Notification.objects.get(id=notification_id, user=request.user)
+    except Notification.DoesNotExist:
+        return Response({'error': 'Notification non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not notification.lue:
+        notification.lue = True
+        notification.save(update_fields=['lue'])
+
+    return Response({'success': True})
 
 
 @api_view(['POST'])
@@ -368,18 +645,98 @@ def mes_candidatures(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def candidatures_responsable(request):
+    """Retourne les candidatures visibles par un responsable/commission, avec filtres par master et type."""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    master_ids = None
+    if role in ['responsable_commission', 'commission']:
+        master_ids = list(
+            MembreCommission.objects.filter(user=request.user, actif=True, commission__actif=True).values_list(
+                'commission__master_id', flat=True
+            )
+        )
+        if not master_ids:
+            return Response([])
+
+    master_id = request.query_params.get('master_id')
+    type_concours = request.query_params.get('type')
+
+    candidatures_qs = Candidature.objects.select_related('candidat', 'master', 'concours').order_by(
+        '-date_soumission'
+    )
+
+    if master_ids is not None:
+        candidatures_qs = candidatures_qs.filter(master_id__in=master_ids)
+
+    if master_id and master_id != 'all':
+        candidatures_qs = candidatures_qs.filter(master_id=master_id)
+
+    if type_concours in ['masters', 'ingenieur']:
+        if type_concours == 'ingenieur':
+            candidatures_qs = candidatures_qs.filter(concours__isnull=False)
+        else:
+            candidatures_qs = candidatures_qs.filter(concours__isnull=True)
+
+    payload = []
+    for candidature in candidatures_qs:
+        payload.append(
+            {
+                'id': candidature.id,
+                'numero': candidature.numero,
+                'candidat_nom': candidature.candidat.get_full_name(),
+                'candidat_email': candidature.candidat.email,
+                'candidat_cin': getattr(candidature.candidat, 'cin', ''),
+                'specialite': candidature.master.specialite if candidature.master else '',
+                'master_id': candidature.master_id,
+                'master_nom': candidature.master.nom if candidature.master else '',
+                'score': candidature.score,
+                'dossier_depose': candidature.dossier_depose,
+                'statut': candidature.statut,
+                'type_concours': 'ingenieur' if candidature.concours_id else 'masters',
+                'parcours': getattr(candidature, 'parcours', '') or '',
+                'date_soumission': candidature.date_soumission,
+                'date_changement_statut': candidature.date_changement_statut,
+            }
+        )
+
+    return Response(payload)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def offres_inscription(request):
     """Retourne les offres d'inscription (masters + cycle ingenieur)."""
     today = timezone.now().date()
 
     masters = Master.objects.filter(actif=True).order_by('nom')
+    configurations = ConfigurationAppel.objects.filter(actif=True).select_related('master')
+    config_by_master = {cfg.master_id: cfg for cfg in configurations}
+
+    role = getattr(request.user, 'role', None)
+    can_see_hidden = role in ['admin', 'responsable_commission', 'commission']
+
     offres = []
 
     for master in masters:
+        config = config_by_master.get(master.id)
+
+        if config and config.est_cache and not can_see_hidden:
+            continue
+
         nom_lower = (master.nom or '').lower()
         specialite_lower = (master.specialite or '').lower()
         is_cycle_ingenieur = 'ingenieur' in nom_lower or 'genie logiciel' in specialite_lower
-        statut = 'ouvert' if master.date_limite_candidature >= today else 'ferme'
+
+        reference_deadline = (
+            config.date_limite_preinscription
+            if config and config.date_limite_preinscription
+            else master.date_limite_candidature
+        )
+        statut = 'ouvert' if reference_deadline and reference_deadline >= today else 'ferme'
+
         offres.append(
             {
                 'id': master.id,
@@ -389,12 +746,104 @@ def offres_inscription(request):
                 'specialite': master.specialite,
                 'description': master.description,
                 'date_limite': master.date_limite_candidature,
+                'date_limite_preinscription': config.date_limite_preinscription if config else None,
+                'date_limite_depot_dossier': config.date_limite_depot_dossier if config else None,
+                'date_limite_paiement': config.date_limite_paiement if config else None,
                 'places': master.places_disponibles,
+                'capacite_interne': config.capacite_interne if config else 0,
+                'capacite_externe': config.capacite_externe if config else 0,
+                'est_cache': config.est_cache if config else False,
+                'est_visible': config.est_visible() if config else True,
+                'document_officiel_pdf_url': (
+                    request.build_absolute_uri(config.document_officiel_pdf.url)
+                    if config and config.document_officiel_pdf
+                    else None
+                ),
+                'statut': statut,
+            }
+        )
+
+    concours_qs = Concours.objects.filter(actif=True).order_by('-created_at')
+    for concours in concours_qs:
+        statut = 'ouvert' if concours.date_cloture and concours.date_cloture >= today else 'ferme'
+        offres.append(
+            {
+                'id': concours.id,
+                'titre': concours.nom,
+                'type': 'concours_ingenieur' if concours.type_concours == 'ingenieur' else 'concours_master',
+                'sous_type': concours.type_concours,
+                'specialite': (concours.conditions_admission or {}).get('specialite', ''),
+                'description': concours.description,
+                'date_limite': concours.date_cloture,
+                'places': concours.places_disponibles,
+                'document_officiel_pdf_url': (
+                    request.build_absolute_uri(concours.document_officiel_pdf.url)
+                    if concours.document_officiel_pdf
+                    else None
+                ),
                 'statut': statut,
             }
         )
 
     return Response(offres)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications_responsable(request):
+    """Retourne les deadlines utiles au responsable pour les masters qu'il gère."""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    master_ids = None
+    if role in ['responsable_commission', 'commission']:
+        master_ids = list(
+            MembreCommission.objects.filter(user=request.user, actif=True, commission__actif=True).values_list(
+                'commission__master_id', flat=True
+            )
+        )
+        if not master_ids:
+            return Response([])
+
+    today = timezone.now().date()
+    configs = ConfigurationAppel.objects.filter(actif=True).select_related('master')
+    if master_ids is not None:
+        configs = configs.filter(master_id__in=master_ids)
+
+    items = []
+    for config in configs:
+        deadlines = [
+            ('Préinscription', config.date_limite_preinscription),
+            ('Dépôt de dossier', config.date_limite_depot_dossier),
+            ('Paiement', config.date_limite_paiement),
+        ]
+        for label, deadline in deadlines:
+            if not deadline:
+                continue
+            days_left = (deadline - today).days
+            items.append(
+                {
+                    'id': f'{config.master_id}-{label}',
+                    'master_id': config.master_id,
+                    'master_nom': config.master.nom,
+                    'deadline_type': label,
+                    'deadline_date': deadline,
+                    'days_left': days_left,
+                    'est_cache': config.est_cache,
+                    'est_visible': config.est_visible(),
+                    'statut': 'ouvert' if config.peut_candidater() else 'ferme',
+                    'type': 'warning' if days_left <= 7 else 'info',
+                    'message': (
+                        f"{label} pour {config.master.nom} dans {days_left} jour(s)"
+                        if days_left >= 0
+                        else f"{label} pour {config.master.nom} est dépassée de {abs(days_left)} jour(s)"
+                    ),
+                }
+            )
+
+    items.sort(key=lambda item: (item['days_left'] if item['days_left'] is not None else 9999, str(item['deadline_date'])))
+    return Response(items)
 
 
 @api_view(['GET'])
@@ -449,8 +898,8 @@ def lister_masters(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def creer_master_admin(request):
-    """Creer un master (admin uniquement)."""
-    if getattr(request.user, 'role', None) != 'admin':
+    """Creer un master (admin ou responsable commission)."""
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
         return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
 
     data = request.data or {}
@@ -502,8 +951,8 @@ def creer_master_admin(request):
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def modifier_supprimer_master_admin(request, master_id):
-    """Modifier/Supprimer (soft delete) un master (admin uniquement)."""
-    if getattr(request.user, 'role', None) != 'admin':
+    """Modifier/Supprimer (soft delete) un master (admin ou responsable commission)."""
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
         return Response({'error': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -710,6 +1159,27 @@ def changer_statut_candidature(request, candidature_id):
     except Exception as exc:
         logger.exception("Erreur envoi email changement statut %s: %s", candidature.id, exc)
 
+    notif_messages = {
+        'sous_examen': 'Votre candidature est en cours d’examen.',
+        'preselectionne': 'Votre candidature est présélectionnée.',
+        'selectionne': 'Votre candidature est sélectionnée.',
+        'rejete': 'Votre candidature a été rejetée.',
+        'en_attente_dossier': 'Veuillez déposer votre dossier numérique.',
+        'inscrit': 'Votre inscription est validée.',
+    }
+    _safe_create_notification(
+        user=candidature.candidat,
+        titre='Mise à jour de candidature',
+        message=notif_messages.get(
+            nouveau_statut,
+            f"Le statut de votre candidature {candidature.numero} est passé à {nouveau_statut}.",
+        ),
+        notif_type='info' if nouveau_statut not in ['selectionne', 'rejete'] else (
+            'success' if nouveau_statut == 'selectionne' else 'danger'
+        ),
+        dedup_key=f"status-change-{candidature.id}-{nouveau_statut}-{timezone.now().date().isoformat()}",
+    )
+
     serializer = CandidatureSerializer(candidature)
     return Response(
         {
@@ -819,6 +1289,112 @@ def gerer_configuration_appel(request, master_id=None):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_document_configuration_appel(request, master_id):
+    """
+    Upload du document officiel PDF pour une offre de préinscription (master).
+    Accessible par responsable et admin uniquement.
+    """
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        config = ConfigurationAppel.objects.get(master_id=master_id)
+    except ConfigurationAppel.DoesNotExist:
+        return Response({'error': 'Configuration non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    pdf_file = request.FILES.get('document_pdf')
+    if not pdf_file:
+        return Response(
+            {'error': 'Aucun fichier PDF fourni'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Vérifier l'extension du fichier
+    allowed_extensions = {'pdf'}
+    file_ext = pdf_file.name.split('.')[-1].lower()
+    if file_ext not in allowed_extensions:
+        return Response(
+            {'error': 'Seuls les fichiers PDF sont acceptes'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Vérifier la taille du fichier (max 10 MB)
+    max_size = 10 * 1024 * 1024
+    if pdf_file.size > max_size:
+        return Response(
+            {'error': 'Fichier trop volumineux (max 10 MB)'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Sauvegarder le fichier
+    config.document_officiel_pdf = pdf_file
+    config.save(update_fields=['document_officiel_pdf'])
+
+    return Response(
+        {
+            'success': True,
+            'message': 'Document PDF charge avec succes',
+            'document_url': request.build_absolute_uri(config.document_officiel_pdf.url) if config.document_officiel_pdf else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def offres_inscription_responsable(request):
+    """
+    API pour responsable: retourne les offres avec statut détaillé (visible/cachée),
+    capacités (interne/externe), URL PDF, et deadlines.
+    """
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    configurations = ConfigurationAppel.objects.filter(actif=True).select_related('master')
+
+    offres = []
+    for config in configurations:
+        master = config.master
+        statut = 'ouvert' if config.peut_candidater() else 'ferme'
+        est_visible = config.est_visible()
+
+        offres.append(
+            {
+                'id': master.id,
+                'titre': master.nom,
+                'type': 'cycle_ingenieur' if 'ingenieur' in master.nom.lower() else 'master',
+                'sous_type': master.type_master,
+                'specialite': master.specialite,
+                'description': master.description,
+                'statut': statut,
+                'est_cache': config.est_cache,
+                'est_visible': est_visible,
+                'capacite_total': config.capacite_accueil,
+                'capacite_interne': config.capacite_interne,
+                'capacite_externe': config.capacite_externe,
+                'capacite_liste_attente': config.capacite_liste_attente,
+                'places': master.places_disponibles,
+                'date_limite': master.date_limite_candidature,
+                'date_debut_visibilite': config.date_debut_visibilite,
+                'date_fin_visibilite': config.date_fin_visibilite,
+                'date_limite_preinscription': config.date_limite_preinscription,
+                'date_limite_depot_dossier': config.date_limite_depot_dossier,
+                'date_limite_paiement': config.date_limite_paiement,
+                'delai_modification_jours': config.delai_modification_candidature_jours,
+                'delai_depot_dossier_j_jours': config.delai_depot_dossier_preselectionnes_jours,
+                'document_officiel_pdf_url': (
+                    request.build_absolute_uri(config.document_officiel_pdf.url)
+                    if config.document_officiel_pdf
+                    else None
+                ),
+            }
+        )
+
+    return Response(offres)
 
 
 class FormuleScoreViewSet(viewsets.ModelViewSet):
@@ -1449,6 +2025,11 @@ def lister_concours(request):
             'places_disponibles': concours.places_disponibles,
             'actif': concours.actif,
             'conditions_admission': concours.conditions_admission,
+            'document_officiel_pdf_url': (
+                request.build_absolute_uri(concours.document_officiel_pdf.url)
+                if concours.document_officiel_pdf
+                else None
+            ),
             'created_at': concours.created_at,
             'updated_at': concours.updated_at,
         }
@@ -1504,6 +2085,18 @@ def creer_concours_admin(request):
         conditions_admission=conditions_admission,
     )
 
+    uploaded_pdf = request.FILES.get('document_officiel_pdf')
+    if uploaded_pdf:
+        file_ext = uploaded_pdf.name.split('.')[-1].lower()
+        if file_ext != 'pdf':
+            concours.delete()
+            return Response({'error': 'Seuls les fichiers PDF sont acceptes.'}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded_pdf.size > 10 * 1024 * 1024:
+            concours.delete()
+            return Response({'error': 'Fichier trop volumineux (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+        concours.document_officiel_pdf = uploaded_pdf
+        concours.save(update_fields=['document_officiel_pdf', 'updated_at'])
+
     return Response(
         {
             'id': concours.id,
@@ -1516,6 +2109,11 @@ def creer_concours_admin(request):
             'actif': concours.actif,
             'conditions_admission': concours.conditions_admission,
             'specialite': concours.conditions_admission.get('specialite', ''),
+            'document_officiel_pdf_url': (
+                request.build_absolute_uri(concours.document_officiel_pdf.url)
+                if concours.document_officiel_pdf
+                else None
+            ),
         },
         status=status.HTTP_201_CREATED,
     )
@@ -1569,6 +2167,20 @@ def modifier_supprimer_concours_admin(request, concours_id):
             payload_conditions.pop('specialite', None)
         concours.conditions_admission = payload_conditions
 
+    uploaded_pdf = request.FILES.get('document_officiel_pdf')
+    if uploaded_pdf:
+        file_ext = uploaded_pdf.name.split('.')[-1].lower()
+        if file_ext != 'pdf':
+            return Response({'error': 'Seuls les fichiers PDF sont acceptes.'}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded_pdf.size > 10 * 1024 * 1024:
+            return Response({'error': 'Fichier trop volumineux (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+        concours.document_officiel_pdf = uploaded_pdf
+
+    if str(data.get('remove_document_officiel_pdf', '')).lower() in ['1', 'true', 'yes']:
+        if concours.document_officiel_pdf:
+            concours.document_officiel_pdf.delete(save=False)
+            concours.document_officiel_pdf = None
+
     concours.save()
 
     return Response(
@@ -1583,6 +2195,11 @@ def modifier_supprimer_concours_admin(request, concours_id):
             'actif': concours.actif,
             'conditions_admission': concours.conditions_admission,
             'specialite': (concours.conditions_admission or {}).get('specialite', ''),
+            'document_officiel_pdf_url': (
+                request.build_absolute_uri(concours.document_officiel_pdf.url)
+                if concours.document_officiel_pdf
+                else None
+            ),
         },
         status=status.HTTP_200_OK,
     )

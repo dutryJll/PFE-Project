@@ -15,6 +15,7 @@ interface Candidature {
   candidat_nom: string;
   candidat_email: string;
   candidat_cin?: string;
+  master_id?: number;
   specialite: string;
   master_nom?: string;
   score: number;
@@ -26,6 +27,29 @@ interface Candidature {
   parcours?: string;
   nouveau_statut?: string;
   date_inscription?: string;
+}
+
+interface NotificationItem {
+  id: number;
+  titre: string;
+  message: string;
+  date: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+  lue: boolean;
+}
+
+interface ResponsibleNotificationItem {
+  id: string;
+  master_id: number;
+  master_nom: string;
+  deadline_type: string;
+  deadline_date: string;
+  days_left: number;
+  est_cache?: boolean;
+  est_visible?: boolean;
+  statut: 'ouvert' | 'ferme';
+  type: 'info' | 'warning';
+  message: string;
 }
 
 interface Specialite {
@@ -106,8 +130,11 @@ type CommissionView =
   | 'profil'
   | 'masters'
   | 'configuration-appels'
+  | 'candidatures-responsable'
   | 'concours-ingenieur'
   | 'candidatures'
+  | 'candidatures-master'
+  | 'candidatures-ingenieur'
   | 'valider-dossier'
   | 'dossiers'
   | 'listes'
@@ -116,7 +143,9 @@ type CommissionView =
   | 'reclamations'
   | 'inscriptions'
   | 'statistiques'
-  | 'deliberations';
+  | 'deliberations'
+  | 'notifications'
+  | 'notifications-responsable';
 
 type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
 type ExportRow = Record<string, string | number | boolean | null | undefined>;
@@ -133,9 +162,45 @@ interface CommissionActionPermissions {
   consulterStatistiques: boolean;
 }
 
+function normalizeActionLabel(value: string): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 interface MasterOption {
   id: number;
   nom: string;
+}
+
+interface OffrePreinscription {
+  id: number;
+  titre: string;
+  type: 'master' | 'cycle_ingenieur';
+  sous_type: string;
+  specialite: string;
+  description: string;
+  date_limite: string;
+  date_limite_preinscription?: string | null;
+  date_limite_depot_dossier?: string | null;
+  date_limite_paiement?: string | null;
+  places: number;
+  capacite_interne?: number;
+  capacite_externe?: number;
+  est_cache?: boolean;
+  est_visible?: boolean;
+  statut: 'ouvert' | 'ferme';
+  document_officiel_pdf_url?: string | null;
+}
+
+interface OffreCalendarPreviewRow {
+  capaciteTotale: string;
+  etablissementOrigine: string;
+  capacite: string;
+  typeDiplome: string;
+  datesImportantes: string;
 }
 
 interface ConfigurationAppelForm {
@@ -148,6 +213,36 @@ interface ConfigurationAppelForm {
   delai_modification_candidature_jours: number;
   delai_depot_dossier_preselectionnes_jours: number;
   actif: boolean;
+  est_cache?: boolean;
+  capacite_interne?: number;
+  capacite_externe?: number;
+  document_officiel_pdf_url?: string | null;
+}
+
+interface NouvelleOffreForm {
+  nom: string;
+  type_master: 'professionnel' | 'recherche';
+  specialite: string;
+  description: string;
+  places_disponibles: number;
+  date_limite_candidature: string;
+  annee_universitaire: string;
+  actif: boolean;
+}
+
+interface OffreEditForm extends NouvelleOffreForm {
+  id: number | null;
+  date_debut_visibilite: string;
+  date_fin_visibilite: string;
+  date_limite_preinscription: string;
+  date_limite_depot_dossier: string;
+  date_limite_paiement: string;
+  delai_modification_candidature_jours: number;
+  delai_depot_dossier_preselectionnes_jours: number;
+  est_cache: boolean;
+  capacite_interne: number;
+  capacite_externe: number;
+  document_officiel_pdf_url?: string | null;
 }
 
 // ========================================
@@ -191,6 +286,39 @@ export class DashboardCommissionComponent implements OnInit {
     gererInscriptions: true,
     consulterStatistiques: true,
   };
+  customRoleActions: string[] = [];
+  private readonly customActionViewMap: Record<string, CommissionView> = {
+    [normalizeActionLabel('Consultation de candidature')]: 'candidatures',
+    [normalizeActionLabel('Vérifier dossiers')]: 'valider-dossier',
+    [normalizeActionLabel('Étude de dossier de candidature')]: 'valider-dossier',
+    [normalizeActionLabel('Consultation de dossier')]: 'dossiers',
+    [normalizeActionLabel('Préselection')]: 'listes',
+    [normalizeActionLabel('Sélection finale')]: 'listes',
+    [normalizeActionLabel('Publier liste principale')]: 'deliberations',
+    [normalizeActionLabel('Publier liste attente')]: 'deliberations',
+    [normalizeActionLabel('Traiter réclamations')]: 'reclamations',
+    [normalizeActionLabel('Gérer inscriptions')]: 'inscriptions',
+    [normalizeActionLabel('Consulter statistiques')]: 'statistiques',
+    [normalizeActionLabel('Membres de la commission')]: 'membres',
+    [normalizeActionLabel('Mon profil')]: 'profil',
+    [normalizeActionLabel('Les masters')]: 'masters',
+    [normalizeActionLabel('Configuration des appels')]: 'configuration-appels',
+    [normalizeActionLabel('Liste des candidatures')]: 'candidatures-responsable',
+    [normalizeActionLabel("Concours cycle d'ingénieur")]: 'concours-ingenieur',
+    [normalizeActionLabel('Analyse dossier')]: 'ocr',
+  };
+  private readonly knownActionNameSet = new Set<string>([
+    normalizeActionLabel('Consultation de candidature'),
+    normalizeActionLabel('Consultation de dossier'),
+    normalizeActionLabel('Vérifier dossiers'),
+    normalizeActionLabel('Préselection'),
+    normalizeActionLabel('Sélection finale'),
+    normalizeActionLabel('Publier liste principale'),
+    normalizeActionLabel('Publier liste attente'),
+    normalizeActionLabel('Traiter réclamations'),
+    normalizeActionLabel('Gérer inscriptions'),
+    normalizeActionLabel('Consulter statistiques'),
+  ]);
 
   // Menu Kebab
   actionMenuOpen: number | null = null;
@@ -249,6 +377,12 @@ export class DashboardCommissionComponent implements OnInit {
       nb_dossiers: 30,
     },
   ];
+
+  notificationsCandidat: NotificationItem[] = [];
+  notificationsNonLues: number = 0;
+  filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationDateDebut: string = '';
+  filtreNotificationDateFin: string = '';
 
   concoursIngenieur: Concours[] = [
     {
@@ -328,9 +462,52 @@ export class DashboardCommissionComponent implements OnInit {
   inscriptionsExportFormat: ExportFormat = 'xlsx';
 
   masterOptions: MasterOption[] = [];
+  offresPreinscription: OffrePreinscription[] = [];
   selectedConfigMasterId: number | null = null;
+  selectedOffreId: number | null = null;
+  selectedMasterForCandidatures: number | 'all' = 'all';
   configLoading: boolean = false;
   configSaving: boolean = false;
+  creationOffreLoading: boolean = false;
+  editingOffreLoading: boolean = false;
+  offreEditionMode: boolean = false;
+  candidaturesResponsable: Candidature[] = [];
+  candidaturesResponsableFiltrees: Candidature[] = [];
+  responsibleNotifications: ResponsibleNotificationItem[] = [];
+  filtreResponsibleNotificationType: '' | 'info' | 'warning' = '';
+  filtreResponsibleNotificationStatut: '' | 'ouvert' | 'ferme' = '';
+  nouvelleOffre: NouvelleOffreForm = {
+    nom: '',
+    type_master: 'recherche',
+    specialite: '',
+    description: '',
+    places_disponibles: 30,
+    date_limite_candidature: '',
+    annee_universitaire: '2026/2027',
+    actif: true,
+  };
+  offreEditForm: OffreEditForm = {
+    id: null,
+    nom: '',
+    type_master: 'recherche',
+    specialite: '',
+    description: '',
+    places_disponibles: 30,
+    date_limite_candidature: '',
+    annee_universitaire: '2026/2027',
+    actif: true,
+    date_debut_visibilite: '',
+    date_fin_visibilite: '',
+    date_limite_preinscription: '',
+    date_limite_depot_dossier: '',
+    date_limite_paiement: '',
+    delai_modification_candidature_jours: 7,
+    delai_depot_dossier_preselectionnes_jours: 14,
+    est_cache: false,
+    capacite_interne: 0,
+    capacite_externe: 0,
+    document_officiel_pdf_url: null,
+  };
   configurationAppel: ConfigurationAppelForm = {
     master: null,
     date_debut_visibilite: '',
@@ -459,21 +636,132 @@ export class DashboardCommissionComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const requestedView = this.route.snapshot.queryParamMap.get('view') as CommissionView | null;
-    if (requestedView && this.canAccessView(requestedView)) {
-      this.filtreStatutMembre = '';
-      // Statistiques
-      this.filtreStatPeriode = 'mois';
-      this.statMasterExportFormat = 'pdf';
-    }
-
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
+
+    let requestedView = this.route.snapshot.queryParamMap.get('view') as CommissionView | null;
+    if (requestedView === 'candidatures-master' || requestedView === 'candidatures-ingenieur') {
+      requestedView = 'candidatures-responsable';
+    }
+    if (requestedView && this.canAccessView(requestedView)) {
+      this.currentView = requestedView;
+    }
+
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
     this.loadMastersForConfiguration();
+    this.loadOffresPreinscription();
+    this.loadCandidaturesResponsable();
+    this.loadResponsibleNotifications();
     this.loadMembers();
+    this.loadNotifications();
+  }
+
+  private loadNotifications(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<NotificationItem[]>('http://localhost:8003/api/candidatures/mes-notifications/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (data) => {
+          this.notificationsCandidat = data || [];
+          this.notificationsNonLues = this.notificationsCandidat.filter((n) => !n.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur chargement notifications commission:', error);
+          this.notificationsCandidat = [];
+          this.notificationsNonLues = 0;
+        },
+      });
+  }
+
+  marquerNotificationCommeLue(notificationId: number): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/notifications/${notificationId}/mark-read/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) =>
+            notification.id === notificationId ? { ...notification, lue: true } : notification,
+          );
+          this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notification commission:', error);
+        },
+      });
+  }
+
+  marquerToutesNotificationsCommeLues(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .post(
+        'http://localhost:8003/api/candidatures/notifications/mark-all-read/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.notificationsCandidat = this.notificationsCandidat.map((notification) => ({
+            ...notification,
+            lue: true,
+          }));
+          this.notificationsNonLues = 0;
+        },
+        error: (error) => {
+          console.error('Erreur marquage notifications lues:', error);
+        },
+      });
+  }
+
+  getNotificationsFiltrees(): NotificationItem[] {
+    return this.notificationsCandidat.filter((notification) => {
+      if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
+        return false;
+      }
+
+      const notificationDate = new Date(notification.date);
+
+      if (this.filtreNotificationDateDebut) {
+        const dateDebut = new Date(`${this.filtreNotificationDateDebut}T00:00:00`);
+        if (notificationDate < dateDebut) {
+          return false;
+        }
+      }
+
+      if (this.filtreNotificationDateFin) {
+        const dateFin = new Date(`${this.filtreNotificationDateFin}T23:59:59`);
+        if (notificationDate > dateFin) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  reinitialiserFiltresNotifications(): void {
+    this.filtreNotificationType = '';
+    this.filtreNotificationDateDebut = '';
+    this.filtreNotificationDateFin = '';
   }
 
   loadMastersForConfiguration(): void {
@@ -489,6 +777,130 @@ export class DashboardCommissionComponent implements OnInit {
         console.error('Erreur chargement masters:', error);
       },
     });
+  }
+
+  loadOffresPreinscription(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<OffrePreinscription[]>(
+        'http://localhost:8003/api/candidatures/offres-inscription-responsable/',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      .subscribe({
+        next: (data) => {
+          this.offresPreinscription = data || [];
+        },
+        error: (error) => {
+          console.error('Erreur chargement offres responsable:', error);
+          this.offresPreinscription = [];
+        },
+      });
+  }
+
+  getSelectedConfigurationMasterLabel(): string {
+    if (!this.selectedConfigMasterId) {
+      return 'Aucun master sélectionné';
+    }
+
+    return (
+      this.masterOptions.find((item) => item.id === this.selectedConfigMasterId)?.nom ||
+      'Master inconnu'
+    );
+  }
+
+  getOffreCalendarPreviewRows(): OffreCalendarPreviewRow[] {
+    const totalCapacity =
+      Number(this.configurationAppel.capacite_interne || 0) +
+      Number(this.configurationAppel.capacite_externe || 0);
+    const masterLabel = this.getSelectedConfigurationMasterLabel();
+    const title = masterLabel.toLowerCase();
+
+    let typeDiplome = 'Licence ou diplôme équivalent';
+    if (title.includes('science des données') || title.includes('data')) {
+      typeDiplome = 'Licence en Mathématiques Appliquées (ou équivalent)';
+    } else if (title.includes('génie logiciel') || title.includes('genie logiciel')) {
+      typeDiplome = 'Licence en Sciences de l’Informatique (ou équivalent)';
+    } else if (title.includes('ingénieur') || title.includes('ingenieur')) {
+      typeDiplome = 'Diplôme d’accès au cycle ingénieur';
+    }
+
+    const dates = [
+      `Inscription en ligne : ${this.configurationAppel.date_debut_visibilite || '-'} → ${this.configurationAppel.date_limite_preinscription || '-'}`,
+      `Résultats de présélection : ${this.configurationAppel.date_limite_depot_dossier || '-'}`,
+      `Dépôt des dossiers numériques : ${this.configurationAppel.date_limite_paiement || '-'}`,
+    ].join(' | ');
+
+    return [
+      {
+        capaciteTotale: String(totalCapacity || 0),
+        etablissementOrigine: 'ISIMM',
+        capacite: String(this.configurationAppel.capacite_interne || 0),
+        typeDiplome,
+        datesImportantes: dates,
+      },
+      {
+        capaciteTotale: '',
+        etablissementOrigine: 'Autres établissements',
+        capacite: String(this.configurationAppel.capacite_externe || 0),
+        typeDiplome,
+        datesImportantes: `Liste finale des admis : ${this.configurationAppel.date_fin_visibilite || '-'}`,
+      },
+    ];
+  }
+
+  loadCandidaturesResponsable(masterId: number | 'all' = this.selectedMasterForCandidatures): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (masterId !== 'all') {
+      params.set('master_id', String(masterId));
+    }
+
+    this.http
+      .get<
+        Candidature[]
+      >(`http://localhost:8003/api/candidatures/responsable/candidatures/?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+      .subscribe({
+        next: (data) => {
+          this.candidaturesResponsable = data || [];
+          this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
+        },
+        error: (error) => {
+          console.error('Erreur chargement candidatures responsable:', error);
+          this.candidaturesResponsable = [];
+          this.candidaturesResponsableFiltrees = [];
+        },
+      });
+  }
+
+  loadResponsibleNotifications(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .get<
+        ResponsibleNotificationItem[]
+      >('http://localhost:8003/api/candidatures/responsable/notifications/', { headers: { Authorization: `Bearer ${token}` } })
+      .subscribe({
+        next: (data) => {
+          this.responsibleNotifications = data || [];
+        },
+        error: (error) => {
+          console.error('Erreur chargement notifications responsable:', error);
+          this.responsibleNotifications = [];
+        },
+      });
   }
 
   onConfigMasterChange(): void {
@@ -523,6 +935,10 @@ export class DashboardCommissionComponent implements OnInit {
             delai_depot_dossier_preselectionnes_jours:
               config.delai_depot_dossier_preselectionnes_jours ?? 14,
             actif: config.actif ?? true,
+            est_cache: config.est_cache ?? false,
+            capacite_interne: config.capacite_interne ?? 0,
+            capacite_externe: config.capacite_externe ?? 0,
+            document_officiel_pdf_url: config.document_officiel_pdf_url || null,
           };
           this.configLoading = false;
         },
@@ -537,6 +953,10 @@ export class DashboardCommissionComponent implements OnInit {
             delai_modification_candidature_jours: 7,
             delai_depot_dossier_preselectionnes_jours: 14,
             actif: true,
+            est_cache: false,
+            capacite_interne: 0,
+            capacite_externe: 0,
+            document_officiel_pdf_url: null,
           };
           this.configLoading = false;
         },
@@ -597,9 +1017,349 @@ export class DashboardCommissionComponent implements OnInit {
       });
   }
 
+  creerNouvelleOffrePreinscription(): void {
+    if (!this.isResponsable) {
+      this.notifyActionBlocked("Création d'offre réservée au responsable.");
+      return;
+    }
+
+    const requiredFields = [
+      this.nouvelleOffre.nom,
+      this.nouvelleOffre.type_master,
+      this.nouvelleOffre.specialite,
+      this.nouvelleOffre.date_limite_candidature,
+    ];
+
+    if (requiredFields.some((value) => !String(value || '').trim())) {
+      this.toastService.show(
+        'Veuillez remplir les champs obligatoires de la nouvelle offre.',
+        'warning',
+      );
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.creationOffreLoading = true;
+
+    this.http
+      .post<any>('http://localhost:8003/api/candidatures/masters/admin/', this.nouvelleOffre, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (created) => {
+          this.toastService.show('Nouvelle offre créée avec succès.', 'success');
+
+          this.nouvelleOffre = {
+            nom: '',
+            type_master: 'recherche',
+            specialite: '',
+            description: '',
+            places_disponibles: 30,
+            date_limite_candidature: '',
+            annee_universitaire: this.nouvelleOffre.annee_universitaire || '2026/2027',
+            actif: true,
+          };
+
+          this.loadMastersForConfiguration();
+          if (created?.id) {
+            this.selectedConfigMasterId = Number(created.id);
+            this.onConfigMasterChange();
+          }
+
+          this.creationOffreLoading = false;
+        },
+        error: (error) => {
+          console.error('Erreur création offre:', error);
+          this.toastService.show(
+            error?.error?.error || "Erreur lors de la création de l'offre.",
+            'error',
+          );
+          this.creationOffreLoading = false;
+        },
+      });
+  }
+
+  selectionnerOffre(offre: OffrePreinscription): void {
+    this.selectedOffreId = offre.id;
+    this.offreEditionMode = true;
+    this.offreEditForm = {
+      id: offre.id,
+      nom: offre.titre,
+      type_master: offre.type === 'cycle_ingenieur' ? 'professionnel' : 'recherche',
+      specialite: offre.specialite,
+      description: offre.description,
+      places_disponibles: offre.places,
+      date_limite_candidature: offre.date_limite || '',
+      annee_universitaire: '2026/2027',
+      actif: offre.statut === 'ouvert',
+      date_debut_visibilite: '',
+      date_fin_visibilite: '',
+      date_limite_preinscription: offre.date_limite_preinscription || '',
+      date_limite_depot_dossier: offre.date_limite_depot_dossier || '',
+      date_limite_paiement: offre.date_limite_paiement || '',
+      delai_modification_candidature_jours: 7,
+      delai_depot_dossier_preselectionnes_jours: 14,
+      est_cache: !!offre.est_cache,
+      capacite_interne: offre.capacite_interne || 0,
+      capacite_externe: offre.capacite_externe || 0,
+      document_officiel_pdf_url: offre.document_officiel_pdf_url || null,
+    };
+    this.selectedConfigMasterId = offre.id;
+    this.onConfigMasterChange();
+  }
+
+  uploadOfferPdf(event: any): void {
+    if (!this.selectedOffreId) {
+      this.toastService.show('Sélectionnez une offre avant de téléverser un PDF.', 'warning');
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      this.toastService.show('Veuillez sélectionner un fichier PDF.', 'error');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('document_pdf', file);
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/configuration/${this.selectedOffreId}/document-pdf/`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.offresPreinscription = this.offresPreinscription.map((offre) =>
+            offre.id === this.selectedOffreId
+              ? { ...offre, document_officiel_pdf_url: response.document_url || null }
+              : offre,
+          );
+          this.offreEditForm.document_officiel_pdf_url = response.document_url || null;
+          this.toastService.show('PDF téléversé avec succès.', 'success');
+          if (event.target) {
+            event.target.value = '';
+          }
+        },
+        error: (error) => {
+          console.error('Erreur téléversement PDF offre:', error);
+          this.toastService.show('Erreur lors du téléversement PDF.', 'error');
+        },
+      });
+  }
+
+  basculerEtatOffre(offre: OffrePreinscription, hidden: boolean): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.http
+      .put(
+        `http://localhost:8003/api/candidatures/configuration/${offre.id}/`,
+        {
+          master: offre.id,
+          est_cache: hidden,
+          actif: offre.statut === 'ouvert',
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show(hidden ? 'Offre masquée.' : 'Offre affichée.', 'success');
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          console.error('Erreur bascule visibilité offre:', error);
+          this.toastService.show('Impossible de modifier la visibilité.', 'error');
+        },
+      });
+  }
+
+  ouvrirFermerOffre(offre: OffrePreinscription, ouvert: boolean): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const dateLimite = ouvert
+      ? this.offreEditForm.date_limite_candidature || offre.date_limite
+      : '2000-01-01';
+
+    this.http
+      .put(
+        `http://localhost:8003/api/candidatures/masters/${offre.id}/`,
+        {
+          nom: offre.titre,
+          type_master: offre.sous_type,
+          specialite: offre.specialite,
+          description: offre.description,
+          places_disponibles: offre.places,
+          date_limite_candidature: dateLimite,
+          annee_universitaire: '2026/2027',
+          actif: ouvert,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show(ouvert ? 'Offre ouverte.' : 'Offre fermée.', 'success');
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          console.error('Erreur ouverture/fermeture offre:', error);
+          this.toastService.show("Impossible de modifier le statut de l'offre.", 'error');
+        },
+      });
+  }
+
+  enregistrerEditionOffre(): void {
+    if (!this.selectedOffreId) {
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.editingOffreLoading = true;
+
+    const payload = {
+      nom: this.offreEditForm.nom,
+      type_master: this.offreEditForm.type_master,
+      specialite: this.offreEditForm.specialite,
+      description: this.offreEditForm.description,
+      places_disponibles: this.offreEditForm.places_disponibles,
+      date_limite_candidature: this.offreEditForm.date_limite_candidature,
+      annee_universitaire: this.offreEditForm.annee_universitaire,
+      actif: this.offreEditForm.actif,
+      est_cache: this.offreEditForm.est_cache,
+      capacite_interne: this.offreEditForm.capacite_interne,
+      capacite_externe: this.offreEditForm.capacite_externe,
+    };
+
+    this.http
+      .put(`http://localhost:8003/api/candidatures/masters/${this.selectedOffreId}/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          this.toastService.show('Offre mise à jour.', 'success');
+          this.editingOffreLoading = false;
+          this.offreEditionMode = false;
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          console.error('Erreur mise à jour offre:', error);
+          this.toastService.show('Erreur lors de la mise à jour.', 'error');
+          this.editingOffreLoading = false;
+        },
+      });
+  }
+
+  get candidaturesMastersResponsableList(): Candidature[] {
+    return this.candidatures.filter((candidature) => candidature.type_concours === 'masters');
+  }
+
+  get candidaturesIngenieurResponsableList(): Candidature[] {
+    return this.candidatures.filter((candidature) => candidature.type_concours === 'ingenieur');
+  }
+
+  uploadConfigurationPdf(event: any): void {
+    if (!this.selectedConfigMasterId) {
+      this.toastService.show('Veuillez sélectionner un master.', 'error');
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      this.toastService.show('Veuillez sélectionner un fichier PDF.', 'error');
+      return;
+    }
+
+    const maxSizeMB = 10;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      this.toastService.show(`Le fichier dépasse ${maxSizeMB} MB.`, 'error');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('document_pdf', file);
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/configuration/${this.selectedConfigMasterId}/document-pdf/`,
+        formData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.configurationAppel.document_officiel_pdf_url = response.document_url;
+          this.toastService.show('Document PDF chargé avec succès.', 'success');
+          // Reset file input
+          if (event.target) {
+            event.target.value = '';
+          }
+        },
+        error: (error) => {
+          console.error('Erreur upload PDF:', error);
+          const errorMsg = error?.error?.error || 'Erreur lors du téléchargement du document.';
+          this.toastService.show(errorMsg, 'error');
+        },
+      });
+  }
+
+  downloadConfigurationPdf(): void {
+    if (!this.configurationAppel.document_officiel_pdf_url) {
+      this.toastService.show('Aucun document disponible.', 'warning');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    // Get the base URL from the document_officiel_pdf_url
+    const link = document.createElement('a');
+    link.href = this.configurationAppel.document_officiel_pdf_url;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   private loadActionPermissions(): void {
     this.authService.getMyEnabledActions().subscribe({
       next: (actions: string[]) => {
+        this.customRoleActions = this.extractCustomRoleActions(actions || []);
+
         // Fallback permissif: si l'API des actions est indisponible/vide,
         // on conserve les permissions locales pour ne pas masquer le menu.
         if (!actions || actions.length === 0) {
@@ -627,9 +1387,32 @@ export class DashboardCommissionComponent implements OnInit {
         }
       },
       error: () => {
+        this.customRoleActions = [];
         console.warn('Permissions indisponibles, maintien du mode permissif local.');
       },
     });
+  }
+
+  private extractCustomRoleActions(actions: string[]): string[] {
+    const unique = new Set<string>();
+    const custom: string[] = [];
+
+    (actions || []).forEach((name) => {
+      const cleaned = (name || '').trim();
+      if (!cleaned) {
+        return;
+      }
+
+      const normalized = normalizeActionLabel(cleaned);
+      if (this.knownActionNameSet.has(normalized) || unique.has(normalized)) {
+        return;
+      }
+
+      unique.add(normalized);
+      custom.push(cleaned);
+    });
+
+    return custom;
   }
 
   canAccessView(view: CommissionView): boolean {
@@ -687,6 +1470,18 @@ export class DashboardCommissionComponent implements OnInit {
 
     if (view === 'membres') {
       return this.isResponsable;
+    }
+
+    if (view === 'notifications-responsable') {
+      return this.isResponsable;
+    }
+
+    if (view === 'candidatures-responsable') {
+      return this.isResponsable;
+    }
+
+    if (view === 'candidatures-master' || view === 'candidatures-ingenieur') {
+      return this.isResponsable && this.actionPermissions.consultationCandidature;
     }
 
     return true;
@@ -995,6 +1790,44 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
     this.currentView = view;
+    if (view === 'notifications') {
+      this.loadNotifications();
+    }
+    if (view === 'notifications-responsable') {
+      this.loadResponsibleNotifications();
+    }
+    if (
+      view === 'candidatures-responsable' ||
+      view === 'candidatures-master' ||
+      view === 'candidatures-ingenieur'
+    ) {
+      this.selectedMasterForCandidatures = 'all';
+      this.loadCandidaturesResponsable();
+    }
+  }
+
+  isCurrentView(view: CommissionView): boolean {
+    return this.currentView === view;
+  }
+
+  openCustomRoleAction(actionName: string): void {
+    const normalized = normalizeActionLabel(actionName);
+    const target = this.customActionViewMap[normalized];
+
+    if (!target) {
+      this.notifyActionBlocked(`Action non mappée: ${actionName}`);
+      return;
+    }
+
+    if (target === 'ocr') {
+      this.openOcrAnalysisPage();
+      return;
+    }
+
+    if (target) {
+      this.switchView(target);
+      return;
+    }
   }
 
   openOcrAnalysisPage(): void {
@@ -1019,9 +1852,8 @@ export class DashboardCommissionComponent implements OnInit {
     const titles: any = {
       dashboard: 'Tableau de bord',
       profil: 'Mon Profil',
-      masters: 'Les Masters',
-      'configuration-appels': 'Configuration des Appels',
-      'concours-ingenieur': "Concours Cycle d'Ingénieur",
+      'configuration-appels': 'Offre de préinscription',
+      'candidatures-responsable': 'Liste des candidatures',
       candidatures: 'Candidatures à évaluer',
       'valider-dossier': 'Dossiers à valider',
       dossiers: 'Tous les dossiers soumis',
@@ -1032,6 +1864,10 @@ export class DashboardCommissionComponent implements OnInit {
       inscriptions: 'Validation des inscriptions',
       statistiques: 'Statistiques et rapports',
       deliberations: 'Procès-verbaux de délibération',
+      notifications: 'Notifications',
+      'notifications-responsable': 'Notifications responsable',
+      'candidatures-master': 'Candidatures Master',
+      'candidatures-ingenieur': 'Candidatures Ingénieur',
     };
     return titles[this.currentView] || 'Tableau de bord';
   }
@@ -1060,6 +1896,81 @@ export class DashboardCommissionComponent implements OnInit {
     return this.concoursIngenieur.filter(
       (concours) => this.getConcoursStatut(concours) === this.filtreConcours,
     );
+  }
+
+  get candidaturesMastersResponsable(): Candidature[] {
+    return this.candidaturesResponsable.filter(
+      (candidature) => candidature.type_concours === 'masters',
+    );
+  }
+
+  get candidaturesIngenieurResponsable(): Candidature[] {
+    return this.candidaturesResponsable.filter(
+      (candidature) => candidature.type_concours === 'ingenieur',
+    );
+  }
+
+  appliquerFiltresResponsable(): void {
+    this.candidaturesResponsableFiltrees = this.candidaturesResponsable.filter((candidature) => {
+      if (
+        this.selectedMasterForCandidatures !== 'all' &&
+        candidature.master_id !== this.selectedMasterForCandidatures
+      ) {
+        return false;
+      }
+
+      if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
+        return false;
+      }
+
+      if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
+        return false;
+      }
+
+      const search = (this.filtres.recherche || '').toLowerCase();
+      if (search) {
+        const match =
+          candidature.numero.toLowerCase().includes(search) ||
+          candidature.candidat_nom.toLowerCase().includes(search) ||
+          candidature.candidat_email.toLowerCase().includes(search) ||
+          (candidature.specialite || '').toLowerCase().includes(search);
+        if (!match) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  get responsibleNotificationsFiltered(): ResponsibleNotificationItem[] {
+    return this.responsibleNotifications.filter((item) => {
+      if (
+        this.filtreResponsibleNotificationType &&
+        item.type !== this.filtreResponsibleNotificationType
+      ) {
+        return false;
+      }
+
+      if (
+        this.filtreResponsibleNotificationStatut &&
+        item.statut !== this.filtreResponsibleNotificationStatut
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  get responsibleDeadlineSoonItems(): ResponsibleNotificationItem[] {
+    return this.responsibleNotifications
+      .filter((item) => item.days_left >= 0 && item.days_left <= 3)
+      .sort((a, b) => a.days_left - b.days_left);
+  }
+
+  get responsibleDeadlineSoonCount(): number {
+    return this.responsibleDeadlineSoonItems.length;
   }
 
   consulterConcours(concours: Concours): void {
