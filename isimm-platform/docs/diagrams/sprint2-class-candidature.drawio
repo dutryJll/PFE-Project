@@ -1,0 +1,157 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Sprint2-Class-Candidature" id="c1d2e3f4g5h6i7j8k9l0">
+    <mxGraphModel dx="1097" dy="703" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="user_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="USER" vertex="1">
+          <mxGeometry height="160" width="180" x="80" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="user_attr" connectable="0" parent="user_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id: UUID&#xa;login: String&#xa;email: String&#xa;nom: String&#xa;prenom: String&#xa;dateInscription: DateTime" vertex="1">
+          <mxGeometry height="104" width="180" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="user_methods" connectable="0" parent="user_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="authenticate()&#xa;logout()" vertex="1">
+          <mxGeometry height="30" width="180" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="candidature_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="CANDIDATURE" vertex="1">
+          <mxGeometry height="200" width="240" x="50" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="candidature_attr" connectable="0" parent="candidature_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_candidature: UUID&#xa;statut: Enum [brouillon|soumis|sous_examen|preselectionne|accepte|refuse]&#xa;dateCreation: DateTime&#xa;dateModification: DateTime&#xa;dateDepotDossier: DateTime&#xa;notes: String&#xa;score: Decimal&#xa;rang: Integer&#xa;feedback: String" vertex="1">
+          <mxGeometry height="144" width="240" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="candidature_methods" connectable="0" parent="candidature_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="soumettre()&#xa;modifierBrouillon()&#xa;deposerDossier()&#xa;ajusterDossier()" vertex="1">
+          <mxGeometry height="30" width="240" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="formation_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="FORMATION" vertex="1">
+          <mxGeometry height="180" width="200" x="420" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="formation_attr" connectable="0" parent="formation_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_formation: UUID&#xa;code: String&#xa;nom: String&#xa;type: Enum [Master|Diplome|Parcours]&#xa;description: String&#xa;specialites: List&lt;Specialite&gt;&#xa;credits: Integer&#xa;duree: Integer" vertex="1">
+          <mxGeometry height="124" width="200" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="formation_methods" connectable="0" parent="formation_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="getSpecialites()&#xa;getOffres()" vertex="1">
+          <mxGeometry height="30" width="200" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="specialite_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="SPECIALITE" vertex="1">
+          <mxGeometry height="140" width="180" x="700" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="specialite_attr" connectable="0" parent="specialite_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_specialite: UUID&#xa;code: String&#xa;nom: String&#xa;description: String" vertex="1">
+          <mxGeometry height="84" width="180" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="specialite_methods" connectable="0" parent="specialite_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="getCapacite(annee)" vertex="1">
+          <mxGeometry height="30" width="180" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="offre_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="OFFRE_PREINSCRIPTION" vertex="1">
+          <mxGeometry height="200" width="240" x="400" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="offre_attr" connectable="0" parent="offre_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_offre: UUID&#xa;numeroOffre: String&#xa;annee: Integer&#xa;dateCreation: DateTime&#xa;datePublication: DateTime&#xa;dateClotureInscription: DateTime&#xa;statut: Enum [draft|active|closed]&#xa;capaciteTotale: Integer&#xa;capaciteParSpecialite: Map&lt;Specialite,Integer&gt;" vertex="1">
+          <mxGeometry height="144" width="240" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="offre_methods" connectable="0" parent="offre_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="publier()&#xa;cloturer()&#xa;getPlacesDisponibles()" vertex="1">
+          <mxGeometry height="30" width="240" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="commission_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="COMMISSION" vertex="1">
+          <mxGeometry height="200" width="220" x="750" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="commission_attr" connectable="0" parent="commission_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_commission: UUID&#xa;nom: String&#xa;president: String&#xa;membres: List&lt;String&gt;&#xa;dateCreation: DateTime&#xa;statut: Enum [active|inactive]&#xa;description: String" vertex="1">
+          <mxGeometry height="124" width="220" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="commission_methods" connectable="0" parent="commission_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="creerOffre()&#xa;evaluerCandidatures()&#xa;genererClassement()&#xa;publierResultats()" vertex="1">
+          <mxGeometry height="50" width="220" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="dossier_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="DOSSIER" vertex="1">
+          <mxGeometry height="180" width="240" x="80" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="dossier_attr" connectable="0" parent="dossier_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_dossier: UUID&#xa;dateDepot: DateTime&#xa;dateAjustement: DateTime&#xa;statut: Enum [en_cours|complete|sous_verification|validee|rejetee]&#xa;documents: List&lt;Document&gt;&#xa;scoreOCR: Decimal&#xa;feedback: String" vertex="1">
+          <mxGeometry height="124" width="240" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="dossier_methods" connectable="0" parent="dossier_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="deposer()&#xa;ajuster()&#xa;valider()" vertex="1">
+          <mxGeometry height="30" width="240" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="document_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="DOCUMENT" vertex="1">
+          <mxGeometry height="180" width="220" x="400" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="document_attr" connectable="0" parent="document_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_document: UUID&#xa;nom: String&#xa;type: Enum [diplome|cv|lettre|dossier]&#xa;cheminFichier: String&#xa;dateUpload: DateTime&#xa;taille: Long&#xa;statutOCR: Enum [pending|processed|error]&#xa;donneeExtraite: JSON" vertex="1">
+          <mxGeometry height="124" width="220" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="document_methods" connectable="0" parent="document_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="traiterOCR()&#xa;valider()" vertex="1">
+          <mxGeometry height="30" width="220" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="notification_class" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;" value="NOTIFICATION" vertex="1">
+          <mxGeometry height="180" width="220" x="750" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="notification_attr" connectable="0" parent="notification_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="id_notification: UUID&#xa;type: Enum [statut|score|offre|document]&#xa;titre: String&#xa;message: String&#xa;dateCreation: DateTime&#xa;statut: Enum [sent|read|archived]&#xa;canal: Enum [email|sms|notification]" vertex="1">
+          <mxGeometry height="124" width="220" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="notification_methods" connectable="0" parent="notification_class" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;" value="envoyer()&#xa;marquerCommeDelue()&#xa;archiver()" vertex="1">
+          <mxGeometry height="30" width="220" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="inheritance_cand_user" edge="1" parent="1" source="candidature_class" style="endArrow=block;endFill=0;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="user_class" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="310" />
+              <mxPoint x="170" y="240" />
+            </Array>
+            <mxPoint x="170" y="320" as="sourcePoint" />
+            <mxPoint x="170" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_cand_offre" edge="1" parent="1" source="candidature_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="offre_class" value="postule&#xa;0..*">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="420" as="sourcePoint" />
+            <mxPoint x="400" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_cand_dossier" edge="1" parent="1" source="candidature_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="dossier_class" value="soumis par&#xa;1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="140" y="520" as="sourcePoint" />
+            <mxPoint x="140" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_dossier_doc" edge="1" parent="1" source="dossier_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="document_class" value="contient&#xa;1..*">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="630" as="sourcePoint" />
+            <mxPoint x="400" y="630" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_offre_form" edge="1" parent="1" source="offre_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="formation_class" value="propose&#xa;1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="520" y="320" as="sourcePoint" />
+            <mxPoint x="520" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_offre_spec" edge="1" parent="1" source="offre_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="specialite_class" value="capacite par&#xa;0..*">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="670" y="380" />
+              <mxPoint x="670" y="150" />
+            </Array>
+            <mxPoint x="640" y="380" as="sourcePoint" />
+            <mxPoint x="700" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_form_spec" edge="1" parent="1" source="formation_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="specialite_class" value="comprend&#xa;1..*">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="150" as="sourcePoint" />
+            <mxPoint x="700" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_commission_offre" edge="1" parent="1" source="commission_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="offre_class" value="crée&#xa;1..*">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="750" y="420" as="sourcePoint" />
+            <mxPoint x="640" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel_cand_notif" edge="1" parent="1" source="candidature_class" style="endArrow=none;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;" target="notification_class" value="reçoit&#xa;1..*">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="680" />
+              <mxPoint x="750" y="660" />
+            </Array>
+            <mxPoint x="290" y="630" as="sourcePoint" />
+            <mxPoint x="750" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -5,6 +5,9 @@ from .models import User, ActionRole
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer pour le modèle User"""
+    suspended_since = serializers.DateTimeField(source='suspended_at', read_only=True)
+    suspended_by_email = serializers.SerializerMethodField()
+    reactivated_by_email = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -23,8 +26,29 @@ class UserSerializer(serializers.ModelSerializer):
             'derniere_connexion',
             'is_active',
             'is_staff',
+            'suspended_at',
+            'suspended_since',
+            'suspension_reason',
+            'suspended_by',
+            'suspended_by_email',
+            'reactivated_at',
+            'reactivated_by',
+            'reactivated_by_email',
         ]
-        read_only_fields = ['id', 'date_inscription', 'derniere_connexion']
+        read_only_fields = [
+            'id',
+            'date_inscription',
+            'derniere_connexion',
+            'suspended_since',
+            'suspended_by_email',
+            'reactivated_by_email',
+        ]
+
+    def get_suspended_by_email(self, obj):
+        return obj.suspended_by.email if obj.suspended_by else None
+
+    def get_reactivated_by_email(self, obj):
+        return obj.reactivated_by.email if obj.reactivated_by else None
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer pour l'inscription"""

@@ -445,19 +445,6 @@
     transform: translateY(0);
   }
 }
-  border-radius: 999px;
-  background: linear-gradient(90deg, #1d70a2, #5aa0cc);
-}
-
-.section-subtitle {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #486581;
-  margin-bottom: 4rem;
-  max-width: 780px;
-  margin-left: auto;
-  margin-right: auto;
-}
 
 .formations-grid {
   display: grid;

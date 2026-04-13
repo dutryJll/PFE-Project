@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { OffreRichContentService } from '../../services/offre-rich-content.service';
 
 interface OfferItem {
   id: number;
@@ -24,8 +25,11 @@ interface FormationDetail {
   intro: string;
   annee?: string;
   description?: string;
+  sourceLabel?: string;
   tableTitle?: string;
   table?: DetailTable;
+  scoreTableTitle?: string;
+  scoreTable?: DetailTable;
   importantDates?: string[];
 }
 
@@ -259,20 +263,73 @@ export class PreinscriptionDetailComponent implements OnInit {
   code = '';
   pdfUrl: string | null = null;
   isLoadingOffer = false;
+  hasSyncedContent = false;
+  syncedOfferId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
+    private offreRichContentService: OffreRichContentService,
   ) {}
 
   ngOnInit(): void {
     const codeParam = (this.route.snapshot.paramMap.get('code') || '').toLowerCase();
+    const offerId = Number(this.route.snapshot.queryParamMap.get('offerId'));
     this.code = codeParam;
     this.detail = FORMATION_DETAILS[codeParam] || null;
 
     if (this.detail) {
       this.loadOfficialPdfForCode(this.detail.code);
     }
+
+    if (Number.isFinite(offerId) && offerId > 0) {
+      this.loadSyncedContent(offerId, codeParam);
+    }
+  }
+
+  private loadSyncedContent(offerId: number, codeParam: string): void {
+    this.offreRichContentService.getOffreRichContent(offerId).subscribe({
+      next: (custom) => {
+        if (!custom) {
+          return;
+        }
+
+        this.hasSyncedContent = true;
+        this.syncedOfferId = offerId;
+        this.detail = {
+          code: codeParam || String(offerId),
+          title: custom.title,
+          intro: custom.openingTitle,
+          description: custom.openingBody,
+          sourceLabel: 'Contenu synchronisé depuis l espace responsable',
+          tableTitle: custom.tableTitle,
+          table: {
+            headers: custom.tableHeaders,
+            rows: custom.tableRows,
+          },
+          scoreTableTitle: custom.scoreTitle || 'Calcul du score',
+          scoreTable: {
+            headers: custom.scoreTableHeaders || ['Composantes', 'Mode de Calcul'],
+            rows:
+              custom.scoreTableRows && custom.scoreTableRows.length > 0
+                ? custom.scoreTableRows
+                : [
+                    ['Score', custom.scoreFormula || ''],
+                    ['Moyenne Générale (M.G)', custom.moyenneFormula || ''],
+                    [
+                      'Bonus (B.N.R / B.S.P)',
+                      [...(custom.bnrRules || []), ...(custom.bspRules || [])].join(' '),
+                    ],
+                  ],
+          },
+          importantDates: [custom.etape1, custom.etape2, ...custom.evaluationNotes],
+        };
+      },
+      error: () => {
+        this.hasSyncedContent = false;
+        this.syncedOfferId = null;
+      },
+    });
   }
 
   private loadOfficialPdfForCode(code: string): void {

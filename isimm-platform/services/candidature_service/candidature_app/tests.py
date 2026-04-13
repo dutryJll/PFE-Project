@@ -8,6 +8,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from .models import CandidatListe, Candidature, ConfigurationAppel, FormuleScore, ListeAdmission, Master, Paiement
 from .views import (
+	_sync_system_notifications_for_user,
 	ajuster_dossier_numerique,
 	changer_statut_candidature,
 	consulter_inscriptions_administratives,
@@ -17,6 +18,7 @@ from .views import (
 	modifier_candidature,
 	publier_liste,
 )
+from .notifications import envoyer_rappels_j3_preinscription
 
 
 class CandidatureWorkflowTests(TestCase):
@@ -209,6 +211,35 @@ class CandidatureWorkflowTests(TestCase):
 		candidature.refresh_from_db()
 		self.assertEqual(candidature.statut, 'dossier_depose')
 		self.assertTrue(candidature.dossier_depose)
+
+	@patch('candidature_app.views.creer_notification_avec_email')
+	def test_sync_notifications_candidate_open_preinscription_emails(self, mock_notify_email):
+		mock_notify_email.return_value = None
+
+		_sync_system_notifications_for_user(self.candidat)
+
+		self.assertTrue(mock_notify_email.called)
+		args, kwargs = mock_notify_email.call_args
+		self.assertEqual(kwargs['notif_type'], 'info')
+		self.assertIn('preinscription-open', kwargs['dedup_key'])
+
+	@patch('candidature_app.notifications.creer_notification_avec_email')
+	def test_rappel_j3_preinscription_creates_notification_and_email(self, mock_notify_email):
+		mock_notify_email.return_value = None
+		candidature = Candidature.objects.create(
+			candidat=self.candidat,
+			master=self.master,
+			statut='selectionne',
+		)
+		self.configuration.date_limite_preinscription = date.today() + timedelta(days=3)
+		self.configuration.save(update_fields=['date_limite_preinscription'])
+
+		envoyer_rappels_j3_preinscription()
+
+		self.assertTrue(mock_notify_email.called)
+		args, kwargs = mock_notify_email.call_args
+		self.assertEqual(kwargs['notif_type'], 'warning')
+		self.assertIn('rappel-j3-preinscription', kwargs['dedup_key'])
 
 	def test_formule_score_master_update_by_responsable(self):
 		request = self.factory.put(

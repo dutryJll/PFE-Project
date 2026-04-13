@@ -222,25 +222,61 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   wizardOffre: Offre | null = null;
   selectedOffreDetail: Offre | null = null;
   wizardData: {
-    type: string;
-    titre: string;
-    resume: string;
+    nom: string;
+    prenom: string;
+    cinPasseport: string;
+    dateNaissance: string;
+    email: string;
+    telephone: string;
+    etablissementOrigine: string;
+    specialiteBac: string;
+    anneeBac: string;
+    moyenneBacPrincipale: string;
+    noteMathBac: string;
+    noteFrancaisBac: string;
+    noteAnglaisBac: string;
+    certificationB2: 'non' | 'oui' | '';
+    specialiteDiplome: string;
+    anneeObtentionDiplome: string;
+    natureDiplome: 'Licence' | 'Maitrise' | '';
+    moyenne1Annee: string;
+    session1Annee: 'Principale' | 'control' | '';
+    moyenne2Annee: string;
+    session2Annee: 'Principale' | 'control' | '';
+    moyenne3Annee: string;
+    session3Annee: 'Principale' | 'control' | '';
+    moyenne4Annee: string;
+    session4Annee: 'Principale' | 'control' | '';
+    nombreRedoublement: string;
     fichierNom: string;
-    attributs: string;
-    auteurs: string;
-    reviewers: string;
-    details: string;
-    confirmation: boolean;
   } = {
-    type: '',
-    titre: '',
-    resume: '',
+    nom: '',
+    prenom: '',
+    cinPasseport: '',
+    dateNaissance: '',
+    email: '',
+    telephone: '',
+    etablissementOrigine: 'ISIMM',
+    specialiteBac: '',
+    anneeBac: '',
+    moyenneBacPrincipale: '',
+    noteMathBac: '',
+    noteFrancaisBac: '',
+    noteAnglaisBac: '',
+    certificationB2: '',
+    specialiteDiplome: '',
+    anneeObtentionDiplome: '',
+    natureDiplome: '',
+    moyenne1Annee: '',
+    session1Annee: '',
+    moyenne2Annee: '',
+    session2Annee: '',
+    moyenne3Annee: '',
+    session3Annee: '',
+    moyenne4Annee: '',
+    session4Annee: '',
+    nombreRedoublement: '',
     fichierNom: '',
-    attributs: '',
-    auteurs: '',
-    reviewers: '',
-    details: '',
-    confirmation: false,
   };
 
   private countdownNow: number = Date.now();
@@ -391,6 +427,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   ];
 
   notificationsCandidat: NotificationItem[] = [];
+  notificationsErreur: string = '';
   filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
   filtreNotificationDateDebut: string = '';
   filtreNotificationDateFin: string = '';
@@ -547,14 +584,19 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     const requestedView = this.route.snapshot.queryParamMap.get('view') as CandidatView | null;
     const workflowMockMode = this.route.snapshot.queryParamMap.get('workflowMock') === '1';
+    const requestedWizardStep = Number(this.route.snapshot.queryParamMap.get('wizardStep') || '0');
     if (requestedView && this.canAccessView(requestedView)) {
       this.currentView = requestedView;
+    }
+    if (requestedWizardStep >= 1) {
+      this.openWizardFromUrl(requestedWizardStep);
     }
 
     this.queryParamsSub = this.route.queryParamMap.subscribe((params) => {
       const isMock = params.get('workflowMock') === '1';
       const isPreferenceFormDemo = params.get('preferenceFormDemo') === '1';
       const viewParam = params.get('view') as CandidatView | null;
+      const wizardStepParam = Number(params.get('wizardStep') || '0');
 
       this.isPreferenceFormDemoMode = isPreferenceFormDemo;
       if (this.isPreferenceFormDemoMode) {
@@ -577,6 +619,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
       if (viewParam && this.canAccessView(viewParam)) {
         this.currentView = viewParam;
+      }
+
+      if (wizardStepParam >= 1) {
+        this.openWizardFromUrl(wizardStepParam);
       }
     });
 
@@ -717,6 +763,66 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.currentView = view;
   }
 
+  validateMenuSection(view: CandidatView, event: Event): void {
+    event.stopPropagation();
+
+    if (!this.canAccessView(view)) {
+      this.notifyActionBlocked("Cette section n'est pas active pour votre rôle.");
+      return;
+    }
+
+    switch (view) {
+      case 'profil':
+        this.switchView('profil');
+        this.updateProfile();
+        break;
+
+      case 'offres-inscription':
+        this.switchView('offres-inscription');
+        this.toastService.show(
+          'Validation preinscription: cliquez sur Postuler puis Soumettre candidature.',
+          'info',
+        );
+        break;
+
+      case 'mon-dossier':
+        this.switchView('mon-dossier');
+        if (!this.selectedDossierNumber) {
+          this.toastService.show(
+            'Selectionnez un dossier puis validez via la section Importer un fichier.',
+            'warning',
+          );
+          return;
+        }
+
+        this.switchView('importer');
+        if (this.shouldShowPreferenceForm()) {
+          this.submitDossierPreferenceForm();
+        } else if (this.selectedDocumentsCount > 0) {
+          this.uploadAllSelectedDocuments();
+        } else {
+          this.toastService.show(
+            'Aucun document selectionne. Ajoutez un document avant validation.',
+            'warning',
+          );
+        }
+        break;
+
+      case 'inscription':
+        this.switchView('inscription');
+        this.toastService.show(
+          'Validation inscription: deposez le justificatif de paiement pour chaque candidature.',
+          'info',
+        );
+        break;
+
+      default:
+        this.switchView(view);
+        this.toastService.show('Validation non requise dans cette section.', 'info');
+        break;
+    }
+  }
+
   openCustomRoleAction(actionName: string): void {
     const normalized = normalizeActionLabel(actionName);
     const target = this.customActionViewMap[normalized];
@@ -817,6 +923,30 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   private notifyActionBlocked(message: string): void {
     this.toastService.show(message, 'warning');
+  }
+
+  private showAlertMessage(message: string): void {
+    const normalized = String(message ?? '').trim();
+    const cleanMessage = normalized.replace(/[✅❌⚠️ℹ️]/g, '').trim();
+    let type: 'success' | 'info' | 'warning' | 'error' = 'info';
+
+    if (normalized.includes('✅')) {
+      type = 'success';
+    } else if (normalized.includes('❌')) {
+      type = 'error';
+    } else if (/erreur|impossible|introuvable|expir/i.test(normalized)) {
+      type = 'error';
+    } else if (
+      /obligatoire|veuillez|aucun|aucune|invalide|fermee|fermé|attention/i.test(normalized)
+    ) {
+      type = 'warning';
+    } else if (
+      /succes|succès|enregistr|soumis|publie|publié|modifie|modifié|supprim/i.test(normalized)
+    ) {
+      type = 'success';
+    }
+
+    this.toastService.show(cleanMessage || 'Notification', type);
   }
 
   getViewTitle(): string {
@@ -954,6 +1084,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   private loadNotifications(): void {
     const token = this.authService.getAccessToken();
     if (!token) {
+      this.notificationsErreur = 'Session expirée. Veuillez vous reconnecter.';
       return;
     }
 
@@ -963,11 +1094,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (data) => {
+          this.notificationsErreur = '';
           this.notificationsCandidat = data || [];
           this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
         },
         error: (error) => {
           console.error('Erreur chargement notifications:', error);
+          this.notificationsErreur =
+            error?.status === 401
+              ? 'Authentification invalide entre services. Reconnectez-vous après redémarrage.'
+              : 'Impossible de charger les notifications pour le moment.';
           this.notificationsCandidat = [];
           this.notificationsNonLues = 0;
         },
@@ -1109,77 +1245,52 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     if (this.dejaCandidature(offre.id)) {
-      alert('Vous avez déjà candidaté pour cette offre');
+      this.toastService.show('Vous avez déjà postulé à cette offre.', 'warning');
       return;
     }
 
     if (offre.statut === 'ferme') {
-      alert('❌ Cette offre est fermée');
+      this.toastService.show('Cette offre est fermée.', 'warning');
       return;
     }
 
-    const titre = offre.type === 'cycle_ingenieur' ? offre.titre : offre.titre;
+    const token = this.authService.getAccessToken();
 
-    if (confirm(`Postuler pour ${titre} ?`)) {
-      const token = this.authService.getAccessToken();
-
-      this.http
-        .post(
-          'http://localhost:8003/api/candidatures/create/',
-          { master_id: offre.id },
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        .subscribe({
-          next: (response: any) => {
-            alert('✅ Candidature soumise avec succès !');
-            this.mesCandidatures.push({
-              id: response.id,
-              numero: response.numero,
-              master_nom: offre.titre,
-              master: response.master,
-              master_id: offre.id,
-              statut: 'soumis',
-              date_soumission: new Date().toISOString(),
-              etat_candidature: 'En cours',
-              dossier_valide: false,
-              date_depot_dossier: '',
-              dossier_depose: false,
-            });
-            this.loadMesCandidatures();
-            this.loadMesDossiers();
-            this.switchView('candidatures');
-          },
-          error: (error) => {
-            console.error('Erreur:', error);
-            alert('❌ Erreur lors de la soumission');
-          },
-        });
-    }
+    this.http
+      .post(
+        'http://localhost:8003/api/candidatures/create/',
+        { master_id: offre.id },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.toastService.show('Candidature soumise avec succès.', 'success');
+          this.mesCandidatures.push({
+            id: response.id,
+            numero: response.numero,
+            master_nom: offre.titre,
+            master: response.master,
+            master_id: offre.id,
+            statut: 'soumis',
+            date_soumission: new Date().toISOString(),
+            etat_candidature: 'En cours',
+            dossier_valide: false,
+            date_depot_dossier: '',
+            dossier_depose: false,
+          });
+          this.loadMesCandidatures();
+          this.loadMesDossiers();
+          this.switchView('candidatures');
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          this.toastService.show('Erreur lors de la soumission de la candidature.', 'error');
+        },
+      });
   }
 
   postulerOffre(offre: Offre): void {
-    if (!this.actionPermissions.preinscription) {
-      this.notifyActionBlocked("Action préinscription désactivée par l'administration.");
-      return;
-    }
-
-    if (this.dejaCandidature(offre.id)) {
-      alert('Vous avez déjà candidaté pour cette offre');
-      return;
-    }
-
-    if (offre.statut === 'ferme') {
-      alert('❌ Cette offre est fermée');
-      return;
-    }
-
-    this.router.navigate(['/candidature/in-progress'], {
-      queryParams: {
-        offerId: offre.id,
-        type: offre.type,
-        title: offre.titre,
-      },
-    });
+    this.startSubmissionWizard(offre);
   }
 
   startSubmissionWizard(offre: Offre): void {
@@ -1189,28 +1300,51 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     if (this.dejaCandidature(offre.id)) {
-      alert('Vous avez déjà candidaté pour cette offre');
+      this.toastService.show('Vous avez déjà postulé à cette offre.', 'warning');
       return;
     }
 
     if (offre.statut === 'ferme') {
-      alert('❌ Cette offre est fermée');
+      this.toastService.show('Cette offre est fermée.', 'warning');
       return;
     }
 
     this.wizardOffre = offre;
     this.wizardCurrentStep = 1;
     this.wizardMaxAllowedStep = 1;
+    const firstName = this.profileData?.first_name || this.currentUser?.first_name || '';
+    const lastName = this.profileData?.last_name || this.currentUser?.last_name || '';
+    const phone = this.profileData?.phone || this.currentUser?.phone || '';
+    const email = this.profileData?.email || this.currentUser?.email || '';
+
     this.wizardData = {
-      type: offre.type,
-      titre: offre.titre,
-      resume: '',
+      nom: lastName,
+      prenom: firstName,
+      cinPasseport: '',
+      dateNaissance: '',
+      email,
+      telephone: phone,
+      etablissementOrigine: this.profileData?.etablissement_origine || 'ISIMM',
+      specialiteBac: '',
+      anneeBac: '',
+      moyenneBacPrincipale: '',
+      noteMathBac: '',
+      noteFrancaisBac: '',
+      noteAnglaisBac: '',
+      certificationB2: '',
+      specialiteDiplome: '',
+      anneeObtentionDiplome: '',
+      natureDiplome: '',
+      moyenne1Annee: '',
+      session1Annee: '',
+      moyenne2Annee: '',
+      session2Annee: '',
+      moyenne3Annee: '',
+      session3Annee: '',
+      moyenne4Annee: '',
+      session4Annee: '',
+      nombreRedoublement: '',
       fichierNom: '',
-      attributs: '',
-      auteurs: '',
-      reviewers: '',
-      details: '',
-      confirmation: false,
     };
     this.showSubmissionWizardModal = true;
   }
@@ -1218,6 +1352,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   closeSubmissionWizard(): void {
     this.showSubmissionWizardModal = false;
     this.wizardOffre = null;
+  }
+
+  private openWizardFromUrl(step: number): void {
+    const boundedStep = Math.min(3, Math.max(1, step));
+    this.currentView = 'offres-inscription';
+    this.showSubmissionWizardModal = true;
+    this.wizardMaxAllowedStep = 3;
+    this.wizardCurrentStep = boundedStep;
   }
 
   canGoToWizardStep(step: number): boolean {
@@ -1238,11 +1380,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   nextWizardStep(): void {
     if (!this.isWizardStepValid(this.wizardCurrentStep)) {
-      alert('❌ Veuillez compléter les champs requis avant de continuer.');
+      this.toastService.show('Veuillez compléter les champs requis avant de continuer.', 'warning');
       return;
     }
 
-    if (this.wizardCurrentStep < 7) {
+    if (this.wizardCurrentStep < 3) {
       this.wizardCurrentStep += 1;
       this.wizardMaxAllowedStep = Math.max(this.wizardMaxAllowedStep, this.wizardCurrentStep);
     }
@@ -1250,17 +1392,42 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   private isWizardStepValid(step: number): boolean {
     if (step === 1) {
-      return (
-        !!this.wizardData.type && !!this.wizardData.titre.trim() && !!this.wizardData.resume.trim()
-      );
+      return [
+        this.wizardData.nom,
+        this.wizardData.prenom,
+        this.wizardData.cinPasseport,
+        this.wizardData.dateNaissance,
+        this.wizardData.email,
+        this.wizardData.telephone,
+        this.wizardData.etablissementOrigine,
+      ].every((value) => !!String(value || '').trim());
     }
 
     if (step === 2) {
-      return !!this.wizardData.fichierNom;
+      return [
+        this.wizardData.specialiteBac,
+        this.wizardData.anneeBac,
+        this.wizardData.moyenneBacPrincipale,
+        this.wizardData.noteMathBac,
+        this.wizardData.noteFrancaisBac,
+        this.wizardData.noteAnglaisBac,
+        this.wizardData.certificationB2,
+        this.wizardData.specialiteDiplome,
+        this.wizardData.anneeObtentionDiplome,
+        this.wizardData.natureDiplome,
+        this.wizardData.moyenne1Annee,
+        this.wizardData.session1Annee,
+        this.wizardData.moyenne2Annee,
+        this.wizardData.session2Annee,
+        this.wizardData.moyenne3Annee,
+        this.wizardData.session3Annee,
+        this.wizardData.nombreRedoublement,
+        this.wizardData.fichierNom,
+      ].every((value) => !!String(value || '').trim());
     }
 
-    if (step === 7) {
-      return this.wizardData.confirmation;
+    if (step === 3) {
+      return true;
     }
 
     return true;
@@ -1282,11 +1449,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isWizardStepValid(7)) {
-      alert('❌ Veuillez confirmer avant de soumettre.');
-      return;
-    }
-
     const offre = this.wizardOffre;
     this.closeSubmissionWizard();
     this.postuler(offre);
@@ -1305,7 +1467,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       this.selectedDossierNumber = dossier.numero_dossier;
       this.switchView('mon-dossier');
     } else {
-      alert('Dossier non trouvé');
+      this.showAlertMessage('Dossier non trouvé');
     }
   }
 
@@ -1602,13 +1764,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   consulterCandidature(candidature: Candidature): void {
     this.closeActionMenu();
-    this.router.navigate(['/candidature/in-progress'], {
-      queryParams: {
-        candidatureId: candidature.id,
-        type: this.isCycleIngenieur(candidature) ? 'ingenieur' : 'master',
-        title: candidature.master_nom,
-      },
-    });
+    this.router.navigate(['/candidat/candidature', candidature.id]);
   }
 
   ouvrirDepotDossier(candidature: Candidature): void {
@@ -1692,9 +1848,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.closeActionMenu();
-    this.selectedCandidatureForEdit = candidature;
-    this.editChoixPriorite = candidature.choix_priorite ?? 1;
-    this.showEditCandidatureModal = true;
+    this.router.navigate(['/candidat/candidature/modifier'], {
+      queryParams: { candidatureId: candidature.id },
+    });
   }
 
   fermerModalModification(): void {
@@ -1710,7 +1866,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     const priorite = Number(this.editChoixPriorite);
     if (!Number.isInteger(priorite) || priorite < 1 || priorite > 5) {
-      alert('❌ Priorité invalide. Veuillez entrer un entier entre 1 et 5.');
+      this.showAlertMessage('❌ Priorité invalide. Veuillez entrer un entier entre 1 et 5.');
       return;
     }
 
@@ -1725,13 +1881,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          alert('✅ Candidature modifiée avec succès.');
+          this.showAlertMessage('✅ Candidature modifiée avec succès.');
           this.fermerModalModification();
           this.loadMesCandidatures();
         },
         error: (error) => {
           console.error('Erreur modification candidature:', error);
-          alert(error?.error?.error || '❌ Erreur lors de la modification de la candidature.');
+          this.showAlertMessage(
+            error?.error?.error || '❌ Erreur lors de la modification de la candidature.',
+          );
         },
       });
   }
@@ -1761,13 +1919,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('❌ Fichier trop volumineux (max 5 Mo)');
+      this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
       return;
     }
 
     const reference = prompt('Entrez la référence de paiement (inscription.tn):', '');
     if (!reference || !reference.trim()) {
-      alert('❌ Référence de paiement obligatoire');
+      this.showAlertMessage('❌ Référence de paiement obligatoire');
       return;
     }
 
@@ -1817,7 +1975,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.router.navigate(['/preinscription/detail', code]);
+    this.router.navigate(['/preinscription/detail', code], {
+      queryParams: { offerId: offre.id },
+    });
   }
 
   fermerDetailOffre(): void {
@@ -2026,7 +2186,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   gererDossier(candidature: Candidature): void {
     if (candidature.dossier_depose) {
-      alert(`Modifier le dossier pour ${candidature.master_nom}`);
+      this.showAlertMessage(`Modifier le dossier pour ${candidature.master_nom}`);
     } else {
       this.switchView('mon-dossier');
     }
@@ -2050,7 +2210,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) {
-          alert('❌ Fichier trop volumineux (max 5 Mo)');
+          this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
           return;
         }
 
@@ -2067,11 +2227,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
             next: () => {
               doc.depose = true;
               doc.date_depot = new Date().toISOString().split('T')[0];
-              alert('✅ Document déposé avec succès !');
+              this.showAlertMessage('✅ Document déposé avec succès !');
             },
             error: (error) => {
               console.error('Erreur:', error);
-              alert('❌ Erreur lors du dépôt');
+              this.showAlertMessage('❌ Erreur lors du dépôt');
             },
           });
       }
@@ -2081,7 +2241,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   voirDocument(doc: Document): void {
-    alert(`Voir le document : ${doc.nom}`);
+    this.showAlertMessage(`Voir le document : ${doc.nom}`);
   }
 
   soumettrePaiementDirect(
@@ -2110,12 +2270,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: () => {
-          alert('✅ Paiement soumis avec succès !');
+          this.showAlertMessage('✅ Paiement soumis avec succès !');
           candidature.statut_inscription = 'paiement_soumis';
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors de la soumission du paiement');
+          this.showAlertMessage('❌ Erreur lors de la soumission du paiement');
         },
       });
   }
@@ -2169,7 +2329,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       !this.nouvelleReclamation.objet ||
       !this.nouvelleReclamation.motif
     ) {
-      alert('❌ Veuillez remplir tous les champs');
+      this.showAlertMessage('❌ Veuillez remplir tous les champs');
       return;
     }
 
@@ -2181,7 +2341,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (response: any) => {
-          alert('✅ Réclamation soumise avec succès !');
+          this.showAlertMessage('✅ Réclamation soumise avec succès !');
           this.reclamations.unshift({
             id: response.id ?? Date.now(),
             identifiant: response.identifiant ?? `RECL-${new Date().getFullYear()}-${Date.now()}`,
@@ -2197,13 +2357,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors de la soumission');
+          this.showAlertMessage('❌ Erreur lors de la soumission');
         },
       });
   }
 
   voirReclamation(reclamation: Reclamation): void {
-    alert(`Détails réclamation: ${reclamation.identifiant}\n\n${reclamation.motif}`);
+    this.showAlertMessage(
+      `Détails réclamation: ${reclamation.identifiant}\n\n${reclamation.motif}`,
+    );
   }
 
   updateProfile(): void {
@@ -2215,24 +2377,24 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: () => {
-          alert('✅ Profil mis à jour avec succès !');
+          this.showAlertMessage('✅ Profil mis à jour avec succès !');
           this.currentUser = { ...this.currentUser, ...this.profileData };
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors de la mise à jour du profil');
+          this.showAlertMessage('❌ Erreur lors de la mise à jour du profil');
         },
       });
   }
 
   changePassword(): void {
     if (this.passwordForm.new_password !== this.passwordForm.confirm_password) {
-      alert('❌ Les mots de passe ne correspondent pas');
+      this.showAlertMessage('❌ Les mots de passe ne correspondent pas');
       return;
     }
 
     if (this.passwordForm.new_password.length < 8) {
-      alert('❌ Le mot de passe doit contenir au moins 8 caractères');
+      this.showAlertMessage('❌ Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
@@ -2249,7 +2411,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          alert('✅ Mot de passe modifié avec succès !');
+          this.showAlertMessage('✅ Mot de passe modifié avec succès !');
           this.passwordForm = {
             current_password: '',
             new_password: '',
@@ -2258,7 +2420,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors du changement de mot de passe');
+          this.showAlertMessage('❌ Erreur lors du changement de mot de passe');
         },
       });
   }
@@ -2273,12 +2435,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const extension = (file.name.split('.').pop() || '').toLowerCase();
 
     if (!allowedExtensions.includes(extension)) {
-      alert('❌ Format non supporté. Utilisez PDF, JPG ou PNG.');
+      this.showAlertMessage('❌ Format non supporté. Utilisez PDF, JPG ou PNG.');
       return false;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('❌ Fichier trop volumineux (max 5 Mo)');
+      this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
       return false;
     }
 
@@ -2437,7 +2599,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const file = event.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('❌ Fichier trop volumineux (max 5 Mo)');
+        this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
         return;
       }
       this.fichierInscription = file;
@@ -2461,7 +2623,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: () => {
-          alert('✅ Fichier envoyé avec succès !');
+          this.showAlertMessage('✅ Fichier envoyé avec succès !');
           this.fichiersHistorique.unshift({
             id: Date.now(),
             nom: this.fichierInscription!.name,
@@ -2471,7 +2633,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert("❌ Erreur lors de l'envoi du fichier");
+          this.showAlertMessage("❌ Erreur lors de l'envoi du fichier");
         },
       });
   }
@@ -2485,16 +2647,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   voirFichier(fichier: FichierHistorique): void {
-    alert(`Voir le fichier : ${fichier.nom}`);
+    this.showAlertMessage(`Voir le fichier : ${fichier.nom}`);
   }
 
   telechargerFichier(fichier: FichierHistorique): void {
-    alert(`Télécharger le fichier : ${fichier.nom}`);
+    this.showAlertMessage(`Télécharger le fichier : ${fichier.nom}`);
   }
 
   exportInscriptionsEnLigne(): void {
     if (!this.mesCandidatures.length) {
-      alert('❌ Aucune candidature à exporter');
+      this.showAlertMessage('❌ Aucune candidature à exporter');
       return;
     }
 

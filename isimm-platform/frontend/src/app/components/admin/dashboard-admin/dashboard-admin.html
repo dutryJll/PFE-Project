@@ -34,7 +34,7 @@
         (click)="switchView('masters')"
       >
         <i class="fas fa-graduation-cap"></i>
-        <span>Gestion des Masters</span>
+        <span>Parcours master</span>
       </a>
 
       <a
@@ -43,21 +43,12 @@
         (click)="allerGestionConcoursIngenieur()"
       >
         <i class="fas fa-cogs"></i>
-        <span>Gestion des concours d'ingénieur</span>
+        <span>Parcours ingénieurs</span>
       </a>
 
       <a class="nav-item" (click)="allerGestionCommission()">
         <i class="fas fa-user-tie"></i>
         <span>Gestion des Commissions </span>
-      </a>
-
-      <a
-        class="nav-item"
-        [class.active]="currentView === 'candidatures'"
-        (click)="switchView('candidatures')"
-      >
-        <i class="fas fa-file-alt"></i>
-        <span>Gestion des candidatures</span>
       </a>
 
       <a
@@ -75,7 +66,7 @@
         (click)="switchView('rapports')"
       >
         <i class="fas fa-chart-line"></i>
-        <span>Rapports</span>
+        <span>Statistique</span>
       </a>
 
       <a class="nav-item" [class.active]="currentView === 'profil'" (click)="switchView('profil')">
@@ -223,14 +214,14 @@
           <select [(ngModel)]="filtreNotificationType">
             <option value="">Tous les types</option>
             <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
+            <option value="success">Succès</option>
+            <option value="warning">Avertissement</option>
             <option value="danger">Danger</option>
           </select>
           <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
           <input type="date" [(ngModel)]="filtreNotificationDateFin" />
           <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
-            Reinitialiser
+            Réinitialiser
           </button>
         </div>
 
@@ -285,6 +276,14 @@
               placeholder="Rechercher nom ou email..."
             />
           </div>
+          <div class="download-box users-filter-box">
+            <label>Filtre compte</label>
+            <select [(ngModel)]="utilisateurStatusFilter">
+              <option value="all">Tous les comptes</option>
+              <option value="active">Comptes actifs</option>
+              <option value="suspended">Comptes suspendus</option>
+            </select>
+          </div>
           <div class="download-box">
             <label>Download table data as</label>
             <select [(ngModel)]="exportFormat">
@@ -310,7 +309,8 @@
                 </th>
                 <th>First name | Last name</th>
                 <th>Email</th>
-                <th>Role</th>
+                <th>Rôle</th>
+                <th>Statut compte</th>
                 <th>Since</th>
                 <th>Actions</th>
               </tr>
@@ -338,14 +338,30 @@
                     getRoleLabel(user.role)
                   }}</span>
                 </td>
+                <td>
+                  <span class="status-badge" [ngClass]="user.is_active ? 'active' : 'inactive'">
+                    {{ getUserStatusLabel(user) }}
+                  </span>
+                  <small class="user-status-meta" *ngIf="!user.is_active && user.suspended_since">
+                    Depuis le {{ user.suspended_since | date: 'dd/MM/yyyy HH:mm' }}
+                  </small>
+                  <small class="user-status-meta" *ngIf="!user.is_active && user.suspension_reason">
+                    Raison: {{ user.suspension_reason }}
+                  </small>
+                </td>
                 <td>{{ user.date_inscription | date: 'dd MMM yyyy' }}</td>
                 <td>
                   <div class="user-action-menu">
                     <button class="btn-kebab" (click)="toggleUserMenu(user.id)">⋮</button>
                     <div class="kebab-menu" *ngIf="openUserMenuId === user.id">
                       <button (click)="modifierUtilisateur(user)">Edit</button>
-                      <button (click)="suspendreUtilisateur(user)">Suspendre utilisateur</button>
-                      <button class="danger" (click)="supprimerUtilisateur(user)">Delete</button>
+                      <button *ngIf="user.is_active" (click)="suspendreUtilisateur(user)">
+                        Suspendre utilisateur
+                      </button>
+                      <button *ngIf="!user.is_active" (click)="activerCompteUtilisateur(user)">
+                        Activer compte
+                      </button>
+                      <button class="danger" (click)="supprimerUtilisateur(user)">Supprimer</button>
                     </div>
                   </div>
                 </td>
@@ -360,15 +376,15 @@
     <div *ngIf="currentView === 'concours-ingenieur'" class="view-content">
       <div class="section-card">
         <div class="section-header">
-          <h2>⚙️ Offres du concours d'ingénieur</h2>
+          <h2>🛤️ Parcours ingénieurs</h2>
           <button class="btn-primary" (click)="ajouterOffreIngenieur()">
-            <i class="fas fa-plus"></i> Nouvelle offre
+            <i class="fas fa-plus"></i> Ajouter une offre
           </button>
         </div>
 
         <p class="admin-site-subtitle">
-          Gérez les offres publiées pour le cycle ingénieur (titre, spécialité, places, dates et
-          ouverture/fermeture).
+          Ouvrez les parcours ingénieurs, ajoutez les spécialités et publiez les appels d'offre. Les
+          offres enregistrées sont ensuite disponibles côté responsable.
         </p>
 
         <div class="reglement-panel">
@@ -500,11 +516,16 @@
     <div *ngIf="currentView === 'masters'" class="view-content">
       <div class="section-card">
         <div class="section-header">
-          <h2>🎓 Gestion des Masters</h2>
+          <h2>🛤️ Parcours master</h2>
           <button class="btn-primary" (click)="ajouterMaster()">
-            <i class="fas fa-plus"></i> Nouveau Master
+            <i class="fas fa-plus"></i> Ajouter une offre
           </button>
         </div>
+
+        <p class="admin-site-subtitle">
+          Publiez les appels d'offre Master avec spécialité et capacité. Chaque offre sauvegardée
+          apparaît dans l'espace offre du responsable.
+        </p>
 
         <div class="reglement-panel masters-ref-panel">
           <div class="reglement-header">
@@ -944,9 +965,10 @@
       <div class="section-card rapports-hero-card">
         <div class="rapports-hero-head">
           <div>
-            <h2>📊 Rapports et statistiques</h2>
+            <h2>📈 Statistique</h2>
             <p class="rapports-subtitle">
-              Suivi global des candidatures, tendances par master et synthèse rapide exportable.
+              Tableau de pilotage des candidatures, des comptes utilisateurs et des tendances par
+              parcours.
             </p>
           </div>
 
@@ -990,6 +1012,18 @@
           <div class="rapports-kpi-card rejected">
             <span class="label">Rejetées</span>
             <strong>{{ candidaturesRejeteesCount }}</strong>
+          </div>
+          <div class="rapports-kpi-card pending">
+            <span class="label">Utilisateurs actifs</span>
+            <strong>{{ activeUsersCount }}</strong>
+          </div>
+          <div class="rapports-kpi-card rejected">
+            <span class="label">Comptes suspendus</span>
+            <strong>{{ suspendedUsersCount }}</strong>
+          </div>
+          <div class="rapports-kpi-card total">
+            <span class="label">Score moyen</span>
+            <strong>{{ reportAverageScore | number: '1.1-2' }}</strong>
           </div>
         </div>
 
@@ -1065,7 +1099,7 @@
             </div>
 
             <details class="profile-collapse">
-              <summary>Additional names</summary>
+              <summary>Noms complémentaires</summary>
               <div class="profile-collapse-body form-row">
                 <div class="form-group">
                   <label>Nom additionnel</label>
@@ -1079,7 +1113,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Interests</summary>
+              <summary>Centres d'intérêt</summary>
               <div class="profile-collapse-body form-group">
                 <label>Centres d'intérêt administratifs</label>
                 <input
@@ -1091,7 +1125,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Optional</summary>
+              <summary>Informations facultatives</summary>
               <div class="profile-collapse-body form-group">
                 <label>Notes complémentaires</label>
                 <textarea name="optional_notes" rows="3"></textarea>
@@ -1099,9 +1133,9 @@
             </details>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-primary">Update profile</button>
+              <button type="submit" class="btn-primary">Mettre à jour le profil</button>
               <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
-                Cancel
+                Annuler
               </button>
             </div>
           </form>
@@ -1142,7 +1176,7 @@
             </div>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-warning">Update password</button>
+              <button type="submit" class="btn-warning">Mettre à jour le mot de passe</button>
               <button
                 type="button"
                 class="btn-outline"
@@ -1150,7 +1184,7 @@
                   passwordForm = { current_password: '', new_password: '', confirm_password: '' }
                 "
               >
-                Cancel
+                Annuler
               </button>
             </div>
           </form>
@@ -1287,6 +1321,50 @@
           <i class="fas fa-check-circle"></i>
           Fermer
         </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showSuspendModal && suspendTargetUser" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Suspendre un utilisateur</h2>
+        <button
+          class="btn-close"
+          type="button"
+          aria-label="Fermer la fenêtre"
+          title="Fermer"
+          (click)="fermerModalSuspend()"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Utilisateur ciblé:
+          <strong>{{ suspendTargetUser.first_name }} {{ suspendTargetUser.last_name }}</strong>
+          ({{ suspendTargetUser.email }})
+        </p>
+
+        <div class="form-group">
+          <label>Raison de suspension *</label>
+          <textarea
+            [(ngModel)]="suspensionReason"
+            name="suspension_reason"
+            rows="3"
+            placeholder="Ex: compte inactif, anomalie détectée, demande administrative..."
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fermerModalSuspend()">
+            Annuler
+          </button>
+          <button type="button" class="btn-primary" (click)="confirmerSuspensionUtilisateur()">
+            Confirmer suspension
+          </button>
+        </div>
       </div>
     </div>
   </div>

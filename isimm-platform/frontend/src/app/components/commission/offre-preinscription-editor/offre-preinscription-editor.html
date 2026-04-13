@@ -1,0 +1,163 @@
+<div class="offre-editor-page">
+  <div class="editor-shell">
+    <header class="editor-header">
+      <div class="header-kicker">Espace Responsable Commission</div>
+      <h1>
+        <span class="title-accent">Edition professionnelle de l offre de preinscription</span>
+      </h1>
+      <p>
+        Configurez un avis complet et lisible pour les candidats: contenu d ouverture, capacites,
+        calendrier, modalites, pieces du dossier et grille de score.
+      </p>
+
+      <div class="offer-meta" *ngIf="offer as currentOffer">
+        <div class="meta-chip">
+          <small>Offre</small>
+          <strong>#{{ currentOffer.id }} - {{ currentOffer.titre }}</strong>
+        </div>
+        <div class="meta-chip">
+          <small>Specialite</small>
+          <strong>{{ currentOffer.specialite }}</strong>
+        </div>
+        <div class="meta-chip">
+          <small>Date limite</small>
+          <strong>{{ currentOffer.date_limite | date: 'dd/MM/yyyy' }}</strong>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn-outline" (click)="backToDashboard()">Retour</button>
+        <button type="button" class="btn-primary" [disabled]="savingContent" (click)="save()">
+          {{ savingContent ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </header>
+
+    <div class="editor-grid" *ngIf="!loading">
+      <section class="editor-card">
+        <h2>Informations principales</h2>
+        <p class="card-help">
+          Ces informations seront affichees en tete de la page Detail dans l espace candidat.
+        </p>
+        <label>Titre de l offre</label>
+        <input [(ngModel)]="form.title" type="text" />
+
+        <label>Titre de l avis</label>
+        <textarea [(ngModel)]="form.openingTitle" rows="2"></textarea>
+
+        <label>Paragraphe d ouverture</label>
+        <textarea [(ngModel)]="form.openingBody" rows="4"></textarea>
+      </section>
+
+      <section class="editor-card span-2">
+        <h2>Capacite et calendrier</h2>
+        <p class="card-help">
+          Structurez les capacites internes et externes dans un tableau clair et officiel.
+        </p>
+        <label>Titre du tableau</label>
+        <input [(ngModel)]="form.tableTitle" type="text" />
+
+        <div class="table-wrapper editor-table-wrapper">
+          <table class="editor-table">
+            <thead>
+              <tr>
+                <th>Profil</th>
+                <th *ngFor="let head of capacityHeaders">{{ head }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="row-badge interne">Interne</span></td>
+                <td><input [(ngModel)]="form.capInterneTotale" type="text" /></td>
+                <td><input [(ngModel)]="form.capInterneOrigine" type="text" /></td>
+                <td><input [(ngModel)]="form.capInterneCapacite" type="text" /></td>
+                <td><textarea [(ngModel)]="form.capInterneDiplome" rows="2"></textarea></td>
+                <td><textarea [(ngModel)]="form.capInterneDates" rows="2"></textarea></td>
+              </tr>
+              <tr>
+                <td><span class="row-badge externe">Externe</span></td>
+                <td><input [(ngModel)]="form.capExterneTotale" type="text" /></td>
+                <td><input [(ngModel)]="form.capExterneOrigine" type="text" /></td>
+                <td><input [(ngModel)]="form.capExterneCapacite" type="text" /></td>
+                <td><textarea [(ngModel)]="form.capExterneDiplome" rows="2"></textarea></td>
+                <td><textarea [(ngModel)]="form.capExterneDates" rows="2"></textarea></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="editor-card">
+        <h2>Modalites d inscription</h2>
+        <p class="card-help">Decrivez le parcours candidat de maniere simple en 2 etapes.</p>
+        <label>Titre section</label>
+        <input [(ngModel)]="form.modalitesTitle" type="text" />
+
+        <label>Etape 1</label>
+        <textarea [(ngModel)]="form.etape1" rows="4"></textarea>
+
+        <label>Etape 2</label>
+        <textarea [(ngModel)]="form.etape2" rows="4"></textarea>
+      </section>
+
+      <section class="editor-card">
+        <h2>Dossier demande</h2>
+        <p class="card-help">
+          Une ligne par document requis. Ce bloc sert de checklist de reference pour les candidats.
+        </p>
+        <label>Titre section</label>
+        <input [(ngModel)]="form.dossierTitle" type="text" />
+
+        <label>Liste des documents (une ligne = un point)</label>
+        <textarea [(ngModel)]="form.dossierItemsText" rows="8"></textarea>
+      </section>
+
+      <section class="editor-card span-2">
+        <h2>Calcul du score</h2>
+        <p class="card-help">
+          Maintenez une grille d evaluation explicite et stable entre editions d offre.
+        </p>
+        <label>Titre section</label>
+        <input [(ngModel)]="form.scoreTitle" type="text" />
+
+        <div class="table-wrapper editor-table-wrapper">
+          <table class="editor-table">
+            <thead>
+              <tr>
+                <th *ngFor="let head of scoreHeaders">{{ head }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input [(ngModel)]="form.scoreRow1Composante" type="text" /></td>
+                <td><textarea [(ngModel)]="form.scoreRow1Calcul" rows="2"></textarea></td>
+              </tr>
+              <tr>
+                <td><input [(ngModel)]="form.scoreRow2Composante" type="text" /></td>
+                <td><textarea [(ngModel)]="form.scoreRow2Calcul" rows="2"></textarea></td>
+              </tr>
+              <tr>
+                <td><input [(ngModel)]="form.scoreRow3Composante" type="text" /></td>
+                <td><textarea [(ngModel)]="form.scoreRow3Calcul" rows="3"></textarea></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="editor-card span-2">
+        <h2>Criteres et remarques</h2>
+        <p class="card-help">
+          Ajoutez les regles institutionnelles importantes (delais, recours, controle des pieces,
+          sanctions).
+        </p>
+        <label>Remarques importantes (une ligne = un point)</label>
+        <textarea [(ngModel)]="form.evaluationNotesText" rows="7"></textarea>
+      </section>
+    </div>
+
+    <section class="editor-card loading-card" *ngIf="loading">
+      Chargement de l offre en cours...
+    </section>
+  </div>
+</div>

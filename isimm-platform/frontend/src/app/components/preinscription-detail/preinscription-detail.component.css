@@ -82,6 +82,80 @@
   color: #aa5500;
 }
 
+.sync-card {
+  max-width: 1100px;
+  margin: 1rem auto 0;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid #b7d0eb;
+  border-left: 6px solid #1d4ed8;
+  background: linear-gradient(135deg, rgba(29, 78, 216, 0.14), rgba(14, 116, 144, 0.08)), #ffffff;
+  box-shadow: 0 14px 30px rgba(20, 50, 80, 0.1);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.sync-card-copy h2 {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 1.08rem;
+  color: #0f3156;
+  font-weight: 800;
+}
+
+.sync-card-copy p {
+  margin: 0;
+  color: #53667a;
+  line-height: 1.5;
+}
+
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow:
+    0 8px 18px rgba(29, 78, 216, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.sync-badge::before {
+  content: '';
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  box-shadow: 0 0 0 4px rgba(219, 234, 254, 0.2);
+}
+
+.sync-card-side {
+  min-width: 210px;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  background: #eef5ff;
+  border: 1px solid #c8dbf2;
+  text-align: right;
+}
+
+.sync-card-side strong {
+  display: block;
+  color: #123e6d;
+  font-size: 0.95rem;
+}
+
+.sync-card-side span {
+  color: #5f7287;
+  font-size: 0.9rem;
+}
+
 .dates-card h2,
 .table-card h2 {
   margin: 0 0 0.8rem;
@@ -135,10 +209,22 @@ th {
 
   .detail-header,
   .detail-tools,
+  .sync-card,
   .detail-description,
   .dates-card,
   .table-card {
     border-radius: 12px;
     padding: 0.85rem;
+  }
+
+  .sync-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sync-card-side {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
   }
 }

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
+import { ToastService } from '../../../services/toast.service';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -35,6 +36,10 @@ interface Utilisateur {
   role: string;
   is_active: boolean;
   date_inscription: string;
+  suspended_since?: string | null;
+  suspension_reason?: string | null;
+  suspended_by_email?: string | null;
+  reactivated_by_email?: string | null;
 }
 
 interface OffreIngenieur {
@@ -146,6 +151,7 @@ function normalizeActionLabel(value: string): string {
 })
 export class DashboardAdminComponent implements OnInit {
   adminLogoSrc: string = '/images/logo-universite.png';
+  private readonly userSuspensionStorageKey = 'admin-user-suspension-dates';
   currentUser: any = null;
   currentView: string = 'dashboard';
   currentDate: Date = new Date();
@@ -168,6 +174,7 @@ export class DashboardAdminComponent implements OnInit {
   // Listes
   utilisateursList: Utilisateur[] = [];
   utilisateurRecherche: string = '';
+  utilisateurStatusFilter: 'all' | 'active' | 'suspended' = 'all';
   selectedUserIds: number[] = [];
   openUserMenuId: number | null = null;
   exportFormat: ExportFormat = 'csv';
@@ -254,11 +261,12 @@ export class DashboardAdminComponent implements OnInit {
   customRoleActions: string[] = [];
   private readonly knownActionNameSet = new Set<string>([
     normalizeActionLabel('Gestion des utilisateurs'),
-    normalizeActionLabel('Gestion des masters'),
+    normalizeActionLabel('Parcours master'),
     normalizeActionLabel("Gestion concours d'ingénieur"),
-    normalizeActionLabel('Gestion des candidatures'),
+    normalizeActionLabel('Parcours ingénieurs'),
     normalizeActionLabel('Administration du site'),
     normalizeActionLabel('Rapports'),
+    normalizeActionLabel('Statistique'),
   ]);
 
   filtresLogs: any = {
@@ -296,12 +304,16 @@ export class DashboardAdminComponent implements OnInit {
   showModalMaster: boolean = false;
   showCandidatureDetailModal: boolean = false;
   selectedCandidature: Candidature | null = null;
+  showSuspendModal: boolean = false;
+  suspendTargetUser: Utilisateur | null = null;
+  suspensionReason: string = '';
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient,
     private authService: AuthService,
+    private toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
@@ -309,14 +321,14 @@ export class DashboardAdminComponent implements OnInit {
     const token = this.authService.getAccessToken();
 
     if (!token || !this.currentUser) {
-      alert('Session expirée. Veuillez vous reconnecter.');
+      this.showAlertMessage('Session expirée. Veuillez vous reconnecter.');
       this.router.navigate(['/login-admin']);
       return;
     }
 
     const requestedView = this.route.snapshot.queryParamMap.get('view');
     if (requestedView) {
-      this.currentView = requestedView;
+      this.currentView = this.resolveViewAlias(requestedView);
     }
 
     this.profileData = { ...this.currentUser };
@@ -476,6 +488,14 @@ export class DashboardAdminComponent implements OnInit {
   // ========================================
   switchView(view: string): void {
     this.currentView = view;
+    const alias = this.buildViewQueryAlias(view);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { view: alias },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
     if (view === 'logs') {
       this.loadLogs();
     } else if (view === 'commissions') {
@@ -555,18 +575,42 @@ export class DashboardAdminComponent implements OnInit {
       dashboard: 'Tableau de bord',
       analytics: 'Analytiques avancées',
       utilisateurs: 'Gestion des utilisateurs',
-      masters: 'Gestion des Masters',
-      'concours-ingenieur': "Gestion des offres - Concours d'ingénieur",
+      masters: 'Parcours master',
+      'concours-ingenieur': 'Parcours ingénieurs',
       candidatures: 'Gestion de candidature',
       administration: 'Administration système',
       logs: "Journaux d'activité",
       parametres: 'Administration du site',
-      rapports: 'Rapports',
+      rapports: 'Statistique',
       profil: 'Mon Profil',
       notifications: 'Notifications',
       'actions-personnalisees': 'Action personnalisée',
     };
     return titles[this.currentView] || 'Tableau de bord';
+  }
+
+  private showAlertMessage(message: string): void {
+    const normalized = String(message ?? '').trim();
+    const cleanMessage = normalized.replace(/[✅❌⚠️ℹ️]/g, '').trim();
+    let type: 'success' | 'info' | 'warning' | 'error' = 'info';
+
+    if (normalized.includes('✅')) {
+      type = 'success';
+    } else if (normalized.includes('❌')) {
+      type = 'error';
+    } else if (/erreur|impossible|introuvable|expir/i.test(normalized)) {
+      type = 'error';
+    } else if (
+      /obligatoire|veuillez|aucun|aucune|invalide|fermee|fermé|attention/i.test(normalized)
+    ) {
+      type = 'warning';
+    } else if (
+      /succes|succès|enregistr|soumis|publie|publié|modifie|modifié|supprim/i.test(normalized)
+    ) {
+      type = 'success';
+    }
+
+    this.toastService.show(cleanMessage || 'Notification', type);
   }
 
   onAdminLogoError(): void {
@@ -610,6 +654,7 @@ export class DashboardAdminComponent implements OnInit {
 
   loadUtilisateurs(): void {
     const token = this.authService.getAccessToken();
+    const storedSuspensions = this.readStoredSuspensionDates();
 
     this.http
       .get('http://localhost:8001/api/auth/users/', {
@@ -617,7 +662,23 @@ export class DashboardAdminComponent implements OnInit {
       })
       .subscribe({
         next: (users: any) => {
-          this.utilisateursList = users;
+          this.utilisateursList = (users || []).map((user: any) => ({
+            id: Number(user.id),
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            email: user.email || '',
+            role: user.role || 'candidat',
+            is_active: !!user.is_active,
+            date_inscription: user.date_inscription || user.date_joined || new Date().toISOString(),
+            suspended_since:
+              user.suspended_since ||
+              user.suspended_at ||
+              user.date_suspension ||
+              (!user.is_active ? storedSuspensions[String(user.id)] || null : null),
+            suspension_reason: user.suspension_reason || null,
+            suspended_by_email: user.suspended_by_email || null,
+            reactivated_by_email: user.reactivated_by_email || null,
+          }));
         },
         error: (error) => {
           console.error('Erreur chargement utilisateurs:', error);
@@ -630,6 +691,8 @@ export class DashboardAdminComponent implements OnInit {
               role: 'candidat',
               is_active: true,
               date_inscription: '2026-02-15',
+              suspended_since: null,
+              suspension_reason: null,
             },
             {
               id: 2,
@@ -637,8 +700,10 @@ export class DashboardAdminComponent implements OnInit {
               last_name: 'Gharbi',
               email: 'fatma@example.com',
               role: 'commission',
-              is_active: true,
+              is_active: false,
               date_inscription: '2026-01-10',
+              suspended_since: '2026-03-20T09:30:00',
+              suspension_reason: 'Non respect du règlement administratif.',
             },
           ];
         },
@@ -924,11 +989,19 @@ export class DashboardAdminComponent implements OnInit {
   // ========================================
   get utilisateursFiltres(): Utilisateur[] {
     const q = this.utilisateurRecherche.trim().toLowerCase();
-    if (!q) {
-      return this.utilisateursList;
-    }
-
     return this.utilisateursList.filter((user) => {
+      if (this.utilisateurStatusFilter === 'active' && !user.is_active) {
+        return false;
+      }
+
+      if (this.utilisateurStatusFilter === 'suspended' && user.is_active) {
+        return false;
+      }
+
+      if (!q) {
+        return true;
+      }
+
       const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
       return fullName.includes(q) || user.email.toLowerCase().includes(q);
     });
@@ -979,13 +1052,130 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   suspendreUtilisateur(user: Utilisateur): void {
-    user.is_active = !user.is_active;
+    this.suspendTargetUser = user;
+    this.suspensionReason = '';
+    this.showSuspendModal = true;
     this.closeUserMenu();
-    alert(
-      user.is_active
-        ? `✅ Compte réactivé pour ${user.first_name} ${user.last_name}`
-        : `⛔ Candidature suspendue pour ${user.first_name} ${user.last_name}`,
-    );
+  }
+
+  activerCompteUtilisateur(user: Utilisateur): void {
+    this.updateUserActiveState(user, true, 'Réactivation manuelle par administrateur');
+  }
+
+  getUserStatusLabel(user: Utilisateur): string {
+    return user.is_active ? 'Actif' : 'Suspendu';
+  }
+
+  confirmerSuspensionUtilisateur(): void {
+    if (!this.suspendTargetUser) {
+      return;
+    }
+
+    const reason = this.suspensionReason.trim();
+    if (!reason) {
+      this.showAlertMessage('❌ La raison de suspension est obligatoire.');
+      return;
+    }
+
+    this.updateUserActiveState(this.suspendTargetUser, false, reason);
+    this.fermerModalSuspend();
+  }
+
+  fermerModalSuspend(): void {
+    this.showSuspendModal = false;
+    this.suspendTargetUser = null;
+    this.suspensionReason = '';
+  }
+
+  private updateUserActiveState(user: Utilisateur, isActive: boolean, reason: string): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8001/api/auth/users/${user.id}/account-status/`,
+        { action: isActive ? 'activate' : 'suspend', reason },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          const updatedUser = response?.user || null;
+          user.is_active = isActive;
+          if (isActive) {
+            user.suspended_since = null;
+            user.suspension_reason = null;
+            user.suspended_by_email = null;
+            user.reactivated_by_email =
+              updatedUser?.reactivated_by_email || this.currentUser?.email || null;
+            this.clearStoredSuspensionDate(user.id);
+          } else {
+            const now = updatedUser?.suspended_since || new Date().toISOString();
+            user.suspended_since = now;
+            user.suspension_reason = reason;
+            user.suspended_by_email =
+              updatedUser?.suspended_by_email || this.currentUser?.email || null;
+            this.storeSuspensionDate(user.id, now);
+          }
+
+          this.closeUserMenu();
+          this.showAlertMessage(
+            isActive
+              ? `✅ Compte activé pour ${user.first_name} ${user.last_name}`
+              : `⛔ Compte suspendu pour ${user.first_name} ${user.last_name}`,
+          );
+        },
+        error: (error) => {
+          console.error('Erreur mise à jour statut utilisateur:', error);
+          this.showAlertMessage('❌ Erreur lors de la mise à jour du compte utilisateur.');
+        },
+      });
+  }
+
+  private readStoredSuspensionDates(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(this.userSuspensionStorageKey);
+      return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private storeSuspensionDate(userId: number, dateIso: string): void {
+    const data = this.readStoredSuspensionDates();
+    data[String(userId)] = dateIso;
+    localStorage.setItem(this.userSuspensionStorageKey, JSON.stringify(data));
+  }
+
+  private clearStoredSuspensionDate(userId: number): void {
+    const data = this.readStoredSuspensionDates();
+    delete data[String(userId)];
+    localStorage.setItem(this.userSuspensionStorageKey, JSON.stringify(data));
+  }
+
+  private resolveViewAlias(requestedView: string): string {
+    const aliases: Record<string, string> = {
+      'parcours-master': 'masters',
+      'parcours-ingenieurs': 'concours-ingenieur',
+      statistique: 'rapports',
+      rapports: 'rapports',
+      masters: 'masters',
+      'concours-ingenieur': 'concours-ingenieur',
+    };
+
+    return aliases[requestedView] || requestedView;
+  }
+
+  private buildViewQueryAlias(view: string): string {
+    const map: Record<string, string> = {
+      masters: 'parcours-master',
+      'concours-ingenieur': 'parcours-ingenieurs',
+      rapports: 'statistique',
+    };
+
+    return map[view] || view;
   }
 
   downloadUsersFile(): void {
@@ -1061,7 +1251,7 @@ export class DashboardAdminComponent implements OnInit {
     pdfTitle: string,
   ): Promise<void> {
     if (!rows.length) {
-      alert('Aucune donnee a exporter');
+      this.showAlertMessage('Aucune donn�e � exporter');
       return;
     }
 
@@ -1192,11 +1382,11 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   nouvelUtilisateur(): void {
-    alert('Créer un nouvel utilisateur');
+    this.showAlertMessage('Créer un nouvel utilisateur');
   }
 
   voirUtilisateur(user: Utilisateur): void {
-    alert(`Voir détails de ${user.first_name} ${user.last_name}`);
+    this.showAlertMessage(`Voir détails de ${user.first_name} ${user.last_name}`);
   }
 
   modifierUtilisateur(user: Utilisateur): void {
@@ -1214,13 +1404,13 @@ export class DashboardAdminComponent implements OnInit {
         })
         .subscribe({
           next: () => {
-            alert('✅ Utilisateur supprimé avec succès');
+            this.showAlertMessage('✅ Utilisateur supprimé avec succès');
             this.closeUserMenu();
             this.loadUtilisateurs();
           },
           error: (error) => {
             console.error('Erreur:', error);
-            alert('❌ Erreur lors de la suppression');
+            this.showAlertMessage('❌ Erreur lors de la suppression');
           },
         });
     }
@@ -1254,7 +1444,7 @@ export class DashboardAdminComponent implements OnInit {
             id: c.id,
             backend_id: c.id,
             titre: c.nom,
-            specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ingenieur',
+            specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ing�nieur',
             places: c.places_disponibles,
             date_limite: c.date_cloture,
             statut: c.actif ? 'ouvert' : 'ferme',
@@ -1335,12 +1525,14 @@ export class DashboardAdminComponent implements OnInit {
     if (!this.concoursIngenieurApiAvailable) {
       this.reglementApplyMessage =
         '❌ API concours indisponible: impossible d’appliquer le règlement sur une offre fictive.';
-      alert('❌ API concours indisponible. Vérifiez le backend concours puis réessayez.');
+      this.showAlertMessage(
+        '❌ API concours indisponible. Vérifiez le backend concours puis réessayez.',
+      );
       return;
     }
 
     if (!this.selectedConcoursIdForReglement) {
-      alert('Veuillez sélectionner un concours ingénieur à mettre à jour.');
+      this.showAlertMessage('Veuillez sélectionner un concours ingénieur à mettre à jour.');
       return;
     }
 
@@ -1363,14 +1555,14 @@ export class DashboardAdminComponent implements OnInit {
           this.hydrateReglementDisplay(response);
           this.isApplyingReglement = false;
           this.reglementApplyMessage = `✅ Règlement officiel appliqué avec succès (${this.chapitresReglement.length} chapitres affichés).`;
-          alert('✅ Règlement officiel appliqué au concours.');
+          this.showAlertMessage('✅ Règlement officiel appliqué au concours.');
         },
         error: (err) => {
           console.error('Erreur application règlement:', err);
           this.isApplyingReglement = false;
           const message = this.extractApiErrorMessage(err);
           this.reglementApplyMessage = `❌ ${message}`;
-          alert(`❌ Échec application du règlement: ${message}`);
+          this.showAlertMessage(`❌ Échec application du règlement: ${message}`);
         },
       });
   }
@@ -1501,7 +1693,7 @@ export class DashboardAdminComponent implements OnInit {
   modifierOffreIngenieur(offre: OffreIngenieur): void {
     const targetId = offre.backend_id || offre.id;
     if (!targetId) {
-      alert('❌ Offre invalide');
+      this.showAlertMessage('❌ Offre invalide');
       return;
     }
     this.router.navigate(['/admin/offres-ingenieur', targetId, 'edit']);
@@ -1518,7 +1710,7 @@ export class DashboardAdminComponent implements OnInit {
 
     const token = this.authService.getAccessToken();
     if (!token) {
-      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
       return;
     }
 
@@ -1534,7 +1726,7 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur changement statut offre:', error);
-          alert('❌ Impossible de modifier le statut de cette offre.');
+          this.showAlertMessage('❌ Impossible de modifier le statut de cette offre.');
         },
       });
   }
@@ -1553,7 +1745,7 @@ export class DashboardAdminComponent implements OnInit {
 
     const token = this.authService.getAccessToken();
     if (!token) {
-      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
       return;
     }
 
@@ -1569,7 +1761,7 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur suppression offre:', error);
-          alert('❌ Erreur lors de la suppression de cette offre.');
+          this.showAlertMessage('❌ Erreur lors de la suppression de cette offre.');
         },
       });
   }
@@ -1583,13 +1775,13 @@ export class DashboardAdminComponent implements OnInit {
 
   enregistrerMaster(): void {
     if (!this.nouveauMaster.nom || !this.nouveauMaster.places || !this.nouveauMaster.date_limite) {
-      alert('❌ Veuillez remplir tous les champs obligatoires');
+      this.showAlertMessage('❌ Veuillez remplir tous les champs obligatoires');
       return;
     }
 
     const token = this.authService.getAccessToken();
     if (!token) {
-      alert('❌ Session expirée. Veuillez vous reconnecter.');
+      this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
       return;
     }
 
@@ -1615,13 +1807,13 @@ export class DashboardAdminComponent implements OnInit {
         )
         .subscribe({
           next: () => {
-            alert('✅ Master modifié avec succès');
+            this.showAlertMessage('✅ Master modifié avec succès');
             this.showModalMaster = false;
             this.loadMasters();
           },
           error: (error) => {
             console.error('Erreur modification master:', error);
-            alert('❌ Erreur lors de la modification du master');
+            this.showAlertMessage('❌ Erreur lors de la modification du master');
           },
         });
       return;
@@ -1633,13 +1825,13 @@ export class DashboardAdminComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          alert('✅ Master ajouté avec succès');
+          this.showAlertMessage('✅ Master ajouté avec succès');
           this.showModalMaster = false;
           this.loadMasters();
         },
         error: (error) => {
           console.error('Erreur création master:', error);
-          alert('❌ Erreur lors de la création du master');
+          this.showAlertMessage('❌ Erreur lors de la création du master');
         },
       });
   }
@@ -1656,7 +1848,7 @@ export class DashboardAdminComponent implements OnInit {
     if (confirm(`Supprimer le master "${master.nom}" ?`)) {
       const token = this.authService.getAccessToken();
       if (!token) {
-        alert('❌ Session expirée. Veuillez vous reconnecter.');
+        this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
         return;
       }
 
@@ -1666,12 +1858,12 @@ export class DashboardAdminComponent implements OnInit {
         })
         .subscribe({
           next: () => {
-            alert('✅ Master supprimé');
+            this.showAlertMessage('✅ Master supprimé');
             this.loadMasters();
           },
           error: (error) => {
             console.error('Erreur suppression master:', error);
-            alert('❌ Erreur lors de la suppression du master');
+            this.showAlertMessage('❌ Erreur lors de la suppression du master');
           },
         });
     }
@@ -1681,15 +1873,15 @@ export class DashboardAdminComponent implements OnInit {
   // ADMINISTRATION SYSTÈME
   // ========================================
   creerRole(): void {
-    alert('Créer un nouveau rôle');
+    this.showAlertMessage('Créer un nouveau rôle');
   }
 
   voirPermissions(role: Role): void {
-    alert(`Voir permissions de ${role.nom}`);
+    this.showAlertMessage(`Voir permissions de ${role.nom}`);
   }
 
   modifierRole(role: Role): void {
-    alert(`Modifier ${role.nom}`);
+    this.showAlertMessage(`Modifier ${role.nom}`);
   }
 
   aPermission(role: Role, permission: Permission): boolean {
@@ -1698,7 +1890,7 @@ export class DashboardAdminComponent implements OnInit {
 
   togglePermission(role: Role, permission: Permission): void {
     if (role.est_systeme) {
-      alert('❌ Impossible de modifier un rôle système');
+      this.showAlertMessage('❌ Impossible de modifier un rôle système');
       return;
     }
 
@@ -1720,7 +1912,7 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors de la modification');
+          this.showAlertMessage('❌ Erreur lors de la modification');
         },
       });
   }
@@ -1780,24 +1972,24 @@ export class DashboardAdminComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          alert('✅ Profil mis à jour avec succès !');
+          this.showAlertMessage('✅ Profil mis à jour avec succès !');
           this.currentUser = { ...this.currentUser, ...this.profileData };
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors de la mise à jour du profil');
+          this.showAlertMessage('❌ Erreur lors de la mise à jour du profil');
         },
       });
   }
 
   changePassword(): void {
     if (this.passwordForm.new_password !== this.passwordForm.confirm_password) {
-      alert('❌ Les mots de passe ne correspondent pas');
+      this.showAlertMessage('❌ Les mots de passe ne correspondent pas');
       return;
     }
 
     if (this.passwordForm.new_password.length < 8) {
-      alert('❌ Le mot de passe doit contenir au moins 8 caractères');
+      this.showAlertMessage('❌ Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
@@ -1814,7 +2006,7 @@ export class DashboardAdminComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          alert('✅ Mot de passe modifié avec succès !');
+          this.showAlertMessage('✅ Mot de passe modifié avec succès !');
           this.passwordForm = {
             current_password: '',
             new_password: '',
@@ -1823,7 +2015,7 @@ export class DashboardAdminComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur:', error);
-          alert('❌ Erreur lors du changement de mot de passe');
+          this.showAlertMessage('❌ Erreur lors du changement de mot de passe');
         },
       });
   }
@@ -1868,8 +2060,8 @@ export class DashboardAdminComponent implements OnInit {
       this.makeActionRow(6, 'Préselection', { commission: true, responsable_commission: true }),
       this.makeActionRow(7, 'Sélection finale', { responsable_commission: true }),
       this.makeActionRow(8, 'Gestion des utilisateurs', { admin: true }),
-      this.makeActionRow(9, 'Gestion des masters', { admin: true }),
-      this.makeActionRow(10, "Gestion concours d'ingénieur", { admin: true }),
+      this.makeActionRow(9, 'Parcours master', { admin: true }),
+      this.makeActionRow(10, 'Parcours ingénieurs', { admin: true }),
     ];
   }
 
@@ -1895,7 +2087,7 @@ export class DashboardAdminComponent implements OnInit {
   addAction(): void {
     const actionName = this.newActionName.trim();
     if (!actionName) {
-      alert("Le nom d'action est obligatoire");
+      this.showAlertMessage("Le nom d'action est obligatoire");
       return;
     }
 
@@ -1954,7 +2146,7 @@ export class DashboardAdminComponent implements OnInit {
   private persistActionRoleMatrix(showSuccessMessage: boolean = false): void {
     if (!this.actionRoleMatrix.length) {
       if (showSuccessMessage) {
-        alert('Ajoutez au moins une action avant de sauvegarder');
+        this.showAlertMessage('Ajoutez au moins une action avant de sauvegarder');
       }
       return;
     }
@@ -1976,7 +2168,7 @@ export class DashboardAdminComponent implements OnInit {
       .subscribe({
         next: (response: any) => {
           if (showSuccessMessage) {
-            alert('✅ Matrice des actions enregistrée avec succès');
+            this.showAlertMessage('✅ Matrice des actions enregistrée avec succès');
           }
           this.actionRoleMatrix = (response.actions || this.actionRoleMatrix).map((row: any) => ({
             action_no: row.action_no,
@@ -1993,7 +2185,7 @@ export class DashboardAdminComponent implements OnInit {
         error: (error) => {
           console.error('Erreur sauvegarde matrice:', error);
           if (showSuccessMessage) {
-            alert("❌ Erreur lors de l'enregistrement de la matrice");
+            this.showAlertMessage("❌ Erreur lors de l'enregistrement de la matrice");
           }
         },
       });
@@ -2061,8 +2253,29 @@ export class DashboardAdminComponent implements OnInit {
     return map[statut] || '';
   }
 
+  get reportAverageScore(): number {
+    if (!this.candidaturesList.length) {
+      return 0;
+    }
+
+    const total = this.candidaturesList.reduce(
+      (sum, candidature) => sum + (candidature.score || 0),
+      0,
+    );
+    return total / this.candidaturesList.length;
+  }
+
+  get activeUsersCount(): number {
+    return this.utilisateursList.filter((user) => user.is_active).length;
+  }
+
+  get suspendedUsersCount(): number {
+    return this.utilisateursList.filter((user) => !user.is_active).length;
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
 }
+

@@ -7,10 +7,10 @@
           Retour au dashboard
         </button>
       </div>
-      <h1>📋 Analyse des Dossiers - Diagnostic OCR/IA</h1>
+      <h1>Analyse professionnelle des dossiers déposés</h1>
       <p>
-        Analysez les dossiers déposés avec assistance OCR/IA pour validation rapide ou révision
-        manuelle
+        Contrôle structuré des pièces du dépôt dossier, vérification OCR/IA et décision de
+        conformité avant passage à l'étape suivante.
       </p>
 
       <div class="kpi-grid">
@@ -26,6 +26,17 @@
           <small>Anomalies dernier diagnostic</small>
           <strong>{{ lastAnomalyCount }}</strong>
         </article>
+      </div>
+
+      <div *ngIf="hasDirectAccess" class="direct-access-banner">
+        <div>
+          <small>Vue ciblée</small>
+          <strong>{{ directAccessLabel }}</strong>
+        </div>
+        <p>
+          La page ouvre directement ce dossier en mode analyse commission, même s'il n'apparaît pas
+          dans la file filtrée actuelle.
+        </p>
       </div>
     </header>
 
@@ -44,7 +55,7 @@
       <!-- 📌 COLONNE GAUCHE : Liste des dossiers -->
       <aside class="dossiers-list-panel">
         <div class="panel-header">
-          <h2>📂 Dossiers en attente ({{ candidaturesList.length }})</h2>
+          <h2>Dossiers à contrôler ({{ candidaturesList.length }})</h2>
           <button class="btn-refresh" (click)="loadCandidatures()" [disabled]="isLoading">
             <i class="fas fa-sync-alt" [class.spinning]="isLoading"></i>
             Actualiser
@@ -100,7 +111,7 @@
       <main class="analysis-panel">
         <div *ngIf="!selectedCandidature" class="empty-analysis">
           <i class="fas fa-inbox"></i>
-          <p>Sélectionnez un dossier pour commencer l'analyse OCR</p>
+          <p>Sélectionnez un dossier pour démarrer l'analyse documentaire.</p>
         </div>
 
         <div *ngIf="selectedCandidature" class="analysis-content">
@@ -120,12 +131,61 @@
             </div>
           </div>
 
+          <div class="analysis-summary-grid">
+            <article class="summary-card status-card" [ngClass]="'tone-' + documentStatusTone">
+              <div class="summary-card-head">
+                <small>Statut documentaire global</small>
+                <span class="summary-chip">{{ documentStatusLabel }}</span>
+              </div>
+              <strong>{{ selectedDocumentsCount }}/{{ requiredDocuments.length }}</strong>
+              <p>Pièces renseignées dans le dépôt dossier pour cette candidature.</p>
+              <div class="summary-progress-bar">
+                <span [style.width.%]="documentCompletionRate"></span>
+              </div>
+            </article>
+
+            <article class="summary-card score-card" [ngClass]="'tone-' + globalComplianceTone">
+              <div class="summary-card-head">
+                <small>Score de conformité global</small>
+                <span class="summary-chip">{{ globalComplianceLabel }}</span>
+              </div>
+              <div class="score-row">
+                <strong>{{ globalComplianceScore }}%</strong>
+                <span>Consolidé à partir des pièces, de l OCR et des anomalies.</span>
+              </div>
+              <div class="summary-progress-bar emphasized">
+                <span [style.width.%]="globalComplianceScore"></span>
+              </div>
+            </article>
+
+            <article class="summary-card timeline-card">
+              <div class="summary-card-head">
+                <small>Timeline d audit</small>
+                <span class="summary-chip neutral">{{ auditTimeline.length }} étapes</span>
+              </div>
+              <div class="timeline-list">
+                <div
+                  class="timeline-step"
+                  *ngFor="let step of auditTimeline"
+                  [class.done]="step.state === 'done'"
+                  [class.current]="step.state === 'current'"
+                >
+                  <span class="timeline-marker"></span>
+                  <div class="timeline-content">
+                    <strong>{{ step.title }}</strong>
+                    <p>{{ step.description }}</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
           <!-- Configuration formulaire test OCR -->
           <div class="form-config-section">
-            <h4>📝 Données pour diagnostic OCR</h4>
+            <h4>Plan de contrôle du dépôt dossier</h4>
             <p class="info-text">
-              Remplissez les données à analyser (ce sont des données de test pour démonstration du
-              moteur OCR)
+              Vérifiez les pièces exigées, puis comparez les informations déclarées avec les
+              extractions OCR pour établir un diagnostic fiable.
             </p>
 
             <div class="quick-actions">
@@ -154,6 +214,26 @@
                   placeholder="15.50"
                   step="0.01"
                 />
+              </div>
+            </div>
+
+            <div class="document-checklist">
+              <h5>Pièces attendues dans le dépôt dossier</h5>
+              <div class="document-grid">
+                <label class="document-item" *ngFor="let document of requiredDocuments">
+                  <input
+                    type="checkbox"
+                    [checked]="isDocumentChecked(document.key)"
+                    (change)="toggleDocument(document.key, $any($event.target).checked)"
+                  />
+                  <span class="document-label">{{ document.label }}</span>
+                  <span class="document-status ok" *ngIf="isDocumentChecked(document.key)">
+                    déclaré
+                  </span>
+                  <span class="document-status alert" *ngIf="isDocumentMissing(document.key)">
+                    manquant OCR
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -211,7 +291,7 @@
 
           <!-- Résultat diagnostic OCR -->
           <div class="diagnostic-section" *ngIf="ocrDiagnostic">
-            <h4>🔍 Résultat diagnostic OCR</h4>
+            <h4>Résultat du diagnostic OCR</h4>
 
             <!-- Score de confiance -->
             <div class="confiance-block" [ngClass]="getConfianceClass(ocrDiagnostic.confiance)">

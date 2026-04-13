@@ -23,6 +23,18 @@
     </span>
   </section>
 
+  <section *ngIf="hasSyncedContent" class="sync-card">
+    <div class="sync-card-copy">
+      <span class="sync-badge">Version éditée</span>
+      <h2>Contenu synchronisé avec l espace responsable</h2>
+      <p>Cette page reprend la version modifiée de l offre pour la consultation candidat.</p>
+    </div>
+    <div class="sync-card-side">
+      <strong>{{ d.sourceLabel || 'Version officielle' }}</strong>
+      <span>Offre ID {{ syncedOfferId }}</span>
+    </div>
+  </section>
+
   <section *ngIf="d.description" class="detail-description">
     {{ d.description }}
   </section>
@@ -46,6 +58,25 @@
         </thead>
         <tbody>
           <tr *ngFor="let row of d.table.rows">
+            <td *ngFor="let col of row" [innerText]="col"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section *ngIf="d.scoreTable" class="table-card">
+    <h2>{{ d.scoreTableTitle || 'Calcul du score' }}</h2>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th *ngFor="let h of d.scoreTable.headers">{{ h }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of d.scoreTable.rows">
             <td *ngFor="let col of row" [innerText]="col"></td>
           </tr>
         </tbody>

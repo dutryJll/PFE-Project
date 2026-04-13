@@ -24,7 +24,9 @@ export class LoginCandidatComponent {
   ) {}
 
   onLogin() {
-    if (!this.email || !this.password) {
+    const normalizedEmail = (this.email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !this.password) {
       this.errorMessage = 'login.candidat.error.fill';
       return;
     }
@@ -32,7 +34,7 @@ export class LoginCandidatComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.authService.login(this.email, this.password).subscribe({
+    this.authService.login(normalizedEmail, this.password).subscribe({
       next: (response) => {
         console.log('✅ Connexion candidat:', response);
         this.isLoading = false;
@@ -49,7 +51,26 @@ export class LoginCandidatComponent {
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = 'login.candidat.error.invalid';
+        const apiMessage =
+          (typeof error?.error === 'string' && error.error) ||
+          error?.error?.error ||
+          error?.error?.detail ||
+          error?.error?.message ||
+          (Array.isArray(error?.error?.non_field_errors) && error.error.non_field_errors[0]) ||
+          null;
+        if (apiMessage && typeof apiMessage === 'string') {
+          this.errorMessage = apiMessage;
+          return;
+        }
+        if (error?.status === 0) {
+          this.errorMessage = "Service d'authentification indisponible. Réessayez.";
+          return;
+        }
+        if (error?.status === 401) {
+          this.errorMessage = 'Email ou mot de passe incorrect';
+          return;
+        }
+        this.errorMessage = 'Erreur de connexion. Réessayez.';
       },
     });
   }

@@ -44,28 +44,36 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/login/`, { email, password }).pipe(
-      tap((response: any) => {
-        console.log('🔐 Réponse login:', response);
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const normalizedPassword = (password || '').trim();
 
-        if (response.access && response.user) {
-          localStorage.setItem('access_token', response.access);
-          localStorage.setItem('refresh_token', response.refresh);
-          localStorage.setItem('current_user', JSON.stringify(response.user));
+    return this.http
+      .post(`${this.apiUrl}/login/`, {
+        email: normalizedEmail,
+        password: normalizedPassword,
+      })
+      .pipe(
+        tap((response: any) => {
+          console.log('🔐 Réponse login:', response);
 
-          this.currentUserSubject.next(response.user);
+          if (response.access && response.user) {
+            localStorage.setItem('access_token', response.access);
+            localStorage.setItem('refresh_token', response.refresh);
+            localStorage.setItem('current_user', JSON.stringify(response.user));
 
-          console.log('✅ Connexion OK - Rôle:', response.user.role);
-        }
-      }),
-      catchError((error: any) => {
-        if (error?.status === 0) {
-          console.error(`❌ Service Auth indisponible: ${this.apiUrl}`);
-        }
-        console.error('❌ Erreur login:', error);
-        return throwError(() => error);
-      }),
-    );
+            this.currentUserSubject.next(response.user);
+
+            console.log('✅ Connexion OK - Rôle:', response.user.role);
+          }
+        }),
+        catchError((error: any) => {
+          if (error?.status === 0) {
+            console.error(`❌ Service Auth indisponible: ${this.apiUrl}`);
+          }
+          console.error('❌ Erreur login:', error);
+          return throwError(() => error);
+        }),
+      );
   }
 
   register(userData: any): Observable<any> {
@@ -152,16 +160,24 @@ export class AuthService {
   }
 
   verifyPassword(email: string, password: string): Observable<any> {
-    console.log('🔐 Vérification mot de passe pour:', email);
-    return this.http.post(`${this.apiUrl}/login/`, { email, password }).pipe(
-      tap((response: any) => {
-        console.log('✅ Mot de passe vérifié');
-      }),
-      catchError((error: any) => {
-        console.error('❌ Mot de passe incorrect');
-        return throwError(() => error);
-      }),
-    );
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const normalizedPassword = (password || '').trim();
+
+    console.log('🔐 Vérification mot de passe pour:', normalizedEmail);
+    return this.http
+      .post(`${this.apiUrl}/login/`, {
+        email: normalizedEmail,
+        password: normalizedPassword,
+      })
+      .pipe(
+        tap((response: any) => {
+          console.log('✅ Mot de passe vérifié');
+        }),
+        catchError((error: any) => {
+          console.error('❌ Mot de passe incorrect');
+          return throwError(() => error);
+        }),
+      );
   }
 
   getMyEnabledActions(forceReload: boolean = false): Observable<string[]> {

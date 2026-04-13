@@ -15,7 +15,7 @@ from django.conf import settings
 from django.db import transaction
 import uuid
 
-from .models import User, ActionRole
+from .models import User, ActionRole, ActionLog
 from .serializers import UserSerializer, RegisterSerializer
 from .email_service import send_verification_email, send_login_notification
 
@@ -46,6 +46,42 @@ DEFAULT_ACTIONS = [
     {'action_no': 21, 'action_name': 'Consulter statistiques', 'enabled_roles': ['commission', 'responsable_commission', 'admin']},
     {'action_no': 22, 'action_name': 'Exporter données', 'enabled_roles': ['admin']},
 ]
+
+
+def _extract_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+
+def _write_account_status_log(request, target_user, action, reason):
+    actor = request.user if request.user.is_authenticated else None
+    actor_label = actor.email if actor else 'system'
+    action_label = 'Suspension de compte' if action == 'suspend' else 'Activation de compte'
+    description = (
+        f"{action_label}: {target_user.email} | "
+        f"Par: {actor_label} | "
+        f"Raison: {reason or 'non fournie'}"
+    )
+
+    ActionLog.objects.create(
+        user=actor,
+        action='account_status_update',
+        module='utilisateurs',
+        description=description,
+        ip_address=_extract_client_ip(request),
+        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        succes=True,
+        details={
+            'target_user_id': target_user.id,
+            'target_email': target_user.email,
+            'status_action': action,
+            'reason': reason,
+            'performed_by': actor_label,
+            'performed_at': timezone.now().isoformat(),
+        },
+    )
 
 
 def _ensure_default_action_roles():
@@ -116,8 +152,8 @@ def register(request):
 @permission_classes([AllowAny])
 def login(request):
     """Connexion"""
-    email = request.data.get('email')
-    password = request.data.get('password')
+    email = (request.data.get('email') or '').strip().lower()
+    password = (request.data.get('password') or '').strip()
     
     if not email or not password:
         return Response(
@@ -125,17 +161,46 @@ def login(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Authentifier
-    user = authenticate(username=email, password=password)
+    # Authentifier (tolérant: email direct, clé USERNAME_FIELD, puis username)
+    user = authenticate(request=request, email=email, password=password)
+    if user is None:
+        user = authenticate(request=request, username=email, password=password)
+
+    # Fallback: si l'UI envoie un email mais que le backend attend le username,
+    # on récupère le user par email puis on tente une authentification par username.
+    if user is None:
+        candidate = User.objects.filter(email__iexact=email).first()
+        if candidate is not None:
+            user = authenticate(request=request, username=candidate.username, password=password)
+
+    # Fallback ultime: verification directe du mot de passe pour tolerer
+    # des ecarts de configuration AUTHENTICATION_BACKENDS.
+    if user is None:
+        candidate = User.objects.filter(email__iexact=email).first()
+        if candidate is None:
+            candidate = User.objects.filter(username__iexact=email).first()
+        if candidate is not None and candidate.check_password(password):
+            user = candidate
     
     if user is None:
         return Response(
             {'error': 'Email ou mot de passe incorrect'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+
+    if not user.is_active:
+        return Response(
+            {'error': 'Compte désactivé. Contactez l\'administration.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
     
     # Générer tokens JWT
     refresh = RefreshToken.for_user(user)
+    refresh['email'] = user.email
+    refresh['username'] = user.username
+    refresh['role'] = getattr(user, 'role', '')
+    refresh['first_name'] = user.first_name or ''
+    refresh['last_name'] = user.last_name or ''
     
     # Mettre à jour dernière connexion
     user.derniere_connexion = timezone.now()
@@ -326,6 +391,69 @@ def user_detail_update(request, user_id):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_user_account_status(request, user_id):
+    """Suspendre/activer un compte avec raison et audit log (admin uniquement)."""
+    if request.user.role != 'admin':
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+    action = (request.data.get('action') or '').strip().lower()
+    reason = (request.data.get('reason') or '').strip()
+
+    if action not in ['suspend', 'activate']:
+        return Response(
+            {'error': 'Action invalide. Utiliser suspend ou activate.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if action == 'suspend' and not reason:
+        return Response(
+            {'error': 'La raison de suspension est obligatoire.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.id == request.user.id and action == 'suspend':
+        return Response(
+            {'error': 'Impossible de suspendre votre propre compte administrateur.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if action == 'suspend':
+        user.is_active = False
+        user.suspended_at = timezone.now()
+        user.suspension_reason = reason
+        user.suspended_by = request.user
+        user.reactivated_at = None
+        user.reactivated_by = None
+    else:
+        user.is_active = True
+        user.reactivated_at = timezone.now()
+        user.reactivated_by = request.user
+
+    user.save()
+    _write_account_status_log(request, user, action, reason)
+
+    return Response(
+        {
+            'message': 'Statut du compte mis à jour avec succès.',
+            'user': UserSerializer(user).data,
+            'audit': {
+                'action': action,
+                'reason': reason,
+                'performed_by': request.user.email,
+                'performed_at': timezone.now().isoformat(),
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 # ========================================

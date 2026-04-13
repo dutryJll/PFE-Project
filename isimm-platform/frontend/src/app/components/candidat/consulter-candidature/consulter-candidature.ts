@@ -70,26 +70,7 @@ export class ConsulterCandidaturesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // DEMO MODE: Activer toujours le mode démo pour avoir un aperçu de travail
-    this.demoMode = true;
-    this.detailRequested = true;
-    this.selectedCandidature = {
-      id: 1,
-      first_name: 'Jean',
-      last_name: 'Dupont',
-      cin: '12345678',
-      email: 'jean.dupont@email.com',
-      numero: '2603-00001-GL',
-      master_nom: 'Master Recherche Génie Logiciel',
-      type: 'master',
-      type_candidature: 'master',
-      score: 85,
-      statut: 'preselectionne',
-      date_soumission: new Date().toISOString(),
-    };
-
-    // Code original commenté - réactiver une fois les tests terminés
-    /*
+    this.demoMode = false;
     this.route.paramMap.subscribe((params) => {
       const idParam = params.get('id');
       if (!idParam) {
@@ -109,7 +90,6 @@ export class ConsulterCandidaturesComponent implements OnInit {
       this.detailRequested = true;
       this.loadCandidatureDetail(id);
     });
-    */
   }
 
   loadCandidatures(): void {

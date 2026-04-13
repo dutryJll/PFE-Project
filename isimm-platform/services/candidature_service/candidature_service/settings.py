@@ -115,7 +115,7 @@ CORS_ALLOW_CREDENTIALS = True
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'candidature_app.authentication.SharedJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -130,6 +130,13 @@ REST_FRAMEWORK = {
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
+}
+
+SIMPLE_JWT = {
+    'ALGORITHM': config('JWT_ALGORITHM', default='HS256'),
+    # Must match auth-service signing key in local dev unless overridden by env.
+    'SIGNING_KEY': config('JWT_SIGNING_KEY', default='django-insecure-auth-service-secret-key'),
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 # ========================================

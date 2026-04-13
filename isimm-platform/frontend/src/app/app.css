@@ -12,6 +12,18 @@
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
   cursor: pointer;
   animation: toast-in 0.2s ease-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .toast-success {

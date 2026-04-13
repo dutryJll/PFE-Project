@@ -82,7 +82,9 @@ export class EditOffreIngenieurComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/admin/dashboard'], { queryParams: { view: 'concours-ingenieur' } });
+    this.router.navigate(['/admin/dashboard'], {
+      queryParams: { view: 'parcours-ingenieurs' },
+    });
   }
 
   loadOffre(): void {

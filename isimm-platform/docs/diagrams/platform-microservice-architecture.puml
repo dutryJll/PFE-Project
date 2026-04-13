@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam rectangle {
+	RoundCorner 8
+}
+
+rectangle "Angular Client" as FE
+rectangle "API Gateway" as G
+
+rectangle "Authentication Service" as AUTH
+rectangle "BackOffice Service" as BACK
+rectangle "FrontOffice Service" as FRONT
+
+database "Auth DB" as DB_AUTH
+database "BackOffice DB" as DB_BACK
+database "FrontOffice DB" as DB_FRONT
+
+FE --> G
+G --> AUTH
+G --> BACK
+G --> FRONT
+
+AUTH --> DB_AUTH
+BACK --> DB_BACK
+FRONT --> DB_FRONT
+
+note bottom of G
+Flux Sprint 2:
+Postuler
+Modifier candidature
+Suivre etat
+Depot dossier
+Notifications
+Score et classement
+end note
+
+@enduml

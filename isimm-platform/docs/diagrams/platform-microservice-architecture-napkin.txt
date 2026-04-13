@@ -1,0 +1,36 @@
+Create a simple microservice architecture diagram.
+
+Title: ISIMM Platform - Microservice Architecture
+
+Use these blocks from left to right:
+1) Angular Client
+2) API Gateway
+3) Authentication Service
+4) BackOffice Service
+5) FrontOffice Service
+6) Auth DB
+7) BackOffice DB
+8) FrontOffice DB
+
+Connections:
+- Angular Client -> API Gateway
+- API Gateway -> Authentication Service
+- API Gateway -> BackOffice Service
+- API Gateway -> FrontOffice Service
+- Authentication Service -> Auth DB
+- BackOffice Service -> BackOffice DB
+- FrontOffice Service -> FrontOffice DB
+
+Style:
+- Clean, minimal, academic
+- Light gray background
+- Blue service boxes
+- Yellow database cylinders
+- Straight arrows
+- Keep labels short
+
+Caption under diagram:
+Figure - Architecture microservice de la plateforme ISIMM.
+
+Optional note:
+Sprint 2 flow: postuler, modifier candidature, suivre etat, deposer dossier, notifications, score/classement.

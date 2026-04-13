@@ -5,6 +5,9 @@
       <div class="logo-icon">👨‍🏫</div>
       <h2>ISIMM</h2>
       <p class="user-role">{{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}</p>
+      <small class="user-role-master" *ngIf="hasUserScopeLabel()">
+        {{ getUserMasterOrSpecialiteLabel() }}
+      </small>
     </div>
 
     <nav class="sidebar-nav">
@@ -14,25 +17,31 @@
       <a
         class="nav-item"
         [class.active]="currentView === 'dashboard'"
-        (click)="switchView('dashboard')"
+        [class.disabled]="isMenuDisabled('dashboard')"
+        (click)="openMenuView('dashboard')"
       >
         <i class="fas fa-home"></i>
-        <span>Tableau de bord</span>
+        <span>Tableau De Bord</span>
       </a>
 
-      <a class="nav-item" [class.active]="currentView === 'profil'" (click)="switchView('profil')">
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'profil'"
+        [class.disabled]="isMenuDisabled('profil')"
+        (click)="openMenuView('profil')"
+      >
         <i class="fas fa-user"></i>
         <span>Mon Profil</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable"
         [class.active]="currentView === 'configuration-appels'"
-        (click)="switchView('configuration-appels')"
+        [class.disabled]="isMenuDisabled('configuration-appels')"
+        (click)="openMenuView('configuration-appels')"
       >
         <i class="fas fa-calendar-check"></i>
-        <span>Offre de préinscription</span>
+        <span>Offre De Préinscription</span>
       </a>
 
       <!-- ÉVALUATION -->
@@ -40,148 +49,80 @@
 
       <a
         class="nav-item"
-        *ngIf="actionPermissions.consultationCandidature"
-        [class.active]="currentView === 'candidatures'"
-        (click)="switchView('candidatures')"
+        [class.active]="
+          currentView === 'candidatures' || currentView === 'candidatures-responsable'
+        "
+        [class.disabled]="!canOpenCandidaturesMasterMenu()"
+        (click)="openCandidaturesMasterMenu()"
       >
         <i class="fas fa-file-alt"></i>
-        <span>Candidatures à évaluer</span>
-        <span class="badge-count">{{ candidatures.length }}</span>
+        <span>Candidatures Master</span>
+        <span class="badge-count">{{
+          isResponsable ? candidaturesResponsableFiltrees.length : candidaturesFiltrees.length
+        }}</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="actionPermissions.verifierDossiers"
-        [class.active]="currentView === 'valider-dossier'"
-        (click)="switchView('valider-dossier')"
+        [class.active]="currentView === 'candidatures-ingenieur'"
+        [class.disabled]="!canOpenCandidaturesIngenieurMenu()"
+        (click)="openCandidaturesIngenieurMenu()"
       >
-        <i class="fas fa-check-circle"></i>
-        <span>étude de dossier de candidature </span>
-        <span class="badge-warning">{{ candidaturesAvecDossier.length }}</span>
+        <i class="fas fa-graduation-cap"></i>
+        <span>Candidatures Ingénieur</span>
+        <span class="badge-count">{{ candidaturesResponsableIngenieurCount }}</span>
       </a>
-
-      <!-- RESPONSABLE -->
-      <div class="nav-section-title" *ngIf="isResponsable">RESPONSABLE</div>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable && actionPermissions.consultationDossier"
-        [class.active]="currentView === 'dossiers'"
-        (click)="switchView('dossiers')"
+        [class.active]="currentView === 'avis-listes'"
+        [class.disabled]="isMenuDisabled('avis-listes')"
+        (click)="openMenuView('avis-listes')"
       >
-        <i class="fas fa-folder-open"></i>
-        <span>Tous les dossiers soumis</span>
+        <i class="fas fa-layer-group"></i>
+        <span>Présélection</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'candidatures-responsable'"
-        (click)="switchView('candidatures-responsable')"
-      >
-        <i class="fas fa-list-ul"></i>
-        <span>Liste des candidatures</span>
-        <span class="badge-count" *ngIf="candidaturesResponsable.length > 0">
-          {{ candidaturesResponsable.length }}
-        </span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="
-          isResponsable && (actionPermissions.preselection || actionPermissions.selectionFinale)
-        "
         [class.active]="currentView === 'listes'"
-        (click)="switchView('listes')"
+        [class.disabled]="isMenuDisabled('listes')"
+        (click)="openMenuView('listes')"
       >
         <i class="fas fa-list-alt"></i>
-        <span>Listes d'admission</span>
+        <span>Sélection</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable && actionPermissions.verifierDossiers"
-        [class.active]="currentView === 'ocr'"
-        (click)="openOcrAnalysisPage()"
+        [class.active]="currentView === 'inscriptions'"
+        [class.disabled]="isMenuDisabled('inscriptions')"
+        (click)="openMenuView('inscriptions')"
       >
-        <i class="fas fa-robot"></i>
-        <span>Analyse dossier</span>
+        <i class="fas fa-user-plus"></i>
+        <span>Inscription En Ligne</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable && actionPermissions.traiterReclamations"
         [class.active]="currentView === 'reclamations'"
-        (click)="switchView('reclamations')"
+        [class.disabled]="isMenuDisabled('reclamations')"
+        (click)="openMenuView('reclamations')"
       >
         <i class="fas fa-exclamation-circle"></i>
-        <span>Traitement de réclamations</span>
+        <span>Réclamations</span>
         <span class="badge-danger">{{ reclamations.length }}</span>
       </a>
 
       <a
         class="nav-item"
-        *ngIf="isResponsable && actionPermissions.gererInscriptions"
-        [class.active]="currentView === 'inscriptions'"
-        (click)="switchView('inscriptions')"
-      >
-        <i class="fas fa-user-plus"></i>
-        <span>Validation des inscriptions</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="
-          isResponsable && (actionPermissions.selectionFinale || actionPermissions.publierListes)
-        "
-        [class.active]="currentView === 'deliberations'"
-        (click)="switchView('deliberations')"
-      >
-        <i class="fas fa-file-signature"></i>
-        <span>PV de délibération</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable && actionPermissions.consulterStatistiques"
-        [class.active]="currentView === 'statistiques'"
-        (click)="switchView('statistiques')"
-      >
-        <i class="fas fa-chart-bar"></i>
-        <span>Statistiques et rapports</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'membres'"
-        (click)="switchView('membres')"
-      >
-        <i class="fas fa-users"></i>
-        <span>Membres de la commission</span>
-      </a>
-
-      <a
-        class="nav-item"
         [class.active]="currentView === 'notifications'"
-        (click)="switchView('notifications')"
+        [class.disabled]="isMenuDisabled('notifications')"
+        (click)="openMenuView('notifications')"
       >
         <i class="fas fa-bell"></i>
         <span>Notifications</span>
         <span class="badge-count" *ngIf="notificationsNonLues > 0">{{ notificationsNonLues }}</span>
-      </a>
-
-      <a
-        class="nav-item"
-        *ngIf="isResponsable"
-        [class.active]="currentView === 'notifications-responsable'"
-        (click)="switchView('notifications-responsable')"
-      >
-        <i class="fas fa-bell"></i>
-        <span>Notifications responsable</span>
-        <span class="badge-danger" *ngIf="responsibleDeadlineSoonCount > 0">
-          {{ responsibleDeadlineSoonCount }} proche(s)
-        </span>
       </a>
 
       <div class="nav-divider"></div>
@@ -251,6 +192,47 @@
         </div>
       </div>
 
+      <div class="section-card">
+        <h2>📈 Statistiques Programmes (Commission)</h2>
+        <p>Vue synthétique par master/cycle avec taux d'acceptation et d'inscription.</p>
+        <div
+          class="table-container"
+          *ngIf="getDashboardProgramStats().length > 0; else noDashboardStats"
+        >
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Programme</th>
+                <th>Type</th>
+                <th>Total</th>
+                <th>Acceptés</th>
+                <th>Inscrits</th>
+                <th>Rejetés</th>
+                <th>Taux acceptation</th>
+                <th>Taux inscription</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stat of getDashboardProgramStats()">
+                <td>
+                  <strong>{{ stat.label }}</strong>
+                </td>
+                <td>{{ stat.type === 'ingenieur' ? 'Ingénieur' : 'Master' }}</td>
+                <td>{{ stat.total }}</td>
+                <td class="success">{{ stat.acceptes }}</td>
+                <td class="success">{{ stat.inscrits }}</td>
+                <td class="danger">{{ stat.rejetes }}</td>
+                <td>{{ stat.tauxAcceptation }}%</td>
+                <td>{{ stat.tauxInscription }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noDashboardStats>
+          <div class="empty-state">Aucune donnée statistique disponible.</div>
+        </ng-template>
+      </div>
+
       <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
         <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
         <p class="role-features-subtitle">
@@ -314,14 +296,14 @@
           <select [(ngModel)]="filtreNotificationType">
             <option value="">Tous les types</option>
             <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
+            <option value="success">Succès</option>
+            <option value="warning">Avertissement</option>
             <option value="danger">Danger</option>
           </select>
           <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
           <input type="date" [(ngModel)]="filtreNotificationDateFin" />
           <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
-            Reinitialiser
+            Réinitialiser
           </button>
         </div>
 
@@ -407,7 +389,7 @@
             </div>
 
             <details class="profile-collapse">
-              <summary>Additional names</summary>
+              <summary>Noms complémentaires</summary>
               <div class="profile-collapse-body form-row">
                 <div class="form-group">
                   <label>Nom additionnel</label>
@@ -421,7 +403,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Interests</summary>
+              <summary>Centres d'intérêt</summary>
               <div class="profile-collapse-body form-group">
                 <label>Centres d'intérêt</label>
                 <input
@@ -433,7 +415,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Optional</summary>
+              <summary>Informations facultatives</summary>
               <div class="profile-collapse-body form-group">
                 <label>Notes complémentaires</label>
                 <textarea name="optional_notes" rows="3"></textarea>
@@ -441,9 +423,9 @@
             </details>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-primary">Update profile</button>
+              <button type="submit" class="btn-primary">Mettre à jour le profil</button>
               <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
-                Cancel
+                Annuler
               </button>
             </div>
           </form>
@@ -484,7 +466,7 @@
             </div>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-warning">Update password</button>
+              <button type="submit" class="btn-warning">Mettre à jour le mot de passe</button>
               <button
                 type="button"
                 class="btn-outline"
@@ -492,7 +474,7 @@
                   passwordForm = { current_password: '', new_password: '', confirm_password: '' }
                 "
               >
-                Cancel
+                Annuler
               </button>
             </div>
           </form>
@@ -579,18 +561,26 @@
 
         <div class="section-subcard">
           <div class="subcard-head">
-            <h3>Liste des offres de préinscription</h3>
+            <div>
+              <h3>Liste des offres de préinscription</h3>
+              <p class="offer-navigation-hint">
+                Clique sur le titre de l'offre ou sur le bouton Ouvrir page d'édition pour aller
+                vers l'éditeur dédié.
+              </p>
+            </div>
             <button type="button" class="btn-outline" (click)="loadOffresPreinscription()">
               Actualiser
             </button>
           </div>
 
-          <div class="offers-table-wrap" *ngIf="offresPreinscription.length > 0; else noOffers">
+          <div class="offers-table-wrap">
             <table class="offers-table">
               <thead>
                 <tr>
                   <th>Offre</th>
+                  <th>Sous-type</th>
                   <th>Spécialité</th>
+                  <th>Date limite</th>
                   <th>Visibilité</th>
                   <th>Statut</th>
                   <th>Capacité</th>
@@ -599,14 +589,25 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let offre of offresPreinscription">
+                <tr *ngFor="let offre of getOffresPreinscriptionForDisplay()">
                   <td>
-                    <strong>{{ offre.titre }}</strong>
+                    <button
+                      type="button"
+                      class="offer-title-link"
+                      (click)="ouvrirPageEditionOffre(offre)"
+                    >
+                      {{ offre.titre }}
+                    </button>
+                    <div class="muted-line" *ngIf="offre.isDemo">
+                      Mode démo (aucune offre réelle)
+                    </div>
                     <div class="muted-line">
                       {{ offre.type === 'cycle_ingenieur' ? 'Cycle Ingénieur' : 'Master' }}
                     </div>
                   </td>
+                  <td>{{ offre.sous_type || '-' }}</td>
                   <td>{{ offre.specialite }}</td>
+                  <td>{{ offre.date_limite | date: 'dd/MM/yyyy' }}</td>
                   <td>
                     <span
                       class="badge-status"
@@ -627,14 +628,10 @@
                   </td>
                   <td>
                     <strong>{{ offre.places }}</strong>
-                    <div class="muted-line">
-                      Int: {{ offre.capacite_interne || 0 }} | Ext:
-                      {{ offre.capacite_externe || 0 }}
-                    </div>
                   </td>
                   <td>
                     <a
-                      *ngIf="offre.document_officiel_pdf_url"
+                      *ngIf="offre.document_officiel_pdf_url && !offre.isDemo"
                       [href]="offre.document_officiel_pdf_url"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -645,68 +642,71 @@
                   </td>
                   <td>
                     <div class="table-actions">
-                      <button class="btn-mini" (click)="selectionnerOffre(offre)">Éditer</button>
                       <button
-                        class="btn-mini"
-                        *ngIf="offre.statut === 'ferme'"
-                        (click)="ouvrirFermerOffre(offre, true)"
+                        class="btn-mini btn-edit-page"
+                        (click)="ouvrirPageEditionOffre(offre)"
                       >
-                        Ouvrir
+                        Éditer
                       </button>
-                      <button
-                        class="btn-mini"
-                        *ngIf="offre.statut === 'ouvert'"
-                        (click)="ouvrirFermerOffre(offre, false)"
-                      >
-                        Fermer
-                      </button>
-                      <button
-                        class="btn-mini"
-                        *ngIf="!offre.est_cache"
-                        (click)="basculerEtatOffre(offre, true)"
-                      >
-                        Cacher
-                      </button>
-                      <button
-                        class="btn-mini"
-                        *ngIf="offre.est_cache"
-                        (click)="basculerEtatOffre(offre, false)"
-                      >
-                        Afficher
-                      </button>
+
+                      <label class="switch-control">
+                        <span class="switch-label">Statut</span>
+                        <input
+                          type="checkbox"
+                          class="switch-input"
+                          [checked]="offre.statut === 'ouvert'"
+                          (change)="onOffreStatutSwitchChange(offre, $event)"
+                        />
+                        <span class="switch-slider"></span>
+                        <span class="switch-state">{{
+                          offre.statut === 'ouvert' ? 'Ouverte' : 'Fermée'
+                        }}</span>
+                      </label>
+
+                      <label class="switch-control">
+                        <span class="switch-label">Visibilité</span>
+                        <input
+                          type="checkbox"
+                          class="switch-input"
+                          [checked]="!offre.est_cache"
+                          (change)="onOffreVisibiliteSwitchChange(offre, $event)"
+                        />
+                        <span class="switch-slider"></span>
+                        <span class="switch-state">{{
+                          offre.est_cache ? 'Cachée' : 'Visible'
+                        }}</span>
+                      </label>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-
-          <ng-template #noOffers>
-            <div class="empty-state">Aucune offre de préinscription disponible.</div>
-          </ng-template>
         </div>
 
-        <div class="section-subcard">
+        <div class="section-subcard" id="create-offer-section">
           <div class="subcard-head">
             <div>
-              <h3>Créer une nouvelle offre</h3>
+              <h3>Ajouter une nouvelle offre</h3>
               <p class="muted-line">
-                Renseigne le master, sa description, son calendrier, ses capacités et son PDF signé.
+                Crée une nouvelle offre de préinscription qui apparaîtra dans la liste ci-dessus.
               </p>
             </div>
-            <button type="button" class="btn-outline" (click)="loadMastersForConfiguration()">
-              Recharger les masters
-            </button>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label>Nom du master</label>
-              <input type="text" [(ngModel)]="nouvelleOffre.nom" name="nouvelle_offre_nom" />
+              <input
+                type="text"
+                [(ngModel)]="nouvelleOffre.nom"
+                name="new_offre_nom"
+                placeholder="Ex: Master Génie Logiciel"
+              />
             </div>
             <div class="form-group">
               <label>Type</label>
-              <select [(ngModel)]="nouvelleOffre.type_master" name="nouvelle_offre_type">
+              <select [(ngModel)]="nouvelleOffre.type_master" name="new_offre_type_master">
                 <option value="recherche">Recherche</option>
                 <option value="professionnel">Professionnel</option>
               </select>
@@ -719,36 +719,37 @@
               <input
                 type="text"
                 [(ngModel)]="nouvelleOffre.specialite"
-                name="nouvelle_offre_spec"
+                name="new_offre_specialite"
+                placeholder="Ex: Intelligence Artificielle"
               />
             </div>
             <div class="form-group">
-              <label>Capacité totale</label>
+              <label>Places disponibles</label>
               <input
                 type="number"
-                min="0"
+                min="1"
                 [(ngModel)]="nouvelleOffre.places_disponibles"
-                name="nouvelle_offre_places"
+                name="new_offre_places"
               />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Année universitaire</label>
-              <input
-                type="text"
-                [(ngModel)]="nouvelleOffre.annee_universitaire"
-                name="nouvelle_offre_annee"
-                placeholder="2026/2027"
-              />
-            </div>
-            <div class="form-group">
               <label>Date limite candidature</label>
               <input
                 type="date"
                 [(ngModel)]="nouvelleOffre.date_limite_candidature"
-                name="nouvelle_offre_date"
+                name="new_offre_date_limite"
+              />
+            </div>
+            <div class="form-group">
+              <label>Année universitaire</label>
+              <input
+                type="text"
+                [(ngModel)]="nouvelleOffre.annee_universitaire"
+                name="new_offre_annee"
+                placeholder="Ex: 2026/2027"
               />
             </div>
           </div>
@@ -759,8 +760,18 @@
               <textarea
                 rows="4"
                 [(ngModel)]="nouvelleOffre.description"
-                name="nouvelle_offre_desc"
+                name="new_offre_description"
+                placeholder="Décris les objectifs, conditions et informations clés de l'offre."
               ></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" [(ngModel)]="nouvelleOffre.actif" name="new_offre_actif" />
+                Offre active
+              </label>
             </div>
           </div>
 
@@ -771,7 +782,7 @@
               (click)="creerNouvelleOffrePreinscription()"
               [disabled]="creationOffreLoading"
             >
-              {{ creationOffreLoading ? 'Création...' : "Créer l'offre" }}
+              {{ creationOffreLoading ? 'Création...' : "Ajouter l'offre" }}
             </button>
           </div>
         </div>
@@ -795,55 +806,11 @@
               </select>
             </div>
             <div class="form-group">
-              <label>État de publication</label>
-              <div class="toggle-row">
-                <label class="checkbox-line">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="configurationAppel.actif"
-                    name="config_actif"
-                  />
-                  Appel actif
-                </label>
-                <label class="checkbox-line">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="configurationAppel.est_cache"
-                    name="config_cache"
-                  />
-                  Visible uniquement pour la commission
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div class="offer-preview-box" *ngIf="selectedConfigMasterId">
-            <div class="subcard-head">
-              <h3>Calendrier et capacités essentielles</h3>
-              <span class="muted-line">{{ getSelectedConfigurationMasterLabel() }}</span>
-            </div>
-
-            <div class="offers-table-wrap">
-              <table class="offers-table offer-preview-table">
-                <thead>
-                  <tr>
-                    <th>Capacité Totale</th>
-                    <th>Établissement d'origine</th>
-                    <th>Capacité</th>
-                    <th>Type de Diplôme</th>
-                    <th>Dates Importantes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let row of getOffreCalendarPreviewRows()">
-                    <td>{{ row.capaciteTotale }}</td>
-                    <td>{{ row.etablissementOrigine }}</td>
-                    <td>{{ row.capacite }}</td>
-                    <td>{{ row.typeDiplome }}</td>
-                    <td>{{ row.datesImportantes }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <label>Appel actif</label>
+              <label class="checkbox-line">
+                <input type="checkbox" [(ngModel)]="configurationAppel.actif" name="config_actif" />
+                Activer l'appel
+              </label>
             </div>
           </div>
 
@@ -948,65 +915,6 @@
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>Capacité interne (places)</label>
-                <input
-                  type="number"
-                  min="0"
-                  [(ngModel)]="configurationAppel.capacite_interne"
-                  name="capacite_interne"
-                />
-              </div>
-              <div class="form-group">
-                <label>Capacité externe (places)</label>
-                <input
-                  type="number"
-                  min="0"
-                  [(ngModel)]="configurationAppel.capacite_externe"
-                  name="capacite_externe"
-                />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="configurationAppel.est_cache"
-                    name="est_cache"
-                  />
-                  Masquer l'offre (visible uniquement pour les responsables)
-                </label>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group full-width">
-                <label>Télécharger le document officiel PDF</label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  (change)="uploadConfigurationPdf($event)"
-                  name="pdf_upload"
-                />
-                <small>Format: PDF, Taille maximum: 10 MB</small>
-              </div>
-            </div>
-
-            <div *ngIf="configurationAppel.document_officiel_pdf_url" class="form-row">
-              <div class="form-group">
-                <label>Document actuellement chargé</label>
-                <a
-                  [href]="configurationAppel.document_officiel_pdf_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >Ouvrir le PDF signé</a
-                >
-              </div>
-            </div>
-
             <div class="profile-actions">
               <button
                 type="submit"
@@ -1043,260 +951,203 @@
                 {{ editingOffreLoading ? 'Enregistrement...' : 'Enregistrer les modifications' }}
               </button>
             </div>
-            <div class="section-subcard" style="margin-top: 1rem">
-              <h3>Téléverser le PDF officiel de cette offre</h3>
-              <input type="file" accept="application/pdf" (change)="uploadOfferPdf($event)" />
-              <small *ngIf="offreEditForm.document_officiel_pdf_url">
-                PDF actuel:
-                <a [href]="offreEditForm.document_officiel_pdf_url" target="_blank">ouvrir</a>
-              </small>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-subcard" style="margin-top: 1rem">
-          <h2>📂 Candidatures du responsable</h2>
-          <div class="filters-section">
-            <div class="filters-grid">
-              <div class="filter-item">
-                <label class="filter-label">Master</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="selectedMasterForCandidatures"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option [ngValue]="'all'">Tous les masters</option>
-                  <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Type</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="filtres.concours"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option value="">Tous</option>
-                  <option value="masters">Master</option>
-                  <option value="ingenieur">Ingénieur</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Statut</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="filtres.statut"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option value="">Tous les statuts</option>
-                  <option value="soumis">Soumis</option>
-                  <option value="sous_examen">En analyse</option>
-                  <option value="preselectionne">Présélectionné</option>
-                  <option value="dossier_depose">Dossier déposé</option>
-                  <option value="selectionne">Sélectionné</option>
-                  <option value="rejete">Rejeté</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Recherche</label>
-                <input
-                  class="filter-input"
-                  type="text"
-                  [(ngModel)]="filtres.recherche"
-                  (input)="appliquerFiltresResponsable()"
-                  placeholder="Nom, CIN, Email..."
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="split-dashboard">
-            <div class="split-panel">
-              <h3>Masters</h3>
-              <div class="mini-cards">
-                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
-                  <ng-container *ngIf="c.type_concours === 'masters'">
-                    <strong>{{ c.numero }}</strong>
-                    <span>{{ c.candidat_nom }}</span>
-                    <small>{{ c.specialite }}</small>
-                  </ng-container>
-                </div>
-              </div>
-            </div>
-            <div class="split-panel">
-              <h3>Cycle Ingénieur</h3>
-              <div class="mini-cards">
-                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
-                  <ng-container *ngIf="c.type_concours === 'ingenieur'">
-                    <strong>{{ c.numero }}</strong>
-                    <span>{{ c.candidat_nom }}</span>
-                    <small>{{ c.specialite }}</small>
-                  </ng-container>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      <div *ngIf="isCurrentView('candidatures-responsable') && isResponsable" class="view-content">
+      <div
+        *ngIf="
+          (isCurrentView('candidatures-responsable') || isCurrentView('candidatures-ingenieur')) &&
+          canAccessView('candidatures-responsable')
+        "
+        class="view-content"
+      >
         <div class="section-card">
           <div class="candidatures-header">
-            <h2>📂 Liste des candidatures (Master + Ingénieur)</h2>
-            <p class="subtitle">Suivi des candidatures par master et par cycle ingénieur.</p>
-          </div>
-
-          <div class="filters-section">
-            <div class="filters-grid">
-              <div class="filter-item">
-                <label class="filter-label">Master</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="selectedMasterForCandidatures"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option [ngValue]="'all'">Tous les masters</option>
-                  <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Type</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="filtres.concours"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option value="">Tous</option>
-                  <option value="masters">Master</option>
-                  <option value="ingenieur">Ingénieur</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Statut</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="filtres.statut"
-                  (change)="appliquerFiltresResponsable()"
-                >
-                  <option value="">Tous les statuts</option>
-                  <option value="soumis">Soumis</option>
-                  <option value="sous_examen">En analyse</option>
-                  <option value="preselectionne">Présélectionné</option>
-                  <option value="dossier_depose">Dossier déposé</option>
-                  <option value="selectionne">Sélectionné</option>
-                  <option value="rejete">Rejeté</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Recherche</label>
-                <input
-                  class="filter-input"
-                  type="text"
-                  [(ngModel)]="filtres.recherche"
-                  (input)="appliquerFiltresResponsable()"
-                  placeholder="Nom, CIN, Email..."
-                />
-              </div>
+            <div>
+              <h2>
+                📂
+                {{
+                  isCurrentView('candidatures-ingenieur')
+                    ? 'Candidatures Ingénieur'
+                    : 'Liste de candidature (Master + Ingénieur)'
+                }}
+              </h2>
             </div>
-          </div>
-
-          <div class="split-dashboard">
-            <div class="split-panel">
-              <h3>Masters</h3>
-              <div class="mini-cards">
-                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
-                  <ng-container *ngIf="c.type_concours === 'masters'">
-                    <strong>{{ c.numero }}</strong>
-                    <span>{{ c.candidat_nom }}</span>
-                    <small>{{ c.specialite }}</small>
-                  </ng-container>
-                </div>
-              </div>
-            </div>
-            <div class="split-panel">
-              <h3>Cycle Ingénieur</h3>
-              <div class="mini-cards">
-                <div class="mini-card" *ngFor="let c of candidaturesResponsableFiltrees">
-                  <ng-container *ngIf="c.type_concours === 'ingenieur'">
-                    <strong>{{ c.numero }}</strong>
-                    <span>{{ c.candidat_nom }}</span>
-                    <small>{{ c.specialite }}</small>
-                  </ng-container>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div *ngIf="isCurrentView('notifications-responsable') && isResponsable" class="view-content">
-        <div class="section-card">
-          <div class="candidatures-header">
-            <h2>🔔 Notifications responsable</h2>
-            <p class="subtitle">Deadlines des masters que vous gérez.</p>
-          </div>
-
-          <div
-            class="section-subcard"
-            *ngIf="responsibleDeadlineSoonCount > 0"
-            style="margin-bottom: 1rem"
-          >
-            <h3>Deadlines proches (J-3 à J0)</h3>
-            <div class="mini-cards">
-              <div class="mini-card" *ngFor="let item of responsibleDeadlineSoonItems">
-                <strong>{{ item.master_nom }}</strong>
-                <span>{{ item.deadline_type }}</span>
-                <small>{{ item.days_left }} jour(s) restant(s)</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="filters-section">
-            <div class="filters-grid">
-              <div class="filter-item">
-                <label class="filter-label">Type de deadline</label>
-                <select class="filter-select" [(ngModel)]="filtreResponsibleNotificationType">
-                  <option value="">Tous</option>
-                  <option value="info">Info</option>
-                  <option value="warning">Alerte</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Statut offre</label>
-                <select class="filter-select" [(ngModel)]="filtreResponsibleNotificationStatut">
-                  <option value="">Tous</option>
-                  <option value="ouvert">Ouverte</option>
-                  <option value="ferme">Fermée</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="notifications-list"
-            *ngIf="responsibleNotificationsFiltered.length > 0; else noResponsibleNotifications"
-          >
-            <article
-              class="notification-card"
-              *ngFor="let item of responsibleNotificationsFiltered"
-            >
-              <div class="notification-head">
-                <strong>{{ item.master_nom }} - {{ item.deadline_type }}</strong>
-                <span class="notification-type" [ngClass]="'type-' + item.type">
-                  {{ item.days_left >= 0 ? item.days_left + ' j' : 'dépassé' }}
-                </span>
-              </div>
-              <p>{{ item.message }}</p>
-              <small
-                >Deadline: {{ item.deadline_date | date: 'dd/MM/yyyy' }} | {{ item.statut }}</small
+            <div class="download-box">
+              <button class="btn-secondary" (click)="resetFiltresResponsable()">
+                <i class="fas fa-undo"></i> Réinitialiser filtres
+              </button>
+              <select [(ngModel)]="candidaturesResponsableExportFormat" class="export-select">
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+                <option value="pdf">PDF</option>
+                <option value="xlsx">Excel</option>
+              </select>
+              <button
+                class="btn-download"
+                [disabled]="candidaturesResponsableFiltrees.length === 0"
+                (click)="exportCandidaturesResponsable()"
               >
-            </article>
+                <i class="fas fa-download"></i> Exporter cette liste
+              </button>
+            </div>
           </div>
 
-          <ng-template #noResponsibleNotifications>
-            <div class="empty-reclamations">
-              <p>Aucune deadline responsable pour le moment.</p>
+          <div class="filters-section">
+            <div class="filters-grid">
+              <div class="filter-item">
+                <label class="filter-label">Master</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="selectedMasterForCandidatures"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option [ngValue]="'all'">Tous les masters</option>
+                  <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Type</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.concours"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous</option>
+                  <option value="masters">Master</option>
+                  <option value="ingenieur">Ingénieur</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Année universitaire</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtreAnneeUniversitaire"
+                  (change)="onResponsableOfferFiltersChanged()"
+                >
+                  <option value="courante">Courante ({{ getCurrentAcademicYear() }})</option>
+                  <option value="precedente">Précédente ({{ getPreviousAcademicYear() }})</option>
+                  <option value="toutes">Toutes les années</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Portée des offres</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtrePorteeOffres"
+                  (change)="onResponsableOfferFiltersChanged()"
+                >
+                  <option value="specialite">Offres ouvertes de ma spécialité</option>
+                  <option value="toutes_ouvertes">Toutes les offres ouvertes</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Statut</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtres.statut"
+                  (change)="appliquerFiltresResponsable()"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="soumis">Soumis</option>
+                  <option value="sous_examen">En analyse</option>
+                  <option value="preselectionne">Présélectionné</option>
+                  <option value="dossier_depose">Dossier déposé</option>
+                  <option value="selectionne">Sélectionné</option>
+                  <option value="rejete">Rejeté</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Recherche</label>
+                <input
+                  class="filter-input"
+                  type="text"
+                  [(ngModel)]="filtres.recherche"
+                  (input)="appliquerFiltresResponsable()"
+                  placeholder="Nom, CIN, Email..."
+                />
+              </div>
             </div>
+            <p class="subtitle" style="margin-top: 0.5rem">
+              Offres ouvertes éligibles: {{ offresEligiblesCount }} (Année:
+              {{ getAcademicYearLabel(filtreAnneeUniversitaire) }})
+            </p>
+          </div>
+
+          <div class="stats-grid" style="margin: 1rem 0">
+            <div class="stat-card">
+              <div class="stat-details">
+                <h3>{{ candidaturesResponsableFiltrees.length }}</h3>
+                <p>Total filtré</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-details">
+                <h3>{{ candidaturesResponsableMastersCount }}</h3>
+                <p>Master</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-details">
+                <h3>{{ candidaturesResponsableIngenieurCount }}</h3>
+                <p>Ingénieur</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-details">
+                <h3>{{ candidaturesResponsableDossiersDeposesCount }}</h3>
+                <p>Dossiers déposés</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="table-container"
+            *ngIf="candidaturesResponsableFiltrees.length > 0; else noCandidaturesResponsableView"
+          >
+            <table class="candidatures-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Candidat</th>
+                  <th>Type</th>
+                  <th>Spécialité</th>
+                  <th>Score</th>
+                  <th>Dossier</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of candidaturesResponsableFiltrees">
+                  <td>
+                    <strong>{{ c.numero }}</strong>
+                  </td>
+                  <td>
+                    <strong>{{ c.candidat_nom }}</strong>
+                    <div class="muted-line">{{ c.candidat_email }}</div>
+                  </td>
+                  <td>{{ c.type_concours === 'ingenieur' ? 'Ingénieur' : 'Master' }}</td>
+                  <td>{{ c.specialite }}</td>
+                  <td>{{ c.score }}</td>
+                  <td>{{ c.dossier_depose ? 'Déposé' : 'Non déposé' }}</td>
+                  <td>{{ getStatusDisplayLabel(c.statut) }}</td>
+                  <td>
+                    <button class="btn-action voir" (click)="voirDossier(c)">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-action" (click)="ouvrirModalAvis(c)">
+                      <i class="fas fa-comment-dots"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noCandidaturesResponsableView>
+            <div class="empty-state">Aucune candidature ne correspond aux filtres appliqués.</div>
           </ng-template>
         </div>
       </div>
@@ -1363,6 +1214,21 @@
       <div class="section-card">
         <div class="candidatures-header">
           <h2>📋 Gestion des candidatures</h2>
+          <div class="download-box">
+            <select [(ngModel)]="candidaturesMembreExportFormat" class="export-select">
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="xlsx">Excel</option>
+            </select>
+            <button
+              class="btn-download"
+              [disabled]="candidaturesFiltrees.length === 0"
+              (click)="exportCandidaturesMembre()"
+            >
+              <i class="fas fa-download"></i> Télécharger la liste complète
+            </button>
+          </div>
         </div>
         <div class="filters-section">
           <div class="filters-grid">
@@ -1457,6 +1323,8 @@
                   <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
                     {{ candidature.statut }}
                   </span>
+                  <br />
+                  <small> Avis favorables: {{ getFavorableVotesCount(candidature.id) }} </small>
                 </td>
                 <td>
                   <!-- MENU KEBAB -->
@@ -1481,7 +1349,7 @@
 
                       <button
                         class="action-menu-item"
-                        *ngIf="actionPermissions.consultationCandidature"
+                        *ngIf="canGiveAvis()"
                         (click)="ouvrirModalAvis(candidature)"
                       >
                         <i class="fas fa-comment"></i>
@@ -1490,25 +1358,34 @@
 
                       <button
                         class="action-menu-item"
-                        *ngIf="actionPermissions.consultationDossier"
-                        (click)="telechargerDossier(candidature)"
+                        *ngIf="canAnalyzeDossier()"
+                        (click)="openOcrAnalysisPage(candidature)"
                       >
-                        <i class="fas fa-download"></i>
-                        <span>Télécharger</span>
+                        <i class="fas fa-search"></i>
+                        <span>Analyser dossier</span>
                       </button>
 
                       <button
                         class="action-menu-item"
-                        *ngIf="actionPermissions.verifierDossiers"
+                        *ngIf="canChangeStatus()"
                         (click)="modifierScore(candidature)"
                       >
                         <i class="fas fa-edit"></i>
-                        <span>Modifier score</span>
+                        <span>Score automatique</span>
                       </button>
 
                       <button
                         class="action-menu-item"
-                        *ngIf="actionPermissions.verifierDossiers"
+                        *ngIf="canValidatePreselection(candidature)"
+                        (click)="validerPreselectionParResponsable(candidature)"
+                      >
+                        <i class="fas fa-check-double"></i>
+                        <span>Valider présélection</span>
+                      </button>
+
+                      <button
+                        class="action-menu-item"
+                        *ngIf="canChangeStatus()"
                         (click)="ouvrirModalStatut(candidature)"
                       >
                         <i class="fas fa-exchange-alt"></i>
@@ -1517,7 +1394,7 @@
 
                       <button
                         class="action-menu-item danger"
-                        *ngIf="actionPermissions.verifierDossiers"
+                        *ngIf="canChangeStatus()"
                         (click)="rejeterCandidature(candidature)"
                       >
                         <i class="fas fa-times-circle"></i>
@@ -1545,8 +1422,45 @@
             <p class="validation-subtitle">
               Étude de dossier de candidature et décision de validation par la commission
             </p>
+            <p class="validation-subtitle">Portée affichée: {{ getCurrentUserScopeLabel() }}</p>
           </div>
-          <span class="validation-counter">{{ candidaturesAvecDossier.length }} dossiers</span>
+          <span class="validation-counter">{{ validationRows.length }} dossiers</span>
+        </div>
+
+        <div class="filters-section" style="margin-bottom: 1rem">
+          <div class="filters-grid">
+            <div class="filter-item">
+              <label class="filter-label">Recherche</label>
+              <input
+                class="filter-input"
+                type="text"
+                [(ngModel)]="validationFilters.recherche"
+                placeholder="N°, nom, spécialité"
+              />
+            </div>
+            <div class="filter-item">
+              <label class="filter-label">Statut</label>
+              <select class="filter-select" [(ngModel)]="validationFilters.statut">
+                <option value="">Tous</option>
+                <option value="dossier_depose">Dossier déposé</option>
+                <option value="selectionne">Sélectionné</option>
+                <option value="rejete">Rejeté</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label class="filter-label">Diplôme conforme</label>
+              <select class="filter-select" [(ngModel)]="validationFilters.diplomeConforme">
+                <option value="">Tous</option>
+                <option value="oui">Oui</option>
+                <option value="non">Non</option>
+              </select>
+            </div>
+            <div class="filter-item" style="display: flex; align-items: end">
+              <button class="btn-primary" (click)="verifierDossiersFiltres()">
+                Vérifier dossiers
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="validation-kpi-grid">
@@ -1572,11 +1486,12 @@
                 <th>Spécialité</th>
                 <th>Date dépôt</th>
                 <th>Statut validation</th>
+                <th>Avis conformité diplôme</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let candidature of candidaturesAvecDossier" class="validation-row">
+              <tr *ngFor="let candidature of validationRows" class="validation-row">
                 <td>
                   <strong>{{ candidature.candidat_nom }}</strong>
                 </td>
@@ -1586,6 +1501,9 @@
                   <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
                     {{ getStatusDisplayLabel(candidature.statut) }}
                   </span>
+                </td>
+                <td>
+                  <small>{{ getAllVotesDisplay(candidature.id) }}</small>
                 </td>
                 <td>
                   <div class="validation-actions">
@@ -1598,7 +1516,7 @@
                         candidature.nouveau_statut = 'dossier_depose'; changerStatut(candidature)
                       "
                     >
-                      <i class="fas fa-check"></i> Valider
+                      <i class="fas fa-check"></i> Validerr
                     </button>
                     <button
                       class="btn-action action-reject"
@@ -1725,6 +1643,33 @@
           </div>
         </div>
 
+        <div class="stats-grid" style="margin: 1rem 0">
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ getListesByType().length }}</h3>
+              <p>Listes {{ typeListe === 'preselection' ? 'de présélection' : 'de sélection' }}</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ listesActivesByTypeCount }}</h3>
+              <p>Listes actives</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ listesArchivesByTypeCount }}</h3>
+              <p>Listes archivées</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ totalCandidatsByTypeCount }}</h3>
+              <p>Candidats cumulés</p>
+            </div>
+          </div>
+        </div>
+
         <div class="listes-grid">
           <div class="liste-card" *ngFor="let liste of getListesByType()">
             <div class="liste-header">
@@ -1737,9 +1682,14 @@
               <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
               <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
               <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
+              <p><i class="fas fa-thumbs-up"></i> Avis: {{ liste.avis || 'Non renseigné' }}</p>
+              <p>
+                <i class="fas fa-balance-scale"></i>
+                Recommandation: {{ liste.recommandation || 'Non définie' }}
+              </p>
             </div>
             <div class="liste-actions">
-              <button class="btn-action voir" (click)="modifierListe(liste)">
+              <button class="btn-action voir" (click)="consulterListe(liste)">
                 <i class="fas fa-edit"></i>
               </button>
               <button
@@ -1759,6 +1709,266 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ✅ CONSULTATION DES LISTES -->
+    <div *ngIf="isCurrentView('avis-listes') && canAccessView('avis-listes')" class="view-content">
+      <div class="section-card">
+        <div class="candidatures-header">
+          <div>
+            <h2>💬 Présélection</h2>
+            <p class="subtitle">
+              Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
+              finale responsable, puis génération de la liste présélectionnée par score.
+            </p>
+          </div>
+          <div class="download-box" *ngIf="isResponsable">
+            <input
+              type="number"
+              min="1"
+              [(ngModel)]="preselectionQuota"
+              class="filter-input"
+              style="width: 120px"
+              placeholder="Quota"
+            />
+            <button class="btn-download" (click)="genererListePreselectionParScore()">
+              <i class="fas fa-sort-amount-down"></i> Générer liste par score
+            </button>
+          </div>
+        </div>
+
+        <div class="filters-section" style="margin-top: 1rem">
+          <div class="filters-grid">
+            <div class="filter-item">
+              <label class="filter-label">Année universitaire</label>
+              <select class="filter-select" [(ngModel)]="filtreAnneeUniversitaire">
+                <option value="courante">Courante ({{ getCurrentAcademicYear() }})</option>
+                <option value="precedente">Précédente ({{ getPreviousAcademicYear() }})</option>
+                <option value="toutes">Toutes les années</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label class="filter-label">Décision responsable</label>
+              <select class="filter-select" [(ngModel)]="preselectionDecisionFilter">
+                <option value="">Toutes</option>
+                <option value="valide">Validé</option>
+                <option value="non_valide">Non validé</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label class="filter-label">Recherche</label>
+              <input
+                class="filter-input"
+                type="text"
+                [(ngModel)]="preselectionSearch"
+                placeholder="N°, nom, email..."
+              />
+            </div>
+            <div class="filter-item">
+              <label class="filter-label">Portée</label>
+              <input
+                class="filter-input"
+                [value]="getCurrentUserScopeLabel()"
+                readonly
+                title="Membre et responsable ne voient que leur spécialité"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="margin: 1rem 0">
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ getPreselectionWorkflowRows().length }}</h3>
+              <p>Candidatures visibles</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ getPreselectionValidCount() }}</h3>
+              <p>Décisions validées</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ preselectionRowsForGeneration.length }}</h3>
+              <p>Dernière liste générée</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="candidatures-table">
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>Candidat</th>
+                <th>Année</th>
+                <th>Notes saisies (préinscription)</th>
+                <th>Score</th>
+                <th>Avis membres</th>
+                <th>Action consulter</th>
+                <th>Décision responsable</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let candidature of getPreselectionWorkflowRows()">
+                <td>
+                  <strong>{{ candidature.numero }}</strong>
+                </td>
+                <td>
+                  <strong>{{ candidature.candidat_nom }}</strong>
+                  <div class="muted-line">{{ candidature.specialite }}</div>
+                </td>
+                <td>{{ candidature.annee_universitaire || getCurrentAcademicYear() }}</td>
+                <td>{{ candidature.notes_preinscription || 'Non renseignées' }}</td>
+                <td>{{ candidature.score }}</td>
+                <td>
+                  <small>{{ getAllVotesDisplay(candidature.id) }}</small>
+                </td>
+                <td>
+                  <button
+                    class="btn-action voir"
+                    (click)="consulterCandidaturePreselection(candidature)"
+                  >
+                    <i class="fas fa-eye"></i> Consulter candidature
+                  </button>
+                  <button class="btn-action" (click)="ouvrirModalAvis(candidature)">
+                    <i class="fas fa-comment-dots"></i> Donner avis
+                  </button>
+                </td>
+                <td>
+                  <ng-container *ngIf="isResponsable; else memberDecisionView">
+                    <select
+                      class="filter-select"
+                      [ngModel]="candidature.decision_responsable || ''"
+                      (ngModelChange)="setDecisionPreselection(candidature, $event)"
+                    >
+                      <option value="">--</option>
+                      <option value="valide">Validé</option>
+                      <option value="non_valide">Non validé</option>
+                    </select>
+                    <button
+                      class="btn-action"
+                      style="margin-top: 0.4rem"
+                      (click)="confirmerDecisionPreselection(candidature)"
+                    >
+                      Confirmer
+                    </button>
+                  </ng-container>
+                  <ng-template #memberDecisionView>
+                    {{
+                      candidature.decision_responsable === 'valide'
+                        ? 'Validé'
+                        : candidature.decision_responsable === 'non_valide'
+                          ? 'Non validé'
+                          : '--'
+                    }}
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="listes-tabs">
+          <button
+            class="liste-tab"
+            [class.active]="typeListe === 'preselection'"
+            (click)="typeListe = 'preselection'"
+          >
+            Présélection
+          </button>
+        </div>
+
+        <div class="listes-grid">
+          <div class="liste-card" *ngFor="let liste of getListesByType()">
+            <div class="liste-header">
+              <h3>{{ liste.nom }}</h3>
+              <span class="liste-badge" [class.active]="liste.statut === 'active'">
+                {{ liste.statut }}
+              </span>
+            </div>
+            <div class="liste-info">
+              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
+              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
+              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
+              <p *ngIf="liste.avis"><i class="fas fa-comment"></i> {{ liste.avis }}</p>
+            </div>
+            <div class="liste-actions">
+              <button class="btn-action voir" (click)="consulterListe(liste)">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button class="btn-action" (click)="ouvrirModalAvisListe(liste)">
+                <i class="fas fa-comment-dots"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ LISTES (MEMBRE - LECTURE SEULE) -->
+    <div
+      *ngIf="currentView === 'listes' && !isResponsable && canAccessView('listes')"
+      class="view-content"
+    >
+      <div class="section-card">
+        <div class="listes-header">
+          <h2>📋 Listes d'admission (lecture seule)</h2>
+        </div>
+
+        <p class="subtitle" style="margin-bottom: 1rem">
+          En tant que membre, vous consultez uniquement les listes de sélection validées.
+        </p>
+
+        <div class="stats-grid" style="margin: 1rem 0">
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ getSelectionListsForMember().length }}</h3>
+              <p>Listes de sélection disponibles</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-details">
+              <h3>{{ getSelectionCandidatesTotalForMember() }}</h3>
+              <p>Total candidats listés</p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="listes-grid"
+          *ngIf="getSelectionListsForMember().length > 0; else noMemberLists"
+        >
+          <div class="liste-card" *ngFor="let liste of getSelectionListsForMember()">
+            <div class="liste-header">
+              <h3>{{ liste.nom }}</h3>
+              <span class="liste-badge" [class.active]="liste.statut === 'active'">
+                {{ liste.statut }}
+              </span>
+            </div>
+            <div class="liste-info">
+              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
+              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
+              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
+              <p *ngIf="liste.avis"><i class="fas fa-comment"></i> {{ liste.avis }}</p>
+            </div>
+            <div class="liste-actions">
+              <button class="btn-action voir" (click)="consulterListe(liste)">
+                <i class="fas fa-eye"></i> Voir
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noMemberLists>
+          <div class="empty-state-empty-member">
+            <h3>Aucune liste de sélection publiée</h3>
+            <p>Les listes validées par le responsable apparaîtront automatiquement ici.</p>
+          </div>
+        </ng-template>
       </div>
     </div>
 
@@ -1810,15 +2020,16 @@
       </div>
     </div>
 
-    <!-- ✅ RÉCLAMATIONS (RESPONSABLE) -->
+    <!-- ✅ RÉCLAMATIONS -->
     <div
       *ngIf="
-        currentView === 'reclamations' && isResponsable && actionPermissions.traiterReclamations
+        currentView === 'reclamations' &&
+        (actionPermissions.traiterReclamations || actionPermissions.consultationCandidature)
       "
       class="view-content"
     >
       <div class="section-card">
-        <h2>📢 Traiter les réclamations (Tableau)</h2>
+        <h2>📢 Réclamations (Tableau)</h2>
         <div class="table-container">
           <table class="candidatures-table reclamations-table">
             <thead>
@@ -1845,7 +2056,14 @@
                   >
                     {{ formatReclamationStatus(reclamation.statut) }}
                   </span>
-                  <div style="margin-top: 0.5rem" *ngIf="reclamation.statut !== 'traitee'">
+                  <div
+                    style="margin-top: 0.5rem"
+                    *ngIf="
+                      isResponsable &&
+                      actionPermissions.traiterReclamations &&
+                      reclamation.statut !== 'traitee'
+                    "
+                  >
                     <button class="btn-action voir" (click)="traiterReclamation(reclamation)">
                       <i class="fas fa-reply"></i> Traiter
                     </button>
@@ -1941,14 +2159,17 @@
       </div>
     </div>
 
-    <!-- ✅ INSCRIPTIONS (RESPONSABLE) -->
+    <!-- ✅ INSCRIPTIONS -->
     <div
-      *ngIf="currentView === 'inscriptions' && isResponsable && actionPermissions.gererInscriptions"
+      *ngIf="
+        currentView === 'inscriptions' &&
+        (actionPermissions.gererInscriptions || actionPermissions.consultationCandidature)
+      "
       class="view-content"
     >
       <div class="section-card">
         <div class="section-header">
-          <h2>📝 Gérer les inscriptions</h2>
+          <h2>📝 Inscriptions en ligne</h2>
           <div class="download-box">
             <select [(ngModel)]="inscriptionsExportFormat" class="export-select">
               <option value="csv">CSV</option>
@@ -1961,14 +2182,69 @@
             </button>
           </div>
         </div>
-        <p>Fonctionnalité à implémenter - Gestion des inscriptions aux masters</p>
+        <p *ngIf="isResponsable">Le responsable peut vérifier et valider les inscriptions.</p>
+        <p *ngIf="!isResponsable">Consultation uniquement pour les membres de commission.</p>
+
+        <div class="form-group" *ngIf="isResponsable">
+          <label>Importer fichier Excel des inscriptions:</label>
+          <input type="file" accept=".xlsx,.xls" (change)="onInscriptionsExcelSelected($event)" />
+          <small *ngIf="selectedInscriptionsFileName">
+            Fichier chargé: {{ selectedInscriptionsFileName }}
+          </small>
+        </div>
+
+        <div class="form-actions" *ngIf="isResponsable">
+          <button class="btn-primary" (click)="verifierInscriptionsExcel()">
+            Vérifier les inscriptions
+          </button>
+          <button class="btn-success" (click)="exporterFichierFinalInscriptions()">
+            Générer fichier final
+          </button>
+          <button class="btn-primary" (click)="genererListesSelectionFinaleAutomatique()">
+            Générer listes finale
+          </button>
+        </div>
+
+        <div class="table-container" *ngIf="inscriptionsVerificationRows.length > 0">
+          <table class="reclamations-table">
+            <thead>
+              <tr>
+                <th>Numéro candidature</th>
+                <th>CIN</th>
+                <th>Numéro inscription</th>
+                <th>Nom et prénom</th>
+                <th>Master</th>
+                <th>Spécialité</th>
+                <th>Vérification</th>
+                <th>Détails</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of inscriptionsVerificationRows">
+                <td>{{ row.numero_candidature }}</td>
+                <td>{{ row.cin }}</td>
+                <td>{{ row.numero_inscription }}</td>
+                <td>{{ row.nom_prenom }}</td>
+                <td>{{ row.master }}</td>
+                <td>{{ row.specialite }}</td>
+                <td>
+                  <span class="statut-badge" [ngClass]="'badge-' + row.verification">
+                    {{ row.verification }}
+                  </span>
+                </td>
+                <td>{{ row.details }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- ✅ STATISTIQUES (RESPONSABLE) -->
     <div
       *ngIf="
-        currentView === 'statistiques' && isResponsable && actionPermissions.consulterStatistiques
+        currentView === 'statistiques' &&
+        (actionPermissions.consulterStatistiques || actionPermissions.consultationCandidature)
       "
       class="view-content"
     >
@@ -2000,83 +2276,105 @@
         </div>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="kpi-grid">
-        <div class="kpi-card kpi-primary">
-          <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ candidatures.length }}</div>
-            <div class="kpi-label">Candidatures reçues</div>
-            <div class="kpi-trend"><i class="fas fa-arrow-up"></i> +12%</div>
+      <ng-container *ngIf="getResponsableMasterStats() as responsableMasterStats">
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-primary">
+            <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ getTotalResponsableCandidatures() }}</div>
+              <div class="kpi-label">Candidatures concernées</div>
+              <div class="kpi-trend">{{ responsableMasterStats.length }} master(s)</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-success">
+            <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ getTotalResponsableDossiersDeposes() }}</div>
+              <div class="kpi-label">Dossiers déposés</div>
+              <div class="kpi-trend">{{ getTauxResponsableDossierGlobal() }}% de dépôt</div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-info">
+            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ getTotalResponsableAcceptes() }}</div>
+              <div class="kpi-label">Acceptés / Sélectionnés</div>
+              <div class="kpi-trend">
+                {{ getTauxResponsableAcceptationGlobal() }}% d’acceptation
+              </div>
+            </div>
+          </div>
+          <div class="kpi-card kpi-warning">
+            <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ getTotalResponsableInscrits() }}</div>
+              <div class="kpi-label">Inscrits</div>
+              <div class="kpi-trend">
+                {{ getTauxResponsableInscriptionGlobal() }}% d’inscription
+              </div>
+            </div>
           </div>
         </div>
-        <div class="kpi-card kpi-success">
-          <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
-          <div class="kpi-content">
-            <div class="kpi-value">42</div>
-            <div class="kpi-label">Dossiers déposés</div>
-            <div class="kpi-trend"><i class="fas fa-check-circle"></i> 93%</div>
-          </div>
-        </div>
-        <div class="kpi-card kpi-info">
-          <div class="kpi-icon"><i class="fas fa-graduation-cap"></i></div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ concoursIngenieur.length }}</div>
-            <div class="kpi-label">Concours actifs</div>
-            <div class="kpi-trend"><i class="fas fa-bar-chart"></i> 2</div>
-          </div>
-        </div>
-        <div class="kpi-card kpi-warning">
-          <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-          <div class="kpi-content">
-            <div class="kpi-value">12</div>
-            <div class="kpi-label">En attente</div>
-            <div class="kpi-trend"><i class="fas fa-exclamation"></i> À traiter</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Master Stats -->
-      <div class="section-card stats-card-header">
-        <h3><i class="fas fa-book"></i> Performances par Master</h3>
-        <p>Statistiques détaillées pour chaque programme</p>
-      </div>
-      <div class="section-card stats-table-container">
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>Master</th>
-              <th>Candidats</th>
-              <th>Dossiers</th>
-              <th>Admis</th>
-              <th>Refusés</th>
-              <th>Taux</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let sp of specialites">
-              <td class="cell-name">
-                <strong>{{ sp.nom }}</strong>
-              </td>
-              <td class="cell-number">{{ sp.nb_candidatures }}</td>
-              <td class="cell-number">{{ sp.nb_dossiers }}</td>
-              <td class="cell-number success">25</td>
-              <td class="cell-number danger">8</td>
-              <td>
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="75"></div>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge" [class]="'status-' + sp.statut">{{
-                  sp.statut === 'actuel' ? 'Actuel' : 'Ancien'
-                }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <!-- Master Stats -->
+        <div class="section-card stats-card-header">
+          <h3><i class="fas fa-book"></i> Statistiques par master concerné</h3>
+          <p>
+            Chaque master suivi par ce responsable avec taux d’acceptation, d’inscription et de
+            rejet.
+          </p>
+        </div>
+        <div class="section-card stats-table-container">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Master</th>
+                <th>Type</th>
+                <th>Candidatures</th>
+                <th>Dossiers</th>
+                <th>Acceptés</th>
+                <th>Inscrits</th>
+                <th>Acceptation</th>
+                <th>Inscription</th>
+                <th>Rejet</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stat of responsableMasterStats">
+                <td class="cell-name">
+                  <strong>{{ getResponsibleMasterLabel(stat) }}</strong>
+                </td>
+                <td class="cell-number">
+                  {{ stat.typeConcours === 'ingenieur' ? 'Ingénieur' : 'Master' }}
+                </td>
+                <td class="cell-number">{{ stat.totalCandidatures }}</td>
+                <td class="cell-number">{{ stat.dossiersDeposes }}</td>
+                <td class="cell-number success">{{ stat.acceptes }}</td>
+                <td class="cell-number success">{{ stat.inscrits }}</td>
+                <td>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="stat.tauxAcceptation"></div>
+                  </div>
+                  <small>{{ stat.tauxAcceptation }}%</small>
+                </td>
+                <td>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="stat.tauxInscription"></div>
+                  </div>
+                  <small>{{ stat.tauxInscription }}%</small>
+                </td>
+                <td>
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="stat.tauxRejet"></div>
+                  </div>
+                  <small>{{ stat.tauxRejet }}%</small>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
 
       <!-- Distribution & Timeline -->
       <div class="stats-row-2">
@@ -2334,6 +2632,141 @@
     </div>
   </main>
 
+  <!-- ✅ MODAL CONSULTATION CANDIDATURE -->
+  <div *ngIf="showModalConsultation" class="modal-overlay" (click)="fermerModalConsultation()">
+    <div class="modal-content consultation-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header consultation-header">
+        <div>
+          <h2>👁️ Consultation candidature</h2>
+          <p>Vue détaillée de la candidature, des avis et de la décision responsable.</p>
+        </div>
+        <button class="btn-close" (click)="fermerModalConsultation()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="candidatureConsultationSelectionnee as consultation">
+        <div class="consultation-hero">
+          <div>
+            <div class="consultation-kicker">Dossier n°{{ consultation.numero }}</div>
+            <h3>{{ consultation.candidat_nom }}</h3>
+            <p>{{ consultation.candidat_email }}</p>
+          </div>
+          <div class="consultation-badges">
+            <span class="consultation-badge status">{{
+              getStatusDisplayLabel(consultation.statut)
+            }}</span>
+            <span class="consultation-badge type">
+              {{ consultation.type_concours === 'ingenieur' ? 'Cycle Ingénieur' : 'Master' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="consultation-grid">
+          <div class="consultation-card">
+            <span class="consultation-label">Score</span>
+            <strong>{{ consultation.score }}</strong>
+            <small>sur 20</small>
+          </div>
+          <div class="consultation-card">
+            <span class="consultation-label">Année</span>
+            <strong>{{ consultation.annee_universitaire || getCurrentAcademicYear() }}</strong>
+            <small>Période de dépôt</small>
+          </div>
+          <div class="consultation-card">
+            <span class="consultation-label">Décision responsable</span>
+            <strong>
+              {{
+                consultation.decision_responsable === 'valide'
+                  ? 'Validée'
+                  : consultation.decision_responsable === 'non_valide'
+                    ? 'Non validée'
+                    : 'En attente'
+              }}
+            </strong>
+            <small>Commission de présélection</small>
+          </div>
+          <div class="consultation-card">
+            <span class="consultation-label">Dossier</span>
+            <strong>{{ consultation.dossier_depose ? 'Déposé' : 'Non déposé' }}</strong>
+            <small>{{ consultation.specialite }}</small>
+          </div>
+        </div>
+
+        <div class="consultation-panels">
+          <section class="consultation-panel">
+            <h4>Informations clés</h4>
+            <div class="consultation-facts">
+              <div>
+                <span>Spécialité</span>
+                <strong>{{ consultation.specialite }}</strong>
+              </div>
+              <div>
+                <span>Date de soumission</span>
+                <strong>{{
+                  consultation.date_inscription || consultation.date_soumission || 'Non renseignée'
+                }}</strong>
+              </div>
+              <div>
+                <span>Notes préinscription</span>
+                <strong>{{ consultation.notes_preinscription || 'Non renseignées' }}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="consultation-panel">
+            <h4>Avis des membres</h4>
+            <ng-container
+              *ngIf="getVotesForCandidature(consultation.id).length > 0; else noVotesConsultation"
+            >
+              <div class="consultation-votes">
+                <article
+                  class="consultation-vote"
+                  *ngFor="let vote of getVotesForCandidature(consultation.id)"
+                >
+                  <div class="vote-topline">
+                    <strong>{{ vote.membreNom }}</strong>
+                    <span>{{ vote.role === 'responsable' ? 'Responsable' : 'Membre' }}</span>
+                  </div>
+                  <p>{{ vote.commentaire }}</p>
+                  <small>
+                    {{
+                      vote.recommandation === 'favorable'
+                        ? 'Favorable'
+                        : vote.recommandation === 'defavorable'
+                          ? 'Défavorable'
+                          : 'Réservé'
+                    }}
+                    •
+                    {{
+                      vote.diplomeConforme === false ? 'Diplôme non conforme' : 'Diplôme conforme'
+                    }}
+                  </small>
+                </article>
+              </div>
+            </ng-container>
+            <ng-template #noVotesConsultation>
+              <p class="consultation-empty">Aucun avis enregistré pour cette candidature.</p>
+            </ng-template>
+          </section>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="fermerModalConsultation()">
+          Fermer
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="voirDossier(candidatureConsultationSelectionnee!)"
+        >
+          <i class="fas fa-folder-open"></i> Consulter le dossier
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ✅ MODAL AVIS -->
   <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
     <div class="modal-content" (click)="$event.stopPropagation()">
@@ -2372,8 +2805,70 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label>Diplôme requis conforme ? *</label>
+            <select [(ngModel)]="avisDiplomeConforme" name="avisDiplomeConforme" required>
+              <option value="conforme">Conforme</option>
+              <option value="non_conforme">Non conforme</option>
+            </select>
+          </div>
+
           <div class="modal-footer">
             <button type="button" class="btn-secondary" (click)="fermerModalAvis()">Annuler</button>
+            <button type="submit" class="btn-primary">
+              <i class="fas fa-save"></i> Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL AVIS LISTE -->
+  <div *ngIf="showModalAvisListe" class="modal-overlay" (click)="fermerModalAvisListe()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>💬 Avis sur la liste</h2>
+        <button class="btn-close" (click)="fermerModalAvisListe()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="candidat-info">
+          <h3>{{ listeSelectionneeAvis?.nom }}</h3>
+          <p><strong>Spécialité :</strong> {{ listeSelectionneeAvis?.specialite }}</p>
+          <p>
+            <strong>Type :</strong>
+            {{ listeSelectionneeAvis?.type === 'preselection' ? 'Présélection' : 'Sélection' }}
+          </p>
+        </div>
+
+        <form (ngSubmit)="enregistrerAvisListe()">
+          <div class="form-group">
+            <label>Votre avis *</label>
+            <textarea
+              [(ngModel)]="avisListeText"
+              name="avisListeText"
+              rows="4"
+              required
+              placeholder="Saisissez votre avis sur cette liste..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Recommandation *</label>
+            <select [(ngModel)]="avisListeRecommandation" name="avisListeRecommandation" required>
+              <option value="favorable">Favorable</option>
+              <option value="defavorable">Défavorable</option>
+              <option value="reserve">Réservé</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="fermerModalAvisListe()">
+              Annuler
+            </button>
             <button type="submit" class="btn-primary">
               <i class="fas fa-save"></i> Enregistrer
             </button>

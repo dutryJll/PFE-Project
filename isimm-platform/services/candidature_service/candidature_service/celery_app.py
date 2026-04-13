@@ -11,6 +11,14 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
+    "synchroniser-notifications-systeme-quotidien": {
+        "task": "candidature_app.tasks.synchroniser_notifications_systeme_tous",
+        "schedule": crontab(hour=8, minute=0),
+    },
+    "rappel-preinscription-j3": {
+        "task": "candidature_app.tasks.envoyer_rappels_j3_tous",
+        "schedule": crontab(hour=8, minute=5),
+    },
     "verifier-dossiers-quotidien": {
         "task": "candidature_app.tasks.verifier_dossiers_non_deposes",
         "schedule": crontab(hour=2, minute=0),

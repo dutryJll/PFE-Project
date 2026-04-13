@@ -711,6 +711,17 @@
   color: #991b1b;
 }
 
+.user-status-meta {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.users-filter-box {
+  min-width: 220px;
+}
+
 /* ========================================
    BUTTONS
 ======================================== */

@@ -28,7 +28,7 @@
         (click)="switchView('offres-inscription')"
       >
         <i class="fas fa-door-open"></i>
-        <span>Préinscription</span>
+        <span>Pr�inscription</span>
       </a>
 
       <a
@@ -120,7 +120,7 @@
       <div *ngIf="showAlert" class="alert-banner urgent">
         <i class="fas fa-exclamation-triangle"></i>
         <div class="alert-content">
-          <strong>⏰ N'attendez pas le dernier moment !</strong>
+          <strong>N'attendez pas le dernier moment !</strong>
           <p>
             Vous avez jusqu'au <strong>jeudi 12 mars, 23h59 heure de Tunis</strong> pour finaliser
             vos actions.
@@ -160,7 +160,7 @@
       </div>
 
       <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
-        <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
+        <h2 class="role-features-title">Fonctionnalités de votre rôle</h2>
         <p class="role-features-subtitle">
           Ces actions sont disponibles dans la plateforme selon votre profil candidat.
         </p>
@@ -178,7 +178,7 @@
       </div>
 
       <div class="section-card">
-        <h2>📊 Activités récentes</h2>
+        <h2>Activités récentes</h2>
         <div class="activites-list">
           <div class="activity-item">
             <div class="activity-icon check-icon">
@@ -186,7 +186,7 @@
             </div>
             <div class="activity-content">
               <strong>Suivi candidature</strong>
-              <small>Votre dernière candidature est bien enregistrée.</small>
+              <small>Votre derni�re candidature est bien enregistr�e.</small>
             </div>
           </div>
           <div class="activity-item">
@@ -195,7 +195,7 @@
             </div>
             <div class="activity-content">
               <strong>Dépôt de dossier</strong>
-              <small>Un nouveau document a été ajouté à votre dossier.</small>
+              <small>Un nouveau document a �t� ajout� � votre dossier.</small>
             </div>
           </div>
           <div class="activity-item">
@@ -203,8 +203,8 @@
               <i class="fas fa-user-edit"></i>
             </div>
             <div class="activity-content">
-              <strong>Profil mis à jour</strong>
-              <small>Vos informations personnelles sont à jour.</small>
+              <strong>Profil mis e jour</strong>
+              <small>Vos informations personnelles sont e jour.</small>
             </div>
           </div>
         </div>
@@ -226,7 +226,7 @@
         </div>
 
         <div class="section-card profile-form-card">
-          <h2>📋 Informations personnelles</h2>
+          <h2>Informations personnelles</h2>
           <form (ngSubmit)="updateProfile()">
             <div class="form-row">
               <div class="form-group">
@@ -249,7 +249,7 @@
             </div>
 
             <details class="profile-collapse">
-              <summary>Additional names</summary>
+              <summary>Noms complémentaires</summary>
               <div class="profile-collapse-body form-row">
                 <div class="form-group">
                   <label>Nom additionnel</label>
@@ -263,7 +263,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Interests</summary>
+              <summary>Centres d'intérêt</summary>
               <div class="profile-collapse-body form-group">
                 <label>Centres d'intérêt académiques</label>
                 <input type="text" name="academic_interests" placeholder="IA, Data, Web..." />
@@ -271,7 +271,7 @@
             </details>
 
             <details class="profile-collapse">
-              <summary>Optional</summary>
+              <summary>Informations facultatives</summary>
               <div class="profile-collapse-body form-group">
                 <label>Notes complémentaires</label>
                 <textarea name="optional_notes" rows="3"></textarea>
@@ -279,9 +279,9 @@
             </details>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-primary">Update profile</button>
+              <button type="submit" class="btn-primary">Valider le profil</button>
               <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
-                Cancel
+                Annuler
               </button>
             </div>
           </form>
@@ -291,10 +291,22 @@
 
     <div *ngIf="currentView === 'offres-inscription'" class="view-content">
       <div class="section-card">
+        <div class="section-header-export">
+          <h2>Préinscription</h2>
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="validateMenuSection('offres-inscription', $event)"
+          >
+            <i class="fas fa-check"></i>
+            Valider
+          </button>
+        </div>
+
         <div class="offres-hero">
           <div class="offres-hero-content">
             <p class="offres-kicker">Admission 2026</p>
-            <h2>Appels d'inscription - Masters & Cycle d'Ingenieur</h2>
+            <h2>Appels d'inscription - Masters et Cycle Ingénieur</h2>
             <p class="offres-subtitle">
               Choisissez votre parcours, consultez le statut d'ouverture et postulez en quelques
               clics.
@@ -326,7 +338,7 @@
               <div class="offre-header recherche">
                 <div class="offre-badge">Parcours Recherche</div>
                 <div class="offre-status" [ngClass]="offre.statut">
-                  {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
+                  {{ offre.statut === 'ouvert' ? 'OUVERT' : 'FERMe' }}
                 </div>
               </div>
               <div class="offre-body">
@@ -338,7 +350,7 @@
                     ><span>Limite : {{ offre.date_limite | date: 'dd/MM/yyyy' }}</span>
                   </div>
                   <div class="info-item">
-                    <i class="fas fa-users"></i><span>Capacité d'accueil : {{ offre.places }}</span>
+                    <i class="fas fa-users"></i><span>Capacite d'accueil : {{ offre.places }}</span>
                   </div>
                 </div>
                 <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
@@ -349,7 +361,7 @@
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      PDF officiel signé
+                      PDF officiel signe
                     </a>
                   </div>
                 </div>
@@ -357,7 +369,7 @@
               <div class="offre-actions">
                 <button class="btn-secondary" type="button" (click)="ouvrirDetailOffre(offre)">
                   <i class="fas fa-eye"></i>
-                  Consulter détail
+                  Detail
                 </button>
                 <button
                   class="btn-postuler"
@@ -371,9 +383,9 @@
                   <i class="fas fa-paper-plane"></i>
                   {{
                     offre.statut === 'ferme'
-                      ? 'Fermée'
+                      ? 'Fermee'
                       : dejaCandidature(offre.id)
-                        ? 'Déjà candidaté'
+                        ? 'Deje candidate'
                         : 'Postuler'
                   }}
                 </button>
@@ -392,7 +404,7 @@
               <div class="offre-header professionnel">
                 <div class="offre-badge">Parcours Professionnel</div>
                 <div class="offre-status" [ngClass]="offre.statut">
-                  {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
+                  {{ offre.statut === 'ouvert' ? 'OUVERT' : 'FERMe' }}
                 </div>
               </div>
               <div class="offre-body">
@@ -404,7 +416,7 @@
                     ><span>Limite : {{ offre.date_limite | date: 'dd/MM/yyyy' }}</span>
                   </div>
                   <div class="info-item">
-                    <i class="fas fa-users"></i><span>Capacité d'accueil : {{ offre.places }}</span>
+                    <i class="fas fa-users"></i><span>Capacite d'accueil : {{ offre.places }}</span>
                   </div>
                 </div>
                 <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
@@ -415,12 +427,16 @@
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      PDF officiel signé
+                      PDF officiel signe
                     </a>
                   </div>
                 </div>
               </div>
               <div class="offre-actions">
+                <button class="btn-secondary" type="button" (click)="ouvrirDetailOffre(offre)">
+                  <i class="fas fa-eye"></i>
+                  Detail
+                </button>
                 <button
                   class="btn-postuler"
                   [disabled]="
@@ -433,9 +449,9 @@
                   <i class="fas fa-paper-plane"></i>
                   {{
                     offre.statut === 'ferme'
-                      ? 'Fermée'
+                      ? 'Fermee'
                       : dejaCandidature(offre.id)
-                        ? 'Déjà candidaté'
+                        ? 'Deje candidate'
                         : 'Postuler'
                   }}
                 </button>
@@ -454,12 +470,12 @@
               <div class="offre-header cycle-ingenieur">
                 <div class="offre-badge">Cycle 3 ans</div>
                 <div class="offre-status" [ngClass]="offre.statut">
-                  {{ offre.statut === 'ouvert' ? '✓ OUVERT' : '✗ FERMÉ' }}
+                  {{ offre.statut === 'ouvert' ? 'OUVERT' : 'FERMe' }}
                 </div>
               </div>
               <div class="offre-body">
                 <h4>{{ offre.titre }}</h4>
-                <p class="offre-specialite">Spécialité : {{ offre.specialite }}</p>
+                <p class="offre-specialite">Specialite : {{ offre.specialite }}</p>
                 <p class="offre-description">{{ offre.description }}</p>
                 <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
                   <div class="info-item">
@@ -469,12 +485,16 @@
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      PDF officiel signé
+                      PDF officiel signe
                     </a>
                   </div>
                 </div>
               </div>
               <div class="offre-actions">
+                <button class="btn-secondary" type="button" (click)="ouvrirDetailOffre(offre)">
+                  <i class="fas fa-eye"></i>
+                  Detail
+                </button>
                 <button
                   class="btn-postuler"
                   [disabled]="
@@ -487,9 +507,9 @@
                   <i class="fas fa-paper-plane"></i>
                   {{
                     offre.statut === 'ferme'
-                      ? 'Fermée'
+                      ? 'Fermee'
                       : dejaCandidature(offre.id)
-                        ? 'Déjà candidaté'
+                        ? 'Deje candidate'
                         : 'Postuler'
                   }}
                 </button>
@@ -503,7 +523,7 @@
     <div *ngIf="currentView === 'candidatures'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>📋 Candidatures</h2>
+          <h2>Candidatures</h2>
           <button
             class="btn-primary"
             *ngIf="actionPermissions.preinscription"
@@ -518,12 +538,12 @@
           <table class="candidatures-table">
             <thead>
               <tr>
-                <th>N° Candidature</th>
-                <th>N° Dossier</th>
+                <th>N� Candidature</th>
+                <th>N� Dossier</th>
                 <th>Candidature d'inscription au Master</th>
-                <th>Année</th>
-                <th>Date soumission</th>
-                <th>Dépôt dossier</th>
+                <th>Ann�e</th>
+                <th>Date de soumission</th>
+                <th>Dépôt du dossier</th>
                 <th>Score</th>
                 <th>Classement</th>
                 <th>Statut</th>
@@ -611,17 +631,17 @@
           </table>
         </div>
 
-        <h3 class="sub-table-title">Candidatures d'inscription au Cycle Ingénieur</h3>
+        <h3 class="sub-table-title">Candidatures d'inscription au Cycle Ing�nieur</h3>
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
-                <th>N° Candidature</th>
-                <th>N° Dossier</th>
-                <th>Candidature d'inscription au Cycle Ingénieur</th>
+                <th>N� Candidature</th>
+                <th>N� Dossier</th>
+                <th>Candidature d'inscription au Cycle Ing�nieur</th>
                 <th>Année</th>
-                <th>Date soumission</th>
-                <th>Dépôt dossier</th>
+                <th>Date de soumission</th>
+                <th>Dépôt du dossier</th>
                 <th>Score</th>
                 <th>Classement</th>
                 <th>Statut</th>
@@ -713,12 +733,22 @@
 
     <div *ngIf="currentView === 'mon-dossier'" class="view-content">
       <div class="section-card">
-        <h2>📁 Dossiers de candidature</h2>
-        <p>Consultez vos dossiers via leur numéro lié à la candidature</p>
+        <div class="section-header-export">
+          <h2>Dossiers de candidature</h2>
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="validateMenuSection('mon-dossier', $event)"
+          >
+            <i class="fas fa-check"></i>
+            Valider
+          </button>
+        </div>
+        <p>Consultez vos dossiers via leur num�ro li� � la candidature</p>
 
         <div class="dossier-toolbar">
           <span *ngIf="selectedDossierNumber" class="selected-dossier-badge"
-            >Dossier sélectionné: {{ selectedDossierNumber }}</span
+            >Dossier selectionne: {{ selectedDossierNumber }}</span
           >
           <button *ngIf="selectedDossierNumber" class="btn-doc" (click)="resetSelectionDossier()">
             Voir tous les dossiers
@@ -729,8 +759,8 @@
           <table class="documents-table">
             <thead>
               <tr>
-                <th>N° Dossier</th>
-                <th>N° Candidature</th>
+                <th>N� Dossier</th>
+                <th>N� Candidature</th>
                 <th>Master</th>
                 <th>Statut</th>
                 <th>Date de soumission</th>
@@ -775,9 +805,17 @@
     <div *ngIf="currentView === 'inscription'" class="view-content">
       <div class="section-card">
         <div class="section-header section-header-export">
-          <h2>💳 Inscription en ligne</h2>
+          <h2>Inscription en ligne</h2>
           <div class="download-box">
-            <label for="inscriptionExportFormat">Download as</label>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="validateMenuSection('inscription', $event)"
+            >
+              <i class="fas fa-check"></i>
+              Valider
+            </button>
+            <label for="inscriptionExportFormat">Telecharger en</label>
             <select
               id="inscriptionExportFormat"
               [(ngModel)]="inscriptionExportFormat"
@@ -789,14 +827,14 @@
               <option value="xlsx">Excel</option>
             </select>
             <button class="btn-download" (click)="exportInscriptionsEnLigne()">
-              <i class="fas fa-download"></i> Télécharger
+              <i class="fas fa-download"></i> Telecharger
             </button>
           </div>
         </div>
         <div class="inscription-guide">
           <p>
             Faites votre inscription et le paiement en ligne sur la plateforme officielle, puis
-            déposez ici le justificatif (PDF/JPG/PNG).
+            deposez ici le justificatif (PDF/JPG/PNG).
           </p>
           <a
             class="btn-link-site"
@@ -804,14 +842,14 @@
             target="_blank"
             rel="noopener noreferrer"
           >
-            <i class="fas fa-external-link-alt"></i> Accéder à inscription.tn
+            <i class="fas fa-external-link-alt"></i> Acceder a inscription.tn
           </a>
         </div>
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
-                <th>N° Candidature</th>
+                <th>N� Candidature</th>
                 <th>Formation</th>
                 <th>Statut inscription</th>
                 <th>Action</th>
@@ -842,7 +880,7 @@
                     "
                     (click)="ouvrirInscription(candidature, paiementPicker)"
                   >
-                    <i class="fas fa-file-upload"></i> Déposer fichier paiement
+                    <i class="fas fa-file-upload"></i> D�poser le justificatif de paiement
                   </button>
                   <input
                     #paiementPicker
@@ -861,7 +899,7 @@
 
     <div *ngIf="currentView === 'importer'" class="view-content">
       <div class="section-card">
-        <h2>📤 Importer un fichier</h2>
+        <h2>Importer un fichier</h2>
         <p class="importer-subtitle">
           Déposez chaque document requis dans son champ dédié. Formats acceptés: PDF, JPG, PNG (max
           5 Mo).
@@ -869,7 +907,7 @@
 
         <div class="dossier-toolbar" *ngIf="selectedDossierNumber">
           <span class="selected-dossier-badge"
-            >Upload lié au dossier: {{ selectedDossierNumber }}</span
+            >Upload lie au dossier: {{ selectedDossierNumber }}</span
           >
           <button class="btn-doc" (click)="switchView('mon-dossier')">Retour aux dossiers</button>
         </div>
@@ -877,8 +915,8 @@
         <div class="section-card" *ngIf="!shouldShowPreferenceForm()">
           <h3>Exemple du formulaire de choix</h3>
           <p class="subtitle">
-            Le formulaire s'affiche automatiquement quand plusieurs masters sont acceptés et un
-            dossier est sélectionné.
+            Le formulaire s'affiche automatiquement quand plusieurs masters sont acceptes et un
+            dossier est selectionne.
           </p>
           <div class="profile-actions">
             <button type="button" class="btn-primary" (click)="activerExemplePreferenceForm()">
@@ -890,7 +928,7 @@
         <div class="section-card" *ngIf="shouldShowPreferenceForm()">
           <h3>Candidature pour le master en informatique</h3>
           <p class="subtitle">
-            Choix par ordre de préférence - Candidature en Master (MPGL, MRGL ou MPDS)
+            Choix par ordre de preference - Candidature en Master (MPGL, MRGL ou MPDS)
           </p>
 
           <div class="profile-actions" *ngIf="isPreferenceFormDemoMode">
@@ -901,7 +939,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Nom et prénom</label>
+              <label>Nom et prenom</label>
               <input
                 type="text"
                 [(ngModel)]="dossierPreferenceForm.nom_prenom"
@@ -921,7 +959,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Établissement d'origine</label>
+              <label>etablissement d'origine</label>
               <input
                 type="text"
                 [(ngModel)]="dossierPreferenceForm.etablissement_origine"
@@ -929,7 +967,7 @@
               />
             </div>
             <div class="form-group">
-              <label>Type de diplôme</label>
+              <label>Type de dipleme</label>
               <input type="text" [(ngModel)]="dossierPreferenceForm.diplome" name="pref_diplome" />
             </div>
           </div>
@@ -938,7 +976,7 @@
             <div class="form-group">
               <label>Choix 1</label>
               <select [(ngModel)]="dossierPreferenceForm.choix_1" name="pref_choix_1">
-                <option value="">Sélectionner</option>
+                <option value="">Selectionner</option>
                 <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
                   {{ opt.value.toUpperCase() }} - {{ opt.label }}
                 </option>
@@ -947,7 +985,7 @@
             <div class="form-group">
               <label>Choix 2</label>
               <select [(ngModel)]="dossierPreferenceForm.choix_2" name="pref_choix_2">
-                <option value="">Sélectionner</option>
+                <option value="">Selectionner</option>
                 <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
                   {{ opt.value.toUpperCase() }} - {{ opt.label }}
                 </option>
@@ -956,7 +994,7 @@
             <div class="form-group">
               <label>Choix 3</label>
               <select [(ngModel)]="dossierPreferenceForm.choix_3" name="pref_choix_3">
-                <option value="">Sélectionner</option>
+                <option value="">Selectionner</option>
                 <option *ngFor="let opt of getPreferenceMasterOptions()" [value]="opt.value">
                   {{ opt.value.toUpperCase() }} - {{ opt.label }}
                 </option>
@@ -979,7 +1017,7 @@
             (click)="uploadAllSelectedDocuments()"
           >
             <i class="fas fa-upload"></i>
-            Envoyer tous les documents sélectionnés ({{ selectedDocumentsCount }})
+            Envoyer tous les documents selectionnes ({{ selectedDocumentsCount }})
           </button>
         </div>
 
@@ -1007,7 +1045,7 @@
               <i class="fas fa-cloud-upload-alt upload-icon"></i>
               <h3>Glissez-déposez votre fichier ici</h3>
               <p>ou cliquez pour parcourir vos fichiers</p>
-              <small>Formats acceptés : PDF, JPG, PNG (Max 5 Mo)</small>
+              <small>Formats acceptes : PDF, JPG, PNG (Max 5 Mo)</small>
               <input
                 #docInput
                 type="file"
@@ -1039,9 +1077,9 @@
 
     <div *ngIf="currentView === 'suivi'" class="view-content">
       <div class="section-card">
-        <h2>🧭 Suivi de candidature</h2>
+        <h2>Suivi de candidature</h2>
         <div *ngIf="isWorkflowMockMode" class="simulation-banner">
-          Mode simulation actif: 4 scénarios de test sont affichés (avec états en rouge).
+          Mode simulation actif: 4 scenarios de test sont affiches (avec etats en rouge).
         </div>
 
         <div class="suivi-layout">
@@ -1090,17 +1128,17 @@
 
     <div *ngIf="currentView === 'historique'" class="view-content">
       <div class="section-card">
-        <h2>🗂️ Historique des candidatures</h2>
+        <h2>Historique des candidatures</h2>
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
               <tr>
-                <th>Année</th>
-                <th>N° Candidature</th>
+                <th>Ann�e</th>
+                <th>N� Candidature</th>
                 <th>Master</th>
                 <th>Score</th>
                 <th>Classement</th>
-                <th>Résultat</th>
+                <th>Resultat</th>
               </tr>
             </thead>
             <tbody>
@@ -1124,7 +1162,7 @@
 
     <div *ngIf="currentView === 'reclamations'" class="view-content">
       <div class="section-card">
-        <h2>📢 Réclamation</h2>
+        <h2>Réclamation</h2>
         <button
           class="btn-nouvelle-reclamation"
           *ngIf="actionPermissions.deposerReclamation"
@@ -1138,8 +1176,8 @@
               <tr>
                 <th>Identifiant</th>
                 <th>Objet</th>
-                <th>Master concerné</th>
-                <th>État</th>
+                <th>Master concerne</th>
+                <th>etat</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1174,22 +1212,22 @@
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>🔔 Notifications</h2>
-          <p class="subtitle">Toutes vos alertes de préinscription, candidature et réclamation.</p>
+          <h2>Notifications</h2>
+          <p class="subtitle">Toutes vos alertes de preinscription, candidature et reclamation.</p>
         </div>
 
         <div class="notifications-filters">
           <select [(ngModel)]="filtreNotificationType">
             <option value="">Tous les types</option>
             <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
+            <option value="success">Succès</option>
+            <option value="warning">Avertissement</option>
             <option value="danger">Danger</option>
           </select>
           <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
           <input type="date" [(ngModel)]="filtreNotificationDateFin" />
           <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
-            Reinitialiser
+            Réinitialiser
           </button>
         </div>
 
@@ -1199,7 +1237,7 @@
         >
           <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
             <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
-              ✓ Marquer tous comme lus
+              Marquer tous comme lus
             </button>
           </div>
           <article
@@ -1221,7 +1259,8 @@
 
         <ng-template #noNotifications>
           <div class="empty-reclamations">
-            <p>Aucune notification pour le moment.</p>
+            <p *ngIf="notificationsErreur">{{ notificationsErreur }}</p>
+            <p *ngIf="!notificationsErreur">Aucune notification pour le moment.</p>
           </div>
         </ng-template>
       </div>
@@ -1235,7 +1274,7 @@
   >
     <div class="modal-content detail-offre-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Consulter détail</h2>
+        <h2>Consulter detail</h2>
         <button class="btn-close" (click)="fermerDetailOffre()">
           <i class="fas fa-times"></i>
         </button>
@@ -1251,10 +1290,10 @@
           <table class="candidatures-table detail-table">
             <thead>
               <tr>
-                <th>Capacité d'accueil totale</th>
-                <th>Établissement d'origine</th>
-                <th>Capacité d'accueil</th>
-                <th>Type de diplôme</th>
+                <th>Capacite d'accueil totale</th>
+                <th>etablissement d'origine</th>
+                <th>Capacite d'accueil</th>
+                <th>Type de dipleme</th>
                 <th>Dates importantes</th>
               </tr>
             </thead>
@@ -1329,7 +1368,7 @@
           [disabled]="!canGoToWizardStep(1)"
           (click)="goToWizardStep(1)"
         >
-          Étape 1: Type, Titre, Résumé
+          Etape 1: Informations personnelles
         </button>
         <button
           type="button"
@@ -1338,7 +1377,7 @@
           [disabled]="!canGoToWizardStep(2)"
           (click)="goToWizardStep(2)"
         >
-          Étape 2: Upload fichier
+          Etape 2: Diplome et Formation
         </button>
         <button
           type="button"
@@ -1347,74 +1386,251 @@
           [disabled]="!canGoToWizardStep(3)"
           (click)="goToWizardStep(3)"
         >
-          Étape 3: Attributs
-        </button>
-        <button
-          type="button"
-          class="wizard-step-nav"
-          [class.active]="wizardCurrentStep === 4"
-          [disabled]="!canGoToWizardStep(4)"
-          (click)="goToWizardStep(4)"
-        >
-          Étape 4: Auteurs
-        </button>
-        <button
-          type="button"
-          class="wizard-step-nav"
-          [class.active]="wizardCurrentStep === 5"
-          [disabled]="!canGoToWizardStep(5)"
-          (click)="goToWizardStep(5)"
-        >
-          Étape 5: Reviewers
-        </button>
-        <button
-          type="button"
-          class="wizard-step-nav"
-          [class.active]="wizardCurrentStep === 6"
-          [disabled]="!canGoToWizardStep(6)"
-          (click)="goToWizardStep(6)"
-        >
-          Étape 6: Détails
-        </button>
-        <button
-          type="button"
-          class="wizard-step-nav"
-          [class.active]="wizardCurrentStep === 7"
-          [disabled]="!canGoToWizardStep(7)"
-          (click)="goToWizardStep(7)"
-        >
-          Étape 7: Revue & Soumission
+          Etape 3: Validation et Synthese
         </button>
       </aside>
 
       <section class="wizard-main">
         <div class="wizard-header">
-          <h2>Soumettre candidature par étapes</h2>
+          <h2>Soumettre candidature par etapes</h2>
           <p *ngIf="wizardOffre">
             <strong>{{ wizardOffre.titre }}</strong>
           </p>
         </div>
 
         <div class="wizard-body" *ngIf="wizardCurrentStep === 1">
-          <div class="form-group">
-            <label>Type *</label>
-            <select [(ngModel)]="wizardData.type" name="wizardType">
-              <option value="">Choisir</option>
-              <option value="master">Master</option>
-              <option value="cycle_ingenieur">Cycle ingénieur</option>
-            </select>
+          <h4>Informations personnelles</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" [(ngModel)]="wizardData.nom" name="wizardNom" />
+            </div>
+            <div class="form-group">
+              <label>Prenom *</label>
+              <input type="text" [(ngModel)]="wizardData.prenom" name="wizardPrenom" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>N CINE/Passeport *</label>
+              <input type="text" [(ngModel)]="wizardData.cinPasseport" name="wizardCinPasseport" />
+            </div>
+            <div class="form-group">
+              <label>Date de naissance *</label>
+              <input
+                type="date"
+                [(ngModel)]="wizardData.dateNaissance"
+                name="wizardDateNaissance"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="wizardData.email" name="wizardEmail" />
+            </div>
+            <div class="form-group">
+              <label>Telephone GSM *</label>
+              <input type="text" [(ngModel)]="wizardData.telephone" name="wizardTelephone" />
+            </div>
           </div>
           <div class="form-group">
-            <label>Titre *</label>
-            <input type="text" [(ngModel)]="wizardData.titre" name="wizardTitre" />
-          </div>
-          <div class="form-group">
-            <label>Résumé *</label>
-            <textarea [(ngModel)]="wizardData.resume" name="wizardResume" rows="4"></textarea>
+            <label>Etablissement universitaire d'origine *</label>
+            <input
+              type="text"
+              [(ngModel)]="wizardData.etablissementOrigine"
+              name="wizardEtablissementOrigine"
+            />
           </div>
         </div>
 
         <div class="wizard-body" *ngIf="wizardCurrentStep === 2">
+          <h4>Baccalaureat</h4>
+          <div class="form-group">
+            <label>Specialite Baccalaureat *</label>
+            <select [(ngModel)]="wizardData.specialiteBac" name="wizardSpecialiteBac">
+              <option value="">Selectionner</option>
+              <option value="Sciences Exprimentales">Sciences Exprimentales</option>
+              <option value="Informatique">Informatique</option>
+              <option value="Technique">Technique</option>
+              <option value="Mathmatiques">Mathmatiques</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ann�e Baccalaureat *</label>
+              <input type="number" [(ngModel)]="wizardData.anneeBac" name="wizardAnn�eBac" />
+            </div>
+            <div class="form-group">
+              <label>Moyenne Bac session principale *</label>
+              <input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenneBacPrincipale"
+                name="wizardMoyenneBac"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Note mathematiques bac *</label>
+              <input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.noteMathBac"
+                name="wizardNoteMathBac"
+              />
+            </div>
+            <div class="form-group">
+              <label>Note francais bac *</label>
+              <input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.noteFrancaisBac"
+                name="wizardNoteFrancaisBac"
+              />
+            </div>
+            <div class="form-group">
+              <label>Note anglais bac *</label>
+              <input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.noteAnglaisBac"
+                name="wizardNoteAnglaisBac"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Certification niveau B2 (Langue) *</label>
+            <select [(ngModel)]="wizardData.certificationB2" name="wizardCertificationB2">
+              <option value="">Selectionner</option>
+              <option value="non">Non</option>
+              <option value="oui">Oui</option>
+            </select>
+            <small>Niveau linguistique B2 (Cadre Europeen Commun de Reference).</small>
+          </div>
+
+          <h4>Diplome et Formation</h4>
+          <div class="form-group">
+            <label>Specialite du diplome obtenu *</label>
+            <select [(ngModel)]="wizardData.specialiteDiplome" name="wizardSpecialiteDiplome">
+              <option value="">Selectionner</option>
+              <option value="Genie Logiciel et Sciences de l'Informatique">
+                Genie Logiciel et Sciences de l'Informatique
+              </option>
+              <option value="Sciences de l'Informatique">Sciences de l'Informatique</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ann�e d'obtention du dernier diplome *</label>
+              <input
+                type="number"
+                [(ngModel)]="wizardData.anneeObtentionDiplome"
+                name="wizardAnn�eDiplome"
+              />
+            </div>
+            <div class="form-group">
+              <label>Nature diplome *</label>
+              <select [(ngModel)]="wizardData.natureDiplome" name="wizardNatureDiplome">
+                <option value="">Selectionner</option>
+                <option value="Licence">Licence</option>
+                <option value="Maitrise">Maitrise</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Moyenne 1ere annee *</label
+              ><input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenne1Annee"
+                name="wizardMoyenne1"
+              />
+            </div>
+            <div class="form-group">
+              <label>Session reussite 1ere annee *</label
+              ><select [(ngModel)]="wizardData.session1Annee" name="wizardSession1">
+                <option value="">Selectionner</option>
+                <option value="Principale">Principale</option>
+                <option value="control">Controle</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Moyenne 2eme annee *</label
+              ><input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenne2Annee"
+                name="wizardMoyenne2"
+              />
+            </div>
+            <div class="form-group">
+              <label>Session reussite 2eme annee *</label
+              ><select [(ngModel)]="wizardData.session2Annee" name="wizardSession2">
+                <option value="">Selectionner</option>
+                <option value="Principale">Principale</option>
+                <option value="control">Controle</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Moyenne 3eme annee *</label
+              ><input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenne3Annee"
+                name="wizardMoyenne3"
+              />
+            </div>
+            <div class="form-group">
+              <label>Session reussite 3eme annee *</label
+              ><select [(ngModel)]="wizardData.session3Annee" name="wizardSession3">
+                <option value="">Selectionner</option>
+                <option value="Principale">Principale</option>
+                <option value="control">Controle</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Moyenne 4eme annee</label
+              ><input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenne4Annee"
+                name="wizardMoyenne4"
+              />
+            </div>
+            <div class="form-group">
+              <label>Session reussite 4eme annee</label
+              ><select [(ngModel)]="wizardData.session4Annee" name="wizardSession4">
+                <option value="">Selectionner</option>
+                <option value="Principale">Principale</option>
+                <option value="control">Controle</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre d'annees de redoublement *</label
+            ><input
+              type="number"
+              [(ngModel)]="wizardData.nombreRedoublement"
+              name="wizardRedoublement"
+            />
+          </div>
+          <p class="wizard-note">
+            Le score est calcule automatiquement par la plateforme en tenant compte des bonus et des
+            moyennes académiques.
+          </p>
+
           <div class="form-group">
             <label>Fichier candidature *</label>
             <input type="file" (change)="onWizardFileSelected($event)" />
@@ -1423,43 +1639,44 @@
         </div>
 
         <div class="wizard-body" *ngIf="wizardCurrentStep === 3">
-          <div class="form-group">
-            <label>Attributs</label>
-            <textarea [(ngModel)]="wizardData.attributs" name="wizardAttributs" rows="3"></textarea>
+          <h4>Validation et Synthese</h4>
+          <div class="summary-card wizard-review">
+            <div class="wizard-review-head">
+              <h5>Recapitulatif de votre candidature</h5>
+              <span class="review-status">Pret pour soumission</span>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span>Candidat</span>
+                <strong>{{ wizardData.nom }} {{ wizardData.prenom }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Email</span>
+                <strong>{{ wizardData.email }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Baccalaureat</span>
+                <strong>{{ wizardData.specialiteBac }} - {{ wizardData.anneeBac }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Moyenne Bac</span>
+                <strong>{{ wizardData.moyenneBacPrincipale }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Diplome</span>
+                <strong>{{ wizardData.natureDiplome }} - {{ wizardData.specialiteDiplome }}</strong>
+              </div>
+              <div class="summary-item">
+                <span>Ann�e d'obtention</span>
+                <strong>{{ wizardData.anneeObtentionDiplome }}</strong>
+              </div>
+            </div>
+            <ul class="wizard-checklist">
+              <li>Verifiez que toutes les informations académiques sont correctes.</li>
+              <li>Verifiez votre email et numero de telephone.</li>
+              <li>Assurez-vous que le fichier de candidature est bien joint.</li>
+            </ul>
           </div>
-        </div>
-
-        <div class="wizard-body" *ngIf="wizardCurrentStep === 4">
-          <div class="form-group">
-            <label>Auteurs et institutions</label>
-            <textarea [(ngModel)]="wizardData.auteurs" name="wizardAuteurs" rows="3"></textarea>
-          </div>
-        </div>
-
-        <div class="wizard-body" *ngIf="wizardCurrentStep === 5">
-          <div class="form-group">
-            <label>Reviewers et éditeurs</label>
-            <textarea [(ngModel)]="wizardData.reviewers" name="wizardReviewers" rows="3"></textarea>
-          </div>
-        </div>
-
-        <div class="wizard-body" *ngIf="wizardCurrentStep === 6">
-          <div class="form-group">
-            <label>Détails & commentaires</label>
-            <textarea [(ngModel)]="wizardData.details" name="wizardDetails" rows="4"></textarea>
-          </div>
-        </div>
-
-        <div class="wizard-body" *ngIf="wizardCurrentStep === 7">
-          <p>Vérifiez vos informations puis confirmez la soumission.</p>
-          <label>
-            <input
-              type="checkbox"
-              [(ngModel)]="wizardData.confirmation"
-              name="wizardConfirmation"
-            />
-            Je confirme que les informations sont correctes.
-          </label>
         </div>
 
         <div class="wizard-footer">
@@ -1472,12 +1689,12 @@
             (click)="previousWizardStep()"
             [disabled]="wizardCurrentStep === 1"
           >
-            Précédent
+            Precedent
           </button>
           <button
             type="button"
             class="btn-primary"
-            *ngIf="wizardCurrentStep < 7"
+            *ngIf="wizardCurrentStep < 3"
             (click)="nextWizardStep()"
           >
             Suivant
@@ -1485,7 +1702,7 @@
           <button
             type="button"
             class="btn-primary"
-            *ngIf="wizardCurrentStep === 7"
+            *ngIf="wizardCurrentStep === 3"
             (click)="submitWizardCandidature()"
           >
             Soumettre candidature

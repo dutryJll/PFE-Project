@@ -34,6 +34,27 @@ class User(AbstractUser):
     # Timestamps
     date_inscription = models.DateTimeField(auto_now_add=True, verbose_name="Date d'inscription")
     derniere_connexion = models.DateTimeField(null=True, blank=True, verbose_name="Dernière connexion")
+
+    # Traçabilité suspension/activation compte
+    suspended_at = models.DateTimeField(null=True, blank=True, verbose_name='Date suspension')
+    suspension_reason = models.TextField(blank=True, default='', verbose_name='Raison suspension')
+    suspended_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='suspended_users',
+        verbose_name='Suspendu par',
+    )
+    reactivated_at = models.DateTimeField(null=True, blank=True, verbose_name='Date réactivation')
+    reactivated_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reactivated_users',
+        verbose_name='Réactivé par',
+    )
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']

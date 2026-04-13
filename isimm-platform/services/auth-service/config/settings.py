@@ -134,6 +134,9 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ALGORITHM': config('JWT_ALGORITHM', default='HS256'),
+    'SIGNING_KEY': config('JWT_SIGNING_KEY', default='django-insecure-auth-service-secret-key'),
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 # ========================================

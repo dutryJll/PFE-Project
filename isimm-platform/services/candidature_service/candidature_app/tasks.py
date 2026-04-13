@@ -10,6 +10,7 @@ from .notifications import (
     envoyer_rappels_j1_depot_dossier,
     sync_preinscription_open_notifications,
 )
+from .views import _sync_system_notifications_for_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -256,3 +257,23 @@ def sync_offres_ouvertes_tous():
     except Exception as e:
         logger.exception("Erreur tâche sync_preinscription_open_notifications: %s", e)
         return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def synchroniser_notifications_systeme_tous():
+    """
+    Tâche Celery pour synchroniser les notifications système de tous les rôles métier.
+    Génère les notifications in-app et les emails associés pour les candidats,
+    les membres de commission, les responsables et les admins.
+    """
+    users = User.objects.all()
+    processed = 0
+
+    for user in users.iterator():
+        try:
+            _sync_system_notifications_for_user(user)
+            processed += 1
+        except Exception:
+            logger.exception("Erreur synchronisation notifications système pour user=%s", user.id)
+
+    return {'status': 'success', 'users_processed': processed}

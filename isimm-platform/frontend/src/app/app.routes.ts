@@ -61,6 +61,7 @@ import { DossierAnalysisComponent } from './components/commission/dossier-analys
 import { ExaminerOcrComponent } from './components/commission/examiner-ocr/examiner-ocr';
 import { TraiterReclamationsComponent } from './components/commission/traiter-reclamations/traiter-reclamations';
 import { GererInscriptionsComponent } from './components/commission/gerer-inscriptions/gerer-inscriptions';
+import { OffrePreinscriptionEditorComponent } from './components/commission/offre-preinscription-editor/offre-preinscription-editor';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
 
 export const routes: Routes = [
@@ -248,6 +249,14 @@ export const routes: Routes = [
     },
   },
   {
+    path: 'commission/offre-preinscription/edit/:id',
+    component: OffrePreinscriptionEditorComponent,
+    canActivate: [authGuard, roleGuard],
+    data: {
+      roles: ['responsable_commission'],
+    },
+  },
+  {
     path: 'commission/preparer-preselection',
     component: PreparerPreselection,
     canActivate: [authGuard, roleGuard, actionGuard],
@@ -312,7 +321,19 @@ export const routes: Routes = [
     data: { roles: ['admin'] },
   },
   {
+    path: 'admin/parcours-master/new',
+    component: EditMasterComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
     path: 'admin/masters/:id/edit',
+    component: EditMasterComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/parcours-master/:id/edit',
     component: EditMasterComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['admin'] },
@@ -324,7 +345,19 @@ export const routes: Routes = [
     data: { roles: ['admin'] },
   },
   {
+    path: 'admin/parcours-ingenieurs/new',
+    component: EditOffreIngenieurComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
     path: 'admin/offres-ingenieur/:id/edit',
+    component: EditOffreIngenieurComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/parcours-ingenieurs/:id/edit',
     component: EditOffreIngenieurComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['admin'] },

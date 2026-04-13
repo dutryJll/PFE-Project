@@ -8,6 +8,7 @@ from channels.layers import get_channel_layer
 from django.conf import settings
 from django.core.mail import send_mail
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.utils import OperationalError
 from django.db import IntegrityError
@@ -27,6 +28,7 @@ from .models import (
     ListeAdmission,
     Master,
     InscriptionEnLigne,
+    InscriptionRapprochementAudit,
     Notification,
 )
 from .services import (
@@ -49,6 +51,7 @@ from .emails import (
     envoyer_notifications_masse,
     envoyer_email_inscription_validee,
 )
+from .notifications import creer_notification_avec_email
 
 
 logger = logging.getLogger(__name__)
@@ -301,6 +304,92 @@ def _validate_formulaire_commission(configuration, formulaire_payload):
     return {'ok': True}
 
 
+def _normalize_offre_rich_content(payload, offer_id):
+    if not isinstance(payload, dict):
+        return None
+
+    def _as_text(value):
+        return str(value).strip() if value is not None else ''
+
+    def _as_list(value):
+        if not isinstance(value, list):
+            return []
+        return [item for item in (_as_text(item) for item in value) if item]
+
+    def _as_rows(value):
+        if not isinstance(value, list):
+            return []
+        rows = []
+        for row in value:
+            if isinstance(row, list):
+                rows.append([_as_text(cell) for cell in row])
+        return rows
+
+    return {
+        'offerId': offer_id,
+        'title': _as_text(payload.get('title')),
+        'openingTitle': _as_text(payload.get('openingTitle')),
+        'openingBody': _as_text(payload.get('openingBody')),
+        'tableTitle': _as_text(payload.get('tableTitle')),
+        'tableHeaders': _as_list(payload.get('tableHeaders')),
+        'tableRows': _as_rows(payload.get('tableRows')),
+        'modalitesTitle': _as_text(payload.get('modalitesTitle')),
+        'etape1': _as_text(payload.get('etape1')),
+        'etape2': _as_text(payload.get('etape2')),
+        'dossierTitle': _as_text(payload.get('dossierTitle')),
+        'dossierItems': _as_list(payload.get('dossierItems')),
+        'scoreTitle': _as_text(payload.get('scoreTitle')),
+        'scoreFormula': _as_text(payload.get('scoreFormula')),
+        'moyenneFormula': _as_text(payload.get('moyenneFormula')),
+        'scoreTableHeaders': _as_list(payload.get('scoreTableHeaders')),
+        'scoreTableRows': _as_rows(payload.get('scoreTableRows')),
+        'bnrRules': _as_list(payload.get('bnrRules')),
+        'bspRules': _as_list(payload.get('bspRules')),
+        'evaluationNotes': _as_list(payload.get('evaluationNotes')),
+        'updatedAt': _as_text(payload.get('updatedAt')) or timezone.now().isoformat(),
+    }
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def contenu_offre_inscription(request, offer_id):
+    config = get_object_or_404(ConfigurationAppel.objects.select_related('master'), master_id=offer_id, actif=True)
+
+    if request.method == 'GET':
+        contenu = config.contenu_offre_edite or None
+        if contenu:
+            contenu = {**contenu, 'offerId': offer_id}
+        return Response(
+            {
+                'offerId': offer_id,
+                'updatedAt': config.updated_at,
+                'content': contenu,
+            }
+        )
+
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    payload = request.data
+    if isinstance(payload, dict) and 'content' in payload:
+        payload = payload.get('content')
+
+    normalized = _normalize_offre_rich_content(payload, offer_id)
+    if not normalized:
+        return Response({'error': 'Contenu invalide'}, status=status.HTTP_400_BAD_REQUEST)
+
+    config.contenu_offre_edite = normalized
+    config.save()
+
+    return Response(
+        {
+            'offerId': offer_id,
+            'updatedAt': config.updated_at,
+            'content': normalized,
+        }
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_candidature(request):
@@ -484,20 +573,74 @@ def _safe_create_notification(user, titre, message, notif_type='info', dedup_key
 
 def _sync_system_notifications_for_user(user):
     today = timezone.now().date()
+    user_role = getattr(user, 'role', None)
+    is_commission_member = MembreCommission.objects.filter(
+        user=user,
+        actif=True,
+        commission__actif=True,
+    ).exists()
+    user_candidatures = Candidature.objects.filter(candidat=user).select_related('master')
+    is_candidate = user_role == 'candidat' or user_candidatures.exists()
 
-    if getattr(user, 'role', None) == 'candidat':
-        offres_ouvertes = Master.objects.filter(actif=True, date_limite_candidature__gte=today).count()
-        if offres_ouvertes > 0:
-            _safe_create_notification(
+    if is_candidate:
+        offres_ouvertes = (
+            ConfigurationAppel.objects.filter(
+                actif=True,
+                date_debut_visibilite__lte=today,
+                date_fin_visibilite__gte=today,
+                date_limite_preinscription__gte=today,
+            )
+            .select_related('master')
+            .order_by('date_limite_preinscription', 'master__nom')
+        )
+        if offres_ouvertes.exists():
+            masters_ouverts = ', '.join(config.master.nom for config in offres_ouvertes[:5])
+            if offres_ouvertes.count() > 5:
+                masters_ouverts += ' ...'
+
+            titre = f"📢 {offres_ouvertes.count()} préinscription(s) ouverte(s)"
+            message = (
+                f"Bonjour {user.get_full_name() or user.username},\n\n"
+                f"{offres_ouvertes.count()} appel(s) de préinscription sont actuellement ouverts.\n"
+                f"Masters concernés: {masters_ouverts}.\n\n"
+                "Connectez-vous au portail pour consulter les offres et déposer votre candidature.\n\n"
+                "Cordialement,\n"
+                "ISIMM Admission"
+            )
+            email_html = f"""
+            <html>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                <h2>Préinscription ouverte</h2>
+                <p>Bonjour <strong>{user.get_full_name() or user.username}</strong>,</p>
+                <p>{offres_ouvertes.count()} appel(s) de préinscription sont actuellement ouverts.</p>
+                <p><strong>Masters concernés:</strong> {masters_ouverts}</p>
+                <p>Connectez-vous au portail pour consulter les offres et déposer votre candidature.</p>
+                <hr/>
+                <p style="color: #999; font-size: 12px;">ISIMM Admission</p>
+              </body>
+            </html>
+            """
+            creer_notification_avec_email(
                 user=user,
-                titre='Préinscription ouverte',
-                message=f"{offres_ouvertes} appel(s) de préinscription sont actuellement ouverts.",
+                titre=titre,
+                message=message,
                 notif_type='info',
                 dedup_key=f"preinscription-open-{today.isoformat()}",
+                email_html=email_html,
             )
 
-        candidatures = Candidature.objects.filter(candidat=user).select_related('master')
-        for candidature in candidatures:
+        for candidature in user_candidatures:
+            _safe_create_notification(
+                user=user,
+                titre='Candidature créée',
+                message=(
+                    f"Votre candidature {candidature.numero} pour {candidature.master.nom} "
+                    "a été enregistrée."
+                ),
+                notif_type='success',
+                dedup_key=f"candidature-created-{candidature.id}",
+            )
+
             if candidature.statut == 'selectionne':
                 _safe_create_notification(
                     user=user,
@@ -518,10 +661,22 @@ def _sync_system_notifications_for_user(user):
                     dedup_key=f"status-{candidature.id}-preselectionne",
                 )
 
-    if getattr(user, 'role', None) in ['responsable_commission', 'commission', 'admin']:
+            if candidature.statut not in ['soumis']:
+                _safe_create_notification(
+                    user=user,
+                    titre='Mise à jour de candidature',
+                    message=(
+                        f"Le statut de votre candidature {candidature.numero} est actuellement "
+                        f"{candidature.get_statut_display()}."
+                    ),
+                    notif_type='info',
+                    dedup_key=f"status-current-{candidature.id}-{candidature.statut}",
+                )
+
+    if user_role in ['responsable_commission', 'commission', 'admin'] or is_commission_member:
         configs_qs = ConfigurationAppel.objects.filter(actif=True).select_related('master')
 
-        if getattr(user, 'role', None) in ['responsable_commission', 'commission']:
+        if user_role in ['responsable_commission', 'commission'] or is_commission_member:
             master_ids = list(
                 MembreCommission.objects.filter(user=user, actif=True, commission__actif=True).values_list(
                     'commission__master_id', flat=True
@@ -533,29 +688,55 @@ def _sync_system_notifications_for_user(user):
             if config.date_limite_depot_dossier:
                 jours_depot = (config.date_limite_depot_dossier - today).days
                 if jours_depot in [7, 3, 1, 0]:
-                    _safe_create_notification(
+                    message = (
+                        f"Master {config.master.nom}: deadline dépôt dossier dans {jours_depot} jour(s) "
+                        f"(date limite: {config.date_limite_depot_dossier})."
+                    )
+                    email_html = f"""
+                    <html>
+                      <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                        <h2>Deadline dépôt dossier proche</h2>
+                        <p>Bonjour {user.get_full_name() or user.username},</p>
+                        <p>{message}</p>
+                        <hr/>
+                        <p style="color: #999; font-size: 12px;">ISIMM Admission</p>
+                      </body>
+                    </html>
+                    """
+                    creer_notification_avec_email(
                         user=user,
                         titre='Deadline étude de dossier proche',
-                        message=(
-                            f"Master {config.master.nom}: deadline dépôt dossier dans {jours_depot} jour(s) "
-                            f"(date limite: {config.date_limite_depot_dossier})."
-                        ),
+                        message=message,
                         notif_type='warning',
                         dedup_key=f"deadline-depot-{config.master_id}-{config.date_limite_depot_dossier}",
+                        email_html=email_html,
                     )
 
             if config.date_limite_preinscription:
                 jours_preinscription = (config.date_limite_preinscription - today).days
                 if jours_preinscription in [7, 3, 1, 0]:
-                    _safe_create_notification(
+                    message = (
+                        f"Master {config.master.nom}: deadline préinscription dans {jours_preinscription} jour(s) "
+                        f"(date limite: {config.date_limite_preinscription})."
+                    )
+                    email_html = f"""
+                    <html>
+                      <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                        <h2>Deadline préinscription proche</h2>
+                        <p>Bonjour {user.get_full_name() or user.username},</p>
+                        <p>{message}</p>
+                        <hr/>
+                        <p style="color: #999; font-size: 12px;">ISIMM Admission</p>
+                      </body>
+                    </html>
+                    """
+                    creer_notification_avec_email(
                         user=user,
                         titre='Deadline préinscription proche',
-                        message=(
-                            f"Master {config.master.nom}: deadline préinscription dans {jours_preinscription} jour(s) "
-                            f"(date limite: {config.date_limite_preinscription})."
-                        ),
+                        message=message,
                         notif_type='warning',
                         dedup_key=f"deadline-preinscription-{config.master_id}-{config.date_limite_preinscription}",
+                        email_html=email_html,
                     )
 
 
@@ -2003,6 +2184,126 @@ def consulter_inscriptions_administratives(request):
         )
 
     return response
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rapprocher_inscriptions_excel(request):
+    if getattr(request.user, 'role', None) not in ['admin', 'commission', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    rows = request.data.get('rows') or []
+    source_filename = (request.data.get('source_filename') or '').strip()
+    master_id = request.data.get('master_id')
+
+    if not isinstance(rows, list):
+        return Response({'error': 'Le champ rows doit etre une liste.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    master = None
+    if master_id not in [None, '', 'all']:
+        try:
+            master = Master.objects.get(id=int(master_id))
+        except (ValueError, Master.DoesNotExist):
+            return Response({'error': 'Master invalide pour le rapprochement.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    candidatures_qs = Candidature.objects.select_related('master').filter(statut='inscrit')
+    if master is not None:
+        candidatures_qs = candidatures_qs.filter(master=master)
+
+    candidatures = list(candidatures_qs)
+    by_numero = {str(c.numero or '').strip(): c for c in candidatures if c.numero}
+    by_cin = {
+        str(c.candidat_cin or '').strip(): c
+        for c in candidatures
+        if getattr(c, 'candidat_cin', None)
+    }
+
+    results = []
+    for row in rows:
+        data = row if isinstance(row, dict) else {}
+
+        numero_candidature = str(
+            data.get('numero_candidature')
+            or data.get('Numéro candidature')
+            or data.get('numero')
+            or ''
+        ).strip()
+        cin = str(data.get('cin') or data.get('CIN') or '').strip()
+        numero_inscription = str(
+            data.get('numero_inscription')
+            or data.get('Numéro inscription')
+            or data.get('inscription')
+            or ''
+        ).strip()
+        nom_prenom = str(data.get('nom_prenom') or data.get('Nom prénom') or data.get('nom') or '').strip()
+        master_nom = str(data.get('master') or data.get('Master') or '').strip()
+        specialite = str(data.get('specialite') or data.get('Spécialité') or '').strip()
+
+        candidature = by_numero.get(numero_candidature) if numero_candidature else None
+        if candidature is None and cin:
+            candidature = by_cin.get(cin)
+
+        if candidature is None:
+            results.append(
+                {
+                    'numero_candidature': numero_candidature,
+                    'cin': cin,
+                    'numero_inscription': numero_inscription,
+                    'nom_prenom': nom_prenom,
+                    'master': master_nom,
+                    'specialite': specialite,
+                    'verification': 'absent',
+                    'details': 'Aucune candidature inscrite correspondante.',
+                }
+            )
+            continue
+
+        incoherences = []
+        if master_nom and candidature.master and master_nom != candidature.master.nom:
+            incoherences.append('Master non coherent')
+        if specialite and candidature.master and specialite != candidature.master.specialite:
+            incoherences.append('Specialite non coherente')
+        if nom_prenom and candidature.candidat and nom_prenom != candidature.candidat.get_full_name():
+            incoherences.append('Nom/prenom non coherent')
+
+        results.append(
+            {
+                'numero_candidature': numero_candidature or (candidature.numero or ''),
+                'cin': cin or str(getattr(candidature, 'candidat_cin', '') or ''),
+                'numero_inscription': numero_inscription,
+                'nom_prenom': nom_prenom or candidature.candidat.get_full_name(),
+                'master': master_nom or (candidature.master.nom if candidature.master else ''),
+                'specialite': specialite or (candidature.master.specialite if candidature.master else ''),
+                'verification': 'incoherent' if incoherences else 'valide',
+                'details': ', '.join(incoherences) if incoherences else 'Verification reussie',
+            }
+        )
+
+    audit = InscriptionRapprochementAudit.objects.create(
+        created_by=request.user,
+        master=master,
+        source_filename=source_filename,
+        total_rows=len(results),
+        valide_rows=sum(1 for row in results if row.get('verification') == 'valide'),
+        incoherent_rows=sum(1 for row in results if row.get('verification') == 'incoherent'),
+        absent_rows=sum(1 for row in results if row.get('verification') == 'absent'),
+        payload_rows=rows,
+        result_rows=results,
+    )
+
+    return Response(
+        {
+            'success': True,
+            'audit_id': audit.id,
+            'rows': results,
+            'summary': {
+                'total': audit.total_rows,
+                'valide': audit.valide_rows,
+                'incoherent': audit.incoherent_rows,
+                'absent': audit.absent_rows,
+            },
+        }
+    )
 
 
 @api_view(['GET'])

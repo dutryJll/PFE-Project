@@ -77,7 +77,7 @@ export class EditMasterComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/admin/dashboard'], { queryParams: { view: 'masters' } });
+    this.router.navigate(['/admin/dashboard'], { queryParams: { view: 'parcours-master' } });
   }
 
   loadMaster(): void {

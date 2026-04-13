@@ -1,0 +1,157 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram id="seq-user-only" name="Seq-Gestion-Utilisateur-Sprint1">
+    <mxGraphModel dx="2056" dy="1306" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tt2" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Diagramme de sequence detaille - Gestion des utilisateurs (Sprint 1)" vertex="1">
+          <mxGeometry height="30" width="860" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="uh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Administrateur" vertex="1">
+          <mxGeometry height="40" width="150" x="80" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="uh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Frontend Angular" vertex="1">
+          <mxGeometry height="40" width="170" x="320" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="uh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Auth API /api/auth/users/*" vertex="1">
+          <mxGeometry height="40" width="200" x="600" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="uh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="User Repository" vertex="1">
+          <mxGeometry height="40" width="160" x="920" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ul1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="120" as="sourcePoint" />
+            <mxPoint x="155" y="1360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ul2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="120" as="sourcePoint" />
+            <mxPoint x="405" y="1360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ul3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="120" as="sourcePoint" />
+            <mxPoint x="700" y="1360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ul4" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="120" as="sourcePoint" />
+            <mxPoint x="1000" y="1360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um1" edge="1" parent="1" style="endArrow=block;html=1;" value="1) Ouvrir ecran gestion utilisateurs">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="180" as="sourcePoint" />
+            <mxPoint x="405" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um2" edge="1" parent="1" style="endArrow=block;html=1;" value="2) GET /api/auth/users/">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="240" as="sourcePoint" />
+            <mxPoint x="700" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um3" edge="1" parent="1" style="endArrow=block;html=1;" value="3) Lire users">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="300" as="sourcePoint" />
+            <mxPoint x="1000" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um4" edge="1" parent="1" style="endArrow=open;dashed=1;html=1;" value="4) Retour liste">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="360" as="sourcePoint" />
+            <mxPoint x="700" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um5" edge="1" parent="1" style="endArrow=open;dashed=1;html=1;" value="5) 200 OK">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="420" as="sourcePoint" />
+            <mxPoint x="405" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um6" edge="1" parent="1" style="endArrow=block;html=1;" value="6) Cliquer Ajouter">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="500" as="sourcePoint" />
+            <mxPoint x="405" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um7" edge="1" parent="1" style="endArrow=block;html=1;" value="7) POST /api/auth/users/create/">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="560" as="sourcePoint" />
+            <mxPoint x="700" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uAlt" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#B85450;fillColor=none;dashed=1;" value="alt donnees invalides" vertex="1">
+          <mxGeometry height="110" width="550" x="270" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="um8" edge="1" parent="1" style="endArrow=block;html=1;strokeColor=#B85450;fontColor=#B85450;" value="8a) 400 Bad Request">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="660" as="sourcePoint" />
+            <mxPoint x="405" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uElse" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#82B366;fillColor=none;dashed=1;" value="else donnees valides" vertex="1">
+          <mxGeometry height="620" width="840" x="270" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="um9" edge="1" parent="1" style="endArrow=block;html=1;" value="8b) Inserer USER_CREDENTIAL">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="800" as="sourcePoint" />
+            <mxPoint x="1000" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um10" edge="1" parent="1" style="endArrow=open;dashed=1;html=1;" value="9) 201 Created">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="860" as="sourcePoint" />
+            <mxPoint x="405" y="860" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um11" edge="1" parent="1" style="endArrow=block;html=1;" value="10) Cliquer Modifier">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="940" as="sourcePoint" />
+            <mxPoint x="405" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um12" edge="1" parent="1" style="endArrow=block;html=1;" value="11) PUT /api/auth/users/{id}/">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="1000" as="sourcePoint" />
+            <mxPoint x="700" y="1000" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um13" edge="1" parent="1" style="endArrow=block;html=1;" value="12) Update user">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="1060" as="sourcePoint" />
+            <mxPoint x="1000" y="1060" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um14" edge="1" parent="1" style="endArrow=open;dashed=1;html=1;" value="13) 200 OK">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="1120" as="sourcePoint" />
+            <mxPoint x="405" y="1120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um15" edge="1" parent="1" style="endArrow=block;html=1;" value="14) Cliquer Supprimer + confirmer">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="155" y="1200" as="sourcePoint" />
+            <mxPoint x="405" y="1200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um16" edge="1" parent="1" style="endArrow=block;html=1;" value="15) DELETE /api/auth/users/{id}/delete/">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="1260" as="sourcePoint" />
+            <mxPoint x="700" y="1260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="um17" edge="1" parent="1" style="endArrow=block;html=1;" value="16) Supprimer compte">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="1320" as="sourcePoint" />
+            <mxPoint x="1000" y="1320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

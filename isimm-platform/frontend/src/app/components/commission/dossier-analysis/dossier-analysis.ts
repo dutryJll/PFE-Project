@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
 interface OCRAnomaly {
@@ -37,6 +37,12 @@ interface Candidature {
   score?: number;
 }
 
+interface AuditStep {
+  title: string;
+  description: string;
+  state: 'done' | 'current' | 'pending';
+}
+
 @Component({
   selector: 'app-dossier-analysis',
   standalone: true,
@@ -46,6 +52,13 @@ interface Candidature {
 })
 export class DossierAnalysisComponent implements OnInit {
   private readonly apiBaseUrl = 'http://localhost:8003/api/candidatures';
+  private preselectedCandidatureId: number | null = null;
+  readonly requiredDocuments = [
+    { key: 'releve_notes', label: 'Relevés de notes' },
+    { key: 'diplome', label: 'Diplôme / Attestation de réussite' },
+    { key: 'cin_scan', label: 'Copie CIN / Passeport' },
+    { key: 'photo_identite', label: "Photo d'identité" },
+  ];
 
   private buildAuthOptions(): { headers: Record<string, string> } | {} {
     const token = localStorage.getItem('access_token');
@@ -88,10 +101,14 @@ export class DossierAnalysisComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
+    const rawId = this.route.snapshot.queryParamMap.get('candidatureId');
+    const parsedId = Number(rawId);
+    this.preselectedCandidatureId = Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
     this.loadCandidatures();
   }
 
@@ -105,6 +122,16 @@ export class DossierAnalysisComponent implements OnInit {
 
   get totalDossiers(): number {
     return this.candidaturesList.length;
+  }
+
+  get hasDirectAccess(): boolean {
+    return this.preselectedCandidatureId !== null;
+  }
+
+  get directAccessLabel(): string {
+    return this.preselectedCandidatureId
+      ? `Accès direct au dossier #${this.preselectedCandidatureId}`
+      : '';
   }
 
   get filteredCandidatures(): Candidature[] {
@@ -146,6 +173,166 @@ export class DossierAnalysisComponent implements OnInit {
     return this.ocrDiagnostic?.anomalies?.length || 0;
   }
 
+  get selectedDocumentsCount(): number {
+    return this.selectedDocumentKeys.length;
+  }
+
+  get documentCompletionRate(): number {
+    if (this.requiredDocuments.length === 0) {
+      return 0;
+    }
+
+    return Math.round((this.selectedDocumentsCount / this.requiredDocuments.length) * 100);
+  }
+
+  get documentStatusLabel(): string {
+    if (this.missingDocumentsFromDiagnostic.length > 0) {
+      return 'Pièces manquantes détectées';
+    }
+
+    if (this.documentCompletionRate >= 100) {
+      return 'Dossier documentaire complet';
+    }
+
+    if (this.selectedDocumentsCount > 0) {
+      return 'Dossier documentaire en complétion';
+    }
+
+    return 'En attente de pièces';
+  }
+
+  get documentStatusTone(): 'good' | 'warning' | 'danger' {
+    if (this.missingDocumentsFromDiagnostic.length > 0) {
+      return 'danger';
+    }
+
+    if (this.documentCompletionRate >= 100) {
+      return 'good';
+    }
+
+    return 'warning';
+  }
+
+  get globalComplianceScore(): number {
+    const documentScore = this.documentCompletionRate;
+    const ocrScore = this.ocrDiagnostic?.confiance ?? documentScore;
+    const anomalyPenalty = Math.min(24, this.lastAnomalyCount * 4);
+    const validationBonus = this.ocrDiagnostic?.validation_auto ? 6 : 0;
+
+    return Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(documentScore * 0.45 + ocrScore * 0.45 + validationBonus - anomalyPenalty),
+      ),
+    );
+  }
+
+  get globalComplianceLabel(): string {
+    if (this.globalComplianceScore >= 85) {
+      return 'Conformité excellente';
+    }
+
+    if (this.globalComplianceScore >= 70) {
+      return 'Conformité solide';
+    }
+
+    if (this.globalComplianceScore >= 50) {
+      return 'Conformité sous surveillance';
+    }
+
+    return 'Conformité fragile';
+  }
+
+  get globalComplianceTone(): 'good' | 'warning' | 'danger' {
+    if (this.globalComplianceScore >= 85) {
+      return 'good';
+    }
+
+    if (this.globalComplianceScore >= 50) {
+      return 'warning';
+    }
+
+    return 'danger';
+  }
+
+  get auditTimeline(): AuditStep[] {
+    const hasSelection = !!this.selectedCandidature;
+    const hasDiagnostic = !!this.ocrDiagnostic;
+
+    return [
+      {
+        title: 'Dossier reçu',
+        description: 'Entrée en file de contrôle de la commission.',
+        state: hasSelection ? 'done' : 'pending',
+      },
+      {
+        title: 'Contrôle documentaire',
+        description:
+          this.selectedDocumentsCount > 0
+            ? `${this.selectedDocumentsCount}/${this.requiredDocuments.length} pièces indexées.`
+            : 'Aucune pièce encore pointée.',
+        state: hasSelection ? (this.documentCompletionRate >= 100 ? 'done' : 'current') : 'pending',
+      },
+      {
+        title: 'Audit OCR / IA',
+        description: hasDiagnostic
+          ? `Confiance ${this.ocrDiagnostic?.confiance ?? 0} % sur la cohérence des pièces.`
+          : 'En attente du lancement de l analyse OCR.',
+        state: hasDiagnostic ? 'done' : hasSelection ? 'current' : 'pending',
+      },
+      {
+        title: 'Décision commission',
+        description: hasDiagnostic
+          ? this.ocrDiagnostic?.validation_auto
+            ? 'Validation automatique possible.'
+            : 'Révision manuelle recommandée.'
+          : 'Attente du diagnostic complet.',
+        state: hasDiagnostic
+          ? this.ocrDiagnostic?.validation_auto
+            ? 'done'
+            : 'current'
+          : 'pending',
+      },
+    ];
+  }
+
+  get selectedDocumentKeys(): string[] {
+    return (this.formulaireSimulation.documents || []).map((doc) => doc.toLowerCase());
+  }
+
+  get missingDocumentsFromDiagnostic(): string[] {
+    if (!this.ocrDiagnostic?.anomalies?.length) {
+      return [];
+    }
+
+    const missingDocs = this.ocrDiagnostic.anomalies
+      .filter((anomaly) => anomaly.type === 'documents_manquants' && anomaly.manquants)
+      .flatMap((anomaly) => anomaly.manquants || [])
+      .map((doc) => String(doc || '').toLowerCase())
+      .filter(Boolean);
+
+    return Array.from(new Set(missingDocs));
+  }
+
+  isDocumentChecked(documentKey: string): boolean {
+    return this.selectedDocumentKeys.includes(documentKey.toLowerCase());
+  }
+
+  isDocumentMissing(documentKey: string): boolean {
+    return this.missingDocumentsFromDiagnostic.includes(documentKey.toLowerCase());
+  }
+
+  toggleDocument(documentKey: string, checked: boolean): void {
+    const current = new Set(this.formulaireSimulation.documents || []);
+    if (checked) {
+      current.add(documentKey);
+    } else {
+      current.delete(documentKey);
+    }
+    this.formulaireSimulation.documents = Array.from(current);
+  }
+
   /**
    * Charge la liste des candidatures avec statut 'dossier_depose'
    * @description Récupère les dossiers en attente d'analyse OCR
@@ -166,6 +353,19 @@ export class DossierAnalysisComponent implements OnInit {
               : [];
           this.candidaturesList = list.filter((c: Candidature) => c.statut === 'dossier_depose');
           this.isLoading = false;
+
+          if (this.preselectedCandidatureId) {
+            const preselected = this.candidaturesList.find(
+              (c) => c.id === this.preselectedCandidatureId,
+            );
+            if (preselected) {
+              this.selectCandidature(preselected);
+              this.successMessage = "Candidature présélectionnée: prête pour l'analyse OCR.";
+            } else {
+              this.selectFallbackCandidature(this.preselectedCandidatureId);
+              this.successMessage = `Candidature #${this.preselectedCandidatureId} ouverte en mode analyse visuelle.`;
+            }
+          }
 
           if (this.selectedCandidature) {
             const stillExists = this.candidaturesList.find(
@@ -189,7 +389,7 @@ export class DossierAnalysisComponent implements OnInit {
               'Session expirée ou invalide (401). Reconnectez-vous puis rechargez la page.';
           } else if (err?.status === 403) {
             this.errorMessage =
-              'Acces refuse (403). Verifiez votre session et reconnectez-vous en compte commission.';
+              'Accès refusé (403). Vérifiez votre session et reconnectez-vous avec un compte commission.';
           } else {
             this.errorMessage = 'Erreur lors du chargement des dossiers: ' + err.message;
           }
@@ -218,10 +418,25 @@ export class DossierAnalysisComponent implements OnInit {
     this.formulaireSimulation = {
       cin: this.selectedCandidature?.id.toString() || '',
       moyenne_generale: '',
-      documents: ['releve_notes', 'diplome'],
+      documents: ['releve_notes', 'diplome', 'cin_scan', 'photo_identite'],
       declared_lines: [],
       extracted_lines: [],
     };
+  }
+
+  selectFallbackCandidature(candidatureId: number): void {
+    this.selectedCandidature = {
+      id: candidatureId,
+      candidat_nom: `Candidature #${candidatureId}`,
+      email: 'Données non encore chargées',
+      master_nom: 'Dossier commission',
+      statut: 'consultation_directe',
+      date_depot_dossier: new Date().toISOString(),
+      score: 0,
+    };
+    this.ocrDiagnostic = null;
+    this.errorMessage = '';
+    this.initFormulaireSynthese();
   }
 
   /**
@@ -257,8 +472,8 @@ export class DossierAnalysisComponent implements OnInit {
             this.successMessage =
               'Analyse OCR complétée: ' +
               (response.ocr_diagnostic.decision === 'auto_valide'
-                ? 'Dossier AUTO-VALIDÉ ✅'
-                : 'Révision manuelle requise ⚠️');
+                ? 'Dossier auto-validé.'
+                : 'Révision manuelle requise.');
           }
         },
         error: (err) => {
@@ -297,11 +512,11 @@ export class DossierAnalysisComponent implements OnInit {
    */
   formatAnomalyType(type: string): string {
     const typeMap: Record<string, string> = {
-      cin_mismatch: '❌ Incoherence CIN',
-      moyenne_mismatch: '❌ Incoherence moyenne',
-      moyenne_format: '⚠️ Format moyenne incorrect',
-      documents_manquants: '❌ Documents manquants',
-      line_mismatch: '⚠️ Divergence ligne',
+      cin_mismatch: 'Incohérence CIN',
+      moyenne_mismatch: 'Incohérence de moyenne',
+      moyenne_format: 'Format de moyenne incorrect',
+      documents_manquants: 'Documents manquants',
+      line_mismatch: 'Divergence de ligne',
     };
     return typeMap[type] || type;
   }
@@ -327,7 +542,7 @@ export class DossierAnalysisComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMessage = 'Dossier marqué comme validé!';
+          this.successMessage = 'Dossier marqué comme validé.';
           setTimeout(() => this.loadCandidatures(), 1500);
         },
         error: (err) => {
@@ -362,7 +577,7 @@ export class DossierAnalysisComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMessage = 'Dossier marqué pour examen commission!';
+          this.successMessage = 'Dossier marqué pour examen par la commission.';
           setTimeout(() => this.loadCandidatures(), 1500);
         },
         error: (err) => {
@@ -371,7 +586,7 @@ export class DossierAnalysisComponent implements OnInit {
             this.errorMessage =
               'Session expirée pendant la révision. Reconnectez-vous puis réessayez.';
           } else {
-            this.errorMessage = 'Erreur revision dossier: ' + err.message;
+            this.errorMessage = 'Erreur de révision du dossier: ' + err.message;
           }
         },
       });
@@ -412,7 +627,7 @@ export class DossierAnalysisComponent implements OnInit {
     this.formulaireSimulation = {
       cin: safeCin,
       moyenne_generale: '15.20',
-      documents: ['releve_notes', 'diplome'],
+      documents: ['releve_notes', 'diplome', 'cin_scan', 'photo_identite'],
       declared_lines: ['Algo: 15', 'BD: 14', 'Moyenne S5: 15.2'],
       extracted_lines: ['Algo: 15', 'BD: 14', 'Moyenne S5: 15.2'],
     };
@@ -423,7 +638,7 @@ export class DossierAnalysisComponent implements OnInit {
     this.formulaireSimulation = {
       cin: safeCin,
       moyenne_generale: '11.00',
-      documents: ['diplome'],
+      documents: ['diplome', 'cin_scan'],
       declared_lines: ['Algo: 15', 'BD: 14', 'Moyenne S5: 15.2'],
       extracted_lines: ['Algo: 10', 'BD: 8', 'Moyenne S5: 11.0'],
     };

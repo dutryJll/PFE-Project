@@ -16,8 +16,16 @@ export class ToastService {
   readonly message$ = this.messageSubject.asObservable();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
+  private normalizeText(text: string): string {
+    return String(text ?? '')
+      .replace(/[✅❌⚠️ℹ️]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   show(text: string, type: ToastType = 'info', durationMs: number = 3500): void {
-    this.messageSubject.next({ text, type });
+    const normalized = this.normalizeText(text);
+    this.messageSubject.next({ text: normalized || 'Notification', type });
 
     if (this.timer) {
       clearTimeout(this.timer);
