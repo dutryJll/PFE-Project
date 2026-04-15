@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
@@ -18,7 +19,7 @@ interface NotificationItem {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -26,9 +27,15 @@ export class DashboardComponent implements OnInit {
   currentUser: any = null;
   userProfile: any = null;
   errorMessage: string = '';
+  currentDate: Date = new Date();
   currentView: 'dashboard' | 'notifications' = 'dashboard';
   notificationsCandidat: NotificationItem[] = [];
   notificationsNonLues = 0;
+  filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationTriRapide: 'recent' | 'critique' = 'recent';
+  filtreNotificationDateDebut: string = '';
+  filtreNotificationDateFin: string = '';
+  filtreNotificationRecherche: string = '';
 
   constructor(
     private authService: AuthService,
@@ -145,7 +152,114 @@ export class DashboardComponent implements OnInit {
   }
 
   getNotificationsFiltrees(): NotificationItem[] {
-    return this.notificationsCandidat;
+    const search = this.filtreNotificationRecherche.trim().toLowerCase();
+    const severity = (notification: NotificationItem): number => {
+      if (notification.type === 'danger') {
+        return 3;
+      }
+      if (notification.type === 'warning') {
+        return 2;
+      }
+      if (notification.type === 'info') {
+        return 1;
+      }
+      return 0;
+    };
+
+    const filtered = this.notificationsCandidat.filter((notification) => {
+      if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
+        return false;
+      }
+
+      const notificationDate = new Date(notification.date);
+
+      if (this.filtreNotificationDateDebut) {
+        const dateDebut = new Date(`${this.filtreNotificationDateDebut}T00:00:00`);
+        if (notificationDate < dateDebut) {
+          return false;
+        }
+      }
+
+      if (this.filtreNotificationDateFin) {
+        const dateFin = new Date(`${this.filtreNotificationDateFin}T23:59:59`);
+        if (notificationDate > dateFin) {
+          return false;
+        }
+      }
+
+      if (search) {
+        const content = `${notification.titre} ${notification.message}`.toLowerCase();
+        if (!content.includes(search)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (this.filtreNotificationTriRapide === 'critique') {
+      return [...filtered].sort((a, b) => {
+        const bySeverity = severity(b) - severity(a);
+        if (bySeverity !== 0) {
+          return bySeverity;
+        }
+
+        if (a.lue !== b.lue) {
+          return Number(a.lue) - Number(b.lue);
+        }
+
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    }
+
+    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  reinitialiserFiltresNotifications(): void {
+    this.filtreNotificationType = '';
+    this.filtreNotificationTriRapide = 'recent';
+    this.filtreNotificationDateDebut = '';
+    this.filtreNotificationDateFin = '';
+    this.filtreNotificationRecherche = '';
+  }
+
+  get notificationsTotalCount(): number {
+    return this.notificationsCandidat.length;
+  }
+
+  get notificationsTodayCount(): number {
+    const today = new Date();
+    return this.notificationsCandidat.filter((notification) => {
+      const date = new Date(notification.date);
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    }).length;
+  }
+
+  get notificationsCriticalCount(): number {
+    return this.notificationsCandidat.filter(
+      (notification) => notification.type === 'warning' || notification.type === 'danger',
+    ).length;
+  }
+
+  get notificationsFilteredUnreadCount(): number {
+    return this.getNotificationsFiltrees().filter((notification) => !notification.lue).length;
+  }
+
+  getNotificationTypeLabel(type: NotificationItem['type']): string {
+    if (type === 'success') {
+      return 'Succes';
+    }
+    if (type === 'warning') {
+      return 'Avertissement';
+    }
+    if (type === 'danger') {
+      return 'Critique';
+    }
+    return 'Information';
   }
 
   getInitials(): string {

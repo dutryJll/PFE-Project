@@ -245,10 +245,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     session2Annee: 'Principale' | 'control' | '';
     moyenne3Annee: string;
     session3Annee: 'Principale' | 'control' | '';
+    natureCandidature: 'Étudiant ISIMM' | 'Étudiant Externe' | '';
     moyenne4Annee: string;
     session4Annee: 'Principale' | 'control' | '';
     nombreRedoublement: string;
-    fichierNom: string;
+    moyenneIng1: string;
+    sessionReussiteIng1: 'Principale' | 'control' | '';
+    nombreRedoublementIng1: string;
+    confirmationDeclaration: boolean;
+    confirmationText: string;
   } = {
     nom: '',
     prenom: '',
@@ -273,10 +278,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     session2Annee: '',
     moyenne3Annee: '',
     session3Annee: '',
+    natureCandidature: '',
     moyenne4Annee: '',
     session4Annee: '',
     nombreRedoublement: '',
-    fichierNom: '',
+    moyenneIng1: '',
+    sessionReussiteIng1: '',
+    nombreRedoublementIng1: '',
+    confirmationDeclaration: false,
+    confirmationText: '',
   };
 
   private countdownNow: number = Date.now();
@@ -429,8 +439,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   notificationsCandidat: NotificationItem[] = [];
   notificationsErreur: string = '';
   filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationTriRapide: 'recent' | 'critique' = 'recent';
   filtreNotificationDateDebut: string = '';
   filtreNotificationDateFin: string = '';
+  filtreNotificationRecherche: string = '';
 
   documentsRequis: Document[] = [
     {
@@ -1162,7 +1174,21 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   getNotificationsFiltrees(): NotificationItem[] {
-    return this.notificationsCandidat.filter((notification) => {
+    const search = this.filtreNotificationRecherche.trim().toLowerCase();
+    const severity = (notification: NotificationItem): number => {
+      if (notification.type === 'danger') {
+        return 3;
+      }
+      if (notification.type === 'warning') {
+        return 2;
+      }
+      if (notification.type === 'info') {
+        return 1;
+      }
+      return 0;
+    };
+
+    const filtered = this.notificationsCandidat.filter((notification) => {
       if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
         return false;
       }
@@ -1183,14 +1209,79 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         }
       }
 
+      if (search) {
+        const content = `${notification.titre} ${notification.message}`.toLowerCase();
+        if (!content.includes(search)) {
+          return false;
+        }
+      }
+
       return true;
     });
+
+    if (this.filtreNotificationTriRapide === 'critique') {
+      return [...filtered].sort((a, b) => {
+        const bySeverity = severity(b) - severity(a);
+        if (bySeverity !== 0) {
+          return bySeverity;
+        }
+
+        if (a.lue !== b.lue) {
+          return Number(a.lue) - Number(b.lue);
+        }
+
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    }
+
+    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   reinitialiserFiltresNotifications(): void {
     this.filtreNotificationType = '';
+    this.filtreNotificationTriRapide = 'recent';
     this.filtreNotificationDateDebut = '';
     this.filtreNotificationDateFin = '';
+    this.filtreNotificationRecherche = '';
+  }
+
+  get notificationsTotalCount(): number {
+    return this.notificationsCandidat.length;
+  }
+
+  get notificationsTodayCount(): number {
+    const today = new Date();
+    return this.notificationsCandidat.filter((notification) => {
+      const date = new Date(notification.date);
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    }).length;
+  }
+
+  get notificationsCriticalCount(): number {
+    return this.notificationsCandidat.filter(
+      (notification) => notification.type === 'warning' || notification.type === 'danger',
+    ).length;
+  }
+
+  get notificationsFilteredUnreadCount(): number {
+    return this.getNotificationsFiltrees().filter((notification) => !notification.lue).length;
+  }
+
+  getNotificationTypeLabel(type: NotificationItem['type']): string {
+    if (type === 'success') {
+      return 'Succes';
+    }
+    if (type === 'warning') {
+      return 'Avertissement';
+    }
+    if (type === 'danger') {
+      return 'Critique';
+    }
+    return 'Information';
   }
 
   // ✅ AJOUT - Méthode chargerHistorique
@@ -1341,10 +1432,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       session2Annee: '',
       moyenne3Annee: '',
       session3Annee: '',
+      natureCandidature: '',
       moyenne4Annee: '',
       session4Annee: '',
       nombreRedoublement: '',
-      fichierNom: '',
+      moyenneIng1: '',
+      sessionReussiteIng1: '',
+      nombreRedoublementIng1: '',
+      confirmationDeclaration: false,
+      confirmationText: '',
     };
     this.showSubmissionWizardModal = true;
   }
@@ -1390,6 +1486,22 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
   }
 
+  isWizardMrglOffer(): boolean {
+    return this.wizardOffre?.titre === 'Mastère Recherche en Génie logiciel(MRGL)';
+  }
+
+  isWizardMrmiOffer(): boolean {
+    return this.wizardOffre?.titre === 'Mastère Recherche en micro-électronique et instrumentation';
+  }
+
+  isWizardMrmiIng1EquivalentSelected(): boolean {
+    return (
+      this.isWizardMrmiOffer() &&
+      this.wizardData.specialiteDiplome ===
+        'Reussite en 1ere annee du cycle ingenieur (Electronique/Instrumentation) ou equivalent'
+    );
+  }
+
   private isWizardStepValid(step: number): boolean {
     if (step === 1) {
       return [
@@ -1404,6 +1516,62 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     if (step === 2) {
+      if (this.isWizardMrglOffer()) {
+        return [
+          this.wizardData.specialiteBac,
+          this.wizardData.anneeBac,
+          this.wizardData.moyenneBacPrincipale,
+          this.wizardData.noteMathBac,
+          this.wizardData.noteFrancaisBac,
+          this.wizardData.noteAnglaisBac,
+          this.wizardData.certificationB2,
+          this.wizardData.specialiteDiplome,
+          this.wizardData.anneeObtentionDiplome,
+          this.wizardData.natureDiplome,
+          this.wizardData.moyenne1Annee,
+          this.wizardData.session1Annee,
+          this.wizardData.moyenne2Annee,
+          this.wizardData.session2Annee,
+          this.wizardData.moyenne3Annee,
+          this.wizardData.session3Annee,
+          this.wizardData.natureCandidature,
+          this.wizardData.nombreRedoublement,
+        ].every((value) => !!String(value || '').trim());
+      }
+
+      if (this.isWizardMrmiOffer()) {
+        const baseMrmiValid = [
+          this.wizardData.specialiteBac,
+          this.wizardData.anneeBac,
+          this.wizardData.moyenneBacPrincipale,
+          this.wizardData.specialiteDiplome,
+          this.wizardData.anneeObtentionDiplome,
+          this.wizardData.natureDiplome,
+          this.wizardData.moyenne1Annee,
+          this.wizardData.session1Annee,
+          this.wizardData.moyenne2Annee,
+          this.wizardData.session2Annee,
+          this.wizardData.moyenne3Annee,
+          this.wizardData.session3Annee,
+          this.wizardData.natureCandidature,
+          this.wizardData.nombreRedoublement,
+        ].every((value) => !!String(value || '').trim());
+
+        if (!baseMrmiValid) {
+          return false;
+        }
+
+        if (this.isWizardMrmiIng1EquivalentSelected()) {
+          return [
+            this.wizardData.moyenneIng1,
+            this.wizardData.sessionReussiteIng1,
+            this.wizardData.nombreRedoublementIng1,
+          ].every((value) => !!String(value || '').trim());
+        }
+
+        return true;
+      }
+
       return [
         this.wizardData.specialiteBac,
         this.wizardData.anneeBac,
@@ -1422,26 +1590,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.moyenne3Annee,
         this.wizardData.session3Annee,
         this.wizardData.nombreRedoublement,
-        this.wizardData.fichierNom,
       ].every((value) => !!String(value || '').trim());
     }
 
     if (step === 3) {
-      return true;
+      // Check if confirmation declaration is checked AND confirmation text is provided
+      return (
+        this.wizardData.confirmationDeclaration === true &&
+        !!String(this.wizardData.confirmationText || '').trim()
+      );
     }
 
     return true;
-  }
-
-  onWizardFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-
-    if (!file) {
-      return;
-    }
-
-    this.wizardData.fichierNom = file.name;
   }
 
   submitWizardCandidature(): void {

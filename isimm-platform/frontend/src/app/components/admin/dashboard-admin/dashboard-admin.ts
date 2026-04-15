@@ -53,6 +53,17 @@ interface OffreIngenieur {
   backend_id?: number;
 }
 
+interface OffreResponsableSync {
+  id: number;
+  titre: string;
+  type: 'master' | 'cycle_ingenieur';
+  specialite: string;
+  places: number;
+  date_limite: string;
+  statut: 'ouvert' | 'ferme';
+  est_cache?: boolean;
+}
+
 interface ReglementConcoursIngenieur {
   metadata?: any;
   [key: string]: any;
@@ -168,8 +179,10 @@ export class DashboardAdminComponent implements OnInit {
   notificationsCandidat: NotificationItem[] = [];
   notificationsNonLues: number = 0;
   filtreNotificationType: '' | 'info' | 'success' | 'warning' | 'danger' = '';
+  filtreNotificationTriRapide: 'recent' | 'critique' = 'recent';
   filtreNotificationDateDebut: string = '';
   filtreNotificationDateFin: string = '';
+  filtreNotificationRecherche: string = '';
 
   // Listes
   utilisateursList: Utilisateur[] = [];
@@ -183,6 +196,10 @@ export class DashboardAdminComponent implements OnInit {
   offresExportFormat: ExportFormat = 'csv';
   mastersList: Master[] = [];
   offresIngenieurList: OffreIngenieur[] = [];
+  offresResponsableSync: OffreResponsableSync[] = [];
+  isLoadingOffresResponsableSync: boolean = false;
+  offresResponsableSyncMessage: string = '';
+  private offresResponsableSyncFromApi: boolean = false;
   reglementReference: ReglementConcoursIngenieur | null = null;
   chapitresReglement: Array<{ key: string; label: string; value: any }> = [];
   referentielMasters: ReferentielMasters | null = null;
@@ -335,9 +352,9 @@ export class DashboardAdminComponent implements OnInit {
     this.loadStats();
     this.loadUtilisateurs();
     this.loadMasters();
-    this.loadReferentielMasters();
     this.loadCandidatures();
     this.loadOffresIngenieur();
+    this.loadOffresResponsableSync();
     this.loadLogs();
     this.loadActionRoleMatrix();
     this.loadActionPermissions();
@@ -419,7 +436,21 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   getNotificationsFiltrees(): NotificationItem[] {
-    return this.notificationsCandidat.filter((notification) => {
+    const search = this.filtreNotificationRecherche.trim().toLowerCase();
+    const severity = (notification: NotificationItem): number => {
+      if (notification.type === 'danger') {
+        return 3;
+      }
+      if (notification.type === 'warning') {
+        return 2;
+      }
+      if (notification.type === 'info') {
+        return 1;
+      }
+      return 0;
+    };
+
+    const filtered = this.notificationsCandidat.filter((notification) => {
       if (this.filtreNotificationType && notification.type !== this.filtreNotificationType) {
         return false;
       }
@@ -440,14 +471,79 @@ export class DashboardAdminComponent implements OnInit {
         }
       }
 
+      if (search) {
+        const content = `${notification.titre} ${notification.message}`.toLowerCase();
+        if (!content.includes(search)) {
+          return false;
+        }
+      }
+
       return true;
     });
+
+    if (this.filtreNotificationTriRapide === 'critique') {
+      return [...filtered].sort((a, b) => {
+        const bySeverity = severity(b) - severity(a);
+        if (bySeverity !== 0) {
+          return bySeverity;
+        }
+
+        if (a.lue !== b.lue) {
+          return Number(a.lue) - Number(b.lue);
+        }
+
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    }
+
+    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   reinitialiserFiltresNotifications(): void {
     this.filtreNotificationType = '';
+    this.filtreNotificationTriRapide = 'recent';
     this.filtreNotificationDateDebut = '';
     this.filtreNotificationDateFin = '';
+    this.filtreNotificationRecherche = '';
+  }
+
+  get notificationsTotalCount(): number {
+    return this.notificationsCandidat.length;
+  }
+
+  get notificationsTodayCount(): number {
+    const today = new Date();
+    return this.notificationsCandidat.filter((notification) => {
+      const date = new Date(notification.date);
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    }).length;
+  }
+
+  get notificationsCriticalCount(): number {
+    return this.notificationsCandidat.filter(
+      (notification) => notification.type === 'warning' || notification.type === 'danger',
+    ).length;
+  }
+
+  get notificationsFilteredUnreadCount(): number {
+    return this.getNotificationsFiltrees().filter((notification) => !notification.lue).length;
+  }
+
+  getNotificationTypeLabel(type: NotificationItem['type']): string {
+    if (type === 'success') {
+      return 'Succes';
+    }
+    if (type === 'warning') {
+      return 'Avertissement';
+    }
+    if (type === 'danger') {
+      return 'Critique';
+    }
+    return 'Information';
   }
 
   private loadActionPermissions(): void {
@@ -723,6 +819,10 @@ export class DashboardAdminComponent implements OnInit {
           statut: m.statut === 'ferme' ? 'ferme' : 'ouvert',
           specialite: m.specialite || '',
         }));
+
+        if (!this.offresResponsableSyncFromApi) {
+          this.rebuildOffresResponsableSyncFromAdminLists();
+        }
       },
       error: (error) => {
         console.error('Erreur chargement masters:', error);
@@ -738,8 +838,81 @@ export class DashboardAdminComponent implements OnInit {
             specialite: 'Informatique',
           },
         ];
+
+        if (!this.offresResponsableSyncFromApi) {
+          this.rebuildOffresResponsableSyncFromAdminLists();
+        }
       },
     });
+  }
+
+  loadOffresResponsableSync(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.isLoadingOffresResponsableSync = true;
+    this.offresResponsableSyncMessage = '';
+
+    this.http
+      .get<any[]>('http://localhost:8003/api/candidatures/offres-inscription-responsable/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (offres) => {
+          this.offresResponsableSyncFromApi = true;
+          this.offresResponsableSync = (offres || []).map((offre: any) => ({
+            id: Number(offre.id),
+            titre: offre.titre || '',
+            type: offre.type === 'cycle_ingenieur' ? 'cycle_ingenieur' : 'master',
+            specialite: offre.specialite || '',
+            places: Number(offre.places ?? 0),
+            date_limite: offre.date_limite || '',
+            statut: offre.statut === 'ferme' ? 'ferme' : 'ouvert',
+            est_cache: !!offre.est_cache,
+          }));
+          this.isLoadingOffresResponsableSync = false;
+        },
+        error: (error) => {
+          console.error('Erreur chargement offres responsable sync:', error);
+          this.offresResponsableSyncFromApi = false;
+          this.offresResponsableSyncMessage =
+            'API responsable indisponible: aperçu généré depuis les tableaux admin.';
+          this.rebuildOffresResponsableSyncFromAdminLists();
+          this.isLoadingOffresResponsableSync = false;
+        },
+      });
+  }
+
+  private rebuildOffresResponsableSyncFromAdminLists(): void {
+    const mastersRows: OffreResponsableSync[] = this.mastersList.map((master) => ({
+      id: Number(master.id),
+      titre: master.nom,
+      type: 'master',
+      specialite: master.specialite,
+      places: Number(master.places ?? 0),
+      date_limite: master.date_limite || '',
+      statut: master.statut === 'ferme' ? 'ferme' : 'ouvert',
+      est_cache: false,
+    }));
+
+    const ingenieurRows: OffreResponsableSync[] = this.offresIngenieurList.map((offre) => ({
+      id: Number(offre.id),
+      titre: offre.titre,
+      type: 'cycle_ingenieur',
+      specialite: offre.specialite,
+      places: Number(offre.places ?? 0),
+      date_limite: offre.date_limite || '',
+      statut: offre.statut === 'ferme' ? 'ferme' : 'ouvert',
+      est_cache: false,
+    }));
+
+    this.offresResponsableSync = [...mastersRows, ...ingenieurRows];
+  }
+
+  getOffresResponsableSyncByType(type: 'master' | 'cycle_ingenieur'): OffreResponsableSync[] {
+    return this.offresResponsableSync.filter((offre) => offre.type === type);
   }
 
   voirMaster(master: Master): void {
@@ -1451,6 +1624,10 @@ export class DashboardAdminComponent implements OnInit {
             description: c.description || '',
           }));
 
+          if (!this.offresResponsableSyncFromApi) {
+            this.rebuildOffresResponsableSyncFromAdminLists();
+          }
+
           if (this.offresIngenieurList.length > 0 && !this.selectedConcoursIdForReglement) {
             this.selectedConcoursIdForReglement =
               this.offresIngenieurList[0].backend_id || this.offresIngenieurList[0].id;
@@ -1470,6 +1647,10 @@ export class DashboardAdminComponent implements OnInit {
               description: 'Concours national pour les titulaires de licence en informatique.',
             },
           ];
+
+          if (!this.offresResponsableSyncFromApi) {
+            this.rebuildOffresResponsableSyncFromAdminLists();
+          }
           if (!this.selectedConcoursIdForReglement) {
             this.selectedConcoursIdForReglement = this.offresIngenieurList[0].id;
           }
@@ -1867,6 +2048,42 @@ export class DashboardAdminComponent implements OnInit {
           },
         });
     }
+  }
+
+  toggleStatutMaster(master: Master): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.showAlertMessage('❌ Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    const nextStatut = master.statut === 'ouvert' ? 'ferme' : 'ouvert';
+    const payload = {
+      nom: master.nom,
+      type_master: master.type,
+      description: master.description,
+      specialite: master.specialite,
+      places_disponibles: master.places,
+      date_limite_candidature: master.date_limite,
+      actif: nextStatut === 'ouvert',
+      annee_universitaire: '2025/2026',
+    };
+
+    this.http
+      .patch(`http://localhost:8003/api/candidatures/masters/${master.id}/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          master.statut = nextStatut;
+          this.showAlertMessage(nextStatut === 'ouvert' ? '✅ Master ouvert' : '✅ Master fermé');
+          this.loadMasters();
+        },
+        error: (error) => {
+          console.error('Erreur changement statut master:', error);
+          this.showAlertMessage('❌ Impossible de modifier le statut du master');
+        },
+      });
   }
 
   // ========================================
@@ -2278,4 +2495,3 @@ export class DashboardAdminComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 }
-

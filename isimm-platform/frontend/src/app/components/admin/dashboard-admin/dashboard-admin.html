@@ -207,7 +207,29 @@
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="section-header">
-          <h2>🔔 Notifications</h2>
+          <div>
+            <h2>🔔 Notifications</h2>
+            <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
+          </div>
+        </div>
+
+        <div class="notifications-kpi-grid">
+          <article class="notifications-kpi-card">
+            <span>Total</span>
+            <strong>{{ notificationsTotalCount }}</strong>
+          </article>
+          <article class="notifications-kpi-card unread">
+            <span>Non lues</span>
+            <strong>{{ notificationsNonLues }}</strong>
+          </article>
+          <article class="notifications-kpi-card today">
+            <span>Aujourd'hui</span>
+            <strong>{{ notificationsTodayCount }}</strong>
+          </article>
+          <article class="notifications-kpi-card critical">
+            <span>Prioritaires</span>
+            <strong>{{ notificationsCriticalCount }}</strong>
+          </article>
         </div>
 
         <div class="notifications-filters">
@@ -218,8 +240,17 @@
             <option value="warning">Avertissement</option>
             <option value="danger">Danger</option>
           </select>
+          <select [(ngModel)]="filtreNotificationTriRapide">
+            <option value="recent">Tri rapide: Plus récent</option>
+            <option value="critique">Tri rapide: Plus critique</option>
+          </select>
           <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
           <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+          <input
+            type="text"
+            [(ngModel)]="filtreNotificationRecherche"
+            placeholder="Rechercher (titre, message...)"
+          />
           <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
             Réinitialiser
           </button>
@@ -230,6 +261,9 @@
           *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
         >
           <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+            <span class="notifications-counter"
+              >{{ notificationsFilteredUnreadCount }} non lue(s) dans le filtre</span
+            >
             <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
               ✓ Marquer tous comme lus
             </button>
@@ -243,7 +277,7 @@
             <div class="notification-head">
               <strong>{{ notification.titre }}</strong>
               <span class="notification-type" [ngClass]="'type-' + notification.type">
-                {{ notification.type }}
+                {{ getNotificationTypeLabel(notification.type) }}
               </span>
             </div>
             <p>{{ notification.message }}</p>
@@ -252,123 +286,11 @@
         </div>
 
         <ng-template #noNotifications>
-          <p>Aucune notification pour le moment.</p>
+          <div class="empty-reclamations notifications-empty-state">
+            <p>Aucune notification pour ce filtre.</p>
+            <small>Réinitialisez les filtres pour élargir la recherche.</small>
+          </div>
         </ng-template>
-      </div>
-    </div>
-
-    <!-- ✅ GESTION UTILISATEURS -->
-    <div *ngIf="currentView === 'utilisateurs'" class="view-content">
-      <div class="section-card">
-        <div class="section-header">
-          <h2>👥 Liste des utilisateurs</h2>
-          <button class="btn-primary" (click)="nouvelUtilisateur()">
-            <i class="fas fa-plus"></i> Nouvel utilisateur
-          </button>
-        </div>
-
-        <div class="users-toolbar">
-          <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input
-              type="text"
-              [(ngModel)]="utilisateurRecherche"
-              placeholder="Rechercher nom ou email..."
-            />
-          </div>
-          <div class="download-box users-filter-box">
-            <label>Filtre compte</label>
-            <select [(ngModel)]="utilisateurStatusFilter">
-              <option value="all">Tous les comptes</option>
-              <option value="active">Comptes actifs</option>
-              <option value="suspended">Comptes suspendus</option>
-            </select>
-          </div>
-          <div class="download-box">
-            <label>Download table data as</label>
-            <select [(ngModel)]="exportFormat">
-              <option value="csv">Comma separated values (csv)</option>
-              <option value="json">JSON</option>
-              <option value="ods">OpenDocument Spreadsheet (.ods)</option>
-              <option value="pdf">Portable Document Format (PDF)</option>
-            </select>
-            <button class="btn-primary btn-download" (click)="downloadUsersFile()">Download</button>
-          </div>
-        </div>
-
-        <div class="table-container">
-          <table class="data-table users-table">
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    [checked]="allUsersSelected"
-                    (change)="toggleAllUsers($event)"
-                  />
-                </th>
-                <th>First name | Last name</th>
-                <th>Email</th>
-                <th>Rôle</th>
-                <th>Statut compte</th>
-                <th>Since</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let user of utilisateursFiltres">
-                <td>
-                  <input
-                    type="checkbox"
-                    [checked]="isUserSelected(user.id)"
-                    (change)="toggleUserSelection(user.id, $event)"
-                  />
-                </td>
-                <td>
-                  <div class="user-name-cell">
-                    <div class="user-avatar">{{ getUserInitials(user) }}</div>
-                    <div>
-                      <strong>{{ user.first_name }} {{ user.last_name }}</strong>
-                    </div>
-                  </div>
-                </td>
-                <td>{{ user.email }}</td>
-                <td>
-                  <span class="role-badge" [ngClass]="user.role">{{
-                    getRoleLabel(user.role)
-                  }}</span>
-                </td>
-                <td>
-                  <span class="status-badge" [ngClass]="user.is_active ? 'active' : 'inactive'">
-                    {{ getUserStatusLabel(user) }}
-                  </span>
-                  <small class="user-status-meta" *ngIf="!user.is_active && user.suspended_since">
-                    Depuis le {{ user.suspended_since | date: 'dd/MM/yyyy HH:mm' }}
-                  </small>
-                  <small class="user-status-meta" *ngIf="!user.is_active && user.suspension_reason">
-                    Raison: {{ user.suspension_reason }}
-                  </small>
-                </td>
-                <td>{{ user.date_inscription | date: 'dd MMM yyyy' }}</td>
-                <td>
-                  <div class="user-action-menu">
-                    <button class="btn-kebab" (click)="toggleUserMenu(user.id)">⋮</button>
-                    <div class="kebab-menu" *ngIf="openUserMenuId === user.id">
-                      <button (click)="modifierUtilisateur(user)">Edit</button>
-                      <button *ngIf="user.is_active" (click)="suspendreUtilisateur(user)">
-                        Suspendre utilisateur
-                      </button>
-                      <button *ngIf="!user.is_active" (click)="activerCompteUtilisateur(user)">
-                        Activer compte
-                      </button>
-                      <button class="danger" (click)="supprimerUtilisateur(user)">Supprimer</button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
 
@@ -378,74 +300,65 @@
         <div class="section-header">
           <h2>🛤️ Parcours ingénieurs</h2>
           <button class="btn-primary" (click)="ajouterOffreIngenieur()">
-            <i class="fas fa-plus"></i> Ajouter une offre
+            <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
         </div>
 
         <p class="admin-site-subtitle">
-          Ouvrez les parcours ingénieurs, ajoutez les spécialités et publiez les appels d'offre. Les
-          offres enregistrées sont ensuite disponibles côté responsable.
+          Gérez les parcours ingénieurs: ajout, modification, ouverture/fermeture et suppression.
+          Chaque parcours enregistré apparaît ensuite côté responsable.
         </p>
 
-        <div class="reglement-panel">
-          <div class="reglement-header">
-            <h3>📘 Règlement officiel concours ingénieur</h3>
-            <div class="reglement-actions">
-              <button class="btn-secondary btn-refresh-ref" (click)="loadReglementReference()">
-                <i class="fas fa-sync-alt"></i>
-                Actualiser
-              </button>
-              <select [(ngModel)]="selectedConcoursIdForReglement">
-                <option [ngValue]="null">Sélectionner un concours</option>
-                <option
-                  *ngFor="let offre of offresIngenieurList"
-                  [ngValue]="offre.backend_id || offre.id"
-                >
-                  #{{ offre.backend_id || offre.id }} - {{ offre.titre }}
-                </option>
-              </select>
-              <button
-                class="btn-primary"
-                [disabled]="isApplyingReglement || !concoursIngenieurApiAvailable"
-                (click)="applyReglementOfficiel()"
-              >
-                <i class="fas fa-check-circle"></i>
-                {{ isApplyingReglement ? 'Application...' : 'Appliquer le règlement officiel' }}
-              </button>
-            </div>
+        <div class="section-card" style="margin-bottom: 1rem">
+          <div class="section-header">
+            <h3>Synchronisation vers espace responsable (Parcours Ingénieur)</h3>
+            <button class="btn-secondary" (click)="loadOffresResponsableSync()">Actualiser</button>
           </div>
-
-          <div class="reglement-message" *ngIf="!concoursIngenieurApiAvailable">
-            API concours indisponible: les offres affichées sont locales (test), l'application du
-            règlement est désactivée.
+          <p class="admin-site-subtitle">
+            Ces parcours apparaissent dans le champ "Offre concernée" de l'espace responsable.
+          </p>
+          <div *ngIf="isLoadingOffresResponsableSync" class="reglement-loading">
+            Chargement des offres synchronisées...
           </div>
-
-          <div class="reglement-meta" *ngIf="reglementReference?.metadata as meta">
-            <span><strong>Version:</strong> {{ meta.version }}</span>
-            <span><strong>Année:</strong> {{ meta.annee_universitaire }}</span>
-            <span><strong>Type:</strong> {{ meta.type_concours }}</span>
+          <div *ngIf="offresResponsableSyncMessage" class="reglement-message">
+            {{ offresResponsableSyncMessage }}
           </div>
-
-          <div *ngIf="isLoadingReglement" class="reglement-loading">Chargement du règlement...</div>
-          <div *ngIf="reglementApplyMessage" class="reglement-message">
-            {{ reglementApplyMessage }}
-          </div>
-
-          <div
-            class="reglement-chapitres"
-            *ngIf="!isLoadingReglement && chapitresReglement.length > 0"
-          >
-            <details class="chapitre-item" *ngFor="let chap of chapitresReglement" open>
-              <summary>{{ chap.label }}</summary>
-              <div class="chapitre-content" [innerText]="formatChapitreContent(chap.value)"></div>
-            </details>
-          </div>
-
-          <div
-            class="reglement-message"
-            *ngIf="!isLoadingReglement && reglementReference && chapitresReglement.length === 0"
-          >
-            Aucun chapitre détecté dans la réponse du règlement.
+          <div class="table-container" *ngIf="!isLoadingOffresResponsableSync">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Offre</th>
+                  <th>Spécialité</th>
+                  <th>Places</th>
+                  <th>Date limite</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let offre of getOffresResponsableSyncByType('cycle_ingenieur')">
+                  <td>
+                    <strong>{{ offre.titre }}</strong>
+                  </td>
+                  <td>{{ offre.specialite }}</td>
+                  <td>{{ offre.places }}</td>
+                  <td>{{ offre.date_limite | date: 'dd/MM/yyyy' }}</td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      [class.ouvert]="offre.statut === 'ouvert'"
+                      [class.ferme]="offre.statut === 'ferme'"
+                    >
+                      {{ offre.statut === 'ouvert' ? 'Ouvert' : 'Fermé' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="getOffresResponsableSyncByType('cycle_ingenieur').length === 0">
+                  <td colspan="5" class="empty-candidatures-row">
+                    Aucun parcours ingénieur synchronisé pour le moment.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -495,11 +408,17 @@
                   </span>
                 </td>
                 <td>
+                  <button
+                    class="btn-action voir"
+                    [title]="
+                      offre.statut === 'ouvert' ? 'Fermer le parcours' : 'Ouvrir le parcours'
+                    "
+                    (click)="toggleStatutOffreIngenieur(offre)"
+                  >
+                    <i class="fas fa-toggle-on"></i>
+                  </button>
                   <button class="btn-action modifier" (click)="modifierOffreIngenieur(offre)">
                     <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn-action voir" (click)="toggleStatutOffreIngenieur(offre)">
-                    <i class="fas fa-toggle-on"></i>
                   </button>
                   <button class="btn-action supprimer" (click)="supprimerOffreIngenieur(offre)">
                     <i class="fas fa-trash"></i>
@@ -518,129 +437,14 @@
         <div class="section-header">
           <h2>🛤️ Parcours master</h2>
           <button class="btn-primary" (click)="ajouterMaster()">
-            <i class="fas fa-plus"></i> Ajouter une offre
+            <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
         </div>
 
         <p class="admin-site-subtitle">
-          Publiez les appels d'offre Master avec spécialité et capacité. Chaque offre sauvegardée
+          Publiez les appels d'offre Master avec spécialité et capacité. Chaque parcours sauvegardé
           apparaît dans l'espace offre du responsable.
         </p>
-
-        <div class="reglement-panel masters-ref-panel">
-          <div class="reglement-header">
-            <h3>📘 Référentiel officiel Masters 2025/2026</h3>
-            <button class="btn-secondary btn-refresh-ref" (click)="loadReferentielMasters()">
-              <i class="fas fa-sync-alt"></i>
-              Actualiser
-            </button>
-          </div>
-
-          <div class="reglement-meta" *ngIf="referentielMasters?.metadata as meta">
-            <span><strong>Année:</strong> {{ meta.annee_universitaire }}</span>
-            <span><strong>Etablissement:</strong> {{ meta.etablissement }}</span>
-          </div>
-
-          <div *ngIf="isLoadingReferentielMasters" class="reglement-loading">
-            Chargement du référentiel masters...
-          </div>
-          <div *ngIf="referentielMastersMessage" class="reglement-message">
-            {{ referentielMastersMessage }}
-          </div>
-
-          <div
-            class="masters-ref-grid"
-            *ngIf="!isLoadingReferentielMasters && getMastersReferenceCards().length > 0"
-          >
-            <div class="masters-ref-card" *ngFor="let item of getMastersReferenceCards()">
-              <h4>{{ item.code }} - {{ item.data.intitule }}</h4>
-
-              <div class="masters-ref-block" *ngIf="item.data.calendrier">
-                <h5>Calendrier</h5>
-                <ul>
-                  <li *ngFor="let cal of item.data.calendrier | keyvalue">
-                    <strong>{{ formatMasterFieldLabel(normalizeKey(cal.key)) }}:</strong>
-                    <span *ngIf="cal.value?.debut && cal.value?.fin">
-                      {{ cal.value.debut }} au {{ cal.value.fin }}
-                    </span>
-                    <span *ngIf="!cal.value?.debut || !cal.value?.fin">
-                      {{ cal.value }}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              <div class="masters-ref-block" *ngIf="item.data.capacites">
-                <h5>Capacités d'accueil</h5>
-                <ul>
-                  <li *ngFor="let cap of item.data.capacites | keyvalue">
-                    <strong>{{ formatMasterFieldLabel(normalizeKey(cap.key)) }}:</strong>
-                    {{ cap.value }}
-                  </li>
-                </ul>
-              </div>
-
-              <div class="masters-ref-block" *ngIf="item.data.modalites_candidature?.length">
-                <h5>Modalités de candidature</h5>
-                <ol>
-                  <li *ngFor="let modalite of item.data.modalites_candidature">
-                    {{ modalite }}
-                  </li>
-                </ol>
-              </div>
-
-              <div class="masters-ref-block" *ngIf="item.data.score">
-                <h5>Calcul du score</h5>
-                <p><strong>Formule licence:</strong> {{ item.data.score.formule_licence }}</p>
-                <p><strong>Bonus langue:</strong> {{ item.data.score.bonus_langue }}</p>
-                <ul *ngIf="item.data.score.bonus_annee_diplome">
-                  <li *ngFor="let bonus of item.data.score.bonus_annee_diplome | keyvalue">
-                    <strong>{{ formatMasterFieldLabel(normalizeKey(bonus.key)) }}:</strong>
-                    {{ bonus.value }} pts
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="masters-ref-footer"
-            *ngIf="!isLoadingReferentielMasters && referentielMasters"
-          >
-            <div class="masters-ref-block" *ngIf="referentielMasters.documents_requis_pdf_unique">
-              <h5>Documents requis (PDF unique)</h5>
-              <ul>
-                <li *ngFor="let doc of referentielMasters.documents_requis_pdf_unique">
-                  {{ doc }}
-                </li>
-              </ul>
-            </div>
-
-            <div class="masters-ref-block" *ngIf="referentielMasters.regles_importantes">
-              <h5>Remarques importantes et règles</h5>
-              <ul>
-                <li *ngFor="let rule of referentielMasters.regles_importantes">
-                  {{ rule }}
-                </li>
-              </ul>
-            </div>
-
-            <div
-              class="masters-ref-block"
-              *ngIf="referentielMasters.modele_formulaire_candidature as formModel"
-            >
-              <h5>Modèle de formulaire de candidature</h5>
-              <ul>
-                <li *ngFor="let field of formModel.champs">
-                  {{ formatMasterFieldLabel(field) }}
-                </li>
-              </ul>
-              <p *ngIf="formModel.choix_possibles?.length">
-                <strong>Choix possibles:</strong> {{ joinMasterChoices(formModel.choix_possibles) }}
-              </p>
-            </div>
-          </div>
-        </div>
 
         <div class="users-toolbar">
           <div class="download-box">
@@ -687,6 +491,15 @@
                 <td>
                   <button class="btn-action voir" title="Voir détails" (click)="voirMaster(master)">
                     <i class="fas fa-eye"></i>
+                  </button>
+                  <button
+                    class="btn-action voir"
+                    [title]="
+                      master.statut === 'ouvert' ? 'Fermer le parcours' : 'Ouvrir le parcours'
+                    "
+                    (click)="toggleStatutMaster(master)"
+                  >
+                    <i class="fas fa-toggle-on"></i>
                   </button>
                   <button
                     class="btn-action voir"

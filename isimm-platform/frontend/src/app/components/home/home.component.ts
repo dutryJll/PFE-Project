@@ -209,6 +209,6 @@ export class HomeComponent {
     if (event) {
       event.preventDefault();
     }
-    this.router.navigate(['/masters']);
+    this.router.navigate(['/choisir-candidature']);
   }
 }

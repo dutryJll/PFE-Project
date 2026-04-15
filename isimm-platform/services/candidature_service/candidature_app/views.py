@@ -350,6 +350,60 @@ def _normalize_offre_rich_content(payload, offer_id):
     }
 
 
+def _concours_sync_marker(concours_id):
+    return f"[AUTO_CONCOURS:{concours_id}]"
+
+
+def _sync_master_from_concours(concours):
+    """
+    Maintient un parcours master miroir pour rendre les concours ingenieur
+    visibles dans le flux d'offre d'inscription du responsable.
+    """
+    marker = _concours_sync_marker(concours.id)
+    specialite = (concours.conditions_admission or {}).get('specialite') or 'Cycle Ingenieur'
+    ouverture = concours.date_ouverture
+    annee_universitaire = (
+        f"{ouverture.year}/{ouverture.year + 1}"
+        if ouverture
+        else f"{timezone.now().year}/{timezone.now().year + 1}"
+    )
+
+    existing = Master.objects.filter(description__contains=marker).first()
+    base_description = (concours.description or '').strip()
+    description = f"{base_description}\n\n{marker}" if base_description else marker
+
+    if existing:
+        existing.nom = concours.nom
+        existing.type_master = 'professionnel'
+        existing.description = description
+        existing.specialite = specialite
+        existing.places_disponibles = concours.places_disponibles
+        existing.date_limite_candidature = concours.date_cloture
+        existing.annee_universitaire = annee_universitaire
+        existing.actif = concours.actif
+        existing.save()
+        return existing
+
+    return Master.objects.create(
+        nom=concours.nom,
+        type_master='professionnel',
+        description=description,
+        specialite=specialite,
+        places_disponibles=concours.places_disponibles,
+        date_limite_candidature=concours.date_cloture,
+        annee_universitaire=annee_universitaire,
+        actif=concours.actif,
+    )
+
+
+def _deactivate_synced_master_from_concours(concours_id):
+    marker = _concours_sync_marker(concours_id)
+    synced = Master.objects.filter(description__contains=marker).first()
+    if synced:
+        synced.actif = False
+        synced.save(update_fields=['actif', 'updated_at'])
+
+
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def contenu_offre_inscription(request, offer_id):
@@ -1536,12 +1590,52 @@ def offres_inscription_responsable(request):
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
     configurations = ConfigurationAppel.objects.filter(actif=True).select_related('master')
+    config_by_master = {config.master_id: config for config in configurations}
+    masters = Master.objects.filter(actif=True).order_by('nom')
 
     offres = []
-    for config in configurations:
+    for master in masters:
+        config = config_by_master.get(master.id)
+
+        if config:
+            statut = 'ouvert' if config.peut_candidater() else 'ferme'
+            est_visible = config.est_visible()
+            est_cache = config.est_cache
+            capacite_total = config.capacite_accueil
+            capacite_interne = config.capacite_interne
+            capacite_externe = config.capacite_externe
+            capacite_liste_attente = config.capacite_liste_attente
+            date_debut_visibilite = config.date_debut_visibilite
+            date_fin_visibilite = config.date_fin_visibilite
+            date_limite_preinscription = config.date_limite_preinscription
+            date_limite_depot_dossier = config.date_limite_depot_dossier
+            date_limite_paiement = config.date_limite_paiement
+            delai_modification_jours = config.delai_modification_candidature_jours
+            delai_depot_dossier_j_jours = config.delai_depot_dossier_preselectionnes_jours
+            document_officiel_pdf_url = (
+                request.build_absolute_uri(config.document_officiel_pdf.url)
+                if config.document_officiel_pdf
+                else None
+            )
+        else:
+            today = timezone.now().date()
+            statut = 'ouvert' if master.date_limite_candidature and master.date_limite_candidature >= today else 'ferme'
+            est_visible = True
+            est_cache = False
+            capacite_total = master.places_disponibles
+            capacite_interne = 0
+            capacite_externe = 0
+            capacite_liste_attente = 0
+            date_debut_visibilite = None
+            date_fin_visibilite = None
+            date_limite_preinscription = master.date_limite_candidature
+            date_limite_depot_dossier = None
+            date_limite_paiement = None
+            delai_modification_jours = 7
+            delai_depot_dossier_j_jours = 14
+            document_officiel_pdf_url = None
+
         master = config.master
-        statut = 'ouvert' if config.peut_candidater() else 'ferme'
-        est_visible = config.est_visible()
 
         offres.append(
             {
@@ -1552,26 +1646,23 @@ def offres_inscription_responsable(request):
                 'specialite': master.specialite,
                 'description': master.description,
                 'statut': statut,
-                'est_cache': config.est_cache,
+                'est_cache': est_cache,
                 'est_visible': est_visible,
-                'capacite_total': config.capacite_accueil,
-                'capacite_interne': config.capacite_interne,
-                'capacite_externe': config.capacite_externe,
-                'capacite_liste_attente': config.capacite_liste_attente,
+                'capacite_total': capacite_total,
+                'capacite_interne': capacite_interne,
+                'capacite_externe': capacite_externe,
+                'capacite_liste_attente': capacite_liste_attente,
                 'places': master.places_disponibles,
                 'date_limite': master.date_limite_candidature,
-                'date_debut_visibilite': config.date_debut_visibilite,
-                'date_fin_visibilite': config.date_fin_visibilite,
-                'date_limite_preinscription': config.date_limite_preinscription,
-                'date_limite_depot_dossier': config.date_limite_depot_dossier,
-                'date_limite_paiement': config.date_limite_paiement,
-                'delai_modification_jours': config.delai_modification_candidature_jours,
-                'delai_depot_dossier_j_jours': config.delai_depot_dossier_preselectionnes_jours,
-                'document_officiel_pdf_url': (
-                    request.build_absolute_uri(config.document_officiel_pdf.url)
-                    if config.document_officiel_pdf
-                    else None
-                ),
+                'date_debut_visibilite': date_debut_visibilite,
+                'date_fin_visibilite': date_fin_visibilite,
+                'date_limite_preinscription': date_limite_preinscription,
+                'date_limite_depot_dossier': date_limite_depot_dossier,
+                'date_limite_paiement': date_limite_paiement,
+                'delai_modification_jours': delai_modification_jours,
+                'delai_depot_dossier_j_jours': delai_depot_dossier_j_jours,
+                'document_officiel_pdf_url': document_officiel_pdf_url,
+                'requires_configuration': config is None,
             }
         )
 
@@ -2386,6 +2477,9 @@ def creer_concours_admin(request):
         conditions_admission=conditions_admission,
     )
 
+    # Synchronisation automatique vers un parcours master editable par le responsable.
+    _sync_master_from_concours(concours)
+
     uploaded_pdf = request.FILES.get('document_officiel_pdf')
     if uploaded_pdf:
         file_ext = uploaded_pdf.name.split('.')[-1].lower()
@@ -2433,6 +2527,7 @@ def modifier_supprimer_concours_admin(request, concours_id):
         return Response({'error': 'Concours introuvable'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
+        _deactivate_synced_master_from_concours(concours.id)
         concours.delete()
         return Response({'message': 'Concours supprime avec succes.'}, status=status.HTTP_200_OK)
 
@@ -2483,6 +2578,9 @@ def modifier_supprimer_concours_admin(request, concours_id):
             concours.document_officiel_pdf = None
 
     concours.save()
+
+    # Maintenir la copie synchronisee visible dans l'espace responsable.
+    _sync_master_from_concours(concours)
 
     return Response(
         {

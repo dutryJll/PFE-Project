@@ -23,7 +23,7 @@
       </li>
       <li>
         <a
-          routerLink="/masters"
+          routerLink="/choisir-candidature"
           class="nav-link"
           routerLinkActive="active"
           (click)="goToMasters($event)"
@@ -77,7 +77,9 @@
       <div class="cta-buttons">
         <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
         <a [routerLink]="['/choisir-candidature']" class="btn-primary"> {{ tr.hero.apply }} </a>
-        <a [routerLink]="['/masters']" class="btn-secondary"> {{ tr.hero.discover }} </a>
+        <a [routerLink]="['/choisir-candidature']" class="btn-secondary">
+          {{ tr.hero.discover }}
+        </a>
       </div>
     </div>
   </div>
@@ -139,8 +141,8 @@
           </li>
         </ul>
 
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
-        <button class="btn-card research-btn" [routerLink]="['/masters']">
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/recherche/exploration -->
+        <button class="btn-card research-btn" [routerLink]="['/masters/recherche/exploration']">
           <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
@@ -179,8 +181,11 @@
           </li>
         </ul>
 
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
-        <button class="btn-card professional-btn" [routerLink]="['/masters']">
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/professionnel/exploration -->
+        <button
+          class="btn-card professional-btn"
+          [routerLink]="['/masters/professionnel/exploration']"
+        >
           <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
@@ -216,8 +221,8 @@
           </li>
         </ul>
 
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters -->
-        <button class="btn-card engineer-btn" [routerLink]="['/masters']">
+        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/ingenieur/exploration -->
+        <button class="btn-card engineer-btn" [routerLink]="['/masters/ingenieur/exploration']">
           <span>{{ tr.cards.explore }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>

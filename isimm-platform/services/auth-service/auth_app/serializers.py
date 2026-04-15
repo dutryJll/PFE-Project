@@ -53,10 +53,11 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer pour l'inscription"""
     password2 = serializers.CharField(write_only=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = User
-        fields = ['email', 'password', 'password2', 'first_name', 'last_name', 'role']
+        fields = ['email', 'username', 'password', 'password2', 'first_name', 'last_name', 'role']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -72,7 +73,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('password2')
-        user = User.objects.create_user(**validated_data)
+        raw_username = (validated_data.pop('username', '') or '').strip()
+        email = (validated_data.get('email') or '').strip().lower()
+
+        if raw_username:
+            username = raw_username
+        else:
+            base = email.split('@')[0] if '@' in email else 'candidat'
+            # Garder uniquement lettres/chiffres/underscore pour un username Django propre.
+            sanitized = ''.join(ch if (ch.isalnum() or ch == '_') else '_' for ch in base).strip('_')
+            base_username = sanitized or 'candidat'
+            username = base_username
+            suffix = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{suffix}"
+                suffix += 1
+
+        user = User.objects.create_user(username=username, **validated_data)
         return user
 
 

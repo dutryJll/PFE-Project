@@ -1214,6 +1214,26 @@
         <div class="candidatures-header">
           <h2>Notifications</h2>
           <p class="subtitle">Toutes vos alertes de preinscription, candidature et reclamation.</p>
+          <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
+        </div>
+
+        <div class="notifications-kpi-grid">
+          <article class="notifications-kpi-card">
+            <span>Total</span>
+            <strong>{{ notificationsTotalCount }}</strong>
+          </article>
+          <article class="notifications-kpi-card unread">
+            <span>Non lues</span>
+            <strong>{{ notificationsNonLues }}</strong>
+          </article>
+          <article class="notifications-kpi-card today">
+            <span>Aujourd'hui</span>
+            <strong>{{ notificationsTodayCount }}</strong>
+          </article>
+          <article class="notifications-kpi-card critical">
+            <span>Prioritaires</span>
+            <strong>{{ notificationsCriticalCount }}</strong>
+          </article>
         </div>
 
         <div class="notifications-filters">
@@ -1224,8 +1244,17 @@
             <option value="warning">Avertissement</option>
             <option value="danger">Danger</option>
           </select>
+          <select [(ngModel)]="filtreNotificationTriRapide">
+            <option value="recent">Tri rapide: Plus récent</option>
+            <option value="critique">Tri rapide: Plus critique</option>
+          </select>
           <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
           <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+          <input
+            type="text"
+            [(ngModel)]="filtreNotificationRecherche"
+            placeholder="Rechercher (titre, message...)"
+          />
           <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
             Réinitialiser
           </button>
@@ -1236,6 +1265,9 @@
           *ngIf="getNotificationsFiltrees().length > 0; else noNotifications"
         >
           <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+            <span class="notifications-counter"
+              >{{ notificationsFilteredUnreadCount }} non lue(s) dans le filtre</span
+            >
             <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
               Marquer tous comme lus
             </button>
@@ -1249,7 +1281,7 @@
             <div class="notification-head">
               <strong>{{ notification.titre }}</strong>
               <span class="notification-type" [ngClass]="'type-' + notification.type">
-                {{ notification.type }}
+                {{ getNotificationTypeLabel(notification.type) }}
               </span>
             </div>
             <p>{{ notification.message }}</p>
@@ -1258,9 +1290,12 @@
         </div>
 
         <ng-template #noNotifications>
-          <div class="empty-reclamations">
+          <div class="empty-reclamations notifications-empty-state">
             <p *ngIf="notificationsErreur">{{ notificationsErreur }}</p>
-            <p *ngIf="!notificationsErreur">Aucune notification pour le moment.</p>
+            <p *ngIf="!notificationsErreur">Aucune notification pour ce filtre.</p>
+            <small *ngIf="!notificationsErreur"
+              >Essayez de reinitialiser les filtres ou revenez plus tard.</small
+            >
           </div>
         </ng-template>
       </div>
@@ -1450,10 +1485,42 @@
             <label>Specialite Baccalaureat *</label>
             <select [(ngModel)]="wizardData.specialiteBac" name="wizardSpecialiteBac">
               <option value="">Selectionner</option>
-              <option value="Sciences Exprimentales">Sciences Exprimentales</option>
-              <option value="Informatique">Informatique</option>
-              <option value="Technique">Technique</option>
-              <option value="Mathmatiques">Mathmatiques</option>
+              <option *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()" value="Informatique">
+                Informatique
+              </option>
+              <option *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()" value="Economique">
+                Economique
+              </option>
+              <option *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()" value="Mathematique">
+                Mathematique
+              </option>
+              <option *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()" value="Technique">
+                Technique
+              </option>
+              <option
+                *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()"
+                value="Science experimentale"
+              >
+                Science experimentale
+              </option>
+              <option *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()" value="Autre">
+                Autre
+              </option>
+              <option
+                *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()"
+                value="Sciences Exprimentales"
+              >
+                Sciences Exprimentales
+              </option>
+              <option *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()" value="Informatique">
+                Informatique
+              </option>
+              <option *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()" value="Technique">
+                Technique
+              </option>
+              <option *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()" value="Mathmatiques">
+                Mathmatiques
+              </option>
             </select>
           </div>
           <div class="form-row">
@@ -1471,9 +1538,9 @@
               />
             </div>
           </div>
-          <div class="form-row">
+          <div class="form-row" *ngIf="isWizardMrglOffer()">
             <div class="form-group">
-              <label>Note mathematiques bac *</label>
+              <label>Note mathématiques du bac *</label>
               <input
                 type="number"
                 step="0.01"
@@ -1482,7 +1549,7 @@
               />
             </div>
             <div class="form-group">
-              <label>Note francais bac *</label>
+              <label>Note français du bac *</label>
               <input
                 type="number"
                 step="0.01"
@@ -1491,7 +1558,7 @@
               />
             </div>
             <div class="form-group">
-              <label>Note anglais bac *</label>
+              <label>Note anglais du bac *</label>
               <input
                 type="number"
                 step="0.01"
@@ -1500,8 +1567,8 @@
               />
             </div>
           </div>
-          <div class="form-group">
-            <label>Certification niveau B2 (Langue) *</label>
+          <div class="form-group" *ngIf="isWizardMrglOffer()">
+            <label>Certification B2 *</label>
             <select [(ngModel)]="wizardData.certificationB2" name="wizardCertificationB2">
               <option value="">Selectionner</option>
               <option value="non">Non</option>
@@ -1515,10 +1582,44 @@
             <label>Specialite du diplome obtenu *</label>
             <select [(ngModel)]="wizardData.specialiteDiplome" name="wizardSpecialiteDiplome">
               <option value="">Selectionner</option>
-              <option value="Genie Logiciel et Sciences de l'Informatique">
+              <option *ngIf="isWizardMrglOffer()" value="Licence en Informatique : GL & SI">
+                Licence en Informatique : GL & SI
+              </option>
+              <option *ngIf="isWizardMrglOffer()" value="Licence en Informatique de Gestion : BI">
+                Licence en Informatique de Gestion : BI
+              </option>
+              <option
+                *ngIf="isWizardMrmiOffer()"
+                value="Licence en EEA, MIM (Electronique, Systemes Embarques, Metrologie) ou TIC (Reseaux et IoT)"
+              >
+                Licence en EEA, MIM (Electronique, Systemes Embarques, Metrologie) ou TIC (Reseaux
+                et IoT)
+              </option>
+              <option
+                *ngIf="isWizardMrmiOffer()"
+                value="Licence en Electronique, Automatique ou Mesures et Instrumentation"
+              >
+                Licence en Electronique, Automatique ou Mesures et Instrumentation
+              </option>
+              <option
+                *ngIf="isWizardMrmiOffer()"
+                value="Reussite en 1ere annee du cycle ingenieur (Electronique/Instrumentation) ou equivalent"
+              >
+                Reussite en 1ere annee du cycle ingenieur (Electronique/Instrumentation) ou
+                equivalent
+              </option>
+              <option
+                *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()"
+                value="Genie Logiciel et Sciences de l'Informatique"
+              >
                 Genie Logiciel et Sciences de l'Informatique
               </option>
-              <option value="Sciences de l'Informatique">Sciences de l'Informatique</option>
+              <option
+                *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()"
+                value="Sciences de l'Informatique"
+              >
+                Sciences de l'Informatique
+              </option>
             </select>
           </div>
 
@@ -1598,7 +1699,7 @@
               </select>
             </div>
           </div>
-          <div class="form-row">
+          <div class="form-row" *ngIf="isWizardMrglOffer()">
             <div class="form-group">
               <label>Moyenne 4eme annee</label
               ><input
@@ -1618,7 +1719,16 @@
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()">
+            <label>Nature de candidature *</label>
+            <select [(ngModel)]="wizardData.natureCandidature" name="wizardNatureCandidature">
+              <option value="">Selectionner</option>
+              <option value="Étudiant ISIMM">Étudiant ISIMM</option>
+              <option value="Étudiant Externe">Étudiant Externe</option>
+            </select>
+          </div>
+
+          <div class="form-row">
             <label>Nombre d'annees de redoublement *</label
             ><input
               type="number"
@@ -1626,16 +1736,38 @@
               name="wizardRedoublement"
             />
           </div>
+
+          <div class="form-row" *ngIf="isWizardMrmiIng1EquivalentSelected()">
+            <div class="form-group">
+              <label>Moyenne ING1 *</label>
+              <input
+                type="number"
+                step="0.01"
+                [(ngModel)]="wizardData.moyenneIng1"
+                name="wizardMoyenneIng1"
+              />
+            </div>
+            <div class="form-group">
+              <label>Session de réussite ING1 *</label>
+              <select [(ngModel)]="wizardData.sessionReussiteIng1" name="wizardSessionIng1">
+                <option value="">Selectionner</option>
+                <option value="Principale">Principale</option>
+                <option value="control">Controle</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nombre d'année(s) de redoublement ING1 *</label>
+              <input
+                type="number"
+                [(ngModel)]="wizardData.nombreRedoublementIng1"
+                name="wizardNombreRedoublementIng1"
+              />
+            </div>
+          </div>
           <p class="wizard-note">
             Le score est calcule automatiquement par la plateforme en tenant compte des bonus et des
             moyennes académiques.
           </p>
-
-          <div class="form-group">
-            <label>Fichier candidature *</label>
-            <input type="file" (change)="onWizardFileSelected($event)" />
-            <small *ngIf="wizardData.fichierNom">Fichier: {{ wizardData.fichierNom }}</small>
-          </div>
         </div>
 
         <div class="wizard-body" *ngIf="wizardCurrentStep === 3">
@@ -1676,6 +1808,39 @@
               <li>Verifiez votre email et numero de telephone.</li>
               <li>Assurez-vous que le fichier de candidature est bien joint.</li>
             </ul>
+          </div>
+
+          <!-- Confirmation Declaration Section - MRGL & MRMI -->
+          <div class="confirmation-section" *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()">
+            <div class="confirmation-card">
+              <h5>Informations personnelles</h5>
+              <p class="confirmation-text">
+                Les informations saisies sont correctes et j'assume toute fausse déclaration.
+              </p>
+
+              <div class="form-group">
+                <label for="confirmationDeclaration" class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="confirmationDeclaration"
+                    [(ngModel)]="wizardData.confirmationDeclaration"
+                    class="form-checkbox"
+                  />
+                  <span>J'accepte cette déclaration *</span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmationText">Ecrire ici: je confirme *</label>
+                <textarea
+                  id="confirmationText"
+                  [(ngModel)]="wizardData.confirmationText"
+                  placeholder="Tapez 'je confirme' pour valider votre candidature"
+                  class="form-textarea"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -60,7 +60,11 @@
           </li>
         </ul>
         <div class="card-actions">
-          <button class="btn-card research-btn" [routerLink]="['/choisir-candidature']">
+          <button
+            type="button"
+            class="btn-card research-btn"
+            (click)="goToResearchExploration($event)"
+          >
             <span>{{ 'masters.explore' | translate }}</span>
           </button>
           <button class="btn-card research-btn" [routerLink]="['/preinscription/detail/mrgl']">
@@ -115,7 +119,10 @@
           </li>
         </ul>
         <div class="card-actions">
-          <button class="btn-card professional-btn" [routerLink]="['/choisir-candidature']">
+          <button
+            class="btn-card professional-btn"
+            [routerLink]="['/masters/professionnel/exploration']"
+          >
             <span>{{ 'masters.explore' | translate }}</span>
           </button>
           <button class="btn-card professional-btn" [routerLink]="['/preinscription/detail/mpgl']">
@@ -167,7 +174,7 @@
           </li>
         </ul>
         <div class="card-actions">
-          <button class="btn-card engineer-btn" [routerLink]="['/choisir-candidature']">
+          <button class="btn-card engineer-btn" [routerLink]="['/masters/ingenieur/exploration']">
             <span>{{ 'masters.explore' | translate }}</span>
           </button>
           <button

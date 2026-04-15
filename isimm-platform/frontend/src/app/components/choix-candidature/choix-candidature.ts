@@ -49,9 +49,17 @@ export class ChoixCandidatureComponent {
   choisirType(type: string): void {
     console.log(`✅ Type choisi: ${type}`);
 
-    // Rediriger vers le formulaire avec le type en paramètre
-    this.router.navigate(['/candidature'], {
-      queryParams: { type: type === 'ingenieur' ? 'ingénieur' : type },
-    });
+    // Redirection vers les pages d'exploration des offres disponibles.
+    if (type === 'master') {
+      this.router.navigate(['/master/disponibles']);
+      return;
+    }
+
+    if (type === 'ingenieur') {
+      this.router.navigate(['/ingenieur/disponibles']);
+      return;
+    }
+
+    this.router.navigate(['/choisir-candidature']);
   }
 }

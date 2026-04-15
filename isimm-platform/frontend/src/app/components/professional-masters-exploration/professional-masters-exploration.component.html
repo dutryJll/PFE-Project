@@ -1,0 +1,145 @@
+<div class="professional-exploration-page">
+  <section class="hero">
+    <h1>Exploration des Mastères Professionnels</h1>
+    <p>
+      Cette page regroupe les informations essentielles des parcours MPGL, MPDS et MP3I pour l année
+      universitaire 2025-2026: capacités, calendrier, dossier et calcul du score.
+    </p>
+  </section>
+
+  <section class="process-card">
+    <h2>Calendrier commun</h2>
+    <ul>
+      <li>Inscription en ligne: {{ calendrierCommun.inscription }}</li>
+      <li>Annonce préselection: {{ calendrierCommun.preselection }}</li>
+      <li>Dépôt du dossier numérique: {{ calendrierCommun.depot }}</li>
+      <li>Résultats finaux: {{ calendrierCommun.resultatFinal }}</li>
+      <li>Recours: {{ calendrierCommun.recours }}</li>
+    </ul>
+  </section>
+
+  <section class="cards-grid">
+    <article class="info-card">
+      <h2>{{ mpgl.titre }}</h2>
+      <p>{{ mpgl.avis }}</p>
+
+      <h3>Capacité totale</h3>
+      <p>{{ mpgl.capaciteTotale }} places</p>
+
+      <h3>Répartition</h3>
+      <ul>
+        <li *ngFor="let line of mpgl.repartition">{{ line }}</li>
+      </ul>
+
+      <h3>Calcul du score</h3>
+      <ul>
+        <li><strong>Formule:</strong> {{ mpgl.score.formule }}</li>
+        <li><strong>M.G:</strong> {{ mpgl.score.mg }}</li>
+        <li><strong>B.N.R:</strong> {{ mpgl.score.bnr }}</li>
+        <li><strong>B.S.P:</strong> {{ mpgl.score.bsp }}</li>
+      </ul>
+
+      <div class="actions">
+        <a class="btn detail-btn" [routerLink]="['/preinscription/detail/mpgl']"
+          >Voir l offre détaillée MPGL</a
+        >
+        <a
+          class="btn apply-btn"
+          [routerLink]="['/candidature']"
+          [queryParams]="{ type: 'master', parcours: 'mpgl' }"
+          >Candidater</a
+        >
+      </div>
+    </article>
+
+    <article class="info-card">
+      <h2>{{ mpds.titre }}</h2>
+      <p>{{ mpds.avis }}</p>
+
+      <h3>Capacité totale</h3>
+      <p>{{ mpds.capaciteTotale }} places</p>
+
+      <h3>Répartition</h3>
+      <ul>
+        <li *ngFor="let line of mpds.repartition">{{ line }}</li>
+      </ul>
+
+      <h3>Calcul du score</h3>
+      <ul>
+        <li><strong>Formule:</strong> {{ mpds.score.formule }}</li>
+        <li><strong>M.G:</strong> {{ mpds.score.mg }}</li>
+        <li><strong>B.N.R:</strong> {{ mpds.score.bnr }}</li>
+        <li><strong>B.S.P:</strong> {{ mpds.score.bsp }}</li>
+      </ul>
+
+      <div class="actions">
+        <a class="btn detail-btn" [routerLink]="['/preinscription/detail/mpds']"
+          >Voir l offre détaillée MPDS</a
+        >
+        <a
+          class="btn apply-btn"
+          [routerLink]="['/candidature']"
+          [queryParams]="{ type: 'master', parcours: 'mpds' }"
+          >Candidater</a
+        >
+      </div>
+    </article>
+
+    <article class="info-card">
+      <h2>{{ mp3i.titre }}</h2>
+      <p>{{ mp3i.avis }}</p>
+
+      <h3>Capacité totale</h3>
+      <p>{{ mp3i.capaciteTotale }} places</p>
+
+      <h3>Répartition</h3>
+      <ul>
+        <li *ngFor="let line of mp3i.repartition">{{ line }}</li>
+      </ul>
+
+      <h3>Calcul du score</h3>
+      <ul>
+        <li><strong>Formule:</strong> {{ mp3i.score.formule }}</li>
+        <li><strong>M.P:</strong> {{ mp3i.score.mp }}</li>
+        <li><strong>M.R:</strong> {{ mp3i.score.mr }}</li>
+        <li><strong>M.C:</strong> {{ mp3i.score.mc }}</li>
+      </ul>
+
+      <div class="actions">
+        <a class="btn detail-btn" [routerLink]="['/preinscription/detail/mp3i']"
+          >Voir l offre détaillée MP3I</a
+        >
+        <a
+          class="btn apply-btn"
+          [routerLink]="['/candidature']"
+          [queryParams]="{ type: 'master', parcours: 'mp3i' }"
+          >Candidater</a
+        >
+      </div>
+    </article>
+  </section>
+
+  <section class="process-card">
+    <h2>Composition du dossier numérique (PDF)</h2>
+    <ul>
+      <li *ngFor="let doc of dossierNumerique">{{ doc }}</li>
+    </ul>
+    <p>
+      Outil conseillé pour fusionner les documents:
+      <a href="https://www.pdf2go.com/fr/fusionner-pdf" target="_blank" rel="noopener noreferrer"
+        >pdf2go.com/fr/fusionner-pdf</a
+      >
+    </p>
+  </section>
+
+  <section class="process-card">
+    <h2>Remarques importantes</h2>
+    <ol>
+      <li *ngFor="let note of remarquesImportantes">{{ note }}</li>
+    </ol>
+  </section>
+
+  <div class="back-link">
+    <a [routerLink]="['/']"><i class="fas fa-arrow-left"></i> Retour à l'accueil </a>
+  </div>
+</div>

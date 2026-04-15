@@ -105,6 +105,50 @@
   border: 1px solid #fecdd3;
 }
 
+.alert-success {
+  background: #ecfdf3;
+  color: #14532d;
+  border: 1px solid #86efac;
+}
+
+.alert-success h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.alert-success p {
+  margin: 0.25rem 0;
+}
+
+.password-line {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(20, 83, 45, 0.08);
+  border: 1px solid rgba(20, 83, 45, 0.18);
+}
+
+.help-line {
+  color: #166534;
+  font-size: 0.92rem;
+}
+
+.btn-login {
+  margin-top: 0.65rem;
+  border: none;
+  border-radius: 10px;
+  background: #15803d;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0.62rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-login:hover {
+  background: #166534;
+}
+
 .candidature-form {
   background: var(--card-bg);
   padding: 0 2.2rem 2.2rem;

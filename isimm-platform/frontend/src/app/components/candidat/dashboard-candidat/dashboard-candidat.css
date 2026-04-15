@@ -538,6 +538,55 @@
   margin-bottom: 1rem;
 }
 
+.notifications-date {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.notifications-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.notifications-kpi-card {
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notifications-kpi-card span {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.notifications-kpi-card strong {
+  font-size: 1.3rem;
+  color: #0f2f4a;
+}
+
+.notifications-kpi-card.unread {
+  border-color: #bfdbfe;
+}
+
+.notifications-kpi-card.today {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.notifications-kpi-card.critical {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff1f2 0%, #fee2e2 100%);
+}
+
 .notifications-filters select,
 .notifications-filters input {
   border: 1px solid #cbd5e1;
@@ -549,6 +598,14 @@
 .notifications-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.notifications-counter {
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
 }
 
 .notifications-list {
@@ -602,6 +659,18 @@
 .notification-type.type-danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.notifications-empty-state small {
+  color: #64748b;
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 860px) {
+  .notifications-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .btn-secondary {
@@ -2610,6 +2679,76 @@
 
 .offres-category:last-child {
   margin-bottom: 0;
+}
+
+/* ========================================
+   CONFIRMATION SECTION
+======================================== */
+.confirmation-section {
+  margin-top: 1.2rem;
+  margin-bottom: 0.9rem;
+}
+
+.confirmation-card {
+  border: 1px solid #dbe7f4;
+  background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.confirmation-card h5 {
+  margin: 0 0 0.8rem;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.confirmation-text {
+  color: #334155;
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  padding: 0.8rem;
+  background: #f1f5f9;
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 1rem;
+}
+
+.form-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #1e293b;
+  resize: vertical;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .category-head {

@@ -1,0 +1,91 @@
+<div class="research-exploration-page">
+  <section class="hero">
+    <h1>Exploration des Mastères Recherche disponibles</h1>
+    <p>
+      Cette page présente uniquement les informations essentielles pour comparer rapidement les
+      mastères recherche. Les détails complets restent dans les pages d offre.
+    </p>
+  </section>
+
+  <section class="cards-grid">
+    <article class="info-card">
+      <h2>{{ mrglKeyInfo.titre }}</h2>
+
+      <h3>Calendrier essentiel</h3>
+      <ul>
+        <li>Inscription en ligne: {{ mrglKeyInfo.inscription }}</li>
+        <li>Résultats préliminaires: {{ mrglKeyInfo.resultatsPreliminaires }}</li>
+        <li>Dépôt numérique: {{ mrglKeyInfo.depotNumerique }}</li>
+        <li>Résultats finaux: {{ mrglKeyInfo.resultatsFinaux }}</li>
+      </ul>
+
+      <h3>Capacité</h3>
+      <ul>
+        <li>{{ mrglKeyInfo.capaciteInterne }}</li>
+        <li>{{ mrglKeyInfo.capaciteExterne }}</li>
+      </ul>
+
+      <h3>Score (résumé)</h3>
+      <p>{{ mrglKeyInfo.resumeScore }}</p>
+
+      <div class="actions">
+        <a class="btn detail-btn" [routerLink]="['/preinscription/detail/mrgl']"
+          >Voir l offre détaillée MRGL</a
+        >
+        <a
+          class="btn apply-btn"
+          [routerLink]="['/candidature']"
+          [queryParams]="{ type: 'master', parcours: 'mrgl' }"
+          >Candidater</a
+        >
+      </div>
+    </article>
+
+    <article class="info-card">
+      <h2>{{ mrmiKeyInfo.titre }}</h2>
+
+      <h3>Calendrier essentiel</h3>
+      <ul>
+        <li>Inscription en ligne: {{ mrmiKeyInfo.inscription }}</li>
+        <li>Résultats préliminaires: {{ mrmiKeyInfo.resultatsPreliminaires }}</li>
+        <li>Dépôt numérique: {{ mrmiKeyInfo.depotNumerique }}</li>
+        <li>Résultats finaux: {{ mrmiKeyInfo.resultatsFinaux }}</li>
+      </ul>
+
+      <h3>Capacité</h3>
+      <ul>
+        <li>{{ mrmiKeyInfo.capaciteM1 }}</li>
+        <li>{{ mrmiKeyInfo.capaciteM2 }}</li>
+      </ul>
+
+      <h3>Score (résumé)</h3>
+      <p>{{ mrmiKeyInfo.resumeScore }}</p>
+
+      <div class="actions">
+        <a class="btn detail-btn" [routerLink]="['/preinscription/detail/mrmi']"
+          >Voir l offre détaillée MRMI</a
+        >
+        <a
+          class="btn apply-btn"
+          [routerLink]="['/candidature']"
+          [queryParams]="{ type: 'master', parcours: 'mrmi' }"
+          >Candidater</a
+        >
+      </div>
+    </article>
+  </section>
+
+  <section class="process-card">
+    <h2>Procédure simplifiée (commune)</h2>
+    <ol>
+      <li>Inscription en ligne dans les délais.</li>
+      <li>Classement préliminaire selon score.</li>
+      <li>Dépôt du dossier numérique pour les pré-admis.</li>
+      <li>Publication de la liste finale.</li>
+    </ol>
+  </section>
+
+  <div class="back-link">
+    <a [routerLink]="['/']"><i class="fas fa-arrow-left"></i> Retour à l'accueil </a>
+  </div>
+</div>

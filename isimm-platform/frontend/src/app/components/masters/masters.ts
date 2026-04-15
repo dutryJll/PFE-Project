@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -106,7 +106,10 @@ export class MastersComponent implements OnInit {
     },
   ];
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+  ) {}
 
   ngOnInit(): void {
     this.loadReferentielMasters();
@@ -208,5 +211,23 @@ export class MastersComponent implements OnInit {
   getTotalPlaces(code: string): number | null {
     const total = this.getSection(code)?.capacites?.total;
     return typeof total === 'number' ? total : null;
+  }
+
+  goToResearchExploration(event?: Event): void {
+    console.log('🔴 goToResearchExploration called - preparing redirect...');
+    event?.preventDefault();
+    event?.stopPropagation();
+    console.log('✅ Event prevented, now navigating...');
+
+    // Double fallback: try router.navigate first, then window.location as backup
+    setTimeout(() => {
+      const navigationSuccess = this.router.navigate(['/exploration-masters-recherche']);
+      console.log('🔵 Router.navigate result:', navigationSuccess);
+
+      if (!navigationSuccess) {
+        console.log('⚠️ Router.navigate failed, using window.location as fallback');
+        window.location.href = '/exploration-masters-recherche';
+      }
+    }, 50);
   }
 }

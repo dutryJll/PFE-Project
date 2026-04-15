@@ -252,10 +252,92 @@
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
 }
 
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.notifications-header h2 {
+  margin: 0;
+  color: #003d5b;
+}
+
+.notifications-header small {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.notifications-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.notifications-kpi-card {
+  border: 1px solid #cfe1ef;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notifications-kpi-card span {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.notifications-kpi-card strong {
+  font-size: 1.3rem;
+  color: #123a5a;
+}
+
+.notifications-kpi-card.today {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.notifications-kpi-card.critical {
+  border-color: #fed7aa;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+}
+
+.notifications-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.notifications-filters select,
+.notifications-filters input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  background: #fff;
+  min-width: 130px;
+}
+
 .notifications-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
   margin-bottom: 1rem;
+}
+
+.notifications-counter {
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
 }
 
 .btn-secondary {
@@ -345,6 +427,21 @@
   padding: 2rem;
   text-align: center;
   color: #66758a;
+}
+
+.empty-state small {
+  color: #64748b;
+}
+
+@media (max-width: 860px) {
+  .notifications-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .instructions-section h3 {

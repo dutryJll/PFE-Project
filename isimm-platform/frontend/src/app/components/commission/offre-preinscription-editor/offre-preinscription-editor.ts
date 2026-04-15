@@ -69,6 +69,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
 
   offerId: number | null = null;
   offer: OffrePreinscriptionItem | null = null;
+  isEmptyMode = false;
   loading = false;
   savingContent = false;
   selectedPdfFileName = '';
@@ -123,6 +124,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.offerId = Number.isFinite(id) && id > 0 ? id : null;
+    this.isEmptyMode = this.route.snapshot.queryParamMap.get('empty') === '1';
 
     if (!this.offerId) {
       this.toastService.show('Offre introuvable.', 'error');
@@ -132,7 +134,45 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
       return;
     }
 
+    if (this.isEmptyMode) {
+      this.form = this.createEmptyFormModel();
+      this.loading = false;
+      return;
+    }
+
     this.loadOffer();
+  }
+
+  private createEmptyFormModel(): EditorFormModel {
+    return {
+      title: '',
+      openingTitle: '',
+      openingBody: '',
+      tableTitle: '',
+      capInterneTotale: '',
+      capInterneOrigine: '',
+      capInterneCapacite: '',
+      capInterneDiplome: '',
+      capInterneDates: '',
+      capExterneTotale: '',
+      capExterneOrigine: '',
+      capExterneCapacite: '',
+      capExterneDiplome: '',
+      capExterneDates: '',
+      modalitesTitle: '',
+      etape1: '',
+      etape2: '',
+      dossierTitle: '',
+      dossierItemsText: '',
+      scoreTitle: '',
+      scoreRow1Composante: '',
+      scoreRow1Calcul: '',
+      scoreRow2Composante: '',
+      scoreRow2Calcul: '',
+      scoreRow3Composante: '',
+      scoreRow3Calcul: '',
+      evaluationNotesText: '',
+    };
   }
 
   private loadOffer(): void {

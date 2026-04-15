@@ -6,7 +6,7 @@
   <div class="candidature-container">
     <div class="form-header">
       <h1>
-        <span *ngIf="typeCandidature === 'master'">📚 Candidature à un Master</span>
+        <span *ngIf="typeCandidature === 'master'">{{ getMasterFormTitle() }}</span>
         <span *ngIf="typeCandidature === 'ingenieur'">🎓 Candidature au Cycle Ingénieur</span>
       </h1>
       <p>
@@ -15,8 +15,15 @@
     </div>
 
     <div *ngIf="errorMessage" class="alert alert-error">❌ {{ errorMessage }}</div>
+    <div *ngIf="successMessage" class="alert alert-success">
+      <h3>✅ Confirmation de création</h3>
+      <p>{{ successMessage }}</p>
+      <p class="password-line"><strong>Mot de passe :</strong> {{ generatedPasswordMessage }}</p>
+      <p class="help-line">Enregistrez-le maintenant, puis cliquez sur Connexion.</p>
+      <button type="button" class="btn-login" (click)="goToLogin()">Aller à la connexion</button>
+    </div>
 
-    <form (ngSubmit)="onSubmit()" class="candidature-form">
+    <form (ngSubmit)="onSubmit()" class="candidature-form" *ngIf="!successMessage">
       <div class="form-section">
         <h2>👤 Informations personnelles</h2>
 
@@ -89,185 +96,480 @@
       <div class="form-section">
         <h2>🎓 Diplôme et parcours académique</h2>
         <p class="info-text">
-          Cette section suit les champs demandés dans l'appel officiel: établissement d'origine,
-          diplôme obtenu, sessions de rattrapage et bonus session principale (BSP).
+          Renseignez les informations du baccalauréat puis du dernier diplôme/formation.
         </p>
 
         <div class="form-grid">
           <div class="form-group">
-            <label>Établissement d'origine *</label>
-            <input
-              type="text"
-              [(ngModel)]="formData.etablissementOrigine"
-              name="etablissementOrigine"
-              placeholder="ISIMM, FST, ISET..."
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Diplôme obtenu *</label>
-            <input
-              type="text"
-              [(ngModel)]="formData.diplome"
-              name="diplome"
-              placeholder="Licence en Informatique, Cycle préparatoire..."
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Nombre d'années avec session de rattrapage *</label>
-            <select [(ngModel)]="formData.anneesRattrapage" name="anneesRattrapage" required>
-              <option value="0">Aucune année en session de rattrapage</option>
-              <option value="1">1 année en session de rattrapage</option>
-              <option value="2">2 années ou plus en session de rattrapage</option>
+            <label>Spécialité baccalauréat *</label>
+            <select [(ngModel)]="formData.specialiteBac" name="specialiteBac" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of specialiteBacOptions" [value]="option.label">
+                {{ option.label }}
+              </option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>Bonus session principale (BSP)</label>
-            <input type="text" [value]="bspValue" readonly />
-            <small>Règle appliquée: 0 (aucune), 0.5 (1 année), 1 (2 années ou plus)</small>
+            <label>Etablissement universitaire d'origine *</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.etablissementUniversitaireOrigine"
+              name="etablissementUniversitaireOrigine"
+              placeholder="Ex: ISIMM"
+              required
+            />
           </div>
 
           <div class="form-group">
-            <label>Moyenne Bac *</label>
+            <label>Année baccalauréat *</label>
             <input
               type="number"
-              [(ngModel)]="formData.moyenneBac"
-              name="moyenneBac"
-              placeholder="15.50"
+              [(ngModel)]="formData.anneeBac"
+              name="anneeBac"
+              min="1990"
+              max="2099"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Moyenne Baccalauréat *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneBacSessionPrincipale"
+              name="moyenneBacSessionPrincipale"
               step="0.01"
               min="0"
               max="20"
               required
             />
-            <small>Entre 0 et 20</small>
           </div>
 
-          <div class="form-group">
-            <label>Moyenne Licence 1</label>
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Note mathématiques du bac *</label>
             <input
               type="number"
-              [(ngModel)]="formData.moyenneL1"
-              name="moyenneL1"
-              placeholder="14.00"
+              [(ngModel)]="formData.noteMathBac"
+              name="noteMathBac"
               step="0.01"
               min="0"
               max="20"
+              required
             />
-            <small>Entre 0 et 20</small>
           </div>
 
-          <div class="form-group">
-            <label>Moyenne Licence 2</label>
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Note français du bac *</label>
             <input
               type="number"
-              [(ngModel)]="formData.moyenneL2"
-              name="moyenneL2"
-              placeholder="15.00"
+              [(ngModel)]="formData.noteFrancaisBac"
+              name="noteFrancaisBac"
               step="0.01"
               min="0"
               max="20"
+              required
             />
-            <small>Entre 0 et 20</small>
           </div>
 
-          <div class="form-group">
-            <label>Moyenne Licence 3</label>
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Note anglais du bac *</label>
             <input
               type="number"
-              [(ngModel)]="formData.moyenneL3"
-              name="moyenneL3"
-              placeholder="16.00"
+              [(ngModel)]="formData.noteAnglaisBac"
+              name="noteAnglaisBac"
               step="0.01"
               min="0"
               max="20"
+              required
             />
-            <small>Entre 0 et 20</small>
           </div>
-        </div>
 
-        <div class="docs-section">
-          <h3>
-            <span *ngIf="typeCandidature === 'master'"
-              >📎 Documents requis - Candidature Master</span
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Certification B2 *</label>
+            <select [(ngModel)]="formData.certificationB2" name="certificationB2" required>
+              <option value="">Sélectionner</option>
+              <option value="non">Non</option>
+              <option value="oui">Oui</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Spécialité du diplôme obtenu *</label>
+            <select
+              [(ngModel)]="formData.specialiteDiplomeObtenu"
+              name="specialiteDiplomeObtenu"
+              required
             >
-            <span *ngIf="typeCandidature === 'ingenieur'"
-              >📎 Documents requis - Candidature Ingénieur</span
-            >
-          </h3>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of getSpecialiteDiplomeOptions()" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
 
-          <div class="docs-grid">
-            <div class="doc-card" *ngFor="let doc of currentRequiredDocuments">
-              <div class="doc-card-head">
-                <strong>{{ doc.label }}</strong>
-                <span class="doc-badge" [class.optional]="!doc.required">
-                  {{ doc.required ? 'Obligatoire' : 'Optionnel' }}
-                </span>
-              </div>
-              <input
-                type="file"
-                [name]="doc.key"
-                (change)="onDocumentChange($event, doc.key)"
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-              <small>{{ getDocumentName(doc.key) }}</small>
-            </div>
+          <div class="form-group">
+            <label>Année d'obtention du dernier diplôme *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.anneeObtentionDernierDiplome"
+              name="anneeObtentionDernierDiplome"
+              min="1990"
+              max="2099"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="isProfessionalMasterSelected()">
+            <label>Type de Licence *</label>
+            <select [(ngModel)]="formData.typeLicence" name="typeLicence" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of typeLicenceOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Nature diplôme *</label>
+            <select [(ngModel)]="formData.natureDiplome" name="natureDiplome" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of getNatureDiplomeOptions()" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="typeCandidature === 'ingenieur'">
+            <label>Catégorie de candidature ingénieur *</label>
+            <select [(ngModel)]="formData.categorieIngenieur" name="categorieIngenieur" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of categoriesIngenieurOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Moyenne 1ère année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenne1ereAnnee"
+              name="moyenne1ereAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Session réussite 1ère année *</label>
+            <select
+              [(ngModel)]="formData.sessionReussite1ereAnnee"
+              name="sessionReussite1ereAnnee"
+              required
+            >
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of sessionOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Moyenne 2ème année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenne2emeAnnee"
+              name="moyenne2emeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Session réussite 2ème année *</label>
+            <select
+              [(ngModel)]="formData.sessionReussite2emeAnnee"
+              name="sessionReussite2emeAnnee"
+              required
+            >
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of sessionOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowTroisiemeAnneeFields()">
+            <label>Moyenne 3ème année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenne3emeAnnee"
+              name="moyenne3emeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowTroisiemeAnneeFields()">
+            <label>Session réussite 3ème année *</label>
+            <select
+              [(ngModel)]="formData.sessionReussite3emeAnnee"
+              name="sessionReussite3emeAnnee"
+              required
+            >
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of sessionOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Moyenne 4ème année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenne4emeAnnee"
+              name="moyenne4emeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <label>Session réussite 4ème année *</label>
+            <select
+              [(ngModel)]="formData.sessionReussite4emeAnnee"
+              name="sessionReussite4emeAnnee"
+              required
+            >
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of sessionOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+
+          <div
+            class="form-group"
+            *ngIf="typeCandidature === 'ingenieur' && shouldShowTroisiemeAnneeFields()"
+          >
+            <label>Moyenne du semestre 1 (3ème année) *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSemestre1TroisiemeAnnee"
+              name="moyenneSemestre1TroisiemeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Nature de candidature *</label>
+            <select [(ngModel)]="formData.natureCandidature" name="natureCandidature" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of natureCandidatureOptions" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Nombre d'années de redoublement *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.nombreAnneesRedoublement"
+              name="nombreAnneesRedoublement"
+              min="0"
+              required
+            />
+          </div>
+
+          <div
+            class="form-group"
+            *ngIf="typeCandidature === 'ingenieur' && isIngenieurCategorieLicenceSelected()"
+          >
+            <label>Classement de la 1ère année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.classement1ereAnnee"
+              name="classement1ereAnnee"
+              min="1"
+              required
+            />
+          </div>
+
+          <div
+            class="form-group"
+            *ngIf="typeCandidature === 'ingenieur' && isIngenieurCategorieLicenceSelected()"
+          >
+            <label>Classement de la 2ème année *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.classement2emeAnnee"
+              name="classement2emeAnnee"
+              min="1"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages()">
+            <label>Moyenne de réussite en session principale (1ère année) *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionPrincipale1ereAnnee"
+              name="moyenneSessionPrincipale1ereAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages()">
+            <label>Moyenne de réussite en session contrôle (1ère année) *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionControle1ereAnnee"
+              name="moyenneSessionControle1ereAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages()">
+            <label>Moyenne de réussite en session principale (2ème année) *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionPrincipale2emeAnnee"
+              name="moyenneSessionPrincipale2emeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages()">
+            <label>Moyenne de réussite en session contrôle (2ème année) *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionControle2emeAnnee"
+              name="moyenneSessionControle2emeAnnee"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages() && hasRedoublement()">
+            <label
+              >Moyenne de réussite en session principale (1ère année) - cas redoublement *</label
+            >
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionPrincipale1ereAnneeRedoublement"
+              name="moyenneSessionPrincipale1ereAnneeRedoublement"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages() && hasRedoublement()">
+            <label>Moyenne de réussite en session contrôle (1ère année) - cas redoublement *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionControle1ereAnneeRedoublement"
+              name="moyenneSessionControle1ereAnneeRedoublement"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages() && hasRedoublement()">
+            <label
+              >Moyenne de réussite en session principale (2ème année) - cas redoublement *</label
+            >
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionPrincipale2emeAnneeRedoublement"
+              name="moyenneSessionPrincipale2emeAnneeRedoublement"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="shouldShowIngenieurSessionAverages() && hasRedoublement()">
+            <label>Moyenne de réussite en session contrôle (2ème année) - cas redoublement *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneSessionControle2emeAnneeRedoublement"
+              name="moyenneSessionControle2emeAnneeRedoublement"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="isIng1EquivalentProfileSelected()">
+            <label>Moyenne ING1 *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.moyenneIng1"
+              name="moyenneIng1"
+              step="0.01"
+              min="0"
+              max="20"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="isIng1EquivalentProfileSelected()">
+            <label>Session de réussite ING1 *</label>
+            <select [(ngModel)]="formData.sessionReussiteIng1" name="sessionReussiteIng1" required>
+              <option value="">Sélectionner</option>
+              <option *ngFor="let option of sessionOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="isIng1EquivalentProfileSelected()">
+            <label>Nombre d'année(s) de redoublement ING1 *</label>
+            <input
+              type="number"
+              [(ngModel)]="formData.nombreAnneesRedoublementIng1"
+              name="nombreAnneesRedoublementIng1"
+              min="0"
+              required
+            />
           </div>
         </div>
       </div>
 
-      <div class="form-section" *ngIf="typeCandidature === 'master'">
-        <h2>🎯 Choix des masters (vœux)</h2>
-        <p class="info-text">Sélectionnez vos choix par ordre de priorité (1, 2, 3).</p>
-
-        <div class="voeux-container">
-          <div class="form-group">
-            <label>Vœu 1 *</label>
-            <select [(ngModel)]="formData.voeu1" name="voeu1" required>
-              <option value="">-- Choisir le vœu 1 --</option>
-              <option *ngFor="let master of getMastersForVoeu(1)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Vœu 2</label>
-            <select [(ngModel)]="formData.voeu2" name="voeu2">
-              <option value="">-- Choisir le vœu 2 --</option>
-              <option *ngFor="let master of getMastersForVoeu(2)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Vœu 3</label>
-            <select [(ngModel)]="formData.voeu3" name="voeu3">
-              <option value="">-- Choisir le vœu 3 --</option>
-              <option *ngFor="let master of getMastersForVoeu(3)" [value]="master.id">
-                {{ master.nom }}
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-section" *ngIf="typeCandidature === 'ingenieur'">
-        <h2>⚙️ Choix de spécialité ingénieur</h2>
-        <p class="info-text">Sélectionnez la spécialité du cycle ingénieur.</p>
-
+      <div class="form-section">
+        <p class="info-text">
+          Les informations saisies sont correctes et j'assume toute fausse déclaration.
+        </p>
         <div class="form-group">
-          <label>Spécialité *</label>
-          <select [(ngModel)]="formData.specialite" name="specialite" required>
-            <option value="">-- Choisir une spécialité --</option>
-            <option *ngFor="let specialite of specialitesIngenieur" [value]="specialite.id">
-              {{ specialite.nom }}
-            </option>
-          </select>
+          <label>Ecrire ici: je confirme *</label>
+          <input
+            type="text"
+            [(ngModel)]="formData.confirmationDeclaration"
+            name="confirmationDeclaration"
+            placeholder="je confirme"
+            required
+          />
         </div>
       </div>
 
@@ -329,20 +631,8 @@
         </div>
       </div>
 
-      <div class="form-section">
-        <label class="checkbox-container">
-          <input type="checkbox" [(ngModel)]="accepteCGU" name="accepteCGU" required />
-          <span
-            >J'accepte les
-            <a href="#" target="_blank">conditions générales d'utilisation</a> *</span
-          >
-        </label>
-      </div>
-
       <div class="form-actions">
-        <button type="button" class="btn-secondary" (click)="router.navigate(['/'])">
-          Annuler
-        </button>
+        <button type="button" class="btn-secondary" (click)="onCancel()">Annuler</button>
 
         <button type="submit" class="btn-primary" [disabled]="isLoading">
           <span *ngIf="!isLoading">✅ Valider et créer mon compte</span>

@@ -6,7 +6,6 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password';
 import { ResetPasswordComponent } from './components/reset-password/reset-password';
-import { MastersComponent } from './components/masters/masters';
 import { ConcoursIngenieurComponent } from './components/concours-ingenieur/concours-ingenieur.component';
 import { CandidatureFormComponent } from './components/candidature-form/candidature-form.component';
 import { CandidatureInProgressComponent } from './components/candidature-in-progress/candidature-in-progress';
@@ -16,6 +15,7 @@ import { roleGuard } from './guards/role-guard';
 import { actionGuard } from './guards/action.guard';
 import { ProfilComponent } from './components/shared/profil.component';
 import { CreatePasswordComponent } from './components/create-password/create-password.component';
+import { VerifyEmailComponent } from './components/verify-email/verify-email.component';
 
 // ========================================
 // NOUVEAUX LOGIN SPÉCIFIQUES
@@ -36,6 +36,11 @@ import { ChoixCandidatureComponent } from './components/choix-candidature/choix-
 import { NouvelleReclamationComponent } from './components/candidat/nouvelle-reclamation/nouvelle-reclamation';
 import { GuideEtudiantComponent } from './components/guide-etudiant/guide-etudiant';
 import { PreinscriptionDetailComponent } from './components/preinscription-detail/preinscription-detail.component';
+import { MasterCatalogComponent } from './components/master-catalog/master-catalog.component';
+import { IngenieurCatalogComponent } from './components/ingenieur-catalog/ingenieur-catalog.component';
+import { ResearchMastersExplorationComponent } from './components/research-masters-exploration/research-masters-exploration.component';
+import { ProfessionalMastersExplorationComponent } from './components/professional-masters-exploration/professional-masters-exploration.component';
+import { EngineerExplorationComponent } from './components/engineer-exploration/engineer-exploration.component';
 
 // ========================================
 // ADMIN COMPONENTS
@@ -101,17 +106,26 @@ export const routes: Routes = [
     component: ResetPasswordComponent,
   },
   {
-    path: 'masters',
-    component: MastersComponent,
-  },
-  {
     path: 'concours-ingenieur',
-    redirectTo: 'masters',
+    redirectTo: '',
     pathMatch: 'full',
   },
   {
     path: 'choisir-candidature',
     component: ChoixCandidatureComponent,
+  },
+  {
+    path: 'master/disponibles',
+    component: MasterCatalogComponent,
+  },
+  {
+    path: 'ingenieur/disponibles',
+    component: IngenieurCatalogComponent,
+  },
+  {
+    path: 'masters/disponibles',
+    redirectTo: 'master/disponibles',
+    pathMatch: 'full',
   },
   {
     path: 'candidature',
@@ -129,6 +143,22 @@ export const routes: Routes = [
     path: 'preinscription/detail/:code',
     component: PreinscriptionDetailComponent,
   },
+  {
+    path: 'masters/recherche/exploration',
+    component: ResearchMastersExplorationComponent,
+  },
+  {
+    path: 'masters/professionnel/exploration',
+    component: ProfessionalMastersExplorationComponent,
+  },
+  {
+    path: 'masters/ingenieur/exploration',
+    component: EngineerExplorationComponent,
+  },
+  {
+    path: 'exploration-masters-recherche',
+    component: ResearchMastersExplorationComponent,
+  },
 
   // ========================================
   // ROUTES CANDIDAT
@@ -136,6 +166,10 @@ export const routes: Routes = [
   {
     path: 'create-password/:token',
     component: CreatePasswordComponent,
+  },
+  {
+    path: 'verify-email/:token',
+    component: VerifyEmailComponent,
   },
   {
     path: 'candidat/dashboard',

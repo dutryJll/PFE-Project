@@ -27,7 +27,7 @@
       <a [routerLink]="['/preselection']" class="nav-item">
         <span>⭐</span> Liste de Préselection
       </a>
-      <a [routerLink]="['/masters']" class="nav-item"> <span>🎓</span> Offres de Masters </a>
+      <a [routerLink]="['/choisir-candidature']" class="nav-item"> <span>🎓</span> Candidater </a>
       <a [routerLink]="['/profile']" class="nav-item"> <span>👤</span> Mon Profil </a>
       <a
         class="nav-item"
@@ -134,7 +134,58 @@
     </div>
 
     <div *ngIf="currentView === 'notifications'" class="notifications-panel">
+      <div class="notifications-header">
+        <h2>🔔 Notifications</h2>
+        <small>{{ currentDate | date: 'EEEE d MMMM y' }}</small>
+      </div>
+
+      <div class="notifications-kpi-grid">
+        <article class="notifications-kpi-card">
+          <span>Total</span>
+          <strong>{{ notificationsTotalCount }}</strong>
+        </article>
+        <article class="notifications-kpi-card unread">
+          <span>Non lues</span>
+          <strong>{{ notificationsNonLues }}</strong>
+        </article>
+        <article class="notifications-kpi-card today">
+          <span>Aujourd'hui</span>
+          <strong>{{ notificationsTodayCount }}</strong>
+        </article>
+        <article class="notifications-kpi-card critical">
+          <span>Prioritaires</span>
+          <strong>{{ notificationsCriticalCount }}</strong>
+        </article>
+      </div>
+
+      <div class="notifications-filters">
+        <select [(ngModel)]="filtreNotificationType">
+          <option value="">Tous les types</option>
+          <option value="info">Info</option>
+          <option value="success">Succès</option>
+          <option value="warning">Avertissement</option>
+          <option value="danger">Danger</option>
+        </select>
+        <select [(ngModel)]="filtreNotificationTriRapide">
+          <option value="recent">Tri rapide: Plus récent</option>
+          <option value="critique">Tri rapide: Plus critique</option>
+        </select>
+        <input type="date" [(ngModel)]="filtreNotificationDateDebut" />
+        <input type="date" [(ngModel)]="filtreNotificationDateFin" />
+        <input
+          type="text"
+          [(ngModel)]="filtreNotificationRecherche"
+          placeholder="Rechercher (titre, message...)"
+        />
+        <button class="btn-secondary" (click)="reinitialiserFiltresNotifications()">
+          Réinitialiser
+        </button>
+      </div>
+
       <div class="notifications-actions" *ngIf="notificationsNonLues > 0">
+        <span class="notifications-counter"
+          >{{ notificationsFilteredUnreadCount }} non lue(s) dans le filtre</span
+        >
         <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
           ✓ Marquer tous comme lus
         </button>
@@ -153,7 +204,7 @@
           <div class="notification-head">
             <strong>{{ notification.titre }}</strong>
             <span class="notification-type" [ngClass]="'type-' + notification.type">
-              {{ notification.type }}
+              {{ getNotificationTypeLabel(notification.type) }}
             </span>
           </div>
           <p>{{ notification.message }}</p>
@@ -163,7 +214,8 @@
 
       <ng-template #noNotifications>
         <div class="empty-state">
-          <p>Aucune notification pour le moment.</p>
+          <p>Aucune notification pour ce filtre.</p>
+          <small>Réinitialisez les filtres pour afficher toutes les alertes.</small>
         </div>
       </ng-template>
     </div>

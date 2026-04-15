@@ -516,6 +516,55 @@
   gap: 0.85rem;
 }
 
+.notifications-date {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.notifications-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.notifications-kpi-card {
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notifications-kpi-card span {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.notifications-kpi-card strong {
+  font-size: 1.3rem;
+  color: #0f2f4a;
+}
+
+.notifications-kpi-card.unread {
+  border-color: #bfdbfe;
+}
+
+.notifications-kpi-card.today {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.notifications-kpi-card.critical {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff1f2 0%, #fee2e2 100%);
+}
+
 .notifications-filters {
   display: flex;
   flex-wrap: wrap;
@@ -534,6 +583,14 @@
 .notifications-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.notifications-counter {
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
 }
 
 .btn-secondary {
@@ -611,6 +668,18 @@
 .notification-type.type-danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.notifications-empty-state small {
+  color: #64748b;
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 860px) {
+  .notifications-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ========================================
