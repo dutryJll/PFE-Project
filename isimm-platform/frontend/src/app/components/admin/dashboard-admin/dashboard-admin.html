@@ -318,7 +318,7 @@
             Ces parcours apparaissent dans le champ "Offre concernée" de l'espace responsable.
           </p>
           <div *ngIf="isLoadingOffresResponsableSync" class="reglement-loading">
-            Chargement des offres synchronisées...
+            <app-skeleton-loader variant="table" [rows]="4"></app-skeleton-loader>
           </div>
           <div *ngIf="offresResponsableSyncMessage" class="reglement-message">
             {{ offresResponsableSyncMessage }}

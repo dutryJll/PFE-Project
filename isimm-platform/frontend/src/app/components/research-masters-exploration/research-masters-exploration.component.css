@@ -54,6 +54,32 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.explore-toolbar {
+  max-width: 980px;
+  margin: 0 auto 1.2rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.explore-toolbar label {
+  color: #0f3f63;
+  font-weight: 700;
+}
+
+.explore-toolbar input {
+  width: 100%;
+  border: 2px solid #d7e6f7;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  font-size: 0.98rem;
+}
+
+.explore-toolbar input:focus {
+  outline: none;
+  border-color: #0e659f;
+  box-shadow: 0 0 0 4px rgba(14, 101, 159, 0.13);
+}
+
 .info-card {
   background: linear-gradient(135deg, #fff 0%, #f8fcfe 100%);
   border: 2px solid #e1f0f8;
@@ -92,6 +118,7 @@
   max-width: 980px;
   margin: 2.5rem auto;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .process-card::before {
@@ -157,6 +184,36 @@
   flex-wrap: wrap;
   border-top: 1px solid #e1f0f8;
   padding-top: 1.2rem;
+}
+
+.master-detail {
+  max-width: 980px;
+  margin: 0 auto 2rem;
+}
+
+.detail-card {
+  margin-top: 0.8rem;
+}
+
+.return-list-btn {
+  margin-bottom: 0.8rem;
+}
+
+.criteria-table {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #d7e6f7;
+  margin-top: 0.5rem;
+}
+
+.criteria-table .mat-mdc-header-row {
+  background: #eef6ff;
+}
+
+.criteria-table .mat-mdc-header-cell {
+  color: #0f3f63;
+  font-weight: 700;
 }
 
 .btn {

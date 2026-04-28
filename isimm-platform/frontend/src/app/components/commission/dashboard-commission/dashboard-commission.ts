@@ -5,9 +5,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {
+  OffreMasterDialogComponent,
+  OffreMasterDialogData,
+} from '../offre-master-dialog/offre-master-dialog.component';
 
 interface Candidature {
   id: number;
@@ -15,6 +22,7 @@ interface Candidature {
   candidat_nom: string;
   candidat_email: string;
   candidat_cin?: string;
+  etablissement_origine?: string;
   master_id?: number;
   specialite: string;
   master_nom?: string;
@@ -31,6 +39,8 @@ interface Candidature {
   notes_preinscription?: string;
   decision_responsable?: 'valide' | 'non_valide' | '';
   date_soumission?: string;
+  classement?: string | number;
+  total_candidats?: number;
 }
 
 interface NotificationItem {
@@ -83,6 +93,22 @@ interface Liste {
   date_creation: string;
   avis?: string;
   recommandation?: 'favorable' | 'defavorable' | 'reserve' | '';
+}
+
+interface ListeGenerationApiPayload {
+  success: boolean;
+  message?: string;
+  liste: {
+    id: number;
+    master_id: number;
+    master_nom: string;
+    type_liste: 'principale' | 'attente';
+    iteration: number;
+    annee_universitaire: string;
+    nb_candidats: number;
+    date_creation: string;
+  } | null;
+  candidats: Candidature[];
 }
 
 interface Reclamation {
@@ -252,8 +278,20 @@ interface OffrePreinscription {
   est_cache?: boolean;
   est_visible?: boolean;
   statut: 'ouvert' | 'ferme';
+  nombre_candidats_inscrits?: number;
   document_officiel_pdf_url?: string | null;
   isDemo?: boolean;
+}
+
+interface OffreMasterCrudItem {
+  id: number;
+  master_id: number;
+  titre: string;
+  description: string;
+  capacite: number;
+  date_limite: string;
+  actif: boolean;
+  nombre_candidats_inscrits: number;
 }
 
 interface OffreCalendarPreviewRow {
@@ -326,7 +364,7 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SkeletonLoaderComponent, MatDialogModule, MatCardModule],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
 })
@@ -392,6 +430,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   // Menu Kebab
   actionMenuOpen: number | null = null;
+  selectedCandidaturePreview: Candidature | null = null;
 
   // Filtres principaux
   filtreSpecialite: 'actuel' | 'ancien' = 'actuel';
@@ -406,6 +445,9 @@ export class DashboardCommissionComponent implements OnInit {
     statut: '',
     parcours: '',
     recherche: '',
+    scoreMin: null,
+    scoreMax: null,
+    etablissement: '',
   };
   filtreAnneeUniversitaire: 'courante' | 'precedente' | 'toutes' = 'courante';
   filtrePorteeOffres: 'specialite' | 'toutes_ouvertes' = 'specialite';
@@ -413,6 +455,7 @@ export class DashboardCommissionComponent implements OnInit {
   preselectionSearch: string = '';
   preselectionQuota: number = 100;
   preselectionRowsForGeneration: Candidature[] = [];
+  generatedSelectionRows: Candidature[] = [];
   selectedPreselectionCandidateIds: number[] = [];
   candidaturesFiltrees: Candidature[] = [];
 
@@ -555,6 +598,11 @@ export class DashboardCommissionComponent implements OnInit {
   masterOptions: MasterOption[] = [];
   offreOptions: OffreOption[] = [];
   offresPreinscription: OffrePreinscription[] = [];
+  offresMasterCrud: OffreMasterCrudItem[] = [];
+  offresMasterCrudFiltrees: OffreMasterCrudItem[] = [];
+  offreMasterSearch: string = '';
+  offreMasterDateSearch: string = '';
+  offresMasterCrudLoading: boolean = false;
   private readonly demoOffrePreinscription: OffrePreinscription = {
     id: -1,
     titre: 'Master Démo - Ingénierie Logicielle',
@@ -765,6 +813,7 @@ export class DashboardCommissionComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -787,6 +836,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.candidaturesFiltrees = [...this.candidatures];
     this.loadMastersForConfiguration();
     this.loadOffresPreinscription();
+    this.loadOffresMasterCrud();
     this.loadResponsibleNotifications();
     this.loadMembers();
     this.loadNotifications();
@@ -803,6 +853,8 @@ export class DashboardCommissionComponent implements OnInit {
       this.resetFiltresResponsable();
       this.loadCandidaturesResponsable();
     }
+
+    this.loadDerniereListeGenereeDepuisBackend();
   }
 
   private loadNotifications(): void {
@@ -1051,6 +1103,239 @@ export class DashboardCommissionComponent implements OnInit {
       });
   }
 
+  private sortRowsByScoreDesc(rows: Candidature[]): Candidature[] {
+    return [...rows].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  }
+
+  private getCandidateEtablissement(candidature: Candidature): string {
+    const directValue = (candidature.etablissement_origine || '').trim();
+    if (directValue) {
+      return directValue;
+    }
+
+    const raw = candidature as unknown as Record<string, unknown>;
+    const fallbackKeys = [
+      'etablissement',
+      'etablissementOrigine',
+      'universite',
+      'universite_origine',
+      'institution',
+    ];
+
+    for (const key of fallbackKeys) {
+      const value = raw[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  loadOffresMasterCrud(): void {
+    const token = this.authService.getAccessToken();
+    if (!token || !this.isResponsable) {
+      this.offresMasterCrud = [];
+      this.offresMasterCrudFiltrees = [];
+      return;
+    }
+
+    this.offresMasterCrudLoading = true;
+
+    const params = new URLSearchParams();
+    if (this.offreMasterSearch.trim()) {
+      params.set('search', this.offreMasterSearch.trim());
+    }
+    if (this.offreMasterDateSearch) {
+      params.set('date_limite', this.offreMasterDateSearch);
+    }
+
+    const query = params.toString();
+    const endpoint = `http://localhost:8003/api/candidatures/offres-master/${query ? `?${query}` : ''}`;
+
+    this.http
+      .get<OffreMasterCrudItem[]>(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (rows) => {
+          this.offresMasterCrud = rows || [];
+          this.offresMasterCrudFiltrees = [...this.offresMasterCrud];
+          this.offresMasterCrudLoading = false;
+        },
+        error: (error) => {
+          console.error('Erreur chargement offres master CRUD:', error);
+          this.offresMasterCrud = [];
+          this.offresMasterCrudFiltrees = [];
+          this.offresMasterCrudLoading = false;
+        },
+      });
+  }
+
+  appliquerFiltresOffresMasterCrud(): void {
+    const search = this.offreMasterSearch.trim().toLowerCase();
+    const byDate = this.offreMasterDateSearch;
+
+    this.offresMasterCrudFiltrees = this.offresMasterCrud.filter((offre) => {
+      const matchesSearch =
+        !search ||
+        String(offre.titre || '')
+          .toLowerCase()
+          .includes(search) ||
+        String(offre.description || '')
+          .toLowerCase()
+          .includes(search);
+
+      const matchesDate = !byDate || String(offre.date_limite || '') === byDate;
+      return matchesSearch && matchesDate;
+    });
+  }
+
+  reinitialiserFiltresOffresMasterCrud(): void {
+    this.offreMasterSearch = '';
+    this.offreMasterDateSearch = '';
+    this.loadOffresMasterCrud();
+  }
+
+  ouvrirDialogOffreMaster(mode: 'create' | 'edit', offre?: OffreMasterCrudItem): void {
+    if (!this.isResponsable) {
+      this.notifyActionBlocked('Action réservée au responsable de commission.');
+      return;
+    }
+
+    const data: OffreMasterDialogData = {
+      mode,
+      value: offre
+        ? {
+            titre: offre.titre,
+            description: offre.description,
+            capacite: offre.capacite,
+            date_limite: offre.date_limite,
+            actif: offre.actif,
+          }
+        : undefined,
+    };
+
+    const dialogRef = this.dialog.open(OffreMasterDialogComponent, {
+      width: '520px',
+      data,
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) {
+        return;
+      }
+      if (mode === 'create') {
+        this.creerOffreMaster(result);
+        return;
+      }
+      if (offre) {
+        this.modifierOffreMaster(offre.id, result);
+      }
+    });
+  }
+
+  private creerOffreMaster(payload: {
+    titre: string;
+    description: string;
+    capacite: number;
+    date_limite: string;
+    actif: boolean;
+  }): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    this.http
+      .post<OffreMasterCrudItem>('http://localhost:8003/api/candidatures/offres-master/', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          this.toastService.show('Offre créée avec succès.', 'success');
+          this.loadOffresMasterCrud();
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          const backendMsg = error?.error?.error || error?.error?.message || '';
+          this.toastService.show(backendMsg || "Impossible de créer l'offre.", 'error');
+        },
+      });
+  }
+
+  private modifierOffreMaster(
+    offreId: number,
+    payload: {
+      titre: string;
+      description: string;
+      capacite: number;
+      date_limite: string;
+      actif: boolean;
+    },
+  ): void {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    this.http
+      .put<OffreMasterCrudItem>(
+        `http://localhost:8003/api/candidatures/offres-master/${offreId}/`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('Offre mise à jour.', 'success');
+          this.loadOffresMasterCrud();
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          const backendMsg = error?.error?.error || error?.error?.message || '';
+          this.toastService.show(backendMsg || "Impossible de modifier l'offre.", 'error');
+        },
+      });
+  }
+
+  supprimerOffreMaster(offre: OffreMasterCrudItem): void {
+    if (!this.isResponsable) {
+      this.notifyActionBlocked('Action réservée au responsable de commission.');
+      return;
+    }
+
+    if (!confirm(`Supprimer l'offre "${offre.titre}" ?`)) {
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    this.http
+      .delete(`http://localhost:8003/api/candidatures/offres-master/${offre.id}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: () => {
+          this.toastService.show('Offre supprimée.', 'success');
+          this.loadOffresMasterCrud();
+          this.loadOffresPreinscription();
+        },
+        error: (error) => {
+          const backendMsg = error?.error?.error || error?.error?.message || '';
+          this.toastService.show(backendMsg || "Impossible de supprimer l'offre.", 'error');
+        },
+      });
+  }
+
   getOffresPreinscriptionForDisplay(): OffrePreinscription[] {
     return this.offresPreinscription.length > 0
       ? this.offresPreinscription
@@ -1124,8 +1409,8 @@ export class DashboardCommissionComponent implements OnInit {
   loadCandidaturesResponsable(masterId: number | 'all' = this.selectedMasterForCandidatures): void {
     const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
     this.responsableCandidaturesFromApi = false;
-    this.candidaturesResponsable = [...fallbackData];
-    this.candidaturesResponsableFiltrees = [...fallbackData];
+    this.candidaturesResponsable = this.sortRowsByScoreDesc(fallbackData);
+    this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
     this.appliquerFiltresResponsable();
 
     const token = this.authService.getAccessToken();
@@ -1152,13 +1437,14 @@ export class DashboardCommissionComponent implements OnInit {
           // If API returns data, use it
           if (apiRows.length > 0) {
             this.responsableCandidaturesFromApi = true;
-            this.candidaturesResponsable = apiRows;
+            this.candidaturesResponsable = this.sortRowsByScoreDesc(apiRows);
             console.log('[LoadCandidaturesResponsable] Using API data');
           } else {
             this.responsableCandidaturesFromApi = false;
             // Fallback: use candidatures with type_concours from local cache
             const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
-            this.candidaturesResponsable = fallbackData.length > 0 ? fallbackData : [];
+            this.candidaturesResponsable =
+              fallbackData.length > 0 ? this.sortRowsByScoreDesc(fallbackData) : [];
             console.log(
               '[LoadCandidaturesResponsable] Using fallback data:',
               fallbackData.length,
@@ -1180,7 +1466,8 @@ export class DashboardCommissionComponent implements OnInit {
 
           // On error, try fallback
           const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
-          this.candidaturesResponsable = fallbackData.length > 0 ? fallbackData : [];
+          this.candidaturesResponsable =
+            fallbackData.length > 0 ? this.sortRowsByScoreDesc(fallbackData) : [];
           this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
           this.appliquerFiltresResponsable();
 
@@ -1524,7 +1811,10 @@ export class DashboardCommissionComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.toastService.show(hidden ? 'Offre masquée.' : 'Offre affichée.', 'success');
+          this.toastService.show(
+            hidden ? 'Offre retirée de la publication.' : 'Offre validée et publiée.',
+            'success',
+          );
           this.loadOffresPreinscription();
         },
         error: (error) => {
@@ -2086,7 +2376,10 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canChangeStatus(): boolean {
-    return this.isResponsable && this.actionPermissions.verifierDossiers;
+    return (
+      this.isResponsable &&
+      (this.actionPermissions.verifierDossiers || this.actionPermissions.preselection)
+    );
   }
 
   canGiveAvis(): boolean {
@@ -2148,9 +2441,63 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   modifierScore(candidature: Candidature): void {
-    this.notifyActionBlocked(
-      'La modification manuelle du score est désactivée. Le score est calculé automatiquement.',
-    );
+    if (!this.isResponsable) {
+      this.notifyActionBlocked('Seul le responsable peut recalculer le score.');
+      this.closeActionMenu();
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      this.closeActionMenu();
+      return;
+    }
+
+    this.http
+      .post<{
+        success?: boolean;
+        score?: number;
+      }>(
+        `http://localhost:8003/api/candidatures/${candidature.id}/calculer-score/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response) => {
+          const computedScore = Number(response?.score);
+          if (!Number.isFinite(computedScore)) {
+            this.toastService.show('Score recalculé, mais valeur invalide retournée.', 'warning');
+            return;
+          }
+
+          candidature.score = computedScore;
+
+          this.candidatures = this.candidatures.map((row) =>
+            row.id === candidature.id ? { ...row, score: computedScore } : row,
+          );
+          this.candidaturesResponsable = this.candidaturesResponsable.map((row) =>
+            row.id === candidature.id ? { ...row, score: computedScore } : row,
+          );
+          this.candidaturesResponsableFiltrees = this.candidaturesResponsableFiltrees.map((row) =>
+            row.id === candidature.id ? { ...row, score: computedScore } : row,
+          );
+
+          this.toastService.show(
+            `Score recalculé automatiquement: ${computedScore.toFixed(2)}`,
+            'success',
+          );
+        },
+        error: (error) => {
+          const backendMsg = error?.error?.error || error?.error?.message || '';
+          this.toastService.show(
+            backendMsg
+              ? `Impossible de recalculer le score: ${backendMsg}`
+              : 'Impossible de recalculer le score automatiquement.',
+            'error',
+          );
+        },
+      });
 
     this.closeActionMenu();
   }
@@ -2378,6 +2725,10 @@ export class DashboardCommissionComponent implements OnInit {
     if (view === 'candidatures') {
       this.loadCandidaturesMembre();
     }
+
+    if (view === 'listes') {
+      this.loadDerniereListeGenereeDepuisBackend();
+    }
   }
 
   isCurrentView(view: CommissionView): boolean {
@@ -2504,8 +2855,12 @@ export class DashboardCommissionComponent implements OnInit {
     this.filtres.concours = '';
     this.filtres.statut = '';
     this.filtres.recherche = '';
+    this.filtres.scoreMin = null;
+    this.filtres.scoreMax = null;
+    this.filtres.etablissement = '';
     this.filtreAnneeUniversitaire = 'courante';
     this.filtrePorteeOffres = 'specialite';
+    this.selectedCandidaturePreview = null;
     this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
   }
 
@@ -2515,43 +2870,116 @@ export class DashboardCommissionComponent implements OnInit {
       offresEligibles.map((offre) => Number(offre.id)).filter((id) => Number.isFinite(id)),
     );
 
-    this.candidaturesResponsableFiltrees = this.candidaturesResponsable.filter((candidature) => {
-      if (masterIdsEligibles.size > 0) {
-        const masterId = Number(candidature.master_id || 0);
-        if (masterId && !masterIdsEligibles.has(masterId)) {
+    this.candidaturesResponsableFiltrees = this.candidaturesResponsable
+      .filter((candidature) => {
+        if (masterIdsEligibles.size > 0) {
+          const masterId = Number(candidature.master_id || 0);
+          if (masterId && !masterIdsEligibles.has(masterId)) {
+            return false;
+          }
+        }
+
+        if (
+          this.selectedMasterForCandidatures !== 'all' &&
+          candidature.master_id !== this.selectedMasterForCandidatures
+        ) {
           return false;
         }
-      }
 
-      if (
-        this.selectedMasterForCandidatures !== 'all' &&
-        candidature.master_id !== this.selectedMasterForCandidatures
-      ) {
-        return false;
-      }
-
-      if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
-        return false;
-      }
-
-      if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
-        return false;
-      }
-
-      const search = (this.filtres.recherche || '').toLowerCase();
-      if (search) {
-        const match =
-          candidature.numero.toLowerCase().includes(search) ||
-          candidature.candidat_nom.toLowerCase().includes(search) ||
-          candidature.candidat_email.toLowerCase().includes(search) ||
-          (candidature.specialite || '').toLowerCase().includes(search);
-        if (!match) {
+        if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
           return false;
         }
-      }
 
-      return true;
-    });
+        if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
+          return false;
+        }
+
+        const search = (this.filtres.recherche || '').toLowerCase();
+        if (search) {
+          const match =
+            candidature.numero.toLowerCase().includes(search) ||
+            candidature.candidat_nom.toLowerCase().includes(search) ||
+            candidature.candidat_email.toLowerCase().includes(search) ||
+            (candidature.specialite || '').toLowerCase().includes(search);
+          if (!match) {
+            return false;
+          }
+        }
+
+        const score = Number(candidature.score || 0);
+        const scoreMin = Number(this.filtres.scoreMin);
+        const scoreMax = Number(this.filtres.scoreMax);
+        if (Number.isFinite(scoreMin) && this.filtres.scoreMin !== null && score < scoreMin) {
+          return false;
+        }
+        if (Number.isFinite(scoreMax) && this.filtres.scoreMax !== null && score > scoreMax) {
+          return false;
+        }
+
+        const etablissement = (this.filtres.etablissement || '').toLowerCase().trim();
+        if (etablissement) {
+          const candidateEtab = this.getCandidateEtablissement(candidature).toLowerCase();
+          if (!candidateEtab.includes(etablissement)) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  }
+
+  validerCandidatureRapide(candidature: Candidature): void {
+    if (!this.canChangeStatus()) {
+      this.notifyActionBlocked('Seul le responsable peut valider une candidature.');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    this.http
+      .post<{
+        success: boolean;
+        candidature?: Candidature;
+        message?: string;
+      }>(
+        `http://localhost:8003/api/candidatures/${candidature.id}/update-status/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response) => {
+          const updatedStatus = response?.candidature?.statut || 'preselectionne';
+          this.candidaturesResponsable = this.sortRowsByScoreDesc(
+            this.candidaturesResponsable.map((row) =>
+              row.id === candidature.id
+                ? { ...row, statut: updatedStatus, decision_responsable: 'valide' }
+                : row,
+            ),
+          );
+          this.candidatures = this.sortRowsByScoreDesc(
+            this.candidatures.map((row) =>
+              row.id === candidature.id
+                ? { ...row, statut: updatedStatus, decision_responsable: 'valide' }
+                : row,
+            ),
+          );
+          this.appliquerFiltresResponsable();
+          this.appliquerFiltres();
+          this.toastService.show(
+            response?.message || 'Candidature validée: présélectionnée.',
+            'success',
+          );
+        },
+        error: (error) => {
+          const backendMsg = error?.error?.error || error?.error?.message || '';
+          this.toastService.show(backendMsg || 'Erreur lors de la validation rapide.', 'error');
+        },
+      });
   }
 
   get responsibleNotificationsFiltered(): ResponsibleNotificationItem[] {
@@ -2757,35 +3185,55 @@ export class DashboardCommissionComponent implements OnInit {
   // FILTRES AVANCÉS
   // ========================================
   appliquerFiltres(): void {
-    this.candidaturesFiltrees = this.candidatures.filter((candidature) => {
-      if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
-        return false;
-      }
-
-      if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
-        return false;
-      }
-
-      if (this.filtres.parcours) {
-        const parcours = (candidature.parcours || candidature.specialite || '').toLowerCase();
-        if (!parcours.includes(this.filtres.parcours.toLowerCase())) {
+    this.candidaturesFiltrees = this.candidatures
+      .filter((candidature) => {
+        if (this.filtres.concours && candidature.type_concours !== this.filtres.concours) {
           return false;
         }
-      }
 
-      if (this.filtres.recherche) {
-        const recherche = this.filtres.recherche.toLowerCase();
-        const matchNom = candidature.candidat_nom.toLowerCase().includes(recherche);
-        const matchEmail = candidature.candidat_email.toLowerCase().includes(recherche);
-        const matchCIN = (candidature.candidat_cin || '').toLowerCase().includes(recherche);
-
-        if (!matchNom && !matchEmail && !matchCIN) {
+        if (this.filtres.statut && candidature.statut !== this.filtres.statut) {
           return false;
         }
-      }
 
-      return true;
-    });
+        if (this.filtres.parcours) {
+          const parcours = (candidature.parcours || candidature.specialite || '').toLowerCase();
+          if (!parcours.includes(this.filtres.parcours.toLowerCase())) {
+            return false;
+          }
+        }
+
+        if (this.filtres.recherche) {
+          const recherche = this.filtres.recherche.toLowerCase();
+          const matchNom = candidature.candidat_nom.toLowerCase().includes(recherche);
+          const matchEmail = candidature.candidat_email.toLowerCase().includes(recherche);
+          const matchCIN = (candidature.candidat_cin || '').toLowerCase().includes(recherche);
+
+          if (!matchNom && !matchEmail && !matchCIN) {
+            return false;
+          }
+        }
+
+        const score = Number(candidature.score || 0);
+        const scoreMin = Number(this.filtres.scoreMin);
+        const scoreMax = Number(this.filtres.scoreMax);
+        if (Number.isFinite(scoreMin) && this.filtres.scoreMin !== null && score < scoreMin) {
+          return false;
+        }
+        if (Number.isFinite(scoreMax) && this.filtres.scoreMax !== null && score > scoreMax) {
+          return false;
+        }
+
+        const etablissement = (this.filtres.etablissement || '').toLowerCase().trim();
+        if (etablissement) {
+          const candidateEtab = this.getCandidateEtablissement(candidature).toLowerCase();
+          if (!candidateEtab.includes(etablissement)) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   }
 
   resetFiltres(): void {
@@ -2794,22 +3242,25 @@ export class DashboardCommissionComponent implements OnInit {
       statut: '',
       parcours: '',
       recherche: '',
+      scoreMin: null,
+      scoreMax: null,
+      etablissement: '',
     };
+    this.selectedCandidaturePreview = null;
     this.candidaturesFiltrees = [...this.candidatures];
   }
 
   voirDossier(candidature: Candidature): void {
-    if (!this.actionPermissions.consultationDossier) {
-      this.notifyActionBlocked("Consultation dossier désactivée par l'administration.");
-      return;
-    }
-
     if (!candidature.dossier_depose) {
-      this.showAlertMessage('❌ Aucun dossier déposé pour cette candidature');
-      return;
+      this.toastService.show(
+        'Aucun dossier confirmé pour cette candidature. Ouverture de la page documents.',
+        'info',
+      );
     }
 
-    this.router.navigate(['/commission/dossier', candidature.id]);
+    this.router.navigate(['/commission/dossier', candidature.id], {
+      queryParams: { source: 'liste-generation' },
+    });
     this.closeActionMenu();
   }
 
@@ -3184,7 +3635,7 @@ export class DashboardCommissionComponent implements OnInit {
   ): Liste {
     const specialiteLabel = this.getCurrentUserScopeLabel();
     const dateCreation = new Date().toLocaleDateString('fr-FR');
-    const createdList: Liste = {
+    return {
       id: Date.now() + Math.floor(Math.random() * 1000),
       nom: `${listNamePrefix} ${specialiteLabel} ${new Date().getFullYear()}`,
       specialite: specialiteLabel,
@@ -3195,10 +3646,257 @@ export class DashboardCommissionComponent implements OnInit {
       avis: `Générée depuis la présélection (${rows.length} candidature(s)).`,
       recommandation: recommendation,
     };
+  }
 
-    this.listes.unshift(createdList);
-    this.derniereListeGeneree = createdList;
-    return createdList;
+  private applyGeneratedListLocally(
+    rows: Candidature[],
+    typeListe: 'principale' | 'attente',
+  ): void {
+    const createdList =
+      typeListe === 'attente'
+        ? this.createSelectionListFromRows(rows, "Liste d'Attente -", 'reserve')
+        : this.createSelectionListFromRows(rows, 'Liste Principale -', 'favorable');
+
+    const statutApplique: 'selectionne' | 'en_attente' =
+      typeListe === 'attente' ? 'en_attente' : 'selectionne';
+
+    this.upsertGeneratedListInMemory(createdList);
+    this.generatedSelectionRows = [...rows]
+      .map((row) => ({ ...row, statut: statutApplique }))
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+    this.synchronizeStatusesAfterGeneration(
+      rows.map((row) => row.id),
+      statutApplique,
+    );
+
+    this.switchView('listes');
+    this.typeListe = 'selection';
+    this.selectedPreselectionCandidateIds = [];
+
+    this.showAlertMessage(
+      `Nouvelle liste créée:\nNom: ${createdList.nom}\nCandidats: ${createdList.nb_candidats}\nDate: ${createdList.date_creation}\nAvis: ${createdList.avis}\nRecommandation: ${createdList.recommandation}`,
+    );
+
+    const label = typeListe === 'attente' ? "d'attente" : 'de sélection';
+    this.toastService.show(
+      `Liste ${label} générée en mode local (${rows.length} candidature(s)).`,
+      'warning',
+    );
+  }
+
+  private canPersistGeneratedList(rows: Candidature[]): boolean {
+    return rows.every((row) => Number(row.master_id || 0) > 0);
+  }
+
+  private getMasterIdForSelectedRows(rows: Candidature[]): number | null {
+    const idsFromRows = Array.from(
+      new Set(
+        rows
+          .map((row) => Number(row.master_id || 0))
+          .filter((masterId) => Number.isFinite(masterId) && masterId > 0),
+      ),
+    );
+
+    if (idsFromRows.length > 1) {
+      this.toastService.show(
+        'Les candidatures cochées appartiennent à plusieurs masters. Filtrez par master avant génération.',
+        'warning',
+      );
+      return null;
+    }
+
+    if (idsFromRows.length === 1) {
+      return idsFromRows[0];
+    }
+
+    if (
+      this.selectedMasterForCandidatures !== 'all' &&
+      Number.isFinite(Number(this.selectedMasterForCandidatures))
+    ) {
+      return Number(this.selectedMasterForCandidatures);
+    }
+
+    if (this.selectedConfigMasterId && Number.isFinite(Number(this.selectedConfigMasterId))) {
+      return Number(this.selectedConfigMasterId);
+    }
+
+    const fallback = this.getPreselectionWorkflowRows().find(
+      (row) => Number(row.master_id || 0) > 0,
+    );
+    return fallback ? Number(fallback.master_id) : null;
+  }
+
+  private getPreferredMasterIdForLatestList(): number | null {
+    if (
+      this.selectedMasterForCandidatures !== 'all' &&
+      Number.isFinite(Number(this.selectedMasterForCandidatures))
+    ) {
+      return Number(this.selectedMasterForCandidatures);
+    }
+
+    if (this.selectedConfigMasterId && Number.isFinite(Number(this.selectedConfigMasterId))) {
+      return Number(this.selectedConfigMasterId);
+    }
+
+    const fromRows = this.getPreselectionWorkflowRows().find(
+      (row) => Number(row.master_id || 0) > 0,
+    );
+    if (fromRows) {
+      return Number(fromRows.master_id);
+    }
+
+    const fromAll = this.candidatures.find((row) => Number(row.master_id || 0) > 0);
+    return fromAll ? Number(fromAll.master_id) : null;
+  }
+
+  private formatApiListToUiList(payload: NonNullable<ListeGenerationApiPayload['liste']>): Liste {
+    const typeLabel = payload.type_liste === 'attente' ? "Liste d'Attente" : 'Liste Principale';
+    const createdDate = new Date(payload.date_creation);
+    return {
+      id: payload.id,
+      nom: `${typeLabel} - ${payload.master_nom} (${payload.annee_universitaire})`,
+      specialite: payload.master_nom,
+      type: 'selection',
+      statut: 'active',
+      nb_candidats: payload.nb_candidats,
+      date_creation: Number.isNaN(createdDate.getTime())
+        ? payload.date_creation
+        : createdDate.toLocaleDateString('fr-FR'),
+      avis: `Générée depuis la présélection (${payload.nb_candidats} candidature(s)).`,
+      recommandation: payload.type_liste === 'attente' ? 'reserve' : 'favorable',
+    };
+  }
+
+  private upsertGeneratedListInMemory(list: Liste): void {
+    this.listes = [list, ...this.listes.filter((existing) => existing.id !== list.id)];
+    this.derniereListeGeneree = list;
+  }
+
+  private synchronizeStatusesAfterGeneration(
+    candidateIds: number[],
+    statut: 'selectionne' | 'en_attente',
+  ): void {
+    const selectedIds = new Set(candidateIds);
+
+    this.candidatures = this.candidatures.map((candidature) =>
+      selectedIds.has(candidature.id) ? { ...candidature, statut } : candidature,
+    );
+
+    this.candidaturesResponsable = this.candidaturesResponsable.map((candidature) =>
+      selectedIds.has(candidature.id) ? { ...candidature, statut } : candidature,
+    );
+  }
+
+  private loadDerniereListeGenereeDepuisBackend(): void {
+    const masterId = this.getPreferredMasterIdForLatestList();
+    const token = this.authService.getAccessToken();
+
+    if (!masterId || !token) {
+      return;
+    }
+
+    this.http
+      .get<ListeGenerationApiPayload>(
+        `http://localhost:8003/api/candidatures/master/${masterId}/liste-admission-recente/`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response) => {
+          if (!response?.liste) {
+            this.generatedSelectionRows = [];
+            return;
+          }
+
+          const uiList = this.formatApiListToUiList(response.liste);
+          this.upsertGeneratedListInMemory(uiList);
+          this.generatedSelectionRows = [...(response.candidats || [])].sort(
+            (a, b) => Number(b.score || 0) - Number(a.score || 0),
+          );
+        },
+        error: (error) => {
+          console.warn('Impossible de charger la dernière liste générée:', error);
+        },
+      });
+  }
+
+  private submitGeneratedListToBackend(
+    rows: Candidature[],
+    typeListe: 'principale' | 'attente',
+  ): void {
+    if (!this.canPersistGeneratedList(rows)) {
+      this.applyGeneratedListLocally(rows, typeListe);
+      return;
+    }
+
+    const masterId = this.getMasterIdForSelectedRows(rows);
+    const token = this.authService.getAccessToken();
+
+    if (!masterId) {
+      this.applyGeneratedListLocally(rows, typeListe);
+      return;
+    }
+
+    if (!token) {
+      this.applyGeneratedListLocally(rows, typeListe);
+      return;
+    }
+
+    const candidatureIds = rows.map((row) => row.id);
+    const statutApplique: 'selectionne' | 'en_attente' =
+      typeListe === 'attente' ? 'en_attente' : 'selectionne';
+
+    this.http
+      .post<ListeGenerationApiPayload>(
+        `http://localhost:8003/api/candidatures/master/${masterId}/generer-liste-manuelle/`,
+        {
+          candidature_ids: candidatureIds,
+          type_liste: typeListe,
+          annee_universitaire: this.getCurrentAcademicYear(),
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response) => {
+          if (!response?.liste) {
+            this.toastService.show(
+              'Réponse backend invalide pour la génération de liste.',
+              'error',
+            );
+            return;
+          }
+
+          const createdList = this.formatApiListToUiList(response.liste);
+          this.upsertGeneratedListInMemory(createdList);
+          this.generatedSelectionRows = [...(response.candidats || rows)]
+            .map((row) => ({ ...row, statut: row.statut || statutApplique }))
+            .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+          this.synchronizeStatusesAfterGeneration(candidatureIds, statutApplique);
+
+          this.switchView('listes');
+          this.typeListe = 'selection';
+          this.selectedPreselectionCandidateIds = [];
+
+          this.showAlertMessage(
+            `Nouvelle liste créée:\nNom: ${createdList.nom}\nCandidats: ${createdList.nb_candidats}\nDate: ${createdList.date_creation}\nAvis: ${createdList.avis}\nRecommandation: ${createdList.recommandation}`,
+          );
+
+          const label = typeListe === 'attente' ? "d'attente" : 'de sélection';
+          this.toastService.show(
+            `Liste ${label} générée et persistée (${rows.length} candidature(s)).`,
+            'success',
+          );
+        },
+        error: (error) => {
+          console.error('Erreur génération liste persistée:', error);
+          const backendMessage = error?.error?.error || error?.error?.message;
+          this.toastService.show(
+            backendMessage || 'Erreur backend, bascule en mode local.',
+            'warning',
+          );
+          this.applyGeneratedListLocally(rows, typeListe);
+        },
+      });
   }
 
   genererListeSelectionDepuisCandidaturesCochees(): void {
@@ -3213,32 +3911,7 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    const createdList = this.createSelectionListFromRows(
-      selectedRows,
-      'Liste Principale -',
-      'favorable',
-    );
-
-    const selectedIds = new Set(selectedRows.map((row) => row.id));
-    this.candidatures = this.candidatures.map((candidature) =>
-      selectedIds.has(candidature.id) ? { ...candidature, statut: 'selectionne' } : candidature,
-    );
-    this.candidaturesResponsable = this.candidaturesResponsable.map((candidature) =>
-      selectedIds.has(candidature.id) ? { ...candidature, statut: 'selectionne' } : candidature,
-    );
-
-    // Naviguer automatiquement vers la section Listes en affichant l'onglet Sélection
-    this.switchView('listes');
-    this.typeListe = 'selection';
-
-    this.showAlertMessage(
-      `Nouvelle liste créée:\nNom: ${createdList.nom}\nCandidats: ${createdList.nb_candidats}\nDate: ${createdList.date_creation}\nAvis: ${createdList.avis}\nRecommandation: ${createdList.recommandation}`,
-    );
-
-    this.toastService.show(
-      `Liste de sélection générée (${selectedRows.length} candidature(s)). Consultez la section "Listes" pour voir la nouvelle liste.`,
-      'success',
-    );
+    this.submitGeneratedListToBackend(selectedRows, 'principale');
   }
 
   genererListeAttenteDepuisCandidaturesCochees(): void {
@@ -3253,32 +3926,7 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    const createdList = this.createSelectionListFromRows(
-      selectedRows,
-      "Liste d'Attente -",
-      'reserve',
-    );
-
-    const selectedIds = new Set(selectedRows.map((row) => row.id));
-    this.candidatures = this.candidatures.map((candidature) =>
-      selectedIds.has(candidature.id) ? { ...candidature, statut: 'en_attente' } : candidature,
-    );
-    this.candidaturesResponsable = this.candidaturesResponsable.map((candidature) =>
-      selectedIds.has(candidature.id) ? { ...candidature, statut: 'en_attente' } : candidature,
-    );
-
-    // Naviguer automatiquement vers la section Listes en affichant l'onglet Sélection
-    this.switchView('listes');
-    this.typeListe = 'selection';
-
-    this.showAlertMessage(
-      `Nouvelle liste créée:\nNom: ${createdList.nom}\nCandidats: ${createdList.nb_candidats}\nDate: ${createdList.date_creation}\nAvis: ${createdList.avis}\nRecommandation: ${createdList.recommandation}`,
-    );
-
-    this.toastService.show(
-      `Liste d'attente générée (${selectedRows.length} candidature(s)). Consultez la section "Listes" pour voir la nouvelle liste.`,
-      'success',
-    );
+    this.submitGeneratedListToBackend(selectedRows, 'attente');
   }
 
   genererListePreselectionParScore(): void {
@@ -3418,10 +4066,6 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    this.candidatureStatutSelectionnee = candidature;
-    this.statusSelection = 'preselectionne';
-    this.statusRejectReason = '';
-
     if (candidature.statut === 'preselectionne') {
       candidature.decision_responsable = 'valide';
       this.toastService.show('La candidature est déjà validée en présélection.', 'info');
@@ -3429,7 +4073,8 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    this.confirmerChangementStatut();
+    // ✅ Utiliser le nouveau modal au lieu de confirmerChangementStatut directement
+    this.ouvrirModalValidationPreselection(candidature);
     this.closeActionMenu();
   }
 
@@ -3722,7 +4367,36 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   modifierListe(liste: Liste): void {
-    this.showAlertMessage(`Modifier la liste: ${liste.nom}`);
+    if (!this.actionPermissions.publierListes) {
+      this.notifyActionBlocked("Modification des listes désactivée par l'administration.");
+      return;
+    }
+
+    const nouveauNom = prompt('Modifier le nom de la liste :', liste.nom);
+    if (nouveauNom === null) {
+      return;
+    }
+
+    const nomNettoye = nouveauNom.trim();
+    if (!nomNettoye) {
+      this.toastService.show('Le nom de la liste est obligatoire.', 'warning');
+      return;
+    }
+
+    const nouvelleSpecialite = prompt('Modifier la spécialité :', liste.specialite);
+    if (nouvelleSpecialite === null) {
+      return;
+    }
+
+    const specialiteNettoyee = nouvelleSpecialite.trim();
+    if (!specialiteNettoyee) {
+      this.toastService.show('La spécialité est obligatoire.', 'warning');
+      return;
+    }
+
+    liste.nom = nomNettoye;
+    liste.specialite = specialiteNettoyee;
+    this.toastService.show('Liste mise à jour avec succès.', 'success');
   }
 
   consulterListe(liste: Liste): void {
@@ -4300,6 +4974,53 @@ export class DashboardCommissionComponent implements OnInit {
     this.exportRows(rows, 'xlsx', 'inscriptions-finales', 'Fichier Final Inscriptions');
   }
 
+  genererListeComplementaireDepuisAbsents(): void {
+    if (!this.isResponsable) {
+      this.notifyActionBlocked('Seul le responsable peut préparer la liste complémentaire.');
+      return;
+    }
+
+    const absents = this.inscriptionsVerificationRows.filter(
+      (row) => row.verification === 'absent',
+    );
+    if (absents.length === 0) {
+      this.toastService.show('Aucun absent détecté après vérification.', 'warning');
+      return;
+    }
+
+    const candidatsEnAttente = this.getInscriptionsScopeRows()
+      .filter((c) => c.statut === 'en_attente' && c.dossier_depose)
+      .sort((a, b) => b.score - a.score);
+
+    if (candidatsEnAttente.length === 0) {
+      this.toastService.show(
+        "Aucun candidat éligible en liste d'attente pour la liste complémentaire.",
+        'warning',
+      );
+      return;
+    }
+
+    const remplacements = candidatsEnAttente.slice(0, absents.length);
+    const liste = this.createSelectionListFromRows(
+      remplacements,
+      'Liste complémentaire',
+      'reserve',
+    );
+
+    liste.avis = `${absents.length} absent(s) détecté(s) après import Excel.`;
+    liste.recommandation = 'reserve';
+    this.upsertGeneratedListInMemory(liste);
+
+    this.generatedSelectionRows = remplacements.map((c) => ({ ...c }));
+    this.typeListe = 'selection';
+    this.currentView = 'listes';
+
+    this.toastService.show(
+      `Liste complémentaire préparée avec ${remplacements.length} candidat(s).`,
+      'success',
+    );
+  }
+
   exportInscriptions(): void {
     const inscriptions = this.candidatures.filter((c) => c.statut === 'inscrit');
     if (inscriptions.length === 0) {
@@ -4475,9 +5196,8 @@ export class DashboardCommissionComponent implements OnInit {
     XLSX.writeFile(workbook, fileName);
   }
 
-  exportRowsToPdf(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
+  private exportRowsToPdf(rows: ExportRow[], baseFileName: string, tableTitle: string): void {
     if (rows.length === 0) {
-      this.showAlertMessage('❌ Aucune donnée à exporter');
       return;
     }
 
@@ -4485,53 +5205,154 @@ export class DashboardCommissionComponent implements OnInit {
     const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Add title
     doc.setFontSize(14);
-    doc.text(tableTitle, pageWidth / 2, 15, { align: 'center' });
+    doc.text(tableTitle, pageWidth / 2, 14, { align: 'center' });
 
-    // Add date
     doc.setFontSize(10);
-    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 22, {
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, 21, {
       align: 'center',
     });
 
-    // Add table
     const headers = Object.keys(rows[0]);
-    const tableRows = rows.map((row) => headers.map((h) => row[h]));
+    const body = rows.map((row) => headers.map((h) => row[h] ?? ''));
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [headers],
-      body: tableRows,
-      startY: 28,
+      body,
+      startY: 26,
       theme: 'grid',
       styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: { 0: { cellWidth: 15 } },
-      didDrawPage: (data: any) => {
-        // Footer
-        const pageCount = (doc as any).internal.pages.length - 1;
-        const currentPage = data.pageNumber;
+      didDrawPage: (data) => {
         doc.setFontSize(8);
-        doc.text(`Page ${currentPage} / ${pageCount}`, pageWidth - 20, pageHeight - 10);
+        doc.text(`Page ${data.pageNumber}`, pageWidth - 18, pageHeight - 8);
       },
     });
 
-    const fileName = this.buildExportFileName(baseFileName, 'pdf');
-    doc.save(fileName);
+    doc.save(this.buildExportFileName(baseFileName, 'pdf'));
   }
 
-  downloadFile(blob: Blob, baseFileName: string, format: string): void {
+  private downloadFile(blob: Blob, baseFileName: string, extension: string): void {
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = this.buildExportFileName(baseFileName, format);
-    document.body.appendChild(a);
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = this.buildExportFileName(baseFileName, extension);
+    document.body.appendChild(anchor);
+    anchor.click();
     window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    document.body.removeChild(anchor);
   }
 
-  buildExportFileName(baseName: string, format: string): string {
+  private buildExportFileName(baseName: string, extension: string): string {
     const timestamp = new Date().toISOString().split('T')[0];
-    return `${baseName}_${timestamp}.${format}`;
+    return `${baseName}_${timestamp}.${extension}`;
+  }
+
+  // ══ MODAL VALIDATION PRÉSÉLECTION ══
+  showModalValidationPreselection = false;
+  candidatureValidationPreselection: Candidature | null = null;
+  preselAvisSelectionne: string = 'favorable';
+  preselCommentaire: string = '';
+  preselConfirmLoading = false;
+  preselectionValidationSuccess = false;
+
+  ouvrirModalValidationPreselection(candidature: Candidature): void {
+    this.candidatureValidationPreselection = candidature;
+    this.preselAvisSelectionne = 'favorable';
+    this.preselCommentaire = '';
+    this.preselConfirmLoading = false;
+    this.preselectionValidationSuccess = false;
+    this.showModalValidationPreselection = true;
+    this.closeActionMenu();
+  }
+
+  fermerModalValidationPreselection(): void {
+    this.showModalValidationPreselection = false;
+    this.preselectionValidationSuccess = false;
+    this.candidatureValidationPreselection = null;
+  }
+
+  confirmerValidationPreselection(): void {
+    if (!this.preselAvisSelectionne || !this.candidatureValidationPreselection) return;
+    this.preselConfirmLoading = true;
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.preselConfirmLoading = false;
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    this.http
+      .post(
+        `http://localhost:8003/api/candidatures/${this.candidatureValidationPreselection.id}/valider-preselection/`,
+        {
+          recommandation: this.preselAvisSelectionne,
+          commentaire: this.preselCommentaire,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.preselConfirmLoading = false;
+          this.preselectionValidationSuccess = true;
+
+          // Mise à jour locale du statut
+          if (this.candidatureValidationPreselection) {
+            this.candidatureValidationPreselection.statut = 'preselectionne';
+            this.candidatureValidationPreselection.decision_responsable = 'valide';
+          }
+
+          // Synchroniser dans toutes les listes locales
+          const id = this.candidatureValidationPreselection!.id;
+          this.candidatures = this.candidatures.map((c) =>
+            c.id === id ? { ...c, statut: 'preselectionne', decision_responsable: 'valide' } : c,
+          );
+          this.candidaturesResponsable = this.sortRowsByScoreDesc(
+            this.candidaturesResponsable.map((c) =>
+              c.id === id ? { ...c, statut: 'preselectionne', decision_responsable: 'valide' } : c,
+            ),
+          );
+          this.appliquerFiltresResponsable();
+          this.appliquerFiltres();
+
+          // Enregistrer l'avis dans candidatureVotes
+          const membreNom =
+            this.currentUser?.first_name && this.currentUser?.last_name
+              ? `${this.currentUser.first_name} ${this.currentUser.last_name}`
+              : this.currentUser?.username || this.currentUser?.email || 'Responsable';
+
+          this.candidatureVotes[id] = [
+            ...(this.candidatureVotes[id] || []).filter((v) => v.membreNom !== membreNom),
+            {
+              membreNom,
+              role: 'responsable',
+              recommandation: this.preselAvisSelectionne as 'favorable' | 'defavorable' | 'reserve',
+              commentaire: this.preselCommentaire || 'Validé par le responsable',
+              date: new Date().toISOString(),
+              diplomeConforme: true,
+            },
+          ];
+        },
+        error: (error) => {
+          console.error('Erreur validation présélection:', error);
+          this.preselConfirmLoading = false;
+
+          // Fallback mode local si l'API est indisponible
+          if (!this.responsableCandidaturesFromApi) {
+            this.preselectionValidationSuccess = true;
+            if (this.candidatureValidationPreselection) {
+              this.candidatureValidationPreselection.statut = 'preselectionne';
+              this.candidatureValidationPreselection.decision_responsable = 'valide';
+            }
+            this.toastService.show('Présélection validée en mode local.', 'warning');
+          } else {
+            const backendMsg = error?.error?.error || error?.error?.message || '';
+            this.toastService.show(
+              backendMsg || 'Erreur lors de la validation de présélection.',
+              'error',
+            );
+          }
+        },
+      });
   }
 }

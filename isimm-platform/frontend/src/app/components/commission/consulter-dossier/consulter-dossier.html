@@ -1,409 +1,315 @@
-<div class="consulter-dossier-page">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="header-content">
-      <button class="btn-back" (click)="retour()">
+﻿<div class="dossier-shell">
+  <header class="dossier-hero">
+    <div class="hero-left">
+      <button class="hero-back" (click)="retour()" aria-label="Retour a la liste">
         <i class="fas fa-arrow-left"></i>
       </button>
-      <div>
-        <h1>Examen du dossier de candidature n°{{ candidatureId }}</h1>
-        <p>Vérification et validation des documents du candidat</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="isLoading" class="loading-section">
-    <div class="spinner"></div>
-    <p>Chargement du dossier...</p>
-  </div>
-
-  <!-- Contenu principal -->
-  <div *ngIf="!isLoading" class="content-container">
-    <!-- Informations candidat -->
-    <div class="candidat-section">
-      <div class="candidat-card">
-        <div class="candidat-header">
-          <div class="candidat-left">
-            <div class="avatar-large">
-              {{ candidat?.first_name?.charAt(0) }}{{ candidat?.last_name?.charAt(0) }}
-            </div>
-            <div class="candidat-info">
-              <h2>{{ candidat?.first_name }} {{ candidat?.last_name }}</h2>
-              <div class="info-grid">
-                <div class="info-item">
-                  <i class="fas fa-id-card"></i>
-                  <span>CIN: {{ candidat?.cin }}</span>
-                </div>
-                <div class="info-item">
-                  <i class="fas fa-envelope"></i>
-                  <span>{{ candidat?.email }}</span>
-                </div>
-                <div class="info-item">
-                  <i class="fas fa-phone"></i>
-                  <span>{{ candidat?.telephone }}</span>
-                </div>
-                <div class="info-item">
-                  <i class="fas fa-calendar-day"></i>
-                  <span>{{ candidat?.date_naissance | date: 'dd/MM/yyyy' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="candidat-right">
-            <!-- Score -->
-            <div class="score-container">
-              <div
-                class="score-circle"
-                [class.excellent]="candidat?.score >= 16"
-                [class.bien]="candidat?.score >= 14 && candidat?.score < 16"
-                [class.passable]="candidat?.score < 14"
-              >
-                <span class="score-value">{{ candidat?.score || '--' }}</span>
-                <span class="score-label">/20</span>
-              </div>
-              <span class="score-text">Score calculé</span>
-            </div>
-
-            <!-- Statut dossier -->
-            <div class="statut-dossier">
-              <span class="statut-label">Statut du dossier</span>
-              <span [class]="'statut-badge ' + getStatutClass(candidat?.statut_dossier)">
-                {{ getStatutLabel(candidat?.statut_dossier) }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Détails candidature -->
-        <div class="candidat-details">
-          <div class="detail-section">
-            <h3>
-              <i class="fas fa-graduation-cap"></i>
-              Informations Candidature
-            </h3>
-            <div class="details-grid">
-              <div class="detail-item">
-                <span class="label">Type</span>
-                <span
-                  class="value badge"
-                  [class.badge-master]="candidat?.type_candidature === 'master'"
-                  [class.badge-ingenieur]="candidat?.type_candidature === 'ingenieur'"
-                >
-                  {{ candidat?.type_candidature === 'master' ? 'Master' : 'Cycle Ingénieur' }}
-                </span>
-              </div>
-
-              <div class="detail-item">
-                <span class="label">Date de soumission</span>
-                <span class="value">{{
-                  candidat?.date_soumission | date: 'dd/MM/yyyy à HH:mm'
-                }}</span>
-              </div>
-
-              <div class="detail-item" *ngIf="candidat?.type_candidature === 'master'">
-                <span class="label">Vœux</span>
-                <div class="voeux-container">
-                  <div class="voeu-item" *ngFor="let voeu of candidat?.voeux; let i = index">
-                    <span class="voeu-number">{{ i + 1 }}</span>
-                    <span class="voeu-text">{{ voeu }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="detail-item" *ngIf="candidat?.type_candidature === 'ingenieur'">
-                <span class="label">Spécialité</span>
-                <span class="value">{{ candidat?.specialite }}</span>
-              </div>
-
-              <div class="detail-item">
-                <span class="label">Adresse</span>
-                <span class="value"
-                  >{{ candidat?.adresse }}, {{ candidat?.ville }} {{ candidat?.code_postal }}</span
-                >
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="hero-title-wrap">
+        <p class="hero-kicker">Commission d'admission</p>
+        <h1>Dossier candidature #{{ candidatureId }}</h1>
+        <p class="hero-subtitle">Controle documentaire, notation et decision finale</p>
       </div>
     </div>
 
-    <!-- Progression documents -->
-    <div class="progress-section">
-      <div class="progress-header">
-        <h3>
-          <i class="fas fa-tasks"></i>
-          Progression de validation
-        </h3>
-        <span class="progress-text"
-          >{{ documentsValides }}/{{ documents.length }} documents validés</span
+    <div
+      class="hero-score"
+      [class.good]="candidat?.score >= 14"
+      [class.top]="candidat?.score >= 16"
+    >
+      <span class="score-caption">Score actuel</span>
+      <strong>{{ candidatureScore }}</strong>
+      <small>{{ scoreMention }}</small>
+    </div>
+  </header>
+
+  <section class="source-banner" *ngIf="sourceContext === 'liste-generation'">
+    <div class="source-label">
+      <i class="fas fa-sparkles"></i>
+      <span>{{ sourceLabel }}</span>
+    </div>
+  </section>
+
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loader-ring"></div>
+    <p>Chargement des informations du dossier...</p>
+  </div>
+
+  <main *ngIf="!isLoading" class="dossier-grid">
+    <section class="card profile-card">
+      <div class="profile-main">
+        <div class="identity-pill">
+          {{ candidat?.first_name?.charAt(0) }}{{ candidat?.last_name?.charAt(0) }}
+        </div>
+        <div class="identity-content">
+          <h2>{{ candidat?.first_name }} {{ candidat?.last_name }}</h2>
+          <p class="profile-sub">
+            Candidat {{ candidat?.type_candidature === 'master' ? 'Master' : 'Cycle Ingenieur' }}
+          </p>
+        </div>
+        <span
+          class="status-pill"
+          [class]="'status-pill ' + getStatutClass(candidat?.statut_dossier)"
         >
+          {{ getStatutLabel(candidat?.statut_dossier) }}
+        </span>
       </div>
-      <div class="progress-bar-container">
-        <div
-          class="progress-bar"
-          [style.width.%]="(documentsValides / documents.length) * 100"
-        ></div>
+
+      <div class="profile-facts">
+        <div class="fact">
+          <i class="fas fa-id-card"></i><span>{{ candidat?.cin }}</span>
+        </div>
+        <div class="fact">
+          <i class="fas fa-envelope"></i><span>{{ candidat?.email }}</span>
+        </div>
+        <div class="fact">
+          <i class="fas fa-phone"></i><span>{{ candidat?.telephone }}</span>
+        </div>
+        <div class="fact">
+          <i class="fas fa-calendar-day"></i
+          ><span>{{ candidat?.date_naissance | date: 'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="fact full-width">
+          <i class="fas fa-map-marker-alt"></i
+          ><span>{{ candidat?.adresse }}, {{ candidat?.ville }} {{ candidat?.code_postal }}</span>
+        </div>
       </div>
-    </div>
 
-    <!-- Documents -->
-    <div class="documents-section">
-      <h3 class="section-title">
-        <i class="fas fa-folder-open"></i>
-        Documents déposés
-      </h3>
+      <div class="profile-meta-grid">
+        <article>
+          <span class="meta-label">Date de soumission</span>
+          <strong>{{ candidat?.date_soumission | date: 'dd/MM/yyyy a HH:mm' }}</strong>
+        </article>
+        <article>
+          <span class="meta-label">Completude</span>
+          <strong>{{ completionPercent }}%</strong>
+        </article>
+        <article>
+          <span class="meta-label">Documents valides</span>
+          <strong>{{ documentsValides }}/{{ documents.length }}</strong>
+        </article>
+      </div>
 
-      <div class="documents-grid">
-        <!-- Document Card -->
-        <div
-          class="document-card"
+      <div class="wishes" *ngIf="candidat?.type_candidature === 'master'">
+        <h3>Voeux exprimes</h3>
+        <div class="wish-list">
+          <span class="wish" *ngFor="let voeu of candidat?.voeux; let i = index">
+            {{ i + 1 }}. {{ voeu }}
+          </span>
+        </div>
+      </div>
+
+      <div class="wishes" *ngIf="candidat?.type_candidature === 'ingenieur'">
+        <h3>Specialite visee</h3>
+        <p>{{ candidat?.specialite }}</p>
+      </div>
+    </section>
+
+    <section class="card progress-card">
+      <div class="progress-head">
+        <h3>Avancement du controle</h3>
+        <strong>{{ completionPercent }}%</strong>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="completionPercent"></div>
+      </div>
+
+      <div class="kpi-row">
+        <article class="kpi valid">
+          <span>Valides</span>
+          <strong>{{ documentsValides }}</strong>
+        </article>
+        <article class="kpi rejected">
+          <span>Rejetes</span>
+          <strong>{{ documentsRejetes }}</strong>
+        </article>
+        <article class="kpi pending">
+          <span>En attente</span>
+          <strong>{{ documentsEnAttente }}</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="card docs-card">
+      <div class="section-head">
+        <h3>Documents du dossier</h3>
+        <p>Validation unitaire avec commentaire obligatoire en cas de rejet.</p>
+      </div>
+
+      <div class="docs-list">
+        <article
+          class="doc-item"
           *ngFor="let doc of documents"
-          [class.validated]="doc.valide === true"
-          [class.rejected]="doc.valide === false"
-          [class.pending]="doc.valide === null"
+          [class.state-valid]="doc.valide === true"
+          [class.state-rejected]="doc.valide === false"
+          [class.state-pending]="doc.valide === null"
+          [class.state-generated]="doc.type === 'generated-summary'"
         >
-          <!-- Header du document -->
-          <div class="document-header">
-            <div
-              class="document-icon"
-              [class.validated]="doc.valide === true"
-              [class.rejected]="doc.valide === false"
-              [class.pending]="doc.valide === null"
-            >
+          <div class="doc-top">
+            <div class="doc-left">
               <i [class]="'fas ' + doc.icon"></i>
+              <div>
+                <h4>{{ doc.nom }}</h4>
+                <p *ngIf="doc.depose">Depose le {{ doc.date_depot | date: 'dd/MM/yyyy' }}</p>
+                <p *ngIf="!doc.depose" class="missing">Non depose</p>
+              </div>
             </div>
-            <div class="document-info">
-              <h4>{{ doc.nom }}</h4>
-              <p *ngIf="doc.depose" class="document-date">
-                <i class="fas fa-calendar"></i>
-                Déposé le {{ doc.date_depot | date: 'dd/MM/yyyy' }}
-              </p>
-              <p *ngIf="!doc.depose" class="non-depose">
-                <i class="fas fa-times-circle"></i>
-                Document non déposé
-              </p>
-            </div>
-
-            <!-- Statut badge -->
-            <div class="statut-badge-container" *ngIf="doc.depose">
-              <span
-                class="statut-badge"
-                [class.validated]="doc.valide === true"
-                [class.rejected]="doc.valide === false"
-                [class.pending]="doc.valide === null"
-              >
-                <i *ngIf="doc.valide === true" class="fas fa-check-circle"></i>
-                <i *ngIf="doc.valide === false" class="fas fa-times-circle"></i>
-                <i *ngIf="doc.valide === null" class="fas fa-clock"></i>
-                {{
-                  doc.valide === true ? 'Validé' : doc.valide === false ? 'Rejeté' : 'En attente'
-                }}
-              </span>
-            </div>
+            <span class="doc-status" *ngIf="doc.depose">
+              {{ doc.valide === true ? 'Valide' : doc.valide === false ? 'Rejete' : 'En attente' }}
+            </span>
           </div>
 
-          <!-- Aperçu et actions (si déposé) -->
-          <div *ngIf="doc.depose" class="document-body">
-            <!-- Aperçu image pour photo -->
-            <div *ngIf="doc.type === 'photo' && doc.url" class="photo-preview">
+          <p class="generated-hint" *ngIf="doc.type === 'generated-summary'">
+            Document automatiquement ajoute depuis la generation de liste.
+          </p>
+
+          <div class="doc-file" *ngIf="doc.depose">
+            <div class="file-info" *ngIf="doc.type !== 'photo'">
+              <i class="fas fa-file-pdf"></i>
+              <div>
+                <strong>{{ doc.nom_fichier }}</strong>
+                <small>{{ doc.taille }}</small>
+              </div>
+            </div>
+
+            <div class="photo-preview" *ngIf="doc.type === 'photo' && doc.url">
               <img [src]="doc.url" [alt]="doc.nom" />
             </div>
-
-            <!-- Icône fichier pour PDF -->
-            <div *ngIf="doc.type !== 'photo'" class="file-preview">
-              <i class="fas fa-file-pdf"></i>
-              <span>{{ doc.nom_fichier }}</span>
-              <small>{{ doc.taille }}</small>
-            </div>
-
-            <!-- Informations de vérification -->
-            <div *ngIf="doc.verified_by" class="verification-info">
-              <i class="fas fa-user-check"></i>
-              <span>Vérifié par {{ doc.verified_by }}</span>
-              <small>le {{ doc.verified_at | date: 'dd/MM/yyyy à HH:mm' }}</small>
-            </div>
-
-            <!-- Commentaire -->
-            <div *ngIf="doc.commentaire" class="document-commentaire">
-              <strong>Commentaire :</strong>
-              <p>{{ doc.commentaire }}</p>
-            </div>
-
-            <!-- Champ commentaire éditable -->
-            <div class="commentaire-section">
-              <label>Commentaire de vérification</label>
-              <textarea
-                [(ngModel)]="doc.nouveauCommentaire"
-                rows="3"
-                placeholder="Ajouter un commentaire sur ce document..."
-              ></textarea>
-            </div>
-
-            <!-- Actions -->
-            <div class="document-actions">
-              <button class="btn-doc btn-view" (click)="voirDocument(doc)">
-                <i class="fas fa-eye"></i>
-                Voir
-              </button>
-              <button class="btn-doc btn-download" (click)="telechargerDocument(doc)">
-                <i class="fas fa-download"></i>
-                Télécharger
-              </button>
-              <button
-                class="btn-doc btn-validate"
-                [class.active]="doc.valide === true"
-                (click)="validerDocument(doc)"
-              >
-                <i class="fas fa-check"></i>
-                Valider
-              </button>
-              <button
-                class="btn-doc btn-reject"
-                [class.active]="doc.valide === false"
-                (click)="rejeterDocument(doc)"
-              >
-                <i class="fas fa-times"></i>
-                Rejeter
-              </button>
-            </div>
           </div>
 
-          <!-- Message si non déposé -->
-          <div *ngIf="!doc.depose" class="document-missing">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Ce document n'a pas encore été déposé par le candidat</p>
+          <div class="verification-log" *ngIf="doc.verified_by">
+            <i class="fas fa-user-check"></i>
+            Verifie par {{ doc.verified_by }} le {{ doc.verified_at | date: 'dd/MM/yyyy a HH:mm' }}
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Décision globale -->
-    <div class="decision-section">
-      <h3 class="section-title">
-        <i class="fas fa-gavel"></i>
-        Décision sur le dossier complet
-      </h3>
+          <div class="comment-block" *ngIf="doc.commentaire">
+            <strong>Commentaire enregistre</strong>
+            <p>{{ doc.commentaire }}</p>
+          </div>
 
-      <div class="decision-card">
-        <div class="decision-summary">
-          <div class="summary-item">
-            <i class="fas fa-file-alt"></i>
-            <div>
-              <span class="summary-label">Total documents</span>
-              <span class="summary-value">{{ documents.length }}</span>
-            </div>
-          </div>
-          <div class="summary-item success">
-            <i class="fas fa-check-circle"></i>
-            <div>
-              <span class="summary-label">Documents validés</span>
-              <span class="summary-value">{{ documentsValides }}</span>
-            </div>
-          </div>
-          <div class="summary-item danger">
-            <i class="fas fa-times-circle"></i>
-            <div>
-              <span class="summary-label">Documents rejetés</span>
-              <span class="summary-value">{{ documentsRejetes }}</span>
-            </div>
-          </div>
-          <div class="summary-item warning">
-            <i class="fas fa-clock"></i>
-            <div>
-              <span class="summary-label">En attente</span>
-              <span class="summary-value">{{ documentsEnAttente }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="decision-form">
-          <div class="form-group">
-            <label>Commentaire global sur le dossier</label>
+          <div class="comment-edit" *ngIf="doc.depose">
+            <label>Commentaire de verification</label>
             <textarea
-              [(ngModel)]="commentaireGlobal"
-              rows="5"
-              placeholder="Observations générales sur le dossier du candidat..."
+              [(ngModel)]="doc.nouveauCommentaire"
+              rows="2"
+              placeholder="Ajouter une remarque pour la commission..."
             ></textarea>
           </div>
 
-          <div class="decision-buttons">
+          <div class="doc-actions" *ngIf="doc.depose">
+            <button class="a-btn view" (click)="voirDocument(doc)">
+              <i class="fas fa-eye"></i>Voir
+            </button>
+            <button class="a-btn download" (click)="telechargerDocument(doc)">
+              <i class="fas fa-download"></i>Telecharger
+            </button>
             <button
-              class="btn-decision btn-valider"
-              (click)="validerDossier()"
-              [disabled]="documentsValides !== documents.length"
+              class="a-btn validate"
+              [class.active]="doc.valide === true"
+              (click)="validerDocument(doc)"
             >
-              <i class="fas fa-check-circle"></i>
-              Valider le dossier
+              <i class="fas fa-check"></i>Valider
             </button>
-            <button class="btn-decision btn-invalider" (click)="invaliderDossier()">
-              <i class="fas fa-times-circle"></i>
-              Invalider le dossier
-            </button>
-            <button class="btn-decision btn-attente" (click)="mettreEnAttente()">
-              <i class="fas fa-pause-circle"></i>
-              Mettre en attente
+            <button
+              class="a-btn reject"
+              [class.active]="doc.valide === false"
+              (click)="rejeterDocument(doc)"
+            >
+              <i class="fas fa-times"></i>Rejeter
             </button>
           </div>
-
-          <p class="decision-hint" *ngIf="documentsValides !== documents.length">
-            <i class="fas fa-info-circle"></i>
-            Vous devez valider tous les documents avant de valider le dossier complet
-          </p>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <!-- Historique -->
-    <div class="historique-section">
-      <h3 class="section-title">
-        <i class="fas fa-history"></i>
-        Historique des modifications
-      </h3>
+    <section class="card decision-card">
+      <div class="section-head">
+        <h3>Decision dossier</h3>
+        <p>Finaliser l'avis de commission sur la base des pieces controlees.</p>
+      </div>
 
-      <div class="timeline">
-        <div class="timeline-item" *ngFor="let event of historique">
-          <div class="timeline-marker" [class]="event.type">
-            <i [class]="'fas ' + event.icon"></i>
-          </div>
-          <div class="timeline-content">
-            <div class="timeline-header">
+      <div class="decision-quick-stats">
+        <span>Total: {{ documents.length }}</span>
+        <span>Valides: {{ documentsValides }}</span>
+        <span>Rejetes: {{ documentsRejetes }}</span>
+        <span>Attente: {{ documentsEnAttente }}</span>
+      </div>
+
+      <div class="reference-box">
+        <strong>Contexte de navigation</strong>
+        <p>
+          Ouverture possible depuis une liste via le parametre
+          <code>?source=liste-generation</code>.
+        </p>
+      </div>
+
+      <div class="comment-edit global">
+        <label>Commentaire global</label>
+        <textarea
+          [(ngModel)]="commentaireGlobal"
+          rows="4"
+          placeholder="Observations generales, points forts, reserves..."
+        ></textarea>
+      </div>
+
+      <div class="decision-actions">
+        <button
+          class="final-btn approve"
+          (click)="validerDossier()"
+          [disabled]="documentsValides !== documents.length"
+        >
+          <i class="fas fa-check-circle"></i>Valider le dossier
+        </button>
+        <button class="final-btn reject" (click)="invaliderDossier()">
+          <i class="fas fa-times-circle"></i>Invalider
+        </button>
+        <button class="final-btn hold" (click)="mettreEnAttente()">
+          <i class="fas fa-pause-circle"></i>Mettre en attente
+        </button>
+      </div>
+
+      <p class="hint" *ngIf="documentsValides !== documents.length">
+        Tous les documents doivent etre valides avant validation finale du dossier.
+      </p>
+    </section>
+
+    <section class="card history-card">
+      <div class="section-head">
+        <h3>Historique</h3>
+        <p>Trace des actions de verification et des decisions.</p>
+      </div>
+
+      <div class="history-timeline">
+        <article class="history-item" *ngFor="let event of historique">
+          <div class="history-dot" [class]="event.type"><i [class]="'fas ' + event.icon"></i></div>
+          <div class="history-content">
+            <div class="history-title-row">
               <strong>{{ event.action }}</strong>
-              <span class="timeline-date">{{ event.date | date: 'dd/MM/yyyy à HH:mm' }}</span>
+              <span>{{ event.date | date: 'dd/MM/yyyy a HH:mm' }}</span>
             </div>
-            <p class="timeline-details">{{ event.details }}</p>
-            <div class="timeline-footer">
-              <i class="fas fa-user"></i>
-              <span>{{ event.auteur }}</span>
-            </div>
+            <p>{{ event.details }}</p>
+            <small><i class="fas fa-user"></i> {{ event.auteur }}</small>
           </div>
-        </div>
+        </article>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </div>
 
-<!-- Modal Viewer Document -->
-<div class="modal-overlay" *ngIf="documentViewer" (click)="fermerViewer()">
-  <div class="modal-viewer" (click)="$event.stopPropagation()">
-    <div class="viewer-header">
+<div class="viewer-overlay" *ngIf="documentViewer" (click)="fermerViewer()">
+  <div class="viewer-modal" (click)="$event.stopPropagation()">
+    <div class="viewer-head">
       <h3>{{ documentViewer?.nom }}</h3>
-      <button class="btn-close" (click)="fermerViewer()">
-        <i class="fas fa-times"></i>
-      </button>
+      <button class="close-btn" (click)="fermerViewer()"><i class="fas fa-times"></i></button>
     </div>
     <div class="viewer-body">
       <iframe [src]="documentViewer?.urlSafe" frameborder="0"></iframe>
     </div>
-    <div class="viewer-footer">
-      <button class="btn-viewer btn-download" (click)="telechargerDocument(documentViewer)">
-        <i class="fas fa-download"></i>
-        Télécharger
+    <div class="viewer-actions">
+      <button class="a-btn download" (click)="telechargerDocument(documentViewer)">
+        <i class="fas fa-download"></i>Telecharger
       </button>
-      <button class="btn-viewer btn-print" (click)="imprimerDocument()">
-        <i class="fas fa-print"></i>
-        Imprimer
+      <button class="a-btn view" (click)="imprimerDocument()">
+        <i class="fas fa-print"></i>Imprimer
       </button>
     </div>
   </div>

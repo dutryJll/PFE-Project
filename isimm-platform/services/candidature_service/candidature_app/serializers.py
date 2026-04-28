@@ -9,6 +9,7 @@ from .models import (
     ListeAdmission,
     Master,
     Notification,
+    OffreMaster,
 )
 
 User = get_user_model()
@@ -30,6 +31,37 @@ class MasterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Master
         fields = '__all__'
+
+
+class OffreMasterSerializer(serializers.ModelSerializer):
+    master_id = serializers.IntegerField(source='master.id', read_only=True)
+    nombre_candidats_inscrits = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OffreMaster
+        fields = [
+            'id',
+            'master_id',
+            'titre',
+            'description',
+            'type_formation',
+            'capacite',
+            'date_limite',
+            'date_debut_visibilite',
+            'date_fin_visibilite',
+            'date_limite_preinscription',
+            'date_limite_depot_dossier',
+            'capacites_detaillees',
+            'appel_actif',
+            'est_publiee',
+            'actif',
+            'created_at',
+            'updated_at',
+            'nombre_candidats_inscrits',
+        ]
+
+    def get_nombre_candidats_inscrits(self, obj):
+        return Candidature.objects.filter(master_id=obj.master_id).count()
 
 
 class CandidatureSerializer(serializers.ModelSerializer):

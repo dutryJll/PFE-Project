@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -156,7 +157,7 @@ function normalizeActionLabel(value: string): string {
 @Component({
   selector: 'app-dashboard-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SkeletonLoaderComponent],
   templateUrl: './dashboard-admin.html',
   styleUrl: './dashboard-admin.css',
 })
@@ -1424,7 +1425,7 @@ export class DashboardAdminComponent implements OnInit {
     pdfTitle: string,
   ): Promise<void> {
     if (!rows.length) {
-      this.showAlertMessage('Aucune donn�e � exporter');
+      this.showAlertMessage('Aucune donnée à exporter');
       return;
     }
 
@@ -1617,7 +1618,7 @@ export class DashboardAdminComponent implements OnInit {
             id: c.id,
             backend_id: c.id,
             titre: c.nom,
-            specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ing�nieur',
+            specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ingénieur',
             places: c.places_disponibles,
             date_limite: c.date_cloture,
             statut: c.actif ? 'ouvert' : 'ferme',

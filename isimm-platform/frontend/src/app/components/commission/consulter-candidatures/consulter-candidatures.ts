@@ -251,6 +251,10 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
     this.router.navigate(['/commission/dossier', candidature.id]);
   }
 
+  deposerDossier(candidature: Candidature): void {
+    this.router.navigate(['/commission/dossier/deposer', candidature.id]);
+  }
+
   exporterExcel(): void {
     const selected = this.candidaturesFiltrees.filter((c) => c.selected);
     alert(`Export Excel de ${selected.length} candidature(s)`);

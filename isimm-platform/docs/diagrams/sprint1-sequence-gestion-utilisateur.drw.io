@@ -7,10 +7,10 @@
 
         <mxCell id="tt2" value="Diagramme de sequence detaille - Gestion des utilisateurs (Sprint 1)" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="860" height="30" as="geometry"/></mxCell>
 
-        <mxCell id="uh1" value="Administrateur" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="150" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh2" value="Frontend Angular" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="170" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh3" value="Auth API /api/auth/users/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="600" y="80" width="200" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh4" value="User Repository" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="160" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh1" value="dashboard-admin.html" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="150" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh2" value="dashboard-admin.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="170" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh3" value="auth_app/urls.py + views.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="600" y="80" width="200" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh4" value="models.py (User)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="160" height="40" as="geometry"/></mxCell>
 
         <mxCell id="ul1" value="" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="155" y="120" as="sourcePoint"/><mxPoint x="155" y="1360" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="ul2" value="" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="405" y="120" as="sourcePoint"/><mxPoint x="405" y="1360" as="targetPoint"/></mxGeometry></mxCell>

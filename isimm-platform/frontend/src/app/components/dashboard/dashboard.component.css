@@ -4,6 +4,47 @@
   background: #f5f7fa;
 }
 
+.dashboard-skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-skeleton__bar,
+.dashboard-skeleton__card,
+.dashboard-skeleton__panel {
+  border-radius: 14px;
+  background: linear-gradient(90deg, #edf2f8 25%, #e4ebf5 37%, #edf2f8 63%);
+  background-size: 400% 100%;
+  animation: dashboard-loading-shimmer 1.25s ease infinite;
+}
+
+.dashboard-skeleton__bar {
+  height: 52px;
+}
+
+.dashboard-skeleton__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-skeleton__card {
+  height: 135px;
+}
+
+.dashboard-skeleton__panel {
+  height: 180px;
+}
+
+@keyframes dashboard-loading-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
 .sidebar {
   width: 280px;
   background: linear-gradient(180deg, #003d5b 0%, #00587a 100%);

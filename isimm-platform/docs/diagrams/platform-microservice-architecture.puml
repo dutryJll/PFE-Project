@@ -17,6 +17,11 @@ database "Auth DB" as DB_AUTH
 database "BackOffice DB" as DB_BACK
 database "FrontOffice DB" as DB_FRONT
 
+FE -right[hidden]-> G
+G -right[hidden]-> AUTH
+AUTH -right[hidden]-> BACK
+BACK -right[hidden]-> FRONT
+
 FE --> G
 G --> AUTH
 G --> BACK

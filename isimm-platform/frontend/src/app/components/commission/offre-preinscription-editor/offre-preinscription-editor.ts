@@ -3,114 +3,107 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTableModule } from '@angular/material/table';
+import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth.service';
 import { OffreRichContentService } from '../../../services/offre-rich-content.service';
 import { ToastService } from '../../../services/toast.service';
 import { OffreRichContent } from '../../../shared/offre-rich-content';
 
-interface OffrePreinscriptionItem {
-  id: number;
-  titre: string;
-  type: 'master' | 'cycle_ingenieur';
-  specialite: string;
-  description: string;
-  date_limite: string;
-  places: number;
-  document_officiel_pdf_url?: string | null;
+interface CapaciteLigne {
+  categorie: string;
+  origine: string;
+  quota: number;
+  diplome: string;
 }
 
-interface EditorFormModel {
-  title: string;
-  openingTitle: string;
-  openingBody: string;
-  tableTitle: string;
-  capInterneTotale: string;
-  capInterneOrigine: string;
-  capInterneCapacite: string;
-  capInterneDiplome: string;
-  capInterneDates: string;
-  capExterneTotale: string;
-  capExterneOrigine: string;
-  capExterneCapacite: string;
-  capExterneDiplome: string;
-  capExterneDates: string;
-  modalitesTitle: string;
-  etape1: string;
-  etape2: string;
-  dossierTitle: string;
-  dossierItemsText: string;
-  scoreTitle: string;
-  scoreRow1Composante: string;
-  scoreRow1Calcul: string;
-  scoreRow2Composante: string;
-  scoreRow2Calcul: string;
-  scoreRow3Composante: string;
-  scoreRow3Calcul: string;
-  evaluationNotesText: string;
+interface OffrePreinscriptionDto {
+  id: number;
+  master_id: number;
+  titre: string;
+  description: string;
+  type_formation?: 'master' | 'cycle_ingenieur';
+  actif: boolean;
+  appel_actif?: boolean;
+  est_publiee?: boolean;
+  capacite: number;
+  date_limite: string;
+  date_debut_visibilite?: string | null;
+  date_fin_visibilite?: string | null;
+  date_limite_preinscription?: string | null;
+  date_limite_depot_dossier?: string | null;
+  capacites_detaillees?: CapaciteLigne[];
+}
+
+interface OffrePreinscriptionForm {
+  titre: string;
+  type_formation: 'master' | 'cycle_ingenieur';
+  appel_actif: boolean;
+  description: string;
+  date_debut_visibilite: string;
+  date_fin_visibilite: string;
+  date_limite_preinscription: string;
+  date_limite_depot_dossier: string;
 }
 
 @Component({
   selector: 'app-offre-preinscription-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatSlideToggleModule,
+    MatTableModule,
+    MatProgressSpinnerModule,
+  ],
   templateUrl: './offre-preinscription-editor.html',
   styleUrl: './offre-preinscription-editor.css',
 })
 export class OffrePreinscriptionEditorComponent implements OnInit {
-  readonly capacityHeaders = [
-    'Capacité totale',
-    'Établissement d origine',
-    'Capacité',
-    'Type de diplôme',
-    'Dates importantes',
-  ];
-
-  readonly scoreHeaders = ['Composantes', 'Mode de Calcul'];
+  private readonly apiBase = environment.candidatureServiceUrl;
 
   offerId: number | null = null;
-  offer: OffrePreinscriptionItem | null = null;
-  isEmptyMode = false;
+  masterId: number | null = null;
   loading = false;
-  savingContent = false;
-  selectedPdfFileName = '';
-  pdfUploadLoading = false;
+  saving = false;
+  publishing = false;
+  publishedPulse = false;
 
-  form: EditorFormModel = {
-    title: '',
-    openingTitle: '',
-    openingBody: '',
-    tableTitle: 'Tableau des capacités d accueil et calendrier',
-    capInterneTotale: '35',
-    capInterneOrigine: 'Institut Supérieur de l Informatique et des Mathématiques (ISIMM)',
-    capInterneCapacite: '30',
-    capInterneDiplome: 'Licence en Sciences de l Informatique',
-    capInterneDates: 'Inscription sur le site web : www.isimm.rnu.tn/public/formulaires',
-    capExterneTotale: '35',
-    capExterneOrigine: 'Autres établissements',
-    capExterneCapacite: '05',
-    capExterneDiplome:
-      'Licence en Sciences de l Informatique ou en Informatique de Gestion (uniquement)',
-    capExterneDates:
-      'Du jour de publication jusqu au 22 juillet 2025. Préselection le 28 juillet. Dépôt dossier du 28 au 31 juillet. Liste admis le 08 août 2025.',
-    modalitesTitle: 'Modalités d inscription au Mastère',
-    etape1:
-      'Première étape : inscription obligatoire sur www.isimm.rnu.tn/public/formulaires et remplissage du formulaire électronique.',
-    etape2:
-      'Seconde étape : les candidats présélectionnés déposent leurs dossiers numériques via le site de l Institut.',
-    dossierTitle: 'Composition du dossier de candidature',
-    dossierItemsText:
-      'Le formulaire de candidature au Mastère en Informatique\nLa fiche de candidature imprimée et signée\nUn CV d une page avec adresse, téléphone et email\nCopies certifiées conformes de tous les diplômes, y compris le Bac\nCopies certifiées conformes des relevés de notes de toutes les années et du Bac\nDocuments de report ou de réorientation si nécessaire\nTous les documents doivent être fusionnés en un seul PDF',
-    scoreTitle: 'Composantes et mode de calcul du score',
-    scoreRow1Composante: 'Score',
-    scoreRow1Calcul: 'Score = M.G + B.N.R + B.S.P',
-    scoreRow2Composante: 'Moyenne Générale (M.G)',
-    scoreRow2Calcul: 'M.G = (Moyenne 1ère année + Moyenne 2ème année + Moyenne 3ème année) / 3',
-    scoreRow3Composante: 'Bonus (B.N.R / B.S.P)',
-    scoreRow3Calcul:
-      'B.N.R: Aucun redoublement 5, un redoublement 3, deux et plus 0. B.S.P: Aucune session 3, une session 2, deux et plus 0.',
-    evaluationNotesText:
-      'Les dossiers incomplets ou hors délai ne sont pas examinés\nToute donnée erronée ou document falsifié annule la candidature\nLes recours sont déposés avant la date limite indiquée par l Institut\nLes originaux sont obligatoires lors de l inscription administrative',
+  readonly quotasColumns = ['categorie', 'origine', 'quota', 'diplome', 'actions'];
+
+  form: OffrePreinscriptionForm = {
+    titre: '',
+    type_formation: 'master',
+    appel_actif: true,
+    description: '',
+    date_debut_visibilite: '',
+    date_fin_visibilite: '',
+    date_limite_preinscription: '',
+    date_limite_depot_dossier: '',
   };
+
+  quotas: CapaciteLigne[] = [
+    {
+      categorie: 'ISIMM Internes',
+      origine: 'ISIMM',
+      quota: 15,
+      diplome: 'Licence en Sciences de l Informatique',
+    },
+    {
+      categorie: 'Autres Externes',
+      origine: 'Autres etablissements',
+      quota: 8,
+      diplome: 'Licence ou equivalent selon la specialite',
+    },
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -122,142 +115,125 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.offerId = Number.isFinite(id) && id > 0 ? id : null;
-    this.isEmptyMode = this.route.snapshot.queryParamMap.get('empty') === '1';
-
-    if (!this.offerId) {
-      this.toastService.show('Offre introuvable.', 'error');
-      this.router.navigate(['/commission/dashboard'], {
-        queryParams: { view: 'configuration-appels' },
-      });
+    const role = this.authService.currentUserValue?.role || '';
+    if (!['responsable_commission', 'commission', 'admin'].includes(role)) {
+      this.toastService.show('Acces non autorise.', 'error');
+      this.backToDashboard();
       return;
     }
 
-    if (this.isEmptyMode) {
-      this.form = this.createEmptyFormModel();
-      this.loading = false;
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.offerId = Number.isFinite(id) && id > 0 ? id : null;
+
+    if (!this.offerId) {
+      this.toastService.show('Offre introuvable.', 'error');
+      this.backToDashboard();
       return;
     }
 
     this.loadOffer();
   }
 
-  private createEmptyFormModel(): EditorFormModel {
-    return {
-      title: '',
-      openingTitle: '',
-      openingBody: '',
-      tableTitle: '',
-      capInterneTotale: '',
-      capInterneOrigine: '',
-      capInterneCapacite: '',
-      capInterneDiplome: '',
-      capInterneDates: '',
-      capExterneTotale: '',
-      capExterneOrigine: '',
-      capExterneCapacite: '',
-      capExterneDiplome: '',
-      capExterneDates: '',
-      modalitesTitle: '',
-      etape1: '',
-      etape2: '',
-      dossierTitle: '',
-      dossierItemsText: '',
-      scoreTitle: '',
-      scoreRow1Composante: '',
-      scoreRow1Calcul: '',
-      scoreRow2Composante: '',
-      scoreRow2Calcul: '',
-      scoreRow3Composante: '',
-      scoreRow3Calcul: '',
-      evaluationNotesText: '',
-    };
+  get isReadOnly(): boolean {
+    return this.authService.currentUserValue?.role === 'commission';
   }
 
-  private loadOffer(): void {
-    const token = this.authService.getAccessToken();
-    if (!token || !this.offerId) {
+  get totalCapacite(): number {
+    return this.quotas.reduce((total, ligne) => total + (Number(ligne.quota) || 0), 0);
+  }
+
+  get publicationLabel(): string {
+    if (this.publishing) {
+      return 'Publication...';
+    }
+    return this.form.appel_actif ? 'Publier maintenant' : 'Activer puis publier';
+  }
+
+  addQuotaRow(): void {
+    if (this.isReadOnly) {
       return;
     }
 
-    this.loading = true;
+    this.quotas = [
+      ...this.quotas,
+      {
+        categorie: 'Nouveau quota',
+        origine: 'A preciser',
+        quota: 0,
+        diplome: '',
+      },
+    ];
+  }
+
+  removeQuotaRow(index: number): void {
+    if (this.isReadOnly || this.quotas.length <= 1) {
+      return;
+    }
+
+    this.quotas = this.quotas.filter((_, currentIndex) => currentIndex !== index);
+  }
+
+  saveOffer(): void {
+    if (!this.offerId || this.isReadOnly) {
+      return;
+    }
+
+    if (!this.form.titre.trim()) {
+      this.toastService.show('Le titre est obligatoire.', 'warning');
+      return;
+    }
+
+    this.saving = true;
+    const payload = this.buildOfferPayload();
 
     this.http
-      .get<OffrePreinscriptionItem[]>(
-        'http://localhost:8003/api/candidatures/offres-inscription-responsable/',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .patch<OffrePreinscriptionDto>(`${this.apiBase}/offres-master/${this.offerId}/`, payload)
       .subscribe({
-        next: (offers) => {
-          this.offer = (offers || []).find((item) => Number(item.id) === this.offerId) || null;
-          this.loadSavedContent();
+        next: (saved) => {
+          this.masterId = saved.master_id;
+          this.form.appel_actif = Boolean(saved.appel_actif ?? saved.actif);
+          this.syncCandidateDesignContent();
+          this.toastService.show(
+            'Offre enregistree. Visible immediatement cote candidat apres publication.',
+            'success',
+          );
+          this.saving = false;
         },
-        error: () => {
-          this.loadSavedContent();
+        error: (error) => {
+          console.error('Erreur sauvegarde offre:', error);
+          this.toastService.show('Erreur lors de la sauvegarde.', 'error');
+          this.saving = false;
         },
       });
   }
 
-  private loadSavedContent(): void {
-    if (!this.offerId) {
-      this.loading = false;
+  publishOffer(): void {
+    if (!this.offerId || this.isReadOnly) {
       return;
     }
 
-    this.offreRichContentService.getOffreRichContent(this.offerId).subscribe({
-      next: (existing) => {
-        if (existing) {
-          this.form = this.toForm(existing);
-        } else if (this.offer) {
-          this.prefillFromOffer();
-        }
+    this.publishing = true;
+    const payload = {
+      actif: true,
+      appel_actif: true,
+      est_publiee: true,
+    };
 
-        this.loading = false;
-      },
-      error: () => {
-        if (this.offer) {
-          this.prefillFromOffer();
-        }
-        this.loading = false;
-      },
-    });
-  }
-
-  private prefillFromOffer(): void {
-    if (!this.offer) {
-      return;
-    }
-
-    this.form.title = this.offer.titre;
-    this.form.openingTitle = `Avis d ouverture des candidatures pour l inscription au ${this.offer.titre}`;
-    this.form.openingBody = `La direction de l ISIMM annonce l ouverture des candidatures pour l inscription en première année du ${this.offer.titre}.`;
-  }
-
-  save(): void {
-    if (!this.offerId) {
-      return;
-    }
-
-    const payload = this.toContent(this.form, this.offerId);
-    this.savingContent = true;
-    this.offreRichContentService.saveOffreRichContent(payload).subscribe({
-      next: (saved) => {
-        this.form = this.toForm(saved);
-        this.toastService.show(
-          'Contenu de l offre enregistré. Visible côté candidat sur Détail.',
-          'success',
-        );
-        this.savingContent = false;
-      },
-      error: (error) => {
-        console.error('Erreur enregistrement contenu offre:', error);
-        this.toastService.show('Erreur lors de l enregistrement du contenu.', 'error');
-        this.savingContent = false;
-      },
-    });
+    this.http
+      .patch<OffrePreinscriptionDto>(`${this.apiBase}/offres-master/${this.offerId}/`, payload)
+      .subscribe({
+        next: () => {
+          this.form.appel_actif = true;
+          this.triggerPublishPulse();
+          this.toastService.show('Offre publiee: statut Ouverte cote candidats.', 'success');
+          this.publishing = false;
+        },
+        error: (error) => {
+          console.error('Erreur publication offre:', error);
+          this.toastService.show('Echec de publication de l offre.', 'error');
+          this.publishing = false;
+        },
+      });
   }
 
   backToDashboard(): void {
@@ -266,174 +242,134 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
     });
   }
 
-  onPdfFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] || null;
-
-    if (!file) {
-      this.selectedPdfFileName = '';
-      return;
-    }
-
-    if (file.type !== 'application/pdf') {
-      this.toastService.show('Veuillez sélectionner un fichier PDF.', 'warning');
-      input.value = '';
-      this.selectedPdfFileName = '';
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      this.toastService.show('Le fichier dépasse 10 Mo.', 'warning');
-      input.value = '';
-      this.selectedPdfFileName = '';
-      return;
-    }
-
-    this.selectedPdfFileName = file.name;
-  }
-
-  uploadOfficialPdf(fileInput: HTMLInputElement): void {
+  private loadOffer(): void {
     if (!this.offerId) {
       return;
     }
 
-    const file = fileInput.files?.[0] || null;
-    if (!file) {
-      this.toastService.show('Veuillez choisir un fichier PDF.', 'warning');
-      return;
-    }
-
-    const token = this.authService.getAccessToken();
-    if (!token) {
-      return;
-    }
-
-    this.pdfUploadLoading = true;
-
-    const formData = new FormData();
-    formData.append('document_pdf', file);
-
+    this.loading = true;
     this.http
-      .post<any>(
-        `http://localhost:8003/api/candidatures/configuration/${this.offerId}/document-pdf/`,
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .get<OffrePreinscriptionDto>(`${this.apiBase}/offres-master/${this.offerId}/`)
       .subscribe({
-        next: (response) => {
-          if (this.offer) {
-            this.offer = {
-              ...this.offer,
-              document_officiel_pdf_url: response?.document_url || null,
-            };
-          }
-
-          this.toastService.show('PDF officiel chargé avec succès.', 'success');
-          this.selectedPdfFileName = '';
-          fileInput.value = '';
-          this.pdfUploadLoading = false;
+        next: (offer) => {
+          this.mapOfferToForm(offer);
+          this.loading = false;
         },
         error: (error) => {
-          console.error('Erreur upload PDF officiel:', error);
-          this.toastService.show('Erreur lors du chargement du PDF officiel.', 'error');
-          this.pdfUploadLoading = false;
+          console.warn('Service offre indisponible, affichage du formulaire local:', error);
+          this.toastService.show(
+            'Le service offre est indisponible pour le moment. Le formulaire reste accessible.',
+            'warning',
+          );
+          this.loading = false;
         },
       });
   }
 
-  private toContent(form: EditorFormModel, offerId: number): OffreRichContent {
-    const rowInterneParts = [
-      form.capInterneTotale,
-      form.capInterneOrigine,
-      form.capInterneCapacite,
-      form.capInterneDiplome,
-      form.capInterneDates,
-    ].map((item) => item.trim());
+  private mapOfferToForm(offer: OffrePreinscriptionDto): void {
+    this.masterId = offer.master_id;
 
-    const rowExterneParts = [
-      form.capExterneTotale,
-      form.capExterneOrigine,
-      form.capExterneCapacite,
-      form.capExterneDiplome,
-      form.capExterneDates,
-    ].map((item) => item.trim());
+    this.form = {
+      titre: offer.titre || '',
+      type_formation: offer.type_formation || 'master',
+      appel_actif: Boolean(offer.appel_actif ?? offer.actif),
+      description: offer.description || '',
+      date_debut_visibilite: offer.date_debut_visibilite || '',
+      date_fin_visibilite: offer.date_fin_visibilite || '',
+      date_limite_preinscription: offer.date_limite_preinscription || offer.date_limite || '',
+      date_limite_depot_dossier: offer.date_limite_depot_dossier || '',
+    };
 
-    const scoreRows = [
-      [form.scoreRow1Composante.trim(), form.scoreRow1Calcul.trim()],
-      [form.scoreRow2Composante.trim(), form.scoreRow2Calcul.trim()],
-      [form.scoreRow3Composante.trim(), form.scoreRow3Calcul.trim()],
-    ];
+    if (Array.isArray(offer.capacites_detaillees) && offer.capacites_detaillees.length > 0) {
+      this.quotas = offer.capacites_detaillees.map((row) => ({
+        categorie: row.categorie || 'Quota',
+        origine: row.origine || '',
+        quota: Number(row.quota) || 0,
+        diplome: row.diplome || '',
+      }));
+    }
+  }
 
+  private buildOfferPayload(): Record<string, unknown> {
     return {
-      offerId,
-      title: form.title.trim(),
-      openingTitle: form.openingTitle.trim(),
-      openingBody: form.openingBody.trim(),
-      tableTitle: form.tableTitle.trim(),
-      tableHeaders: this.capacityHeaders,
-      tableRows: [rowInterneParts, rowExterneParts],
-      modalitesTitle: form.modalitesTitle.trim(),
-      etape1: form.etape1.trim(),
-      etape2: form.etape2.trim(),
-      dossierTitle: form.dossierTitle.trim(),
-      dossierItems: this.splitByLine(form.dossierItemsText),
-      scoreTitle: form.scoreTitle.trim(),
-      scoreFormula: form.scoreRow1Calcul.trim(),
-      moyenneFormula: form.scoreRow2Calcul.trim(),
-      scoreTableHeaders: this.scoreHeaders,
-      scoreTableRows: scoreRows,
+      titre: this.form.titre.trim(),
+      description: this.form.description.trim(),
+      type_formation: this.form.type_formation,
+      actif: this.form.appel_actif,
+      appel_actif: this.form.appel_actif,
+      date_limite: this.form.date_limite_preinscription,
+      date_debut_visibilite: this.form.date_debut_visibilite || null,
+      date_fin_visibilite: this.form.date_fin_visibilite || null,
+      date_limite_preinscription: this.form.date_limite_preinscription || null,
+      date_limite_depot_dossier: this.form.date_limite_depot_dossier || null,
+      capacite: this.totalCapacite,
+      capacites_detaillees: this.quotas.map((ligne) => ({
+        categorie: (ligne.categorie || '').trim(),
+        origine: (ligne.origine || '').trim(),
+        quota: Number(ligne.quota) || 0,
+        diplome: (ligne.diplome || '').trim(),
+      })),
+    };
+  }
+
+  private syncCandidateDesignContent(): void {
+    if (!this.offerId) {
+      return;
+    }
+
+    const content: OffreRichContent = {
+      offerId: this.offerId,
+      title: this.form.titre,
+      openingTitle: `Offre de preinscription ${this.form.type_formation === 'master' ? 'Master' : 'Cycle Ingenieur'}`,
+      openingBody: this.form.description,
+      tableTitle: 'Capacites et diplomes admissibles',
+      tableHeaders: ['Categorie', 'Etablissement d origine', 'Quota', 'Diplome requis'],
+      tableRows: this.quotas.map((ligne) => [
+        ligne.categorie,
+        ligne.origine,
+        String(ligne.quota),
+        ligne.diplome,
+      ]),
+      modalitesTitle: 'Calendrier de candidature',
+      etape1: `Visibilite de l appel: ${this.form.date_debut_visibilite || '-'} au ${this.form.date_fin_visibilite || '-'}.`,
+      etape2: `Preinscription jusqu au ${this.form.date_limite_preinscription || '-'} et depot du dossier avant ${this.form.date_limite_depot_dossier || '-'}.`,
+      dossierTitle: 'Indications',
+      dossierItems: [
+        'Les informations publiees par la commission sont les informations officielles.',
+        'La capacite totale est automatiquement calculee depuis les quotas.',
+      ],
+      scoreTitle: 'Etat de publication',
+      scoreFormula: this.form.appel_actif ? 'Offre ouverte' : 'Offre fermee',
+      moyenneFormula: `Capacite totale: ${this.totalCapacite}`,
+      scoreTableHeaders: ['Champ', 'Valeur'],
+      scoreTableRows: [
+        ['Type', this.form.type_formation],
+        ['Date limite preinscription', this.form.date_limite_preinscription || '-'],
+        ['Date limite depot dossier', this.form.date_limite_depot_dossier || '-'],
+      ],
       bnrRules: [],
       bspRules: [],
-      evaluationNotes: this.splitByLine(form.evaluationNotesText),
+      evaluationNotes: [
+        'Veuillez conserver les dates officielles de cette offre.',
+        'Les modifications sont appliquees en temps reel.',
+      ],
       updatedAt: new Date().toISOString(),
     };
+
+    this.offreRichContentService.saveOffreRichContent(content).subscribe({
+      error: (error) => {
+        console.error('Erreur sync contenu candidat:', error);
+      },
+    });
   }
 
-  private toForm(content: OffreRichContent): EditorFormModel {
-    const cap1 = content.tableRows?.[0] || [];
-    const cap2 = content.tableRows?.[1] || [];
-    const score1 = content.scoreTableRows?.[0] || [];
-    const score2 = content.scoreTableRows?.[1] || [];
-    const score3 = content.scoreTableRows?.[2] || [];
-
-    return {
-      title: content.title || '',
-      openingTitle: content.openingTitle || '',
-      openingBody: content.openingBody || '',
-      tableTitle: content.tableTitle || '',
-      capInterneTotale: cap1[0] || '',
-      capInterneOrigine: cap1[1] || '',
-      capInterneCapacite: cap1[2] || '',
-      capInterneDiplome: cap1[3] || '',
-      capInterneDates: cap1[4] || '',
-      capExterneTotale: cap2[0] || '',
-      capExterneOrigine: cap2[1] || '',
-      capExterneCapacite: cap2[2] || '',
-      capExterneDiplome: cap2[3] || '',
-      capExterneDates: cap2[4] || '',
-      modalitesTitle: content.modalitesTitle || '',
-      etape1: content.etape1 || '',
-      etape2: content.etape2 || '',
-      dossierTitle: content.dossierTitle || '',
-      dossierItemsText: (content.dossierItems || []).join('\n'),
-      scoreTitle: content.scoreTitle || '',
-      scoreRow1Composante: score1[0] || 'Score',
-      scoreRow1Calcul: score1[1] || content.scoreFormula || '',
-      scoreRow2Composante: score2[0] || 'Moyenne Générale (M.G)',
-      scoreRow2Calcul: score2[1] || content.moyenneFormula || '',
-      scoreRow3Composante: score3[0] || 'Bonus (B.N.R / B.S.P)',
-      scoreRow3Calcul:
-        score3[1] || [...(content.bnrRules || []), ...(content.bspRules || [])].join(' '),
-      evaluationNotesText: (content.evaluationNotes || []).join('\n'),
-    };
-  }
-
-  private splitByLine(value: string): string[] {
-    return String(value || '')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => !!line);
+  private triggerPublishPulse(): void {
+    this.publishedPulse = false;
+    setTimeout(() => {
+      this.publishedPulse = true;
+      setTimeout(() => {
+        this.publishedPulse = false;
+      }, 1600);
+    }, 20);
   }
 }

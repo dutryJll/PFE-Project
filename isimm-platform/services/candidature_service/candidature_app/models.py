@@ -6,6 +6,19 @@ from datetime import timedelta
 
 User = get_user_model()
 
+
+def _safe_float(value, default=0.0):
+    try:
+        if value in [None, '']:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_text(value):
+    return ''.join(ch for ch in str(value or '').lower() if ch.isalnum())
+
 class Master(models.Model):
     TYPE_CHOICES = [
         ('professionnel', 'Professionnel'),
@@ -34,6 +47,46 @@ class Master(models.Model):
     
     def __str__(self):
         return self.nom
+
+
+class OffreMaster(models.Model):
+    """Offre de preinscription edition commission, synchronisee avec Master."""
+
+    master = models.OneToOneField(Master, on_delete=models.CASCADE, related_name='offre_master')
+    titre = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    type_formation = models.CharField(max_length=30, default='master')
+    capacite = models.IntegerField(default=30)
+    date_limite = models.DateField()
+    date_debut_visibilite = models.DateField(null=True, blank=True)
+    date_fin_visibilite = models.DateField(null=True, blank=True)
+    date_limite_preinscription = models.DateField(null=True, blank=True)
+    date_limite_depot_dossier = models.DateField(null=True, blank=True)
+    capacites_detaillees = models.JSONField(default=list, blank=True)
+    appel_actif = models.BooleanField(default=True)
+    est_publiee = models.BooleanField(default=False)
+    actif = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date_limite', 'titre']
+        indexes = [
+            models.Index(fields=['actif', 'date_limite']),
+        ]
+
+    def __str__(self):
+        return self.titre
+
+    def save(self, *args, **kwargs):
+        if self.master:
+            self.master.nom = self.titre
+            self.master.description = self.description
+            self.master.places_disponibles = self.capacite
+            self.master.date_limite_candidature = self.date_limite_preinscription or self.date_limite
+            self.master.actif = self.actif
+            self.master.save()
+        super().save(*args, **kwargs)
 
 
 class Commission(models.Model):
@@ -115,7 +168,34 @@ class ConfigurationAppel(models.Model):
     
     def est_visible(self):
         today = timezone.now().date()
-        return self.actif and self.date_debut_visibilite <= today <= self.date_fin_visibilite
+        if not self.actif:
+            return False
+
+        start = getattr(self, 'date_debut_visibilite', None)
+        end = getattr(self, 'date_fin_visibilite', None)
+
+        if start and end:
+            return start <= today <= end
+
+        if start and not end:
+            return start <= today
+
+        if end and not start:
+            return today <= end
+
+        # If no bounds, fallback to active flag
+        return bool(self.actif)
+
+    def peut_candidater(self):
+        today = timezone.now().date()
+        if not self.actif:
+            return False
+
+        deadline = getattr(self, 'date_limite_preinscription', None)
+        if not deadline:
+            return True
+
+        return today <= deadline
     
     def peut_candidater(self):
         today = timezone.now().date()
@@ -198,8 +278,106 @@ class Candidature(models.Model):
         
         if self.statut in ['sous_examen', 'preselectionne', 'selectionne']:
             self.peut_modifier = False
+
+        # Sprint 2: recalcul automatique si les details de notes bac/licence sont disponibles.
+        weighted_score = self._compute_bac_licence_weighted_score()
+        if weighted_score is not None:
+            self.score = weighted_score
         
         super().save(*args, **kwargs)
+
+    def _compute_bac_licence_weighted_score(self):
+        donnees = getattr(self, 'donnees_academiques', None)
+        if not donnees:
+            return None
+
+        notes = donnees.notes_detaillees if isinstance(donnees.notes_detaillees, dict) else {}
+        payload = notes.get('payload', {}) if isinstance(notes.get('payload'), dict) else {}
+
+        def _avg(values):
+            cleaned = [_safe_float(v, None) for v in values]
+            cleaned = [v for v in cleaned if v is not None]
+            if not cleaned:
+                return None
+            return sum(cleaned) / len(cleaned)
+
+        formation_code = str(notes.get('formation_code') or payload.get('formation_code') or '').upper()
+        common = payload.get('common', {}) if isinstance(payload.get('common'), dict) else {}
+        gl_ds = payload.get('glDs', {}) if isinstance(payload.get('glDs'), dict) else {}
+        i3 = payload.get('i3', {}) if isinstance(payload.get('i3'), dict) else {}
+        mrgl_licence = payload.get('mrglLicence', {}) if isinstance(payload.get('mrglLicence'), dict) else {}
+        mrgl_maitrise = payload.get('mrglMaitrise', {}) if isinstance(payload.get('mrglMaitrise'), dict) else {}
+        mrmi_cas1 = payload.get('mrmiCas1', {}) if isinstance(payload.get('mrmiCas1'), dict) else {}
+        mrmi_cas2 = payload.get('mrmiCas2', {}) if isinstance(payload.get('mrmiCas2'), dict) else {}
+        ing_cas1 = payload.get('ingCas1', {}) if isinstance(payload.get('ingCas1'), dict) else {}
+        ing_cas2 = payload.get('ingCas2', {}) if isinstance(payload.get('ingCas2'), dict) else {}
+
+        moyenne_bac = notes.get('moyenne_bac', payload.get('moyenne_bac'))
+        moyenne_licence = notes.get('moyenne_licence', payload.get('moyenne_licence'))
+
+        if moyenne_bac in [None, ''] or moyenne_licence in [None, '']:
+            if formation_code in ['MPGL', 'MPDS']:
+                moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                    gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')
+                ])
+            elif formation_code == 'MP3I':
+                moyenne_bac = moyenne_bac if moyenne_bac not in [None, ''] else i3.get('moyBac')
+                moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                    i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')
+                ])
+            elif formation_code == 'MRGL':
+                parcours = str(payload.get('mrglParcours') or '').lower()
+                if parcours == 'maitrise':
+                    moyenne_bac = moyenne_bac if moyenne_bac not in [None, ''] else mrgl_maitrise.get('moyBac')
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                        mrgl_maitrise.get('moy1'),
+                        mrgl_maitrise.get('moy2'),
+                        mrgl_maitrise.get('moy3'),
+                        mrgl_maitrise.get('moy4'),
+                    ])
+                else:
+                    moyenne_bac = moyenne_bac if moyenne_bac not in [None, ''] else mrgl_licence.get('moyBac')
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                        mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')
+                    ])
+            elif formation_code == 'MRMI':
+                parcours = str(payload.get('mrmiParcours') or '').lower()
+                if parcours == 'cas2':
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else mrmi_cas2.get('moyIng1')
+                else:
+                    moyenne_bac = moyenne_bac if moyenne_bac not in [None, ''] else mrmi_cas1.get('moyBac')
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                        mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')
+                    ])
+            elif formation_code in ['ING_INFO_GL', 'ING_EM']:
+                parcours = str(payload.get('ingParcours') or '').lower()
+                if parcours == 'cas2':
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                        ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')
+                    ])
+                else:
+                    moyenne_licence = moyenne_licence if moyenne_licence not in [None, ''] else _avg([
+                        ing_cas1.get('moy1'), ing_cas1.get('moy2')
+                    ])
+
+        if moyenne_bac in [None, '']:
+            moyenne_bac = _safe_float(getattr(donnees, 'moyenne_specialite', None), default=None)
+        if moyenne_licence in [None, '']:
+            moyenne_licence = _safe_float(getattr(donnees, 'moyenne_generale', None), default=None)
+
+        bac = _safe_float(moyenne_bac, default=None)
+        licence = _safe_float(moyenne_licence, default=None)
+
+        if bac is None and licence is None:
+            return None
+
+        if bac is None:
+            bac = licence
+        if licence is None:
+            licence = bac
+
+        # Coefficients retenus: 40% bac + 60% licence.
+        return round((0.4 * float(bac)) + (0.6 * float(licence)), 2)
     
     def generer_numero_candidature(self):
         now = timezone.now()
@@ -315,14 +493,81 @@ class FormuleScore(models.Model):
     
     def __str__(self):
         return f"Formule {self.master.nom}"
-    
-    def calculer_score(self, donnees_candidat):
+
+    def _master_formula_key(self):
+        haystack = _normalize_text(f"{self.master.nom} {self.master.specialite}")
+
+        if 'mpgl' in haystack or 'genielogiciel' in haystack and 'recherche' not in haystack:
+            return 'MPGL'
+        if 'mpds' in haystack or 'sciencedesdonnees' in haystack:
+            return 'MPDS'
+        if '3i' in haystack or 'instrumentationindustrielle' in haystack:
+            return 'MP3I'
+        if 'mrgl' in haystack or ('recherche' in haystack and 'genielogiciel' in haystack):
+            return 'MRGL'
+        if 'mrmi' in haystack or ('recherche' in haystack and 'microelectronique' in haystack):
+            return 'MRMI'
+        if 'inginfo' in haystack or ('ingenieur' in haystack and 'informatique' in haystack and 'genielogiciel' in haystack):
+            return 'ING_INFO_GL'
+        if 'ingem' in haystack or ('ingenieur' in haystack and 'electronique' in haystack):
+            return 'ING_EM'
+
+        return 'GENERIC'
+
+    def _session_control_count(self, *sessions):
+        count = 0
+        for session in sessions:
+            value = _normalize_text(session)
+            if not value:
+                continue
+            if value in {'control', 'controle', 'rattrapage', 'sessioncontrole', 'sessionrattrapage'}:
+                count += 1
+        return count
+
+    def _bonus_session_principale(self, *sessions):
+        control_count = self._session_control_count(*sessions)
+        if control_count == 0:
+            return 3.0
+        if control_count == 1:
+            return 2.0
+        return 0.0
+
+    def _bonus_redoublement(self, nb_redoublements):
+        if nb_redoublements <= 0:
+            return 5.0
+        if nb_redoublements == 1:
+            return 3.0
+        return 0.0
+
+    def _bonus_redoublement_mrgl(self, nb_redoublements):
+        if nb_redoublements <= 0:
+            return 5.0
+        if nb_redoublements == 1:
+            return 1.5
+        return 0.0
+
+    def _bonus_langue(self, note_francais, note_anglais, certification_b2):
+        if _safe_float(note_francais) >= 12 or _safe_float(note_anglais) >= 12:
+            return 1.0
+        if bool(certification_b2):
+            return 1.0
+        return 0.0
+
+    def _bonus_annee_diplome(self, annee_diplome):
+        annee = str(annee_diplome or '').strip()
+        if annee in {'2025', '2023'}:
+            return 4.0
+        if annee in {'2022', '2021', '2020'}:
+            return 2.0
+        return 0.0
+
+    def _generic_score(self, donnees_candidat):
         score = 0.0
-        
+
         score += donnees_candidat.get('moyenne_generale', 0) * float(self.coef_moyenne_generale)
         score += donnees_candidat.get('moyenne_specialite', 0) * float(self.coef_moyenne_specialite)
         score += donnees_candidat.get('note_pfe', 0) * float(self.coef_note_pfe)
-        
+
         mention = donnees_candidat.get('mention', '').lower()
         if mention == 'tres_bien':
             score += float(self.bonus_mention_tres_bien)
@@ -330,20 +575,203 @@ class FormuleScore(models.Model):
             score += float(self.bonus_mention_bien)
         elif mention == 'assez_bien':
             score += float(self.bonus_mention_assez_bien)
-        
+
         nb_redoublements = donnees_candidat.get('nb_redoublements', 0)
         score += nb_redoublements * float(self.malus_redoublement)
-        
+
         nb_dettes = donnees_candidat.get('nb_dettes', 0)
         score += nb_dettes * float(self.malus_dette)
-        
+
         for critere, config in self.criteres_specifiques.items():
             if critere in donnees_candidat:
                 valeur = donnees_candidat[critere]
                 coef = config.get('coefficient', 0)
                 score += valeur * coef
-        
+
         return round(score, 2)
+
+    def _score_mpgl_mpds(self, donnees_candidat):
+        moyenne_generale = _safe_float(donnees_candidat.get('moyenne_generale'))
+        nb_redoublements = int(_safe_float(donnees_candidat.get('nb_redoublements')))
+        session_reussite = donnees_candidat.get('session_reussite') or ''
+
+        score = moyenne_generale
+        score += self._bonus_redoublement(nb_redoublements)
+        score += self._bonus_session_principale(session_reussite)
+        return round(score, 2)
+
+    def _score_mp3i(self, donnees_candidat):
+        payload = donnees_candidat.get('payload', {}) if isinstance(donnees_candidat.get('payload'), dict) else {}
+
+        moyenne_bac = _safe_float(
+            payload.get('moyenneBacPrincipale')
+            or payload.get('moyBac')
+            or donnees_candidat.get('moyenne_specialite')
+        )
+        moy_l1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moyL1'))
+        moy_l2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moyL2'))
+        moy_l3 = _safe_float(payload.get('moyenne3Annee') or payload.get('moyL3'))
+
+        score = (0.5 * moyenne_bac) + (1.0 * moy_l1) + (1.5 * moy_l2) + (2.0 * moy_l3)
+
+        nb_redoublements = int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements')))
+        if nb_redoublements > 1:
+            return 0.0
+        score += -4.0 * nb_redoublements
+
+        session1 = payload.get('session1Annee') or payload.get('session1')
+        session2 = payload.get('session2Annee') or payload.get('session2')
+        session3 = payload.get('session3Annee') or payload.get('session3')
+
+        if _normalize_text(session1) in {'control', 'controle'}:
+            score += -1.0
+        if _normalize_text(session2) in {'control', 'controle'}:
+            score += -1.5
+        if _normalize_text(session3) in {'control', 'controle'}:
+            score += -2.0
+
+        return round(score, 2)
+
+    def _score_mrgl(self, donnees_candidat):
+        payload = donnees_candidat.get('payload', {}) if isinstance(donnees_candidat.get('payload'), dict) else {}
+        nature_diplome = _normalize_text(payload.get('natureDiplome') or payload.get('nature_diplome'))
+        moyenne_bac = _safe_float(payload.get('moyenneBacPrincipale') or payload.get('moyBac'))
+        note_math_bac = _safe_float(payload.get('noteMathBac') or payload.get('note_math_bac'))
+        note_francais = payload.get('noteFrancaisBac') or payload.get('note_francais_bac')
+        note_anglais = payload.get('noteAnglaisBac') or payload.get('note_anglais_bac')
+        certification_b2 = payload.get('certificationB2') or payload.get('certification_b2')
+        annee_diplome = payload.get('anneeObtentionDiplome') or payload.get('annee_obtention_diplome')
+
+        nb_redoublements = int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements')))
+        session1 = payload.get('session1Annee')
+        session2 = payload.get('session2Annee')
+        session3 = payload.get('session3Annee')
+
+        score = 0.0
+
+        if nature_diplome == 'maitrise':
+            moy1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moy1'))
+            moy2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
+            moy3 = _safe_float(payload.get('moyenne3Annee') or payload.get('moy3'))
+            moy4 = _safe_float(payload.get('moyenne4Annee') or payload.get('moy4'))
+            score += (1.5 * moy1) + (2.0 * moy2) + (2.0 * moy3) + moy4
+        else:
+            moy1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moy1'))
+            moy2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
+            moy3 = _safe_float(payload.get('moyenne3Annee') or payload.get('moy3'))
+            score += (1.5 * moy1) + (2.0 * moy2) + moy3
+
+        score += self._bonus_redoublement_mrgl(nb_redoublements)
+        score += self._bonus_session_principale(session1, session2, session3)
+        score += ((moyenne_bac + note_math_bac - 20.0) / 2.0)
+        score += self._bonus_langue(note_francais, note_anglais, certification_b2)
+
+        if nature_diplome == 'licence':
+            score += self._bonus_annee_diplome(annee_diplome)
+
+        return round(score, 2)
+
+    def _score_mrmi(self, donnees_candidat):
+        payload = donnees_candidat.get('payload', {}) if isinstance(donnees_candidat.get('payload'), dict) else {}
+        parcours = _normalize_text(payload.get('mrmiParcours') or payload.get('parcours'))
+
+        if parcours == 'cas2' or _safe_float(payload.get('moyenneIng1')):
+            moyenne_ing1 = _safe_float(payload.get('moyenneIng1') or payload.get('moyIng1'))
+            session = payload.get('sessionReussiteIng1') or payload.get('session_reussite_ing1')
+            nb_redoublements = int(
+                _safe_float(payload.get('nombreRedoublementIng1') or payload.get('nombreRedoublement'))
+            )
+            score = moyenne_ing1
+            if _normalize_text(session) in {'control', 'controle'}:
+                score -= 1.0
+            score += -2.0 * nb_redoublements
+            return round(score, 2)
+
+        moyenne_bac = _safe_float(payload.get('moyenneBacPrincipale') or payload.get('moyBac'))
+        moy_l1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moyL1'))
+        moy_l2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moyL2'))
+        moy_l3 = _safe_float(payload.get('moyenne3Annee') or payload.get('moyL3'))
+        nb_redoublements = int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements')))
+        session1 = payload.get('session1Annee')
+        session2 = payload.get('session2Annee')
+        session3 = payload.get('session3Annee')
+
+        score = (0.5 * moyenne_bac) + (1.0 * moy_l1) + (1.5 * moy_l2) + (2.0 * moy_l3)
+        score += -4.0 * nb_redoublements
+        if _normalize_text(session1) in {'control', 'controle'}:
+            score += -1.0
+        if _normalize_text(session2) in {'control', 'controle'}:
+            score += -1.5
+        if _normalize_text(session3) in {'control', 'controle'}:
+            score += -2.0
+
+        return round(score, 2)
+
+    def _score_ing(self, donnees_candidat):
+        payload = donnees_candidat.get('payload', {}) if isinstance(donnees_candidat.get('payload'), dict) else {}
+        parcours = _normalize_text(payload.get('ingParcours') or payload.get('parcours') or 'cas1')
+
+        rang1 = _safe_float(
+            payload.get('rang1')
+            or payload.get('rang_1')
+            or payload.get('classement1')
+            or payload.get('rank1')
+        )
+        rang2 = _safe_float(
+            payload.get('rang2')
+            or payload.get('rang_2')
+            or payload.get('classement2')
+            or payload.get('rank2')
+        )
+        effectif1 = _safe_float(payload.get('effectif1') or payload.get('effectif_1') or payload.get('total1'))
+        effectif2 = _safe_float(payload.get('effectif2') or payload.get('effectif_2') or payload.get('total2'))
+
+        if rang1 > 0 and rang2 > 0:
+            moyenne1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moy1'))
+            moyenne2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
+            moyenne3 = _safe_float(payload.get('moyenne3Annee') or payload.get('moy3'))
+
+            ratio1 = rang1 / max(effectif1 - 1.0, 1.0)
+            ratio2 = rang2 / max(effectif2 - 1.0, 1.0)
+            return round(0.5 * ((2 * moyenne1) + (2 * moyenne2) + moyenne3) + 50 * (1 - ratio1) + 50 * (1 - ratio2), 2)
+
+        if parcours == 'cas1':
+            moy1 = _safe_float(payload.get('moyenne1Annee') or payload.get('moy1'))
+            moy2 = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
+            session1 = payload.get('session1Annee')
+            session2 = payload.get('session2Annee')
+
+            score = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
+
+            bonus1 = 2.0 if _normalize_text(session1) in {'principale', 'principal'} else 1.5 if _normalize_text(session1) in {'control', 'controle'} else 0.0
+            bonus2 = 2.0 if _normalize_text(session2) in {'principale', 'principal'} else 1.5 if _normalize_text(session2) in {'control', 'controle'} else 0.0
+
+            if int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements'))):
+                bonus1 = 1.0 if bonus1 > 0 else 0.0
+                bonus2 = 1.0 if bonus2 > 0 else 0.0
+
+            return round(score + bonus1 + bonus2, 2)
+
+        moyenne1 = _safe_float(payload.get('m1'))
+        moyenne2 = _safe_float(payload.get('m2'))
+        moyenne3 = _safe_float(payload.get('m3'))
+        return round(0.5 * ((2 * moyenne1) + (2 * moyenne2) + moyenne3), 2)
+    
+    def calculer_score(self, donnees_candidat):
+        master_key = self._master_formula_key()
+
+        if master_key in {'MPGL', 'MPDS'}:
+            return self._score_mpgl_mpds(donnees_candidat)
+        if master_key == 'MP3I':
+            return self._score_mp3i(donnees_candidat)
+        if master_key == 'MRGL':
+            return self._score_mrgl(donnees_candidat)
+        if master_key == 'MRMI':
+            return self._score_mrmi(donnees_candidat)
+        if master_key in {'ING_INFO_GL', 'ING_EM'}:
+            return self._score_ing(donnees_candidat)
+
+        return self._generic_score(donnees_candidat)
 
 
 class DonneesAcademiques(models.Model):
@@ -371,9 +799,26 @@ class DonneesAcademiques(models.Model):
     
     def __str__(self):
         return f"Données académiques - {self.candidature.numero}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Recompute candidature score whenever bac/licence data changes.
+        self.calculer_et_sauvegarder_score()
     
     def calculer_et_sauvegarder_score(self):
-        formule = self.candidature.master.formule_score
+        formule = getattr(self.candidature.master, 'formule_score', None)
+
+        payload = {}
+        if isinstance(self.notes_detaillees, dict):
+            payload = self.notes_detaillees.get('payload', {})
+            if not isinstance(payload, dict):
+                payload = {}
+
+        session_reussite = None
+        if isinstance(self.notes_detaillees, dict):
+            session_reussite = self.notes_detaillees.get('session_reussite')
+        if session_reussite is None:
+            session_reussite = payload.get('session')
         
         donnees = {
             'moyenne_generale': float(self.moyenne_generale),
@@ -382,12 +827,32 @@ class DonneesAcademiques(models.Model):
             'mention': self.mention,
             'nb_redoublements': self.nb_redoublements,
             'nb_dettes': self.nb_dettes,
+            'notes_detaillees': self.notes_detaillees if isinstance(self.notes_detaillees, dict) else {},
+            'payload': payload,
+            'session_reussite': session_reussite,
         }
         
-        score = formule.calculer_score(donnees)
+        if formule:
+            score = formule.calculer_score(donnees)
+        else:
+            notes = self.notes_detaillees if isinstance(self.notes_detaillees, dict) else {}
+            payload = notes.get('payload', {}) if isinstance(notes.get('payload'), dict) else {}
+            moyenne_bac = _safe_float(notes.get('moyenne_bac', payload.get('moyenne_bac')), default=None)
+            moyenne_licence = _safe_float(notes.get('moyenne_licence', payload.get('moyenne_licence')), default=None)
+
+            if moyenne_bac is not None or moyenne_licence is not None:
+                if moyenne_bac is None:
+                    moyenne_bac = moyenne_licence
+                if moyenne_licence is None:
+                    moyenne_licence = moyenne_bac
+                score = round((0.4 * moyenne_bac) + (0.6 * moyenne_licence), 2)
+            else:
+                # Fallback when no custom formula is configured yet.
+                score = round((0.4 * donnees['moyenne_specialite']) + (0.6 * donnees['moyenne_generale']), 2)
         
-        self.candidature.score = score
-        self.candidature.save()
+        if self.candidature.score != score:
+            self.candidature.score = score
+            self.candidature.save(update_fields=['score', 'updated_at'])
         
         return score
 

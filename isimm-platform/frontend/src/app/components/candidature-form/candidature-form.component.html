@@ -14,17 +14,69 @@
       </p>
     </div>
 
-    <div *ngIf="errorMessage" class="alert alert-error">❌ {{ errorMessage }}</div>
-    <div *ngIf="successMessage" class="alert alert-success">
-      <h3>✅ Confirmation de création</h3>
-      <p>{{ successMessage }}</p>
-      <p class="password-line"><strong>Mot de passe :</strong> {{ generatedPasswordMessage }}</p>
-      <p class="help-line">Enregistrez-le maintenant, puis cliquez sur Connexion.</p>
-      <button type="button" class="btn-login" (click)="goToLogin()">Aller à la connexion</button>
+    <div class="form-stepper" *ngIf="!successMessage">
+      <button
+        type="button"
+        class="step-pill"
+        *ngFor="let step of formSteps"
+        [class.active]="currentFormStep === step.no"
+        [disabled]="!isFormStepAccessible(step.no)"
+        (click)="goToFormStep(step.no)"
+      >
+        <span>{{ step.no }}</span>
+        {{ step.label }}
+      </button>
     </div>
 
+    <div *ngIf="errorMessage" class="alert alert-error">❌ {{ errorMessage }}</div>
+
+    <mat-card *ngIf="successMessage" class="success-card" appearance="outlined">
+      <div class="success-hero">
+        <div class="success-animation" aria-hidden="true">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div>
+          <h2>Inscription confirmée</h2>
+          <p>{{ successMessage }}</p>
+        </div>
+      </div>
+
+      <div class="soft-warning">
+        <mat-icon>info</mat-icon>
+        <span
+          >Veuillez conserver précieusement ces identifiants, ils ne seront affichés qu'une seule
+          fois.</span
+        >
+      </div>
+
+      <div class="credential-grid">
+        <div class="credential-item">
+          <mat-icon>password</mat-icon>
+          <div class="credential-copy">
+            <span class="credential-label">Mot de passe généré</span>
+            <span class="password-badge">{{ generatedPasswordMessage }}</span>
+          </div>
+        </div>
+
+        <div class="credential-actions">
+          <button type="button" class="btn-copy" (click)="copyGeneratedPassword()">
+            <mat-icon>content_copy</mat-icon>
+            Copier
+          </button>
+          <span class="copied-feedback" *ngIf="copiedPassword">Copié !</span>
+        </div>
+      </div>
+
+      <div class="login-hint">
+        <mat-icon>login</mat-icon>
+        <span>Vous pouvez maintenant continuer vers votre espace de connexion.</span>
+      </div>
+
+      <button type="button" class="btn-login" (click)="goToLogin()">Se connecter</button>
+    </mat-card>
+
     <form (ngSubmit)="onSubmit()" class="candidature-form" *ngIf="!successMessage">
-      <div class="form-section">
+      <div class="form-section" *ngIf="currentFormStep === 1">
         <h2>👤 Informations personnelles</h2>
 
         <div class="form-grid">
@@ -93,7 +145,7 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section" *ngIf="currentFormStep === 2">
         <h2>🎓 Diplôme et parcours académique</h2>
         <p class="info-text">
           Renseignez les informations du baccalauréat puis du dernier diplôme/formation.
@@ -104,7 +156,7 @@
             <label>Spécialité baccalauréat *</label>
             <select [(ngModel)]="formData.specialiteBac" name="specialiteBac" required>
               <option value="">Sélectionner</option>
-              <option *ngFor="let option of specialiteBacOptions" [value]="option.label">
+              <option *ngFor="let option of specialiteBacOptions" [value]="option.code">
                 {{ option.label }}
               </option>
             </select>
@@ -192,6 +244,13 @@
               <option value="non">Non</option>
               <option value="oui">Oui</option>
             </select>
+          </div>
+
+          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+            <small class="info-text">
+              Remarque : La moyenne du bac et la note en mathématique sont celles de la session
+              principale.
+            </small>
           </div>
 
           <div class="form-group">
@@ -325,7 +384,7 @@
             </select>
           </div>
 
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+          <div class="form-group" *ngIf="shouldShowMrglFourthYearFields()">
             <label>Moyenne 4ème année *</label>
             <input
               type="number"
@@ -338,7 +397,7 @@
             />
           </div>
 
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
+          <div class="form-group" *ngIf="shouldShowMrglFourthYearFields()">
             <label>Session réussite 4ème année *</label>
             <select
               [(ngModel)]="formData.sessionReussite4emeAnnee"
@@ -374,6 +433,28 @@
                 {{ option }}
               </option>
             </select>
+          </div>
+
+          <div class="form-group" *ngIf="isEtudiantExterneSelected()">
+            <label>Etablissement de l'étudiant externe *</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.etablissementExterne"
+              name="etablissementExterne"
+              placeholder="Nom de l'établissement"
+              required
+            />
+          </div>
+
+          <div class="form-group" *ngIf="isEtudiantExterneSelected()">
+            <label>Spécialité de l'étudiant externe *</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.specialiteExterne"
+              name="specialiteExterne"
+              placeholder="Spécialité du diplôme"
+              required
+            />
           </div>
 
           <div class="form-group">
@@ -557,7 +638,29 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section" *ngIf="currentFormStep === 3">
+        <h2>📊 Résultats académiques et score estimatif</h2>
+        <p class="info-text">
+          Cette prévisualisation est automatique et indicative. Le score final est recalculé côté
+          serveur lors du dépôt.
+        </p>
+        <div class="score-preview-box">
+          <div class="score-preview-item">
+            <span>Moyenne Bac</span>
+            <strong>{{ formData.moyenneBacSessionPrincipale ?? '-' }}</strong>
+          </div>
+          <div class="score-preview-item">
+            <span>Moyenne académique</span>
+            <strong>{{ getAcademicAveragePreview() ?? '-' }}</strong>
+          </div>
+          <div class="score-preview-item score-total">
+            <span>Score estimatif</span>
+            <strong>{{ getEstimatedScoreDisplay() }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" *ngIf="currentFormStep === 4">
         <p class="info-text">
           Les informations saisies sont correctes et j'assume toute fausse déclaration.
         </p>
@@ -573,7 +676,7 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section" *ngIf="currentFormStep === 4">
         <h2>🔐 Création de votre mot de passe</h2>
 
         <div class="password-mode">
@@ -634,7 +737,30 @@
       <div class="form-actions">
         <button type="button" class="btn-secondary" (click)="onCancel()">Annuler</button>
 
-        <button type="submit" class="btn-primary" [disabled]="isLoading">
+        <button
+          type="button"
+          class="btn-secondary"
+          *ngIf="currentFormStep > 1"
+          (click)="previousFormStep()"
+        >
+          Précédent
+        </button>
+
+        <button
+          type="button"
+          class="btn-primary"
+          *ngIf="currentFormStep < totalFormSteps"
+          (click)="nextFormStep()"
+        >
+          Suivant
+        </button>
+
+        <button
+          type="submit"
+          class="btn-primary"
+          *ngIf="currentFormStep === totalFormSteps"
+          [disabled]="isLoading"
+        >
           <span *ngIf="!isLoading">✅ Valider et créer mon compte</span>
           <span *ngIf="isLoading">⏳ Création en cours...</span>
         </button>

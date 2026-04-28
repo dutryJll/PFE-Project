@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
 import { AuthService } from '../../../services/auth.service';
+import { isPublicOffer } from '../../../shared/public-offer';
 
 interface CandidatureLight {
   id: number;
@@ -166,6 +167,10 @@ export class NouvelleReclamationComponent implements OnInit {
           const unique = new Map<number, string>();
 
           for (const offre of offres) {
+            if (!isPublicOffer(offre) || offre?.statut !== 'ouvert') {
+              continue;
+            }
+
             const id = Number(offre?.id);
             if (!Number.isFinite(id) || id <= 0) {
               console.warn('⚠️ ID invalide dans offre:', offre);

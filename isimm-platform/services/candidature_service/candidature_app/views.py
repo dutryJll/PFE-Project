@@ -11,7 +11,8 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.utils import OperationalError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
+from django.db.models import F, Max, Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -27,6 +28,7 @@ from .models import (
     FormuleScore,
     ListeAdmission,
     Master,
+    OffreMaster,
     InscriptionEnLigne,
     InscriptionRapprochementAudit,
     Notification,
@@ -43,6 +45,7 @@ from .serializers import (
     ConfigurationAppelSerializer,
     FormuleScoreSerializer,
     NotificationSerializer,
+    OffreMasterSerializer,
     UserUpdateSerializer,
 )
 from .emails import (
@@ -483,6 +486,15 @@ def create_candidature(request):
                 return 0.0
             return sum(cleaned) / len(cleaned)
 
+        def _has_invalid_note(values):
+            for value in values:
+                parsed = _as_float(value, None)
+                if parsed is None:
+                    continue
+                if parsed < 0 or parsed > 20:
+                    return True
+            return False
+
         common = academic_data.get('common', {}) if isinstance(academic_data.get('common'), dict) else {}
         gl_ds = academic_data.get('glDs', {}) if isinstance(academic_data.get('glDs'), dict) else {}
         i3 = academic_data.get('i3', {}) if isinstance(academic_data.get('i3'), dict) else {}
@@ -521,19 +533,52 @@ def create_candidature(request):
         moyenne_specialite = 0.0
 
         if formation_code in ['MPGL', 'MPDS']:
+            if _has_invalid_note([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')]):
+                return Response(
+                    {'error': 'Les moyennes doivent etre comprises entre 0 et 20.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             moyenne_generale = _avg([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')])
             moyenne_specialite = moyenne_generale
         elif formation_code == 'MP3I':
+            if _has_invalid_note([i3.get('moyBac'), i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')]):
+                return Response(
+                    {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             moyenne_generale = _avg([i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')])
             moyenne_specialite = _as_float(i3.get('moyBac'), moyenne_generale)
         elif formation_code == 'MRGL':
             parcours = academic_data.get('mrglParcours', 'licence')
             if parcours == 'licence':
+                if _has_invalid_note([
+                    mrgl_licence.get('moy1'),
+                    mrgl_licence.get('moy2'),
+                    mrgl_licence.get('moy3'),
+                    mrgl_licence.get('moyBac'),
+                    mrgl_licence.get('noteMathBac'),
+                ]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _avg(
                     [mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')]
                 )
                 moyenne_specialite = _as_float(mrgl_licence.get('moyBac'), moyenne_generale)
             else:
+                if _has_invalid_note([
+                    mrgl_maitrise.get('moy1'),
+                    mrgl_maitrise.get('moy2'),
+                    mrgl_maitrise.get('moy3'),
+                    mrgl_maitrise.get('moy4'),
+                    mrgl_maitrise.get('moyBac'),
+                    mrgl_maitrise.get('noteMathBac'),
+                ]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _avg(
                     [
                         mrgl_maitrise.get('moy1'),
@@ -546,18 +591,43 @@ def create_candidature(request):
         elif formation_code == 'MRMI':
             parcours = academic_data.get('mrmiParcours', 'cas1')
             if parcours == 'cas1':
+                if _has_invalid_note([
+                    mrmi_cas1.get('moyBac'),
+                    mrmi_cas1.get('moyL1'),
+                    mrmi_cas1.get('moyL2'),
+                    mrmi_cas1.get('moyL3'),
+                ]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _avg(
                     [mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')]
                 )
                 moyenne_specialite = _as_float(mrmi_cas1.get('moyBac'), moyenne_generale)
             else:
+                if _has_invalid_note([mrmi_cas2.get('moyIng1')]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _as_float(mrmi_cas2.get('moyIng1'), 0.0)
                 moyenne_specialite = moyenne_generale
         elif formation_code in ['ING_INFO_GL', 'ING_EM']:
             parcours = academic_data.get('ingParcours', 'cas1')
             if parcours == 'cas1':
+                if _has_invalid_note([ing_cas1.get('moy1'), ing_cas1.get('moy2')]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _avg([ing_cas1.get('moy1'), ing_cas1.get('moy2')])
             else:
+                if _has_invalid_note([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')]):
+                    return Response(
+                        {'error': 'Les moyennes et notes doivent etre comprises entre 0 et 20.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 moyenne_generale = _avg([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')])
             moyenne_specialite = moyenne_generale
 
@@ -577,6 +647,8 @@ def create_candidature(request):
                 'notes_detaillees': {
                     'source': 'preinscription_step3',
                     'formation_code': formation_code,
+                    'moyenne_bac': round(moyenne_specialite, 2),
+                    'moyenne_licence': round(moyenne_generale, 2),
                     'selected_diplome': selected_diplome,
                     'etablissement_origine': etablissement_origine,
                     'diplome_reference': diplome_reference,
@@ -586,6 +658,9 @@ def create_candidature(request):
                 },
             },
         )
+
+        # Force le recalcul automatique du score apres persistance des donnees academiques.
+        candidature.save()
 
     Notification.objects.create(
         user=request.user,
@@ -900,7 +975,8 @@ def candidatures_responsable(request):
     type_concours = request.query_params.get('type')
 
     candidatures_qs = Candidature.objects.select_related('candidat', 'master', 'concours').order_by(
-        '-date_soumission'
+        F('score').desc(nulls_last=True),
+        '-date_soumission',
     )
 
     if master_ids is not None:
@@ -956,47 +1032,100 @@ def offres_inscription(request):
     offres = []
 
     for master in masters:
-        config = config_by_master.get(master.id)
+        try:
+            config = config_by_master.get(master.id)
+            nombre_candidats_inscrits = Candidature.objects.filter(master_id=master.id).count()
 
-        if config and config.est_cache and not can_see_hidden:
+            if config and config.est_cache and not can_see_hidden:
+                continue
+
+            nom_lower = (master.nom or '').lower()
+            specialite_lower = (master.specialite or '').lower()
+            is_cycle_ingenieur = 'ingenieur' in nom_lower or 'genie logiciel' in specialite_lower
+
+            reference_deadline = (
+                config.date_limite_preinscription
+                if config and config.date_limite_preinscription
+                else master.date_limite_candidature
+            )
+            statut = 'ouvert' if reference_deadline and reference_deadline >= today else 'ferme'
+
+            offres.append(
+                {
+                    'id': master.id,
+                    'titre': master.nom,
+                    'type': 'cycle_ingenieur' if is_cycle_ingenieur else 'master',
+                    'sous_type': master.type_master,
+                    'specialite': master.specialite,
+                    'description': master.description,
+                    'date_limite': master.date_limite_candidature,
+                    'date_limite_preinscription': config.date_limite_preinscription if config else None,
+                    'date_limite_depot_dossier': config.date_limite_depot_dossier if config else None,
+                    'date_limite_paiement': config.date_limite_paiement if config else None,
+                    'places': master.places_disponibles,
+                    'capacite_interne': config.capacite_interne if config else 0,
+                    'capacite_externe': config.capacite_externe if config else 0,
+                    'est_cache': config.est_cache if config else False,
+                    'est_visible': config.est_visible() if config else True,
+                    'document_officiel_pdf_url': (
+                        request.build_absolute_uri(config.document_officiel_pdf.url)
+                        if config and config.document_officiel_pdf
+                        else None
+                    ),
+                    'statut': statut,
+                    'nombre_candidats_inscrits': nombre_candidats_inscrits,
+                }
+            )
+        except Exception as exc:
+            logger.exception('Erreur lors de la construction de l offre %s: %s', master.id, exc)
             continue
 
-        nom_lower = (master.nom or '').lower()
-        specialite_lower = (master.specialite or '').lower()
-        is_cycle_ingenieur = 'ingenieur' in nom_lower or 'genie logiciel' in specialite_lower
+    # Sprint 3: offres commission (OffreMaster) visibles automatiquement cote candidat.
+    try:
+        offres_master = OffreMaster.objects.select_related('master').filter(actif=True)
+        for offre_master in offres_master:
+            master = offre_master.master
+            if not master or not master.actif:
+                continue
 
-        reference_deadline = (
-            config.date_limite_preinscription
-            if config and config.date_limite_preinscription
-            else master.date_limite_candidature
-        )
-        statut = 'ouvert' if reference_deadline and reference_deadline >= today else 'ferme'
+            if not offre_master.est_publiee and not can_see_hidden:
+                continue
 
-        offres.append(
-            {
-                'id': master.id,
-                'titre': master.nom,
-                'type': 'cycle_ingenieur' if is_cycle_ingenieur else 'master',
-                'sous_type': master.type_master,
-                'specialite': master.specialite,
-                'description': master.description,
-                'date_limite': master.date_limite_candidature,
-                'date_limite_preinscription': config.date_limite_preinscription if config else None,
-                'date_limite_depot_dossier': config.date_limite_depot_dossier if config else None,
-                'date_limite_paiement': config.date_limite_paiement if config else None,
-                'places': master.places_disponibles,
-                'capacite_interne': config.capacite_interne if config else 0,
-                'capacite_externe': config.capacite_externe if config else 0,
-                'est_cache': config.est_cache if config else False,
-                'est_visible': config.est_visible() if config else True,
-                'document_officiel_pdf_url': (
-                    request.build_absolute_uri(config.document_officiel_pdf.url)
-                    if config and config.document_officiel_pdf
-                    else None
-                ),
-                'statut': statut,
-            }
-        )
+            # Eviter les doublons si le master est deja expose via la boucle precedente.
+            if any(existing.get('id') == master.id for existing in offres):
+                continue
+
+            reference_deadline = offre_master.date_limite_preinscription or offre_master.date_limite
+            statut_public = (
+                'ouvert'
+                if offre_master.est_publiee and offre_master.appel_actif and reference_deadline and reference_deadline >= today
+                else 'ferme'
+            )
+
+            offres.append(
+                {
+                    'id': master.id,
+                    'titre': offre_master.titre,
+                    'type': 'master',
+                    'sous_type': master.type_master,
+                    'specialite': master.specialite,
+                    'type_formation': offre_master.type_formation,
+                    'description': offre_master.description,
+                    'date_limite': offre_master.date_limite,
+                    'date_debut_visibilite': offre_master.date_debut_visibilite,
+                    'date_fin_visibilite': offre_master.date_fin_visibilite,
+                    'date_limite_preinscription': offre_master.date_limite_preinscription,
+                    'date_limite_depot_dossier': offre_master.date_limite_depot_dossier,
+                    'places': offre_master.capacite,
+                    'capacites_detaillees': offre_master.capacites_detaillees,
+                    'est_publiee': offre_master.est_publiee,
+                    'appel_actif': offre_master.appel_actif,
+                    'statut': statut_public,
+                    'nombre_candidats_inscrits': Candidature.objects.filter(master_id=master.id).count(),
+                }
+            )
+    except OperationalError as exc:
+        logger.warning('Table OffreMaster indisponible, fallback masters uniquement: %s', exc)
 
     concours_qs = Concours.objects.filter(actif=True).order_by('-created_at')
     for concours in concours_qs:
@@ -1130,6 +1259,160 @@ def lister_masters(request):
         )
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def offres_master_crud(request):
+    """
+    CRUD Sprint 3 - Offres de preinscription master.
+    - GET: liste (avec recherche par titre/date)
+    - POST: creation offre + master associe
+    """
+    if request.method == 'GET':
+        if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission', 'commission']:
+            return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+        qs = OffreMaster.objects.select_related('master').filter(actif=True)
+        search = (request.query_params.get('search') or '').strip().lower()
+        date_limite = (request.query_params.get('date_limite') or '').strip()
+
+        if search:
+            qs = qs.filter(Q(titre__icontains=search) | Q(description__icontains=search))
+        if date_limite:
+            qs = qs.filter(date_limite=date_limite)
+
+        serializer = OffreMasterSerializer(qs.order_by('date_limite', 'titre'), many=True)
+        return Response(serializer.data)
+
+    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data or {}
+    titre = (data.get('titre') or '').strip()
+    description = (data.get('description') or '').strip()
+    capacite = data.get('capacite')
+    date_limite = data.get('date_limite')
+
+    if not titre or capacite in [None, ''] or not date_limite:
+        return Response(
+            {'error': 'Champs requis: titre, capacite, date_limite.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        capacite_int = int(capacite)
+    except (TypeError, ValueError):
+        return Response({'error': 'capacite invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    master = Master.objects.create(
+        nom=titre,
+        type_master='professionnel',
+        description=description,
+        specialite=(data.get('specialite') or 'Master'),
+        places_disponibles=capacite_int,
+        date_limite_candidature=date_limite,
+        annee_universitaire=data.get('annee_universitaire', f"{timezone.now().year}/{timezone.now().year + 1}"),
+        actif=bool(data.get('actif', True)),
+    )
+
+    offre = OffreMaster.objects.create(
+        master=master,
+        titre=titre,
+        description=description,
+        type_formation=(data.get('type_formation') or 'master'),
+        capacite=capacite_int,
+        date_limite=date_limite,
+        date_debut_visibilite=data.get('date_debut_visibilite') or None,
+        date_fin_visibilite=data.get('date_fin_visibilite') or None,
+        date_limite_preinscription=data.get('date_limite_preinscription') or date_limite,
+        date_limite_depot_dossier=data.get('date_limite_depot_dossier') or None,
+        capacites_detaillees=data.get('capacites_detaillees') or [],
+        appel_actif=bool(data.get('appel_actif', True)),
+        est_publiee=bool(data.get('est_publiee', False)),
+        actif=bool(data.get('actif', True)),
+    )
+
+    return Response(OffreMasterSerializer(offre).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def offre_master_detail_crud(request, offre_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        offre = OffreMaster.objects.select_related('master').get(id=offre_id)
+    except OffreMaster.DoesNotExist:
+        return Response({'error': 'Offre non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(OffreMasterSerializer(offre).data)
+
+    if role not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'DELETE':
+        offre.actif = False
+        offre.save(update_fields=['actif', 'updated_at'])
+        master = offre.master
+        master.actif = False
+        master.save(update_fields=['actif', 'updated_at'])
+        return Response({'success': True, 'message': 'Offre desactivee.'}, status=status.HTTP_200_OK)
+
+    data = request.data or {}
+    if 'titre' in data:
+        offre.titre = data.get('titre') or offre.titre
+    if 'description' in data:
+        offre.description = data.get('description') or ''
+    if 'type_formation' in data:
+        offre.type_formation = data.get('type_formation') or 'master'
+    if 'capacite' in data:
+        try:
+            offre.capacite = int(data.get('capacite'))
+        except (TypeError, ValueError):
+            return Response({'error': 'capacite invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+    if 'date_limite' in data:
+        offre.date_limite = data.get('date_limite')
+    if 'actif' in data:
+        offre.actif = bool(data.get('actif'))
+    if 'appel_actif' in data:
+        offre.appel_actif = bool(data.get('appel_actif'))
+    if 'est_publiee' in data:
+        offre.est_publiee = bool(data.get('est_publiee'))
+    if 'date_debut_visibilite' in data:
+        offre.date_debut_visibilite = data.get('date_debut_visibilite') or None
+    if 'date_fin_visibilite' in data:
+        offre.date_fin_visibilite = data.get('date_fin_visibilite') or None
+    if 'date_limite_preinscription' in data:
+        offre.date_limite_preinscription = data.get('date_limite_preinscription') or None
+    if 'date_limite_depot_dossier' in data:
+        offre.date_limite_depot_dossier = data.get('date_limite_depot_dossier') or None
+    if 'capacites_detaillees' in data:
+        detaillees = data.get('capacites_detaillees')
+        offre.capacites_detaillees = detaillees if isinstance(detaillees, list) else []
+
+    offre.save()
+    return Response(OffreMasterSerializer(offre).data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def offre_master_public_detail(request, offre_id):
+    """Expose le detail d'une offre publiee pour affichage cote candidat en temps reel."""
+    try:
+        offre = OffreMaster.objects.select_related('master').get(id=offre_id, actif=True)
+    except OffreMaster.DoesNotExist:
+        return Response({'error': 'Offre non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not offre.est_publiee and getattr(request.user, 'role', None) not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Offre non publiee'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = OffreMasterSerializer(offre).data
+    data['statut_public'] = 'ouvert' if offre.appel_actif and offre.est_publiee else 'ferme'
+    return Response(data)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def creer_master_admin(request):
@@ -1183,7 +1466,7 @@ def creer_master_admin(request):
     )
 
 
-@api_view(['PATCH', 'DELETE'])
+@api_view(['PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def modifier_supprimer_master_admin(request, master_id):
     """Modifier/Supprimer (soft delete) un master (admin ou responsable commission)."""
@@ -1427,6 +1710,69 @@ def changer_statut_candidature(request, candidature_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def update_status(request, candidature_id):
+    """Action rapide Sprint 3: bouton Valider -> statut preselectionne."""
+    if getattr(request.user, 'role', None) not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    ancien_statut = candidature.statut
+    nouveau_statut = 'preselectionne'
+
+    if ancien_statut == nouveau_statut:
+        return Response({'success': True, 'message': 'Statut deja preselectionne.'}, status=status.HTTP_200_OK)
+
+    statuts_suivants = ALLOWED_STATUS_TRANSITIONS.get(ancien_statut, set())
+    if nouveau_statut not in statuts_suivants:
+        return Response(
+            {
+                'error': f'Transition interdite: {ancien_statut} -> {nouveau_statut}',
+                'allowed_transitions': sorted(list(statuts_suivants)),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    candidature.statut = nouveau_statut
+    candidature.date_changement_statut = timezone.now()
+    candidature.peut_modifier = False
+    candidature.save(update_fields=['statut', 'date_changement_statut', 'peut_modifier', 'updated_at'])
+    candidature.ajouter_historique(
+        ancien_statut,
+        nouveau_statut,
+        request.user,
+        'Validation commission (update_status)',
+    )
+
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)(
+            'candidatures_updates',
+            {
+                'type': 'candidature_status_changed',
+                'candidature_id': candidature.id,
+                'candidate_user_id': candidature.candidat_id,
+                'new_status': nouveau_statut,
+                'updated_at': timezone.now().isoformat(),
+            },
+        )
+
+    serializer = CandidatureSerializer(candidature)
+    return Response(
+        {
+            'success': True,
+            'message': 'Statut mis a jour: preselectionne',
+            'candidature': serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def send_member_credentials(request):
     email = request.data.get('email')
     password = request.data.get('password')
@@ -1579,6 +1925,35 @@ def upload_document_configuration_appel(request, master_id):
     )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def publier_offre_preinscription(request, master_id):
+    """
+    Validation et publication officielle d'un appel de preinscription.
+    Cette action est reservee au responsable de commission.
+    """
+    if getattr(request.user, 'role', None) != 'responsable_commission':
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        config = ConfigurationAppel.objects.get(master_id=master_id)
+    except ConfigurationAppel.DoesNotExist:
+        return Response({'error': 'Configuration non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    config.actif = True
+    config.est_cache = False
+    config.save(update_fields=['actif', 'est_cache', 'updated_at'])
+
+    return Response(
+        {
+            'success': True,
+            'message': 'Appel de preinscription valide et publie avec succes.',
+            'master_id': master_id,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def offres_inscription_responsable(request):
@@ -1596,6 +1971,7 @@ def offres_inscription_responsable(request):
     offres = []
     for master in masters:
         config = config_by_master.get(master.id)
+        nombre_candidats_inscrits = Candidature.objects.filter(master_id=master.id).count()
 
         if config:
             statut = 'ouvert' if config.peut_candidater() else 'ferme'
@@ -1635,8 +2011,6 @@ def offres_inscription_responsable(request):
             delai_depot_dossier_j_jours = 14
             document_officiel_pdf_url = None
 
-        master = config.master
-
         offres.append(
             {
                 'id': master.id,
@@ -1653,6 +2027,7 @@ def offres_inscription_responsable(request):
                 'capacite_externe': capacite_externe,
                 'capacite_liste_attente': capacite_liste_attente,
                 'places': master.places_disponibles,
+                'nombre_candidats_inscrits': nombre_candidats_inscrits,
                 'date_limite': master.date_limite_candidature,
                 'date_debut_visibilite': date_debut_visibilite,
                 'date_fin_visibilite': date_fin_visibilite,
@@ -1985,6 +2360,356 @@ def calculer_score_candidature(request, candidature_id):
             {'error': 'Donnees academiques non renseignees'},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def calculer_score_final_et_statut(request, candidature_id):
+    """
+    API Sprint 3:
+    - Calcule/actualise le score final a partir des moyennes saisies (Sprint 2)
+    - Met a jour automatiquement le statut selon les seuils du jury
+    """
+
+    try:
+        candidature = Candidature.objects.select_related('master').get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    user_role = getattr(request.user, 'role', None)
+    is_owner = candidature.candidat_id == getattr(request.user, 'id', None)
+    if not (is_owner or user_role in ['admin', 'commission', 'responsable_commission']):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    payload = request.data or {}
+
+    def _as_float(value, default=None):
+        try:
+            if value in [None, '']:
+                return default
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    moyenne_bac = _as_float(payload.get('moyenne_bac'))
+    moyenne_licence = _as_float(payload.get('moyenne_licence'))
+    moyenne_specialite = _as_float(payload.get('moyenne_specialite'))
+    note_pfe = _as_float(payload.get('note_pfe'), 0.0)
+
+    if moyenne_licence is None:
+        moyenne_licence = _as_float(payload.get('moyenne_generale'))
+
+    if moyenne_licence is None and moyenne_bac is None:
+        return Response(
+            {'error': 'Veuillez fournir au moins moyenne_licence ou moyenne_bac.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    moyenne_generale = moyenne_licence if moyenne_licence is not None else moyenne_bac
+    if moyenne_specialite is None:
+        moyenne_specialite = moyenne_generale
+
+    if any(
+        value is not None and (value < 0 or value > 20)
+        for value in [moyenne_bac, moyenne_licence, moyenne_specialite, note_pfe]
+    ):
+        return Response(
+            {'error': 'Les moyennes et notes doivent etre entre 0 et 20.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    seuil_acceptation = _as_float(payload.get('seuil_acceptation'), 14.0)
+    seuil_attente = _as_float(payload.get('seuil_attente'), 10.0)
+    if seuil_acceptation is None or seuil_attente is None:
+        return Response(
+            {'error': 'Seuils jury invalides.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if seuil_attente > seuil_acceptation:
+        return Response(
+            {'error': 'seuil_attente doit etre inferieur ou egal a seuil_acceptation.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    notes_detaillees = {
+        'source': 'api_score_final_sprint3',
+        'moyenne_bac': moyenne_bac,
+        'moyenne_licence': moyenne_licence,
+        'payload': payload,
+    }
+
+    donnees, _ = DonneesAcademiques.objects.get_or_create(
+        candidature=candidature,
+        defaults={
+            'moyenne_generale': moyenne_generale,
+            'moyenne_specialite': moyenne_specialite,
+            'note_pfe': note_pfe or 0.0,
+            'mention': 'passable',
+            'nb_redoublements': int(_as_float(payload.get('nb_redoublements'), 0) or 0),
+            'nb_dettes': int(_as_float(payload.get('nb_dettes'), 0) or 0),
+            'notes_detaillees': notes_detaillees,
+        },
+    )
+
+    donnees.moyenne_generale = moyenne_generale
+    donnees.moyenne_specialite = moyenne_specialite
+    donnees.note_pfe = note_pfe or 0.0
+    donnees.nb_redoublements = int(_as_float(payload.get('nb_redoublements'), donnees.nb_redoublements) or 0)
+    donnees.nb_dettes = int(_as_float(payload.get('nb_dettes'), donnees.nb_dettes) or 0)
+    donnees.notes_detaillees = notes_detaillees
+    donnees.save()
+
+    score = donnees.calculer_et_sauvegarder_score()
+    previous_status = candidature.statut
+
+    if score >= seuil_acceptation:
+        candidature.statut = 'selectionne'
+        candidature.motif_rejet = ''
+    elif score >= seuil_attente:
+        candidature.statut = 'en_attente'
+        candidature.motif_rejet = ''
+    else:
+        candidature.statut = 'rejete'
+        candidature.motif_rejet = 'Score inferieur au seuil jury.'
+
+    candidature.date_changement_statut = timezone.now()
+    candidature.peut_modifier = False
+    candidature.save(update_fields=['statut', 'motif_rejet', 'date_changement_statut', 'peut_modifier', 'updated_at'])
+
+    if previous_status != candidature.statut:
+        try:
+            candidature.ajouter_historique(previous_status, candidature.statut, request.user, 'Mise a jour automatique selon seuils jury')
+        except Exception:
+            # L'historique ne doit pas bloquer la reponse API.
+            pass
+
+    return Response(
+        {
+            'success': True,
+            'candidature_id': candidature.id,
+            'score_final': score,
+            'statut': candidature.statut,
+            'seuils': {
+                'acceptation': seuil_acceptation,
+                'attente': seuil_attente,
+            },
+            'input': {
+                'moyenne_bac': moyenne_bac,
+                'moyenne_licence': moyenne_licence,
+                'moyenne_specialite': moyenne_specialite,
+                'note_pfe': note_pfe,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+def _has_commission_access_to_master(user, master_id):
+    role = getattr(user, 'role', None)
+    if role == 'admin':
+        return True
+    if role in ['responsable_commission', 'commission']:
+        return MembreCommission.objects.filter(
+            user=user,
+            actif=True,
+            commission__actif=True,
+            commission__master_id=master_id,
+        ).exists()
+    return False
+
+
+def _serialize_candidature_for_liste(candidature):
+    candidat_nom = ''
+    candidat_email = ''
+    candidat_cin = ''
+
+    if getattr(candidature, 'candidat', None):
+        candidat_nom = candidature.candidat.get_full_name()
+        candidat_email = getattr(candidature.candidat, 'email', '')
+        candidat_cin = getattr(candidature.candidat, 'cin', '')
+
+    return {
+        'id': candidature.id,
+        'numero': candidature.numero,
+        'candidat_nom': candidat_nom,
+        'candidat_email': candidat_email,
+        'candidat_cin': candidat_cin,
+        'specialite': candidature.master.specialite if candidature.master else '',
+        'master_id': candidature.master_id,
+        'master_nom': candidature.master.nom if candidature.master else '',
+        'score': float(candidature.score) if candidature.score is not None else 0.0,
+        'dossier_depose': candidature.dossier_depose,
+        'statut': candidature.statut,
+        'date_soumission': candidature.date_soumission,
+    }
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generer_liste_manuelle(request, master_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    if not _has_commission_access_to_master(request.user, master_id):
+        return Response({'error': 'Acces au master refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    raw_type_liste = str(request.data.get('type_liste') or 'principale').strip().lower()
+    type_liste = 'attente' if raw_type_liste in ['attente', 'waiting'] else 'principale'
+
+    candidature_ids = request.data.get('candidature_ids')
+    if not isinstance(candidature_ids, list) or not candidature_ids:
+        return Response(
+            {'error': 'candidature_ids doit etre une liste non vide.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        ordered_unique_ids = list(dict.fromkeys(int(cand_id) for cand_id in candidature_ids))
+    except (TypeError, ValueError):
+        return Response({'error': 'candidature_ids contient une valeur invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    candidatures_qs = Candidature.objects.select_related('candidat', 'master').filter(
+        id__in=ordered_unique_ids,
+        master_id=master_id,
+    )
+    candidatures = sorted(
+        list(candidatures_qs),
+        key=lambda cand: (float(cand.score or 0), cand.date_soumission),
+        reverse=True,
+    )
+
+    if len(candidatures) != len(ordered_unique_ids):
+        ids_found = {cand.id for cand in candidatures}
+        ids_missing = [cand_id for cand_id in ordered_unique_ids if cand_id not in ids_found]
+        return Response(
+            {
+                'error': 'Certaines candidatures sont introuvables ou hors master.',
+                'candidature_ids_invalides': ids_missing,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    annee = timezone.now().year
+    annee_universitaire = request.data.get('annee_universitaire', f'{annee}/{annee+1}')
+    max_iteration = (
+        ListeAdmission.objects.filter(
+            master=master,
+            type_liste=type_liste,
+            annee_universitaire=annee_universitaire,
+        ).aggregate(max_iteration=Max('iteration'))['max_iteration']
+        or 0
+    )
+    prochaine_iteration = int(max_iteration) + 1
+
+    if prochaine_iteration > 4:
+        return Response(
+            {
+                'error': 'Limite des iterations atteinte pour cette annee universitaire.',
+                'annee_universitaire': annee_universitaire,
+                'type_liste': type_liste,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    nouveau_statut = 'selectionne' if type_liste == 'principale' else 'en_attente'
+
+    with transaction.atomic():
+        liste = ListeAdmission.objects.create(
+            master=master,
+            type_liste=type_liste,
+            iteration=prochaine_iteration,
+            annee_universitaire=annee_universitaire,
+            capacite_accueil=len(candidatures),
+            places_restantes=0,
+            active=True,
+            publiee=False,
+        )
+
+        for position, candidature in enumerate(candidatures, start=1):
+            CandidatListe.objects.create(
+                liste=liste,
+                candidature=candidature,
+                position=position,
+                score=candidature.score if candidature.score is not None else 0,
+            )
+            candidature.statut = nouveau_statut
+            candidature.save(update_fields=['statut', 'updated_at'])
+
+    candidats_payload = [_serialize_candidature_for_liste(cand) for cand in candidatures]
+
+    return Response(
+        {
+            'success': True,
+            'message': 'Liste admission generee et enregistree avec succes.',
+            'liste': {
+                'id': liste.id,
+                'master_id': liste.master_id,
+                'master_nom': liste.master.nom,
+                'type_liste': liste.type_liste,
+                'iteration': liste.iteration,
+                'annee_universitaire': liste.annee_universitaire,
+                'nb_candidats': len(candidats_payload),
+                'date_creation': liste.date_creation,
+            },
+            'candidats': candidats_payload,
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def liste_admission_recente(request, master_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    if not _has_commission_access_to_master(request.user, master_id):
+        return Response({'error': 'Acces au master refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    type_liste_query = str(request.query_params.get('type_liste') or '').strip().lower()
+    mapped_type_liste = None
+    if type_liste_query in ['selection', 'principale']:
+        mapped_type_liste = 'principale'
+    elif type_liste_query in ['attente', 'waiting']:
+        mapped_type_liste = 'attente'
+
+    listes_qs = ListeAdmission.objects.select_related('master').filter(master_id=master_id)
+    if mapped_type_liste:
+        listes_qs = listes_qs.filter(type_liste=mapped_type_liste)
+
+    liste = listes_qs.order_by('-date_creation').first()
+    if not liste:
+        return Response({'success': True, 'liste': None, 'candidats': []})
+
+    candidatures = [
+        candidat_liste.candidature
+        for candidat_liste in liste.candidats.select_related('candidature__candidat', 'candidature__master').all()
+    ]
+    candidats_payload = [_serialize_candidature_for_liste(cand) for cand in candidatures]
+
+    return Response(
+        {
+            'success': True,
+            'liste': {
+                'id': liste.id,
+                'master_id': liste.master_id,
+                'master_nom': liste.master.nom,
+                'type_liste': liste.type_liste,
+                'iteration': liste.iteration,
+                'annee_universitaire': liste.annee_universitaire,
+                'nb_candidats': len(candidats_payload),
+                'date_creation': liste.date_creation,
+            },
+            'candidats': candidats_payload,
+        }
+    )
 
 
 @api_view(['POST'])

@@ -1,336 +1,411 @@
-<!-- Header avec Logo ISIMM -->
-<header class="header">
-  <nav class="navbar">
-    <!-- Logo ISIMM à gauche -->
-    <div class="logo-container">
-      <img src="/ISIMM_LOGO.png" />
-      <div class="logo-text">
-        <span class="main-title">ISIMM Admissions</span>
-        <span class="subtitle">{{ tr.nav.official }}</span>
-      </div>
-    </div>
-
-    <!-- Navigation -->
-    <ul class="nav-links">
-      <li>
-        <a
-          routerLink="/"
-          class="nav-link"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          >{{ tr.nav.home }}</a
-        >
-      </li>
-      <li>
-        <a
-          routerLink="/choisir-candidature"
-          class="nav-link"
-          routerLinkActive="active"
-          (click)="goToMasters($event)"
-          >{{ tr.nav.formation }}</a
-        >
-      </li>
-
-      <li>
-        <a routerLink="/guide-etudiant" routerLinkActive="active">{{ tr.nav.guide }}</a>
-      </li>
-      <li>
-        <a href="#contact">{{ tr.nav.contact }}</a>
-      </li>
-    </ul>
-
-    <div class="nav-actions">
-      <div class="lang-dropdown" (click)="$event.stopPropagation()">
-        <a
-          class="dropdown-toggle nav-link"
-          href="#"
-          role="menuitem"
-          aria-label="Langue"
-          aria-haspopup="true"
-          [attr.aria-expanded]="showLangMenu"
-          (click)="toggleLanguageMenu($event)"
-        >
-          {{ tr.nav.languageLabel }}
-          <b class="caret"></b>
-        </a>
-
-        <div class="lang-menu" *ngIf="showLangMenu">
-          <a href="#" (click)="selectLanguage('fr', $event)">{{ tr.nav.languageFr }}</a>
-          <a href="#" (click)="selectLanguage('en', $event)">{{ tr.nav.languageEn }}</a>
+<div class="landing">
+  <!-- Header avec Logo ISIMM -->
+  <header class="header landing__header">
+    <nav class="navbar">
+      <!-- Logo ISIMM à gauche -->
+      <a class="logo-container" routerLink="/" aria-label="Accueil ISIMM">
+        <img src="/ISIMM_LOGO.png" />
+        <div class="logo-text">
+          <span class="main-title">ISIMM Admissions</span>
+          <span class="subtitle">{{ tr.nav.official }}</span>
         </div>
-      </div>
+      </a>
 
-      <a routerLink="/login" class="btn-connexion">{{ tr.nav.login }}</a>
-    </div>
-  </nav>
-</header>
-
-<!-- Hero Section MODIFIÉ -->
-<section class="hero" id="accueil">
-  <div class="hero-content">
-    <div class="hero-panel">
-      <h1>
-        {{ tr.hero.title }}
-        <span>ISIMM</span>
-      </h1>
-      <p>{{ tr.hero.subtitle }}</p>
-      <div class="cta-buttons">
-        <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
-        <a [routerLink]="['/choisir-candidature']" class="btn-primary"> {{ tr.hero.apply }} </a>
-        <a [routerLink]="['/choisir-candidature']" class="btn-secondary">
-          {{ tr.hero.discover }}
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Stats Section ORIGINAL -->
-<section class="stats-section">
-  <div class="stats-grid">
-    <div class="stat-item">
-      <h3>100%</h3>
-      <p>{{ tr.stats.one }}</p>
-    </div>
-    <div class="stat-item">
-      <h3>24/7</h3>
-      <p>{{ tr.stats.two }}</p>
-    </div>
-    <div class="stat-item">
-      <h3>IA</h3>
-      <p>{{ tr.stats.three }}</p>
-    </div>
-    <div class="stat-item">
-      <h3>✓</h3>
-      <p>{{ tr.stats.four }}</p>
-    </div>
-  </div>
-</section>
-
-<!-- FORMATIONS SECTION MODIFIÉE -->
-<section class="formations-section" id="masters">
-  <div class="concours-container">
-    <h2 class="section-title">{{ tr.sections.formationsTitle }}</h2>
-    <p class="section-subtitle">{{ tr.sections.formationsSubtitle }}</p>
-
-    <div class="formations-grid">
-      <!-- Masters de Recherche -->
-      <div class="formation-card research">
-        <div class="card-icon-container">
-          <div class="icon-circle research-bg">
-            <i class="fas fa-flask"></i>
-          </div>
-          <div class="card-badge research-badge">{{ tr.cards.researchBadge }}</div>
-        </div>
-
-        <h3 class="card-title">{{ tr.cards.researchTitle }}</h3>
-        <p class="card-description">{{ tr.cards.researchDesc }}</p>
-
-        <ul class="card-features">
-          <li>
-            <span class="feature-icon research-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.researchItem1 }}</span>
-          </li>
-          <li>
-            <span class="feature-icon research-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.researchItem2 }}</span>
-          </li>
-        </ul>
-
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/recherche/exploration -->
-        <button class="btn-card research-btn" [routerLink]="['/masters/recherche/exploration']">
-          <span>{{ tr.cards.explore }}</span>
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-
-      <!-- Masters Professionnels -->
-      <div class="formation-card professional">
-        <div class="card-icon-container">
-          <div class="icon-circle professional-bg">
-            <i class="fas fa-briefcase"></i>
-          </div>
-          <div class="card-badge professional-badge">{{ tr.cards.professionalBadge }}</div>
-        </div>
-
-        <h3 class="card-title">{{ tr.cards.professionalTitle }}</h3>
-        <p class="card-description">{{ tr.cards.professionalDesc }}</p>
-
-        <ul class="card-features">
-          <li>
-            <span class="feature-icon professional-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.professionalItem1 }}</span>
-          </li>
-          <li>
-            <span class="feature-icon professional-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.professionalItem2 }}</span>
-          </li>
-          <li>
-            <span class="feature-icon professional-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.professionalItem3 }}</span>
-          </li>
-        </ul>
-
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/professionnel/exploration -->
-        <button
-          class="btn-card professional-btn"
-          [routerLink]="['/masters/professionnel/exploration']"
-        >
-          <span>{{ tr.cards.explore }}</span>
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-
-      <!-- Cycle Ingénieur -->
-      <div class="formation-card engineer">
-        <div class="card-icon-container">
-          <div class="icon-circle engineer-bg">
-            <i class="fas fa-graduation-cap"></i>
-          </div>
-          <div class="card-badge engineer-badge featured">
-            <i class="fas fa-star"></i>
-            {{ tr.cards.engineerBadge }}
-          </div>
-        </div>
-
-        <h3 class="card-title">{{ tr.cards.engineerTitle }}</h3>
-        <p class="card-description">{{ tr.cards.engineerDesc }}</p>
-
-        <ul class="card-features">
-          <li>
-            <span class="feature-icon engineer-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.engineerItem1 }}</span>
-          </li>
-          <li>
-            <span class="feature-icon engineer-icon">
-              <i class="fas fa-check"></i>
-            </span>
-            <span>{{ tr.cards.engineerItem2 }}</span>
-          </li>
-        </ul>
-
-        <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/ingenieur/exploration -->
-        <button class="btn-card engineer-btn" [routerLink]="['/masters/ingenieur/exploration']">
-          <span>{{ tr.cards.explore }}</span>
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Processus Section ORIGINAL -->
-<section class="etapes-section" id="processus">
-  <div class="concours-container">
-    <h2 class="section-title">{{ tr.sections.processTitle }}</h2>
-    <p class="section-subtitle">{{ tr.sections.processSubtitle }}</p>
-
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="timeline-number">1</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s1Title }}</h4>
-          <p>{{ tr.process.s1Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">2</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s2Title }}</h4>
-          <p>{{ tr.process.s2Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">3</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s3Title }}</h4>
-          <p>{{ tr.process.s3Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">4</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s4Title }}</h4>
-          <p>{{ tr.process.s4Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">5</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s5Title }}</h4>
-          <p>{{ tr.process.s5Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">6</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s6Title }}</h4>
-          <p>{{ tr.process.s6Text }}</p>
-        </div>
-      </div>
-
-      <div class="timeline-item">
-        <div class="timeline-number">7</div>
-        <div class="timeline-content">
-          <h4>{{ tr.process.s7Title }}</h4>
-          <p>{{ tr.process.s7Text }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Footer ORIGINAL -->
-<footer class="footer" id="contact">
-  <div class="footer-content">
-    <div class="footer-section">
-      <h3>ISIMM</h3>
-      <p>{{ tr.footer.institute }}</p>
-    </div>
-    <div class="footer-section">
-      <h3>{{ tr.footer.quickLinks }}</h3>
-      <ul>
+      <!-- Navigation -->
+      <ul class="nav-links">
         <li>
-          <a href="#">{{ tr.footer.calendar }}</a>
+          <a
+            routerLink="/"
+            class="nav-link"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            >{{ tr.nav.home }}</a
+          >
         </li>
         <li>
-          <a href="#">{{ tr.footer.faq }}</a>
+          <a
+            routerLink="/choisir-candidature"
+            class="nav-link"
+            routerLinkActive="active"
+            (click)="goToMasters($event)"
+            >{{ tr.nav.formation }}</a
+          >
+        </li>
+
+        <li>
+          <a routerLink="/guide-etudiant" routerLinkActive="active">{{ tr.nav.guide }}</a>
         </li>
         <li>
-          <a href="#">{{ tr.footer.docs }}</a>
-        </li>
-        <li>
-          <a routerLink="/login">{{ tr.footer.login }}</a>
+          <a href="#contact">{{ tr.nav.contact }}</a>
         </li>
       </ul>
+
+      <div class="nav-actions">
+        <div class="lang-dropdown" (click)="$event.stopPropagation()">
+          <a
+            class="dropdown-toggle nav-link"
+            href="#"
+            role="menuitem"
+            aria-label="Langue"
+            aria-haspopup="true"
+            [attr.aria-expanded]="showLangMenu"
+            (click)="toggleLanguageMenu($event)"
+          >
+            {{ tr.nav.languageLabel }}
+            <b class="caret"></b>
+          </a>
+
+          <div class="lang-menu" *ngIf="showLangMenu">
+            <a href="#" (click)="selectLanguage('fr', $event)">{{ tr.nav.languageFr }}</a>
+            <a href="#" (click)="selectLanguage('en', $event)">{{ tr.nav.languageEn }}</a>
+          </div>
+        </div>
+
+        <a routerLink="/login" class="btn-connexion">
+          <i class="fas fa-user-lock"></i>
+          <span>{{ tr.nav.login }}</span>
+        </a>
+      </div>
+
+      <button
+        class="mobile-menu-btn"
+        type="button"
+        (click)="toggleMobileMenu($event)"
+        [attr.aria-expanded]="isMobileMenuOpen"
+        aria-label="Ouvrir le menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </nav>
+
+    <div class="mobile-menu" *ngIf="isMobileMenuOpen">
+      <a routerLink="/" (click)="closeMobileMenu()">{{ tr.nav.home }}</a>
+      <a routerLink="/choisir-candidature" (click)="goToMasters($event)">{{ tr.nav.formation }}</a>
+      <a routerLink="/guide-etudiant" (click)="closeMobileMenu()">{{ tr.nav.guide }}</a>
+      <a href="#contact" (click)="closeMobileMenu()">{{ tr.nav.contact }}</a>
+      <a routerLink="/login" class="mobile-menu__cta" (click)="closeMobileMenu()">
+        {{ tr.nav.login }}
+      </a>
     </div>
-    <div class="footer-section">
-      <h3>Contact</h3>
-      <ul>
-        <li>📧 admissions@isimm.tn</li>
-        <li>📞 +216 73 500 274</li>
-        <li>📍 Avenue de la Corniche, Monastir 5000</li>
-      </ul>
+  </header>
+
+  <!-- Hero Section MODIFIÉ -->
+  <section class="hero" id="accueil">
+    <div class="hero-content">
+      <div class="hero-panel">
+        <h1>
+          <strong>{{ tr.hero.title }}</strong>
+        </h1>
+        <p>
+          {{ tr.hero.subtitle }}
+        </p>
+        <div class="cta-buttons">
+          <!-- ✅ BOUTON MODIFIÉ - Redirige vers page de choix -->
+          <a [routerLink]="['/choisir-candidature']" class="btn-primary"> {{ tr.hero.apply }} </a>
+          <a [routerLink]="['/choisir-candidature']" class="btn-secondary">
+            {{ tr.hero.discover }}
+          </a>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="footer-bottom">
-    <p>&copy; 2026 ISIMM - {{ tr.footer.rights }}</p>
-  </div>
-</footer>
+  </section>
+
+  <!-- Stats Section ORIGINAL -->
+  <section class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-item" *ngFor="let stat of credibilityStats">
+        <h3>{{ stat.value }}</h3>
+        <p>{{ stat.label }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORMATIONS SECTION MODIFIÉE -->
+  <section class="formations-section" id="masters">
+    <div class="concours-container">
+      <h2 class="section-title">{{ tr.sections.formationsTitle }}</h2>
+      <p class="section-subtitle">{{ tr.sections.formationsSubtitle }}</p>
+      <p class="publication-note">{{ tr.sections.formationsNote }}</p>
+
+      <div class="formations-grid">
+        <!-- Masters de Recherche -->
+        <div class="formation-card research">
+          <div class="card-icon-container">
+            <div class="icon-circle research-bg">
+              <i class="fas fa-flask"></i>
+            </div>
+            <div class="card-badge research-badge">{{ tr.cards.researchBadge }}</div>
+          </div>
+
+          <h3 class="card-title">{{ tr.cards.researchTitle }}</h3>
+          <p class="card-description">{{ tr.cards.researchDesc }}</p>
+
+          <ul class="card-features">
+            <li>
+              <span class="feature-icon research-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.researchItem1 }}</span>
+            </li>
+            <li>
+              <span class="feature-icon research-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.researchItem2 }}</span>
+            </li>
+          </ul>
+
+          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/recherche/exploration -->
+          <div class="formation-status">
+            <app-status-badge
+              [label]="formationStatuses['research'].label"
+              [tone]="formationStatuses['research'].tone"
+            ></app-status-badge>
+          </div>
+
+          <button
+            class="btn-card research-btn"
+            [routerLink]="[formationStatuses['research'].route]"
+          >
+            <span>{{ tr.cards.explore }}</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Masters Professionnels -->
+        <div class="formation-card professional">
+          <div class="card-icon-container">
+            <div class="icon-circle professional-bg">
+              <i class="fas fa-briefcase"></i>
+            </div>
+            <div class="card-badge professional-badge">{{ tr.cards.professionalBadge }}</div>
+          </div>
+
+          <h3 class="card-title">{{ tr.cards.professionalTitle }}</h3>
+          <p class="card-description">{{ tr.cards.professionalDesc }}</p>
+
+          <ul class="card-features">
+            <li>
+              <span class="feature-icon professional-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.professionalItem1 }}</span>
+            </li>
+            <li>
+              <span class="feature-icon professional-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.professionalItem2 }}</span>
+            </li>
+            <li>
+              <span class="feature-icon professional-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.professionalItem3 }}</span>
+            </li>
+          </ul>
+
+          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/professionnel/exploration -->
+          <div class="formation-status">
+            <app-status-badge
+              [label]="formationStatuses['professional'].label"
+              [tone]="formationStatuses['professional'].tone"
+            ></app-status-badge>
+          </div>
+
+          <button
+            class="btn-card professional-btn"
+            [routerLink]="[formationStatuses['professional'].route]"
+          >
+            <span>{{ tr.cards.explore }}</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Cycle Ingénieur -->
+        <div class="formation-card engineer">
+          <div class="card-icon-container">
+            <div class="icon-circle engineer-bg">
+              <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div class="card-badge engineer-badge featured">
+              <i class="fas fa-star"></i>
+              {{ tr.cards.engineerBadge }}
+            </div>
+          </div>
+
+          <h3 class="card-title">{{ tr.cards.engineerTitle }}</h3>
+          <p class="card-description">{{ tr.cards.engineerDesc }}</p>
+
+          <ul class="card-features">
+            <li>
+              <span class="feature-icon engineer-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.engineerItem1 }}</span>
+            </li>
+            <li>
+              <span class="feature-icon engineer-icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>{{ tr.cards.engineerItem2 }}</span>
+            </li>
+          </ul>
+
+          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/ingenieur/exploration -->
+          <div class="formation-status">
+            <app-status-badge
+              [label]="formationStatuses['engineer'].label"
+              [tone]="formationStatuses['engineer'].tone"
+            ></app-status-badge>
+          </div>
+
+          <button
+            class="btn-card engineer-btn"
+            [routerLink]="[formationStatuses['engineer'].route]"
+          >
+            <span>{{ tr.cards.explore }}</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Processus Section ORIGINAL -->
+  <section class="etapes-section" id="processus">
+    <div class="concours-container">
+      <h2 class="section-title">{{ tr.sections.processTitle }}</h2>
+      <p class="section-subtitle">{{ tr.sections.processSubtitle }}</p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-number">1</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s1Title }}</h4>
+            <p>{{ tr.process.s1Text }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">2</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s2Title }}</h4>
+            <p>{{ tr.process.s2Text }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">3</div>
+          <div class="timeline-content">
+            <h4>
+              <i class="fas fa-file-invoice"></i>
+              {{ tr.process.s3Title }}
+            </h4>
+            <p>{{ tr.process.s3Text }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">4</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s4Title }}</h4>
+            <p>{{ tr.process.s4Text }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">5</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s5Title }}</h4>
+            <p>{{ tr.process.s5Text }}</p>
+            <p class="timeline-highlight">{{ tr.process.s5Realtime }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">6</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s6Title }}</h4>
+            <p>{{ tr.process.s6Text }}</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-number">7</div>
+          <div class="timeline-content">
+            <h4>{{ tr.process.s7Title }}</h4>
+            <p>{{ tr.process.s7Text }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer ORIGINAL -->
+  <footer class="footer" id="contact">
+    <div class="footer-content">
+      <div class="footer-section">
+        <div class="footer-brand">
+          <img src="/ISIMM_LOGO.png" alt="Logo ISIMM" class="footer-logo" />
+          <h3>ISIMM</h3>
+        </div>
+        <p>{{ tr.footer.institute }}</p>
+      </div>
+      <div class="footer-section">
+        <h3>{{ tr.footer.quickLinks }}</h3>
+        <ul>
+          <li>
+            <a href="#">{{ tr.footer.calendar }}</a>
+          </li>
+          <li>
+            <a href="#">{{ tr.footer.faq }}</a>
+          </li>
+          <li>
+            <a href="#">{{ tr.footer.docs }}</a>
+          </li>
+          <li>
+            <a routerLink="/login">{{ tr.footer.login }}</a>
+          </li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Contact</h3>
+        <ul>
+          <li>📧 admissions@isimm.tn</li>
+          <li>📞 +216 73 500 274</li>
+          <li>📍 Avenue de la Corniche, Monastir 5000</li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h3>{{ tr.footer.social }}</h3>
+        <ul class="social-links">
+          <li>
+            <a href="https://www.facebook.com/isimm.monastir" target="_blank" rel="noopener">
+              <i class="fab fa-facebook"></i>
+              Facebook
+            </a>
+          </li>
+          <li>
+            <a href="https://www.linkedin.com/school/isimm" target="_blank" rel="noopener">
+              <i class="fab fa-linkedin"></i>
+              LinkedIn
+            </a>
+          </li>
+          <li>
+            <a href="https://www.youtube.com" target="_blank" rel="noopener">
+              <i class="fab fa-youtube"></i>
+              YouTube
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 ISIMM - {{ tr.footer.rights }}</p>
+    </div>
+  </footer>
+</div>

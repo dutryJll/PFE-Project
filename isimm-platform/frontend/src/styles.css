@@ -1,5 +1,7 @@
 /*=============== GOOGLE FONTS ===============*/
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import url('@angular/material/prebuilt-themes/azure-blue.css');
+@import 'ngx-toastr/toastr';
 
 /*=============== VARIABLES CSS ===============*/
 :root {
@@ -54,6 +56,29 @@ body {
   color: var(--text-color);
   background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 55%, #ffffff 100%);
   min-height: 100vh;
+}
+
+body.theme-dark {
+  --text-color: #e2e8f0;
+  --gray-color: #94a3b8;
+  --light-bg: #0f172a;
+  --corp-surface: #111827;
+  --corp-surface-soft: #1f2937;
+  --corp-border: #334155;
+  --corp-border-strong: #475569;
+  color: #e2e8f0;
+  background: linear-gradient(180deg, #0b1220 0%, #111827 65%, #1f2937 100%);
+}
+
+body.theme-dark .section-card,
+body.theme-dark .view-content,
+body.theme-dark .analysis-panel,
+body.theme-dark .dossiers-list-panel,
+body.theme-dark .formation-card,
+body.theme-dark .timeline-content {
+  background: #111827;
+  color: #e2e8f0;
+  border-color: #334155;
 }
 
 h1,
@@ -276,6 +301,121 @@ textarea.form-control {
 
 ::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/*=============== GLOBAL MATERIAL-LIKE TABLES/FORMS ===============*/
+:root {
+  --corp-surface: #ffffff;
+  --corp-surface-soft: #f7faff;
+  --corp-border: #d9e5f3;
+  --corp-border-strong: #b8cce5;
+  --corp-shadow: 0 10px 30px rgba(15, 44, 73, 0.08);
+  --corp-shadow-soft: 0 6px 18px rgba(15, 44, 73, 0.06);
+  --corp-focus: 0 0 0 4px rgba(29, 78, 137, 0.12);
+}
+
+form {
+  background: var(--corp-surface);
+  border: 1px solid var(--corp-border);
+  border-radius: 16px;
+  box-shadow: var(--corp-shadow-soft);
+  padding: 1rem;
+}
+
+form input,
+form select,
+form textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--corp-border);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  font: inherit;
+  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+  outline: none;
+  border-color: var(--isimm-blue);
+  box-shadow: var(--corp-focus);
+  background-color: #fcfeff;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--corp-surface);
+  border: 1px solid var(--corp-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--corp-shadow);
+}
+
+table thead {
+  background: linear-gradient(180deg, #edf4ff 0%, #e3eeff 100%);
+}
+
+table th,
+table td {
+  padding: 0.8rem 0.85rem;
+  border-bottom: 1px solid #ebf2fb;
+  text-align: left;
+}
+
+table th {
+  color: #1c3f66;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+table tbody tr:hover {
+  background: var(--corp-surface-soft);
+}
+
+table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+  box-shadow: var(--corp-shadow-soft);
+}
+
+.table-container table {
+  min-width: 760px;
+}
+
+.mat-mdc-progress-bar {
+  --mdc-linear-progress-active-indicator-color: var(--isimm-blue);
+  --mdc-linear-progress-track-color: #dce9f8;
+  border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+  form {
+    padding: 0.85rem;
+    border-radius: 14px;
+  }
+
+  table th,
+  table td {
+    padding: 0.68rem 0.6rem;
+    font-size: 0.86rem;
+  }
 }
 
 ::-webkit-scrollbar-thumb {

@@ -33,6 +33,14 @@ export class ConsulterDossierComponent implements OnInit {
   candidatureId: number = 0;
   candidat: any = null;
   isLoading: boolean = true;
+  sourceContext: string = '';
+  sourceLabel: string = 'Consultation du dossier';
+  pageSummary = {
+    statut: 'En attente de validation',
+    completude: '75%',
+    documents: 4,
+    valides: 2,
+  };
   commentaireGlobal: string = '';
   documentViewer: any = null;
 
@@ -92,6 +100,21 @@ export class ConsulterDossierComponent implements OnInit {
       valide: null,
       nouveauCommentaire: '',
     },
+    {
+      id: 5,
+      type: 'generated-summary',
+      nom: 'Document de synthèse depuis la liste générée',
+      icon: 'fa-layer-group',
+      depose: true,
+      date_depot: '2026-04-16',
+      url: '/assets/docs/sample.pdf',
+      nom_fichier: 'liste-generation-2.pdf',
+      taille: '180 KB',
+      valide: true,
+      commentaire: 'Document généré automatiquement depuis la liste de sélection.',
+      verified_by: 'Système commission',
+      verified_at: '2026-04-16T09:15:00',
+    },
   ];
 
   historique = [
@@ -129,6 +152,19 @@ export class ConsulterDossierComponent implements OnInit {
 
   ngOnInit(): void {
     this.candidatureId = Number(this.route.snapshot.paramMap.get('id'));
+    this.sourceContext = this.route.snapshot.queryParamMap.get('source') || '';
+    this.sourceLabel =
+      this.sourceContext === 'liste-generation'
+        ? 'Ouvert depuis une liste générée'
+        : 'Consultation du dossier';
+    if (this.sourceContext === 'liste-generation') {
+      this.pageSummary = {
+        statut: 'Dossier issu de la liste générée',
+        completude: '80%',
+        documents: this.documents.length,
+        valides: this.documents.filter((doc) => doc.valide === true).length,
+      };
+    }
     this.loadCandidature();
   }
 
@@ -150,6 +186,7 @@ export class ConsulterDossierComponent implements OnInit {
         score: 17.5,
         statut_dossier: 'en_attente',
         date_soumission: '2026-02-15T10:30:00',
+        source: this.sourceContext || 'commission-dashboard',
       };
       this.isLoading = false;
     }, 1000);
@@ -165,6 +202,34 @@ export class ConsulterDossierComponent implements OnInit {
 
   get documentsEnAttente(): number {
     return this.documents.filter((d) => d.depose && d.valide === null).length;
+  }
+
+  get completionPercent(): number {
+    if (!this.documents.length) {
+      return 0;
+    }
+    return Math.round((this.documentsValides / this.documents.length) * 100);
+  }
+
+  get candidatureScore(): string {
+    if (this.candidat?.score === null || this.candidat?.score === undefined) {
+      return '--';
+    }
+    return Number(this.candidat.score).toFixed(1);
+  }
+
+  get scoreMention(): string {
+    const score = Number(this.candidat?.score ?? 0);
+    if (score >= 16) {
+      return 'Excellent';
+    }
+    if (score >= 14) {
+      return 'Très bon';
+    }
+    if (score >= 12) {
+      return 'Bon niveau';
+    }
+    return 'À renforcer';
   }
 
   getStatutClass(statut: string): string {
@@ -284,7 +349,7 @@ export class ConsulterDossierComponent implements OnInit {
 
   retour(): void {
     this.router.navigate(['/commission/dashboard'], {
-      queryParams: { view: 'candidatures' },
+      queryParams: { view: 'listes' },
     });
   }
 }

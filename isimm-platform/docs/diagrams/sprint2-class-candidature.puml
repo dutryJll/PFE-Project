@@ -1,241 +1,311 @@
 @startuml
+title Sprint 2 - Diagramme de classes (Preinscription) conforme a la plateforme
+
 hide empty members
 skinparam classAttributeIconSize 0
 skinparam shadowing false
 skinparam linetype ortho
 skinparam backgroundColor #f5f5f5
 
-package "Sprint 2 - Candidature" #DDEBF7 {
-
-  enum EtatCandidature {
-    BROUILLON
-    SOUMISE
-    PRESELECTIONNEE
-    NON_PRESELECTIONNEE
-    DOSSIER_COMPLET
-    DOSSIER_INCOMPLET
-    DOSSIER_NON_DEPOSE
-    SELECTIONNEE
-    EN_ATTENTE_SELECTION
-    EN_ATTENTE_PAIEMENT
-    INSCRIPTION_CONFIRMEE
-    INSCRIPTION_NON_CONFIRMEE
-    ADMISE
-    NON_ADMISE
-    REJETEE
-    ANNULEE
+package "Types enumeres" #F3F7FF {
+  enum RoleUtilisateur {
+    candidat
+    commission
+    responsable_commission
+    admin
   }
 
-  enum TypeFormation {
-    MASTER_PROFESSIONNEL
-    MASTER_RECHERCHE
-    CYCLE_INGENIEUR
+  enum TypeMaster {
+    professionnel
+    recherche
   }
 
-  enum TypePiece {
-    CIN
-    DIPLOME
-    RELEVE_NOTES
-    CERTIFICAT_LANGUE
-    CV
-    PHOTO
-    LETTRE_MOTIVATION
-    AUTRE
+  enum TypeConcours {
+    master
+    ingenieur
+  }
+
+  enum StatutCandidature {
+    soumis
+    annule
+    sous_examen
+    rejete
+    preselectionne
+    en_attente_dossier
+    dossier_non_depose
+    dossier_depose
+    en_attente
+    selectionne
+    inscrit
+  }
+
+  enum TypeNotification {
+    info
+    success
+    warning
+    danger
   }
 
   enum StatutDossier {
-    INCOMPLET
-    COMPLET
-    VALIDE
-    REJETE
+    en_cours
+    soumis
+    en_verification
+    incomplet
+    complet
+    rejete
+  }
+
+  enum TypeDocument {
+    diplome
+    releve_notes
+    cv
+    lettre_motivation
+    certificat_langue
+    attestation_travail
+    autre
+  }
+
+  enum Mention {
+    passable
+    assez_bien
+    bien
+    tres_bien
+  }
+}
+
+package "Acteurs metier (specialisation de User)" #EAF4FF {
+  abstract class User {
+    +id: int
+    +email: string
+    +username: string
+    +first_name: string
+    +last_name: string
+    +role: RoleUtilisateur
   }
 
   class Candidat {
+    +postuler(offre): Candidature
+    +modifierCandidature(candidature): void
+    +consulterEtat(candidature): StatutCandidature
+    +consulterScoreEtClassement(candidature): decimal/int
+    +consulterNotifications(): Notification[]
+  }
+
+  class CommissionUtilisateur {
+    +evaluer(candidature): void
+    +changerStatut(candidature, statut): void
+    +publierListes(master): void
+  }
+}
+
+package "Offres d appel" #E8FFF5 {
+  class Master {
     +id: int
-    +auth_user_id: int
-    +cin: string
     +nom: string
-    +prenom: string
-    +email: string
-    +telephone: string
-    +date_inscription: datetime
-    +profil_complet: boolean
-    --
-    +creerCandidature(formation): Candidature
-    +modifierCandidature(id): void
-    +consulterEtat(id): EtatCandidature
-    +consulterScoreClassement(id): ScoreClassement
-    +deposerDossier(id): DossierNumerique
-    +getHistoriqueCandidatures(): Candidature[]
-  }
-
-  class FormationOffre {
-    +id: int
-    +code: string
-    +intitule: string
-    +type: TypeFormation
-    +annee_universitaire: string
-    +capacite_total: int
-    +capacite_isimm: int
-    +capacite_externe: int
-    +date_ouverture: date
-    +date_limite_candidature: date
-    +date_limite_dossier: date
+    +type_master: TypeMaster
+    +specialite: string
     +places_disponibles: int
-    --
-    +estOuverte(): boolean
-    +calculerDelaiFermeture(): int
+    +date_limite_candidature: date
+    +annee_universitaire: string
+    +actif: bool
   }
 
+  class Concours {
+    +id: int
+    +nom: string
+    +type_concours: TypeConcours
+    +date_ouverture: date
+    +date_cloture: date
+    +places_disponibles: int
+    +actif: bool
+  }
+
+  class ConfigurationAppel {
+    +id: int
+    +date_debut_visibilite: date
+    +date_fin_visibilite: date
+    +date_limite_preinscription: date
+    +date_limite_depot_dossier: date
+    +delai_modification_candidature_jours: int
+    +capacite_accueil: int
+    +capacite_interne: int
+    +capacite_externe: int
+    +est_cache: bool
+  }
+
+  class Commission {
+    +id: int
+    +nom: string
+    +delai_preselection: int
+    +delai_depot_dossier: int
+    +delai_paiement: int
+    +actif: bool
+  }
+
+  class MembreCommission {
+    +id: int
+    +role: string (responsable|membre)
+    +actif: bool
+  }
+}
+
+package "Preinscription - Dossier - Resultats" #FFF4E8 {
   class Candidature {
     +id: int
-    +numero_candidature: string
-    +candidat_id: int
-    +formation_id: int
-    +date_creation: datetime
+    +numero: string
+    +statut: StatutCandidature
+    +score: decimal
+    +classement: int
     +date_soumission: datetime
-    +date_derniere_modification: datetime
-    +etat: EtatCandidature
-    +choix_priorite: int (1-3)
-    +score_final: decimal
-    +rang_classement: int
+    +date_limite_modification: datetime
+    +peut_modifier: bool
+    +dossier_depose: bool
+    +date_depot_dossier: datetime
+    +motif_rejet: text
     --
-    +soumettre(): boolean
-    +mettreAJour(donnees): void
-    +verifierDelaiModification(): boolean
-    +verifierDelaiDossier(): boolean
-    +annuler(): void
+    +peut_etre_modifie(): bool
+    +peut_etre_annulee(): bool
+    +ajouter_historique(...): void
   }
 
-  class DossierNumerique {
+  class DonneesAcademiques {
     +id: int
-    +candidature_id: int
-    +date_depot: datetime
-    +date_derniere_modif: datetime
+    +moyenne_generale: decimal
+    +moyenne_specialite: decimal
+    +note_pfe: decimal
+    +mention: Mention
+    +nb_redoublements: int
+    +nb_dettes: int
+    --
+    +calculer_et_sauvegarder_score(): decimal
+  }
+
+  class FormuleScore {
+    +id: int
+    +nom: string
+    +coef_moyenne_generale: decimal
+    +coef_moyenne_specialite: decimal
+    +coef_note_pfe: decimal
+    +bonus_mention_tres_bien: decimal
+    +bonus_mention_bien: decimal
+    +bonus_mention_assez_bien: decimal
+    +malus_redoublement: decimal
+    +malus_dette: decimal
+    --
+    +calculer_score(donnees): decimal
+  }
+
+  class Dossier {
+    +id: int
     +statut: StatutDossier
-    +pourcentage_completion: int
-    +commentaire_admin: text
+    +date_depot: datetime
+    +date_limite_depot: datetime
+    +nb_documents_attendus: int
+    +nb_documents_soumis: int
+    +score_completude: decimal
     --
-    +calculerCompletude(): int
-    +validerDossier(): boolean
-    +rejecterDossier(motif): void
-    +ajouterPiece(fichier): PieceJointe
+    +calculer_completude(): decimal
   }
 
-  class PieceJointe {
+  class DocumentType {
     +id: int
-    +dossier_id: int
-    +type_piece: TypePiece
-    +nom_fichier: string
-    +chemin_stockage: string
-    +taille_ko: int
-    +hash_fichier: string
-    +uploaded_at: datetime
-    +valide: boolean
-    --
-    +remplacer(nouveauFichier): void
-    +supprimer(): void
-    +validerFormat(): boolean
+    +type_document: TypeDocument
+    +obligatoire: bool
+    +taille_max_mb: int
+    +formats_acceptes: json
   }
 
-  class HistoriqueEtat {
+  class Document {
     +id: int
-    +candidature_id: int
-    +ancien_etat: EtatCandidature
-    +nouvel_etat: EtatCandidature
-    +date_changement: datetime
-    +initiateur_id: int
-    +initiateur_role: string
-    +commentaire: text
-    --
-    +enregistrerChangement(): void
+    +nom_fichier_original: string
+    +format_fichier: string
+    +statut: string
+    +score_ocr: decimal
+    +date_upload: datetime
+    +celery_task_id: string
   }
 
-  class Evaluation {
+  class ValidationDocument {
     +id: int
-    +candidature_id: int
-    +date_evaluation: datetime
-    +note_dossier: decimal (0-20)
-    +note_bonus: decimal (0-5)
-    +score_total: decimal
-    +criteres_evaluation: json
-    +recommandation: string (ADMIS|ATTENTE|REJETE)
-    --
-    +calculerScore(): decimal
-    +genererRapport(): string
-  }
-
-  class ScoreClassement {
-    +id: int
-    +candidature_id: int
-    +formation_id: int
-    +score_final: decimal
-    +rang: int
-    +rang_en_attente: int
-    +publie_le: datetime
-    +statut_final: string
-    --
-    +calculerRang(): int
-    +determinerAdmission(): boolean
+    +statut: string (accepte|rejete|en_attente)
+    +commentaires: text
+    +date_validation: datetime
   }
 
   class Notification {
     +id: int
-    +candidat_id: int
-    +type: string (ETAT|RESULTAT|DEPOT|RAPPEL)
-    +sujet: string
-    +contenu: text
-    +date_creation: datetime
-    +date_envoi: datetime
-    +statut_envoi: string (ENVOYE|ECHEC)
-    +lue: boolean
-    --
-    +envoyer(): boolean
-    +marquerCommeEchouee(raison): void
+    +titre: string
+    +message: text
+    +type: TypeNotification
+    +lue: bool
+    +created_at: datetime
+  }
+
+  class ListeAdmission {
+    +id: int
+    +type_liste: string (principale|attente)
+    +iteration: int
+    +publiee: bool
+    +date_publication: datetime
+  }
+
+  class CandidatListe {
+    +id: int
+    +position: int
+    +score: decimal
+    +a_paye: bool
+    +a_confirme_inscription: bool
   }
 }
 
-Candidat "1" -- "0..*" Candidature : postuler a
-Candidat "1" -- "0..*" Notification : destintaire
-FormationOffre "1" -- "0..*" Candidature : reception de
-Candidature "1" *-- "0..1" DossierNumerique : contient
-Candidature "1" *-- "0..*" HistoriqueEtat : genere
-Candidature "1" o-- "0..1" Evaluation : sujet de
-Candidature "1" o-- "0..1" ScoreClassement : resultat de
-DossierNumerique "1" *-- "1..*" PieceJointe : composee de
-Notification "0..*" --> "1" Candidature : concerne
+' Heritage demande: Candidat et Commission heritent de User
+Candidat --|> User
+CommissionUtilisateur --|> User
+
+' Association demandee: offre d appel et candidat (via candidature)
+Candidat "1" -- "0..*" Candidature : postule
+Master "1" -- "0..*" Candidature : recoit candidatures
+Concours "0..1" -- "0..*" Candidature : recoit candidatures
+
+Master "1" -- "0..1" ConfigurationAppel : configuration
+Master "1" -- "0..1" Commission : pilotee par
+Commission "1" -- "0..*" MembreCommission : contient
+MembreCommission "0..*" --> "1" CommissionUtilisateur : user
+
+Candidature "1" -- "0..1" DonneesAcademiques : porte
+Master "1" -- "0..1" FormuleScore : formule
+DonneesAcademiques --> FormuleScore : calcule score avec
+
+Candidature "1" -- "0..1" Dossier : depot
+Dossier "1" -- "0..*" Document : contient
+Master "1" -- "0..*" DocumentType : exige
+Document --> DocumentType : type
+Document "1" -- "0..1" ValidationDocument : validation
+ValidationDocument --> CommissionUtilisateur : valide_par
+
+Candidat "1" -- "0..*" Notification : recoit
+Candidature "0..*" --> "1" Candidat : appartient a
+
+Master "1" -- "0..*" ListeAdmission : publie
+ListeAdmission "1" -- "0..*" CandidatListe : lignes
+CandidatListe --> Candidature : reference
 
 note right of Candidature
-  **Flux Sprint 2 - 4 Scénarios Majeurs :**
-  
-  📌 SCÉNARIO 1 (Succès Complet):
-  Préinscrit → Présélectionné → Dossier déposé
-  → Sélectionné → Inscription confirmée ✓
-  
-  📌 SCÉNARIO 2 (Échec Précoce):
-  Préinscrit → NON PRÉSÉLECTIONNÉ (STOP)
-  Fin du processus, ne continue pas
-  
-  📌 SCÉNARIO 3 (Dossier NON déposé):
-  Préinscrit → Présélectionné → Dossier NON
-  déposé avant délai → Rejeté
-  
-  📌 SCÉNARIO 4 (En Attente):
-  Préinscrit → Présélectionné → Dossier déposé
-  → EN ATTENTE ou SÉLECTIONNÉ → Inscription
-  confirmée OU NON ADMIS
-  
-  Voir: sprint2-suivi-workflow.puml
+US 3.1: postuler a master ou concours ingenieur
+US 3.2: modifier avant delai (date_limite_modification)
+US 3.3: consulter etat (statut)
+US 3.4: notification email lors changement de statut
+US 3.5: consulter score et classement
 end note
 
-note top of FormationOffre
-  Référence les offres d'inscription
-  (Masters Prof/Recherche, Cycle Ingénieur)
+note top of Master
+Dans la plateforme, l offre d appel est publiee via:
+Master + ConfigurationAppel (+ option Concours ingenieur).
 end note
 
-note bottom of DossierNumerique
-  Validation: pièces requises,
-  formats acceptés, délais respect
+note bottom of Candidat
+Association offre/candidat satisfaite par la classe Candidature
+(table de liaison metier entre Candidat et offre publiee).
 end note
 
 @enduml

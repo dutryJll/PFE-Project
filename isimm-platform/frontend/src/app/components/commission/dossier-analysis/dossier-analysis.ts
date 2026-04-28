@@ -4,6 +4,7 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
 
 interface OCRAnomaly {
   type: string;
@@ -46,7 +47,7 @@ interface AuditStep {
 @Component({
   selector: 'app-dossier-analysis',
   standalone: true,
-  imports: [CommonModule, HttpClientModule, FormsModule],
+  imports: [CommonModule, HttpClientModule, FormsModule, SkeletonLoaderComponent],
   templateUrl: './dossier-analysis.html',
   styleUrls: ['./dossier-analysis.css'],
 })

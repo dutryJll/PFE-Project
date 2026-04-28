@@ -7,16 +7,16 @@
         <mxCell id="tt2" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" value="Diagramme de sequence detaille - Gestion des utilisateurs (Sprint 1)" vertex="1">
           <mxGeometry height="30" width="860" x="40" y="20" as="geometry" />
         </mxCell>
-        <mxCell id="uh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Administrateur" vertex="1">
+        <mxCell id="uh1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="dashboard-admin.html" vertex="1">
           <mxGeometry height="40" width="150" x="80" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="uh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Frontend Angular" vertex="1">
+        <mxCell id="uh2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="dashboard-admin.ts" vertex="1">
           <mxGeometry height="40" width="170" x="320" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="uh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="Auth API /api/auth/users/*" vertex="1">
+        <mxCell id="uh3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="auth_app/urls.py + views.py" vertex="1">
           <mxGeometry height="40" width="200" x="600" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="uh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="User Repository" vertex="1">
+        <mxCell id="uh4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" value="models.py (User)" vertex="1">
           <mxGeometry height="40" width="160" x="920" y="80" as="geometry" />
         </mxCell>
         <mxCell id="ul1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" value="">

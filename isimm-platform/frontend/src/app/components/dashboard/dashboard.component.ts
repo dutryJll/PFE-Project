@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { environment } from '../../../environments/environment';
@@ -19,7 +20,7 @@ interface NotificationItem {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, MatProgressBarModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -36,6 +37,8 @@ export class DashboardComponent implements OnInit {
   filtreNotificationDateDebut: string = '';
   filtreNotificationDateFin: string = '';
   filtreNotificationRecherche: string = '';
+  isDashboardLoading = true;
+  isNotificationsLoading = false;
 
   constructor(
     private authService: AuthService,
@@ -60,9 +63,11 @@ export class DashboardComponent implements OnInit {
       next: (profile) => {
         console.log('✅ Profil chargé:', profile);
         this.userProfile = profile;
+        this.isDashboardLoading = false;
       },
       error: (error) => {
         console.error('❌ Erreur chargement profil:', error);
+        this.isDashboardLoading = false;
       },
     });
   }
@@ -83,6 +88,8 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    this.isNotificationsLoading = true;
+
     this.http
       .get<NotificationItem[]>(`${environment.candidatureServiceUrl}/mes-notifications/`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -91,11 +98,13 @@ export class DashboardComponent implements OnInit {
         next: (data) => {
           this.notificationsCandidat = data || [];
           this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
+          this.isNotificationsLoading = false;
         },
         error: (error) => {
           console.error('❌ Erreur chargement notifications:', error);
           this.notificationsCandidat = [];
           this.notificationsNonLues = 0;
+          this.isNotificationsLoading = false;
         },
       });
   }

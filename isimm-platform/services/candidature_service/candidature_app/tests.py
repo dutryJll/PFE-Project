@@ -6,10 +6,23 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from .models import CandidatListe, Candidature, ConfigurationAppel, FormuleScore, ListeAdmission, Master, Paiement
+from .models import (
+	CandidatListe,
+	Candidature,
+	Concours,
+	Commission,
+	ConfigurationAppel,
+	DonneesAcademiques,
+	FormuleScore,
+	ListeAdmission,
+	Master,
+	MembreCommission,
+	Paiement,
+)
 from .views import (
 	_sync_system_notifications_for_user,
 	ajuster_dossier_numerique,
+	candidatures_responsable,
 	changer_statut_candidature,
 	consulter_inscriptions_administratives,
 	create_candidature,
@@ -17,6 +30,7 @@ from .views import (
 	formule_score_master,
 	modifier_candidature,
 	publier_liste,
+	update_status,
 )
 from .notifications import envoyer_rappels_j3_preinscription
 
@@ -354,3 +368,174 @@ class CandidatureWorkflowTests(TestCase):
 		self.assertEqual(response.data['stats']['total'], 2)
 		self.assertEqual(response.data['stats']['finalisee'], 1)
 		self.assertEqual(response.data['stats']['incomplete'], 1)
+
+	def test_score_recalcule_automatiquement_depuis_bac_et_licence(self):
+		candidature = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='soumis')
+
+		DonneesAcademiques.objects.create(
+			candidature=candidature,
+			moyenne_generale=15.0,
+			moyenne_specialite=12.0,
+			nb_redoublements=0,
+			notes_detaillees={
+				'source': 'test',
+				'formation_code': 'MPGL',
+				'moyenne_bac': 12,
+				'moyenne_licence': 15,
+				'payload': {
+					'formation_code': 'MPGL',
+					'glDs': {'moy1': 14, 'moy2': 15, 'moy3': 16},
+				},
+			},
+		)
+
+		candidature.save()
+		candidature.refresh_from_db()
+
+		# 40% bac + 60% licence = 0.4*12 + 0.6*15 = 13.8
+		self.assertEqual(float(candidature.score), 13.8)
+
+	def test_candidatures_responsable_sont_triees_par_score_desc(self):
+		commission = Commission.objects.create(master=self.master, nom='Commission Test', actif=True)
+		MembreCommission.objects.create(commission=commission, user=self.responsable, role='responsable', actif=True)
+
+		candidat2 = self.user_model.objects.create_user(
+			username='cand2',
+			email='cand2@example.com',
+			password='test12345',
+		)
+		candidat2.role = 'candidat'
+
+		candidat3 = self.user_model.objects.create_user(
+			username='cand3',
+			email='cand3@example.com',
+			password='test12345',
+		)
+		candidat3.role = 'candidat'
+
+		c1 = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='soumis', score=12.5)
+		c2 = Candidature.objects.create(candidat=candidat2, master=self.master, statut='soumis', score=16.2)
+		c3 = Candidature.objects.create(candidat=candidat3, master=self.master, statut='soumis', score=14.1)
+
+		request = self.factory.get('/api/candidatures/responsable/candidatures/')
+		force_authenticate(request, user=self.responsable)
+		response = candidatures_responsable(request)
+
+		self.assertEqual(response.status_code, 200)
+		returned_ids = [item['id'] for item in response.data]
+		self.assertEqual(returned_ids, [c2.id, c3.id, c1.id])
+
+	def test_update_status_positionne_preselectionne(self):
+		commission = Commission.objects.create(master=self.master, nom='Commission Validation', actif=True)
+		MembreCommission.objects.create(commission=commission, user=self.commission, role='membre', actif=True)
+
+		candidature = Candidature.objects.create(candidat=self.candidat, master=self.master, statut='sous_examen')
+
+		request = self.factory.post(f'/api/candidatures/{candidature.id}/update-status/', {}, format='json')
+		force_authenticate(request, user=self.commission)
+
+		response = update_status(request, candidature.id)
+
+		self.assertEqual(response.status_code, 200)
+		candidature.refresh_from_db()
+		self.assertEqual(candidature.statut, 'preselectionne')
+		self.assertFalse(candidature.peut_modifier)
+
+	def test_create_candidature_rejette_notes_superieures_a_20(self):
+		request = self.factory.post(
+			'/api/candidatures/create/',
+			{
+				'master_id': self.master.id,
+				'formation_code': 'MPGL',
+				'academic_data': {
+					'common': {'session': 'principale', 'redoublements': 0},
+					'glDs': {'moy1': 21, 'moy2': 15, 'moy3': 14},
+				},
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = create_candidature(request)
+
+		self.assertEqual(response.status_code, 400)
+		self.assertIn('0 et 20', str(response.data.get('error', '')))
+		self.assertEqual(Candidature.objects.filter(candidat=self.candidat).count(), 1)
+
+	def test_create_candidature_persiste_donnees_preinscription_et_calcule_score(self):
+		request = self.factory.post(
+			'/api/candidatures/create/',
+			{
+				'master_id': self.master.id,
+				'formation_code': 'MP3I',
+				'selected_diplome': 'Licence en Informatique',
+				'etablissement_origine': 'ISIMM',
+				'diplome_reference': 'Licence',
+				'diplomes': [
+					{
+						'intitule': 'Licence en Informatique',
+						'etablissement': 'ISIMM',
+						'annee': '2025',
+					}
+				],
+				'academic_data': {
+					'common': {'session': 'principale', 'redoublements': 0},
+					'i3': {'moyBac': 12, 'moyL1': 14, 'moyL2': 16, 'moyL3': 18},
+				},
+			},
+			format='json',
+		)
+		force_authenticate(request, user=self.candidat)
+
+		response = create_candidature(request)
+
+		self.assertEqual(response.status_code, 201)
+		candidature_id = response.data['id']
+		candidature = Candidature.objects.get(id=candidature_id)
+		donnees = DonneesAcademiques.objects.get(candidature=candidature)
+
+		self.assertEqual(donnees.notes_detaillees.get('selected_diplome'), 'Licence en Informatique')
+		self.assertEqual(donnees.notes_detaillees.get('etablissement_origine'), 'ISIMM')
+		self.assertEqual(donnees.notes_detaillees.get('formation_code'), 'MP3I')
+
+		# Bac=12, Licence=(14+16+18)/3=16 => score=0.4*12 + 0.6*16 = 14.4
+		self.assertAlmostEqual(float(candidature.score), 14.4, places=2)
+
+	def test_candidatures_responsable_filtre_type_ingenieur(self):
+		commission = Commission.objects.create(master=self.master, nom='Commission Type', actif=True)
+		MembreCommission.objects.create(commission=commission, user=self.responsable, role='responsable', actif=True)
+
+		concours = Concours.objects.create(
+			nom='Concours Ingenieur 2026',
+			type_concours='ingenieur',
+			description='Concours test',
+			date_ouverture=date.today() - timedelta(days=1),
+			date_cloture=date.today() + timedelta(days=10),
+			places_disponibles=30,
+			actif=True,
+		)
+
+		candidat2 = self.user_model.objects.create_user(
+			username='cand_type',
+			email='cand_type@example.com',
+			password='test12345',
+		)
+		candidat2.role = 'candidat'
+
+		Candidature.objects.create(candidat=self.candidat, master=self.master, statut='soumis', score=11.0)
+		candidature_ing = Candidature.objects.create(
+			candidat=candidat2,
+			master=self.master,
+			statut='soumis',
+			score=15.0,
+			concours=concours,
+		)
+
+		request = self.factory.get('/api/candidatures/responsable/candidatures/?type=ingenieur')
+		force_authenticate(request, user=self.responsable)
+		response = candidatures_responsable(request)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(len(response.data), 1)
+		self.assertEqual(response.data[0]['id'], candidature_ing.id)
+		self.assertEqual(response.data[0]['type_concours'], 'ingenieur')

@@ -68,6 +68,7 @@ import { TraiterReclamationsComponent } from './components/commission/traiter-re
 import { GererInscriptionsComponent } from './components/commission/gerer-inscriptions/gerer-inscriptions';
 import { OffrePreinscriptionEditorComponent } from './components/commission/offre-preinscription-editor/offre-preinscription-editor';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
+import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 
 export const routes: Routes = [
   // ========================================
@@ -268,10 +269,9 @@ export const routes: Routes = [
   {
     path: 'commission/dossier/:id',
     component: CommissionDossierComponent,
-    canActivate: [authGuard, roleGuard, actionGuard],
+    canActivate: [authGuard, roleGuard],
     data: {
       roles: ['commission', 'responsable_commission'],
-      actions: ['Consultation de dossier'],
     },
   },
   {
@@ -287,7 +287,7 @@ export const routes: Routes = [
     component: OffrePreinscriptionEditorComponent,
     canActivate: [authGuard, roleGuard],
     data: {
-      roles: ['responsable_commission'],
+      roles: ['responsable_commission', 'commission'],
     },
   },
   {
@@ -313,6 +313,12 @@ export const routes: Routes = [
     component: GererInscriptionsComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: { roles: ['responsable_commission'], actions: ['Gérer inscriptions'] },
+  },
+  {
+    path: 'commission/dossier/deposer/:id',
+    component: DeposerDossierCommissionComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['commission', 'responsable_commission'], actions: ['Dépôt de dossier'] },
   },
 
   // ========================================

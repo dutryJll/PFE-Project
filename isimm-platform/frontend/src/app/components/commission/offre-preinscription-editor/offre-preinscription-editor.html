@@ -1,163 +1,197 @@
 <div class="offre-editor-page">
   <div class="editor-shell">
-    <header class="editor-header">
-      <div class="header-kicker">Espace Responsable Commission</div>
-      <h1>
-        <span class="title-accent">Edition professionnelle de l offre de preinscription</span>
-      </h1>
+    <header class="page-head">
+      <div class="kicker">ISIMM | Espace Commission</div>
+      <h1>Offre de Préinscription</h1>
       <p>
-        Configurez un avis complet et lisible pour les candidats: contenu d ouverture, capacites,
-        calendrier, modalites, pieces du dossier et grille de score.
+        Interface unifiée Commission/Candidat. Les informations sauvegardées ici sont synchronisées
+        pour l affichage candidat.
       </p>
-
-      <div class="offer-meta" *ngIf="offer as currentOffer">
-        <div class="meta-chip">
-          <small>Offre</small>
-          <strong>#{{ currentOffer.id }} - {{ currentOffer.titre }}</strong>
-        </div>
-        <div class="meta-chip">
-          <small>Specialite</small>
-          <strong>{{ currentOffer.specialite }}</strong>
-        </div>
-        <div class="meta-chip">
-          <small>Date limite</small>
-          <strong>{{ currentOffer.date_limite | date: 'dd/MM/yyyy' }}</strong>
-        </div>
+      <div class="role-badge" [class.readonly]="isReadOnly">
+        <mat-icon>{{ isReadOnly ? 'visibility' : 'edit_note' }}</mat-icon>
+        <span>{{
+          isReadOnly ? 'Mode lecture seule (Commission)' : 'Mode édition (Responsable)'
+        }}</span>
       </div>
 
-      <div class="header-actions">
-        <button type="button" class="btn-outline" (click)="backToDashboard()">Retour</button>
-        <button type="button" class="btn-primary" [disabled]="savingContent" (click)="save()">
-          {{ savingContent ? 'Enregistrement...' : 'Enregistrer' }}
+      <div class="head-actions">
+        <button type="button" mat-stroked-button color="primary" (click)="backToDashboard()">
+          Retour
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          color="primary"
+          (click)="saveOffer()"
+          [disabled]="isReadOnly || saving || loading"
+        >
+          <mat-icon>save</mat-icon>
+          {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          class="publish-btn"
+          (click)="publishOffer()"
+          [disabled]="isReadOnly || publishing || loading"
+        >
+          <mat-icon>rocket_launch</mat-icon>
+          {{ publicationLabel }}
         </button>
       </div>
     </header>
 
-    <div class="editor-grid" *ngIf="!loading">
-      <section class="editor-card">
-        <h2>Informations principales</h2>
-        <p class="card-help">
-          Ces informations seront affichees en tete de la page Detail dans l espace candidat.
-        </p>
-        <label>Titre de l offre</label>
-        <input [(ngModel)]="form.title" type="text" />
-
-        <label>Titre de l avis</label>
-        <textarea [(ngModel)]="form.openingTitle" rows="2"></textarea>
-
-        <label>Paragraphe d ouverture</label>
-        <textarea [(ngModel)]="form.openingBody" rows="4"></textarea>
-      </section>
-
-      <section class="editor-card span-2">
-        <h2>Capacite et calendrier</h2>
-        <p class="card-help">
-          Structurez les capacites internes et externes dans un tableau clair et officiel.
-        </p>
-        <label>Titre du tableau</label>
-        <input [(ngModel)]="form.tableTitle" type="text" />
-
-        <div class="table-wrapper editor-table-wrapper">
-          <table class="editor-table">
-            <thead>
-              <tr>
-                <th>Profil</th>
-                <th *ngFor="let head of capacityHeaders">{{ head }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span class="row-badge interne">Interne</span></td>
-                <td><input [(ngModel)]="form.capInterneTotale" type="text" /></td>
-                <td><input [(ngModel)]="form.capInterneOrigine" type="text" /></td>
-                <td><input [(ngModel)]="form.capInterneCapacite" type="text" /></td>
-                <td><textarea [(ngModel)]="form.capInterneDiplome" rows="2"></textarea></td>
-                <td><textarea [(ngModel)]="form.capInterneDates" rows="2"></textarea></td>
-              </tr>
-              <tr>
-                <td><span class="row-badge externe">Externe</span></td>
-                <td><input [(ngModel)]="form.capExterneTotale" type="text" /></td>
-                <td><input [(ngModel)]="form.capExterneOrigine" type="text" /></td>
-                <td><input [(ngModel)]="form.capExterneCapacite" type="text" /></td>
-                <td><textarea [(ngModel)]="form.capExterneDiplome" rows="2"></textarea></td>
-                <td><textarea [(ngModel)]="form.capExterneDates" rows="2"></textarea></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="editor-card">
-        <h2>Modalites d inscription</h2>
-        <p class="card-help">Decrivez le parcours candidat de maniere simple en 2 etapes.</p>
-        <label>Titre section</label>
-        <input [(ngModel)]="form.modalitesTitle" type="text" />
-
-        <label>Etape 1</label>
-        <textarea [(ngModel)]="form.etape1" rows="4"></textarea>
-
-        <label>Etape 2</label>
-        <textarea [(ngModel)]="form.etape2" rows="4"></textarea>
-      </section>
-
-      <section class="editor-card">
-        <h2>Dossier demande</h2>
-        <p class="card-help">
-          Une ligne par document requis. Ce bloc sert de checklist de reference pour les candidats.
-        </p>
-        <label>Titre section</label>
-        <input [(ngModel)]="form.dossierTitle" type="text" />
-
-        <label>Liste des documents (une ligne = un point)</label>
-        <textarea [(ngModel)]="form.dossierItemsText" rows="8"></textarea>
-      </section>
-
-      <section class="editor-card span-2">
-        <h2>Calcul du score</h2>
-        <p class="card-help">
-          Maintenez une grille d evaluation explicite et stable entre editions d offre.
-        </p>
-        <label>Titre section</label>
-        <input [(ngModel)]="form.scoreTitle" type="text" />
-
-        <div class="table-wrapper editor-table-wrapper">
-          <table class="editor-table">
-            <thead>
-              <tr>
-                <th *ngFor="let head of scoreHeaders">{{ head }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><input [(ngModel)]="form.scoreRow1Composante" type="text" /></td>
-                <td><textarea [(ngModel)]="form.scoreRow1Calcul" rows="2"></textarea></td>
-              </tr>
-              <tr>
-                <td><input [(ngModel)]="form.scoreRow2Composante" type="text" /></td>
-                <td><textarea [(ngModel)]="form.scoreRow2Calcul" rows="2"></textarea></td>
-              </tr>
-              <tr>
-                <td><input [(ngModel)]="form.scoreRow3Composante" type="text" /></td>
-                <td><textarea [(ngModel)]="form.scoreRow3Calcul" rows="3"></textarea></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="editor-card span-2">
-        <h2>Criteres et remarques</h2>
-        <p class="card-help">
-          Ajoutez les regles institutionnelles importantes (delais, recours, controle des pieces,
-          sanctions).
-        </p>
-        <label>Remarques importantes (une ligne = un point)</label>
-        <textarea [(ngModel)]="form.evaluationNotesText" rows="7"></textarea>
-      </section>
-    </div>
-
-    <section class="editor-card loading-card" *ngIf="loading">
-      Chargement de l offre en cours...
+    <section class="publish-state" [class.pulse]="publishedPulse">
+      <mat-icon>verified</mat-icon>
+      <div>
+        <strong>Statut actuel:</strong>
+        <span>{{ form.appel_actif ? 'Ouverte pour les candidats' : 'Fermée' }}</span>
+      </div>
     </section>
+
+    <section class="loading-zone" *ngIf="loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p>Chargement de l offre...</p>
+    </section>
+
+    <div class="editor-grid" *ngIf="!loading">
+      <mat-card class="editor-card" appearance="outlined">
+        <h2><mat-icon>info</mat-icon> Section 1 · Informations Générales</h2>
+        <div class="field-grid">
+          <label>
+            <span>Titre de l offre</span>
+            <input [(ngModel)]="form.titre" [disabled]="isReadOnly" type="text" />
+          </label>
+
+          <label>
+            <span>Type</span>
+            <select [(ngModel)]="form.type_formation" [disabled]="isReadOnly">
+              <option value="master">Master</option>
+              <option value="cycle_ingenieur">Cycle Ingénieur</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <mat-slide-toggle [(ngModel)]="form.appel_actif" [disabled]="isReadOnly">
+            Appel actif
+          </mat-slide-toggle>
+        </div>
+
+        <label>
+          <span>Description</span>
+          <textarea [(ngModel)]="form.description" [disabled]="isReadOnly" rows="6"></textarea>
+        </label>
+      </mat-card>
+
+      <mat-card class="editor-card" appearance="outlined">
+        <h2><mat-icon>event</mat-icon> Section 2 · Calendrier</h2>
+
+        <div class="field-grid">
+          <label>
+            <span>Date début visibilité</span>
+            <input [(ngModel)]="form.date_debut_visibilite" [disabled]="isReadOnly" type="date" />
+          </label>
+
+          <label>
+            <span>Date fin visibilité</span>
+            <input [(ngModel)]="form.date_fin_visibilite" [disabled]="isReadOnly" type="date" />
+          </label>
+
+          <label>
+            <span>Date limite préinscription</span>
+            <input
+              [(ngModel)]="form.date_limite_preinscription"
+              [disabled]="isReadOnly"
+              type="date"
+            />
+          </label>
+
+          <label>
+            <span>Date limite dépôt dossier</span>
+            <input
+              [(ngModel)]="form.date_limite_depot_dossier"
+              [disabled]="isReadOnly"
+              type="date"
+            />
+          </label>
+        </div>
+      </mat-card>
+
+      <mat-card class="editor-card span-2" appearance="outlined">
+        <h2><mat-icon>table_rows</mat-icon> Section 3 · Capacité & Diplômes</h2>
+        <p class="section-help">
+          Tableau dynamique des quotas (exemple: ISIMM Internes 15 places, Autres Externes 8
+          places).
+        </p>
+
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="quotas" class="quota-table">
+            <ng-container matColumnDef="categorie">
+              <th mat-header-cell *matHeaderCellDef>Catégorie</th>
+              <td mat-cell *matCellDef="let row">
+                <input [(ngModel)]="row.categorie" [disabled]="isReadOnly" type="text" />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="origine">
+              <th mat-header-cell *matHeaderCellDef>Établissement</th>
+              <td mat-cell *matCellDef="let row">
+                <input [(ngModel)]="row.origine" [disabled]="isReadOnly" type="text" />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="quota">
+              <th mat-header-cell *matHeaderCellDef>Places</th>
+              <td mat-cell *matCellDef="let row">
+                <input [(ngModel)]="row.quota" [disabled]="isReadOnly" type="number" min="0" />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="diplome">
+              <th mat-header-cell *matHeaderCellDef>Diplôme requis</th>
+              <td mat-cell *matCellDef="let row">
+                <input [(ngModel)]="row.diplome" [disabled]="isReadOnly" type="text" />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Action</th>
+              <td mat-cell *matCellDef="let row; let i = index">
+                <button
+                  type="button"
+                  mat-stroked-button
+                  color="warn"
+                  [disabled]="isReadOnly"
+                  (click)="removeQuotaRow(i)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="quotasColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: quotasColumns"></tr>
+          </table>
+        </div>
+
+        <div class="table-actions">
+          <button
+            type="button"
+            mat-stroked-button
+            color="primary"
+            [disabled]="isReadOnly"
+            (click)="addQuotaRow()"
+          >
+            <mat-icon>add</mat-icon>
+            Ajouter un quota
+          </button>
+          <div class="capacity-pill">
+            <mat-icon>groups</mat-icon>
+            <strong>Capacité totale: {{ totalCapacite }} places</strong>
+          </div>
+        </div>
+      </mat-card>
+    </div>
   </div>
 </div>

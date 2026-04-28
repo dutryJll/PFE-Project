@@ -9,9 +9,9 @@
           <mxGeometry x="40" y="20" width="780" height="30" as="geometry"/>
         </mxCell>
 
-        <mxCell id="h1" value="Utilisateur" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="130" height="40" as="geometry"/></mxCell>
-        <mxCell id="h2" value="Frontend Angular" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="80" width="160" height="40" as="geometry"/></mxCell>
-        <mxCell id="h3" value="Auth API /api/auth/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="560" y="80" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="h1" value="login-commission.component.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="130" height="40" as="geometry"/></mxCell>
+        <mxCell id="h2" value="auth.service.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="80" width="160" height="40" as="geometry"/></mxCell>
+        <mxCell id="h3" value="auth_app/urls.py + views.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="560" y="80" width="180" height="40" as="geometry"/></mxCell>
         <mxCell id="h4" value="User Store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="850" y="80" width="170" height="40" as="geometry"/></mxCell>
         <mxCell id="h5" value="Token Service JWT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1120" y="80" width="180" height="40" as="geometry"/></mxCell>
 
@@ -32,7 +32,7 @@
 
         <mxCell id="else1" value="else identifiants valides" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#82B366;fillColor=none;dashed=1;" vertex="1" parent="1"><mxGeometry x="250" y="560" width="1060" height="500" as="geometry"/></mxCell>
         <mxCell id="m7" value="6b) Generer access/refresh token" style="endArrow=block;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="650" y="640" as="sourcePoint"/><mxPoint x="1210" y="640" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m8" value="7) Retour tokens + expiry" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1210" y="700" as="sourcePoint"/><mxPoint x="650" y="700" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="m8" value="7) Retour access + refresh (views.py)" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1210" y="700" as="sourcePoint"/><mxPoint x="650" y="700" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m9" value="8) Inserer AUTHENTICATION(user_id, token_secret, refresh_token, token_expiry)" style="endArrow=block;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="650" y="760" as="sourcePoint"/><mxPoint x="935" y="760" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m10" value="9) 200 OK + token + role" style="endArrow=open;dashed=1;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="650" y="820" as="sourcePoint"/><mxPoint x="380" y="820" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m11" value="10) GET /api/auth/my-actions/" style="endArrow=block;html=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="380" y="880" as="sourcePoint"/><mxPoint x="650" y="880" as="targetPoint"/></mxGeometry></mxCell>
@@ -50,10 +50,10 @@
 
         <mxCell id="tt2" value="Diagramme de sequence detaille - Gestion des utilisateurs (Sprint 1)" style="text;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" vertex="1" parent="1"><mxGeometry x="40" y="20" width="860" height="30" as="geometry"/></mxCell>
 
-        <mxCell id="uh1" value="Administrateur" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="150" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh2" value="Frontend Angular" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="170" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh3" value="Auth API /api/auth/users/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="600" y="80" width="200" height="40" as="geometry"/></mxCell>
-        <mxCell id="uh4" value="User Repository" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="160" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh1" value="dashboard-admin.html" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="80" y="80" width="150" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh2" value="dashboard-admin.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="170" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh3" value="auth_app/urls.py + views.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="600" y="80" width="200" height="40" as="geometry"/></mxCell>
+        <mxCell id="uh4" value="models.py (User)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="160" height="40" as="geometry"/></mxCell>
 
         <mxCell id="ul1" value="" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="155" y="120" as="sourcePoint"/><mxPoint x="155" y="1360" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="ul2" value="" style="endArrow=none;dashed=1;strokeColor=#6C8EBF;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="405" y="120" as="sourcePoint"/><mxPoint x="405" y="1360" as="targetPoint"/></mxGeometry></mxCell>

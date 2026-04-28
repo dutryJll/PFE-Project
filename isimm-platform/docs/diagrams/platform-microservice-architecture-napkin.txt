@@ -1,36 +1,74 @@
-Create a simple microservice architecture diagram.
+Create this exact architecture diagram in French.
 
-Title: ISIMM Platform - Microservice Architecture
+Title:
+Architecture Microservices ISIMM
 
-Use these blocks from left to right:
-1) Angular Client
-2) API Gateway
-3) Authentication Service
-4) BackOffice Service
-5) FrontOffice Service
-6) Auth DB
-7) BackOffice DB
-8) FrontOffice DB
+Nodes and labels (keep this wording):
+1) Utilisateurs
+	subtitle: Candidat, Commission, Administrateur
 
-Connections:
-- Angular Client -> API Gateway
-- API Gateway -> Authentication Service
-- API Gateway -> BackOffice Service
-- API Gateway -> FrontOffice Service
-- Authentication Service -> Auth DB
-- BackOffice Service -> BackOffice DB
-- FrontOffice Service -> FrontOffice DB
+2) Angular Client (frontend web)
+	subtitle: Frontend web application.
 
-Style:
-- Clean, minimal, academic
-- Light gray background
-- Blue service boxes
-- Yellow database cylinders
-- Straight arrows
-- Keep labels short
+3) Auth Service (Django, JWT, roles, login)
+	subtitle: Handles authentication, JWT generation, roles, and login.
 
-Caption under diagram:
-Figure - Architecture microservice de la plateforme ISIMM.
+4) Auth DB (PostgreSQL)
+	subtitle: Stores accounts and tokens.
 
-Optional note:
-Sprint 2 flow: postuler, modifier candidature, suivre etat, deposer dossier, notifications, score/classement.
+5) User Service (Django gestion profils utilisateurs)
+	subtitle: Manages user profiles.
+
+6) User DB (PostgreSQL)
+	subtitle: Stores user profiles.
+
+7) Candidature Service (Django, dossiers, status, reclamations, notifications)
+	subtitle: Manages applications, statuses, claims, and notifications.
+
+8) Candidature DB (SQLite)
+	subtitle: Stores applications, documents, notifications.
+
+9) Redis Broker + Celery Worker/Beat
+	subtitle: Connects to Candidature Service for asynchronous tasks.
+
+10) File Storage local (media)
+	 subtitle: Local file storage linked to Candidature Service.
+
+11) Taches asynchrones
+	 subtitle: Notifications, rappels, traitement OCR.
+
+Main connections:
+- Utilisateurs -> Angular Client
+- Angular Client -> Auth Service
+- Auth Service -> Auth DB
+- Auth Service -> User Service
+- User Service -> User DB
+- User Service -> Candidature Service
+- Candidature Service -> Candidature DB
+- Candidature Service -> Redis Broker + Celery Worker/Beat
+- Candidature Service -> File Storage local (media)
+- Redis Broker + Celery Worker/Beat -> Taches asynchrones
+
+Additional service-to-service/API relations (as in the reference image):
+- Angular Client -> User Service
+- Angular Client -> Candidature Service
+- Auth DB <-> User Service
+- Auth Service -> Candidature Service
+
+Layout constraints (important):
+- Place nodes vertically and horizontally exactly like the reference:
+  Utilisateurs top center, Angular below, Auth left, User center, Candidature right,
+  DBs below their services, Redis/File Storage below Candidature, Taches asynchrones at bottom.
+- Use orthogonal lines only (90 degrees).
+- No diagonal links.
+- Keep the same blue cards and green DB cylinders.
+- Black background.
+
+Critical arrow rule:
+- Do NOT attach arrowheads to the top edge of any rectangular service box.
+- Incoming arrows to rectangular boxes must enter from left, right, or bottom edges only.
+- Keep arrowheads clean and outside labels.
+
+Visual style:
+- Modern clean architecture infographic.
+- Preserve spacing so links do not cross node text.

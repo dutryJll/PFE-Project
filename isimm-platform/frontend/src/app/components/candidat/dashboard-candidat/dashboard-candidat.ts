@@ -4,8 +4,18 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { isPublicOffer } from '../../../shared/public-offer';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -32,6 +42,8 @@ interface Candidature {
   date_limite_modification?: string;
   peut_modifier?: boolean;
   jours_restants?: number;
+  historique_statut?: HistoriqueStatutItem[];
+  historiqueStatut?: HistoriqueStatutItem[];
 }
 
 type WorkflowStageState = 'done' | 'current' | 'pending' | 'rejected';
@@ -40,6 +52,19 @@ interface WorkflowStage {
   label: string;
   state: WorkflowStageState;
   hint?: string;
+}
+
+interface HistoriqueStatutItem {
+  statut?: string;
+  etat?: string;
+  state?: string;
+  libelle?: string;
+  label?: string;
+  date?: string;
+  created_at?: string;
+  updated_at?: string;
+  commentaire?: string;
+  motif?: string;
 }
 
 interface Master {
@@ -64,6 +89,10 @@ interface Offre {
   places?: number;
   statut: 'ouvert' | 'ferme';
   document_officiel_pdf_url?: string | null;
+  est_cache?: boolean;
+  est_visible?: boolean;
+  publie_par_responsable?: boolean;
+  nombre_candidats_inscrits?: number;
 }
 
 interface DossierCandidature {
@@ -94,6 +123,8 @@ interface Document {
   icon: string;
   depose: boolean;
   date_depot?: string;
+  obligatoire?: boolean;
+  fichier_url?: string;
 }
 
 interface Reclamation {
@@ -128,17 +159,49 @@ interface OffreDetailRow {
   etablissementOrigine: string;
   capaciteAccueille: string;
   typeDiplome: string;
+  coefficients?: string;
   datesImportantes: string;
 }
 
-// ✅ CORRECTION - Interface HistoriqueItem complète
+interface SummaryCard {
+  title: string;
+  value: number | string;
+  subtitle: string;
+  icon: string;
+  tone: 'indigo' | 'blue' | 'green' | 'orange';
+  progress: number;
+}
+
+interface DeadlineCountdown {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  expired: boolean;
+}
+
+interface QuickActionCard {
+  key: 'modifier' | 'notifications';
+  title: string;
+  description: string;
+  icon: string;
+  badge?: number;
+}
+
+interface DashboardTimelineItem {
+  title: string;
+  subtitle: string;
+  statusLabel: string;
+  tone: 'success' | 'warning' | 'info';
+  icon: string;
+}
+
 interface HistoriqueItem {
   id?: number;
   titre?: string;
   description?: string;
   date?: string;
   color?: string;
-  // Nouvelles propriétés pour l'historique des candidatures
   annee_universitaire?: string;
   numero?: string;
   master_nom?: string;
@@ -146,6 +209,7 @@ interface HistoriqueItem {
   classement?: string;
   statut_final?: string;
   date_soumission?: string;
+  historique_statut?: HistoriqueStatutItem[];
 }
 
 type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
@@ -163,6 +227,8 @@ type CandidatView =
   | 'reclamations'
   | 'notifications'
   | 'importer';
+
+type ProfileTab = 'personnel' | 'academique' | 'documents' | 'securite';
 
 interface CandidatActionPermissions {
   preinscription: boolean;
@@ -184,18 +250,88 @@ function normalizeActionLabel(value: string): string {
 @Component({
   selector: 'app-dashboard-candidat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatButtonModule,
+    MatCardModule,
+    MatChipsModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatTabsModule,
+    MatStepperModule,
+    MatTooltipModule,
+  ],
   templateUrl: './dashboard-candidat.html',
-  styleUrl: './dashboard-candidat.css',
+  styleUrls: ['./dashboard-candidat.css', './dashboard-candidat-wizard.css'],
 })
 export class DashboardCandidatComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   currentView: CandidatView = 'dashboard';
   currentDate: Date = new Date();
+  private readonly deadlineDate = new Date('2026-03-12T23:59:59');
+  candidatureTabIndex: number = 0;
+
+  // ── Nouvelles propriétés ──
+  dragOverDocId: number | null = null;
+  uploadProgress: { [docId: string]: number } = {};
+  uploadErrors: { [docId: string]: string } = {};
+  apercuDoc: any = null;
+  finalisationLoading = false;
+
+  // Explore Section Properties
+  rechercheOffre: string = '';
+  rechercheDateOffre: string = '';
+  displayedDetailColumns: string[] = [
+    'etablissementOrigine',
+    'capaciteAccueille',
+    'typeDiplome',
+    'coefficients',
+    'datesImportantes',
+  ];
+
+  get userDisplayName(): string {
+    return this.currentUser
+      ? `${this.currentUser.first_name} ${this.currentUser.last_name}`
+      : 'Candidat';
+  }
+
+  get profileCompletionPercent(): number {
+    const checks = [
+      !!(this.profileData?.first_name || this.currentUser?.first_name),
+      !!(this.profileData?.last_name || this.currentUser?.last_name),
+      !!(this.profileData?.email || this.currentUser?.email),
+      !!(this.profileData?.phone || this.currentUser?.phone),
+      !!(this.profileData?.address || this.currentUser?.address),
+      !!(this.profileData?.etablissement_origine || this.currentUser?.etablissement_origine),
+      !!(this.profileData?.diplome || this.currentUser?.diplome),
+      this.documentsRequis.length > 0 && this.documentsDeposes / this.documentsRequis.length >= 0.5,
+    ];
+
+    const completed = checks.filter(Boolean).length;
+    return Math.round((completed / checks.length) * 100);
+  }
+
+  // ── Calculs complétude dossier ──
+  get documentsTotaux(): number {
+    return this.documentsRequis.filter((d) => d.obligatoire !== false).length;
+  }
+
+  get documentsValides(): number {
+    return this.documentsRequis.filter((d) => d.obligatoire !== false && d.depose === true).length;
+  }
+
+  get completionPercent(): number {
+    if (this.documentsTotaux === 0) return 0;
+    return Math.round((this.documentsValides / this.documentsTotaux) * 100);
+  }
+
+  isSidebarOpen: boolean = false;
+  activeProfileTab: ProfileTab = 'personnel';
+  isProfileEditMode: boolean = false;
 
   showAlert: boolean = true;
 
-  // ✅ AJOUT - Filtre année pour historique
   filtreAnnee: string = '';
   selectedDossierNumber: string | null = null;
   dossierPreferenceForm: DossierPreferenceForm = {
@@ -211,16 +347,71 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   openActionMenuId: number | null = null;
   inscriptionExportFormat: ExportFormat = 'pdf';
   notificationsNonLues = 0;
+  isDashboardLoading = true;
+  isHistoriqueLoading = false;
   isWorkflowMockMode = false;
   isPreferenceFormDemoMode = false;
   showEditCandidatureModal: boolean = false;
   selectedCandidatureForEdit: Candidature | null = null;
   editChoixPriorite: number = 1;
   showSubmissionWizardModal: boolean = false;
+  isOffresInscriptionFallback: boolean = false;
+  // Allow clicking any step for quick preview/testing
+  wizardAllowFreeNavigation: boolean = true;
   wizardCurrentStep: number = 1;
   wizardMaxAllowedStep: number = 1;
+  readonly wizardTotalSteps: number = 3;
+  readonly wizardStepsMeta: Array<{ label: string }> = [
+    { label: 'Informations Personnelles' },
+    { label: 'Diplôme et Formation' },
+    { label: 'Validation et Synthèse' },
+  ];
   wizardOffre: Offre | null = null;
   selectedOffreDetail: Offre | null = null;
+  wizardTouched: {
+    nom: boolean;
+    prenom: boolean;
+    cinPasseport: boolean;
+    dateNaissance: boolean;
+    email: boolean;
+    telephone: boolean;
+    etablissementOrigine: boolean;
+    confirmationText: boolean;
+  } = {
+    nom: false,
+    prenom: false,
+    cinPasseport: false,
+    dateNaissance: false,
+    email: false,
+    telephone: false,
+    etablissementOrigine: false,
+    confirmationText: false,
+  };
+  readonly wizardRequiredDocs: Array<{ label: string; icon: string; hint: string }> = [
+    {
+      label: 'Copie du CIN / Passeport',
+      icon: 'fa-id-card',
+      hint: 'PDF/JPG/PNG - max 5 Mo',
+    },
+    {
+      label: 'Diplôme ou attestation',
+      icon: 'fa-graduation-cap',
+      hint: 'Document lisible et complet',
+    },
+    {
+      label: 'Relevés de notes',
+      icon: 'fa-table',
+      hint: 'Toutes les années demandées',
+    },
+    {
+      label: 'CV',
+      icon: 'fa-file-alt',
+      hint: 'Format PDF recommandé',
+    },
+  ];
+  wizardUploadedFiles: Array<File | null> = [];
+  wizardDragOverIndex: number | null = null;
+  wizardSubmitting: boolean = false;
   wizardData: {
     nom: string;
     prenom: string;
@@ -246,6 +437,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     moyenne3Annee: string;
     session3Annee: 'Principale' | 'control' | '';
     natureCandidature: 'Étudiant ISIMM' | 'Étudiant Externe' | '';
+    etablissementExterne: string;
+    specialiteExterne: string;
     moyenne4Annee: string;
     session4Annee: 'Principale' | 'control' | '';
     nombreRedoublement: string;
@@ -279,6 +472,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     moyenne3Annee: '',
     session3Annee: '',
     natureCandidature: '',
+    etablissementExterne: '',
+    specialiteExterne: '',
     moyenne4Annee: '',
     session4Annee: '',
     nombreRedoublement: '',
@@ -447,21 +642,49 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   documentsRequis: Document[] = [
     {
       id: 1,
-      nom: "Carte d'identité nationale",
-      icon: 'fa-id-card',
+      nom: 'Formulaire de candidature au Mastère en Informatique (joint à cet avis)',
+      icon: 'fa-file-signature',
       depose: true,
       date_depot: '2026-02-10',
+      obligatoire: true,
     },
     {
       id: 2,
-      nom: 'Diplôme de licence',
-      icon: 'fa-graduation-cap',
+      nom: 'Fiche de candidature imprimée depuis le site web et dûment signée',
+      icon: 'fa-clipboard-check',
       depose: true,
       date_depot: '2026-02-10',
+      obligatoire: true,
     },
-    { id: 3, nom: 'Relevés de notes', icon: 'fa-file-alt', depose: true, date_depot: '2026-02-12' },
-    { id: 4, nom: 'CV détaillé', icon: 'fa-file-pdf', depose: false },
-    { id: 5, nom: 'Lettre de motivation', icon: 'fa-envelope', depose: false },
+    {
+      id: 3,
+      nom: "Curriculum Vitae (CV) d'une page avec adresse postale, téléphone et e-mail",
+      icon: 'fa-user-tie',
+      depose: true,
+      date_depot: '2026-02-12',
+      obligatoire: true,
+    },
+    {
+      id: 4,
+      nom: 'Copie certifiée conforme de tous les diplômes obtenus, y compris le Baccalauréat',
+      icon: 'fa-graduation-cap',
+      depose: false,
+      obligatoire: true,
+    },
+    {
+      id: 5,
+      nom: 'Copie certifiée conforme des relevés de notes de toutes les années et du Baccalauréat',
+      icon: 'fa-file-alt',
+      depose: false,
+      obligatoire: true,
+    },
+    {
+      id: 6,
+      nom: "Document justifiant un report d'inscription ou une réorientation (si applicable)",
+      icon: 'fa-file-medical',
+      depose: false,
+      obligatoire: false,
+    },
   ];
 
   reclamations: Reclamation[] = [
@@ -499,7 +722,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     { id: 2, nom: 'releve_notes.pdf', date: '16/02/2026' },
   ];
 
-  // ✅ CORRECTION - Historique avec données complètes
   historique: HistoriqueItem[] = [
     {
       id: 1,
@@ -561,6 +783,20 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     deposerReclamation: true,
   };
   customRoleActions: string[] = [];
+  readonly quickActionCards: QuickActionCard[] = [
+    {
+      key: 'modifier',
+      title: 'Modifier Candidature',
+      description: 'Mettre à jour vos informations et continuer le stepper de soumission.',
+      icon: 'edit',
+    },
+    {
+      key: 'notifications',
+      title: 'Mes Notifications',
+      description: 'Consulter vos alertes et messages non lus en un clic.',
+      icon: 'notifications',
+    },
+  ];
   private readonly customActionViewMap: Record<string, CandidatView> = {
     [normalizeActionLabel('Préinscription')]: 'offres-inscription',
     [normalizeActionLabel('Consultation de candidature')]: 'candidatures',
@@ -587,6 +823,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -652,6 +889,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.loadOffresInscription();
     this.loadMesDossiers();
     this.loadNotifications();
+    if (this.currentView === 'historique') {
+      this.chargerHistorique();
+    }
     this.startCountdownClock();
     this.connectStatusWebSocket();
   }
@@ -766,13 +1006,30 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.router.navigate(['/candidat/reclamations/nouvelle']);
   }
 
-  switchView(view: CandidatView): void {
+  switchView(view: CandidatView, options?: { preserveDossierSelection?: boolean }): void {
     if (!this.canAccessView(view)) {
       this.notifyActionBlocked("Cette section n'est pas active pour votre rôle.");
       return;
     }
     this.closeActionMenu();
+    if (view === 'mon-dossier' && !options?.preserveDossierSelection) {
+      this.resetSelectionDossier();
+    }
     this.currentView = view;
+    if (view === 'historique') {
+      this.chargerHistorique();
+    }
+    if (window.innerWidth <= 768) {
+      this.closeSidebar();
+    }
+  }
+
+  toggleSidebar(): void {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
+
+  closeSidebar(): void {
+    this.isSidebarOpen = false;
   }
 
   validateMenuSection(view: CandidatView, event: Event): void {
@@ -852,8 +1109,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       next: (actions: string[]) => {
         this.customRoleActions = this.extractCustomRoleActions(actions || []);
 
-        // Fallback permissif: si l'API des actions est indisponible/vide,
-        // on conserve les permissions locales pour ne pas masquer le menu candidat.
         if (!actions || actions.length === 0) {
           console.warn('Aucune action distante chargee, conservation des permissions locales.');
           return;
@@ -982,8 +1237,135 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.showAlert = false;
   }
 
+  get dashboardSummaryCards(): SummaryCard[] {
+    const total = Math.max(this.mesCandidatures.length, 1);
+    return [
+      {
+        title: 'Candidatures déposées',
+        value: this.mesCandidatures.length,
+        subtitle: 'Total de vos candidatures soumises',
+        icon: 'fa-file-alt',
+        tone: 'indigo',
+        progress: 100,
+      },
+      {
+        title: 'Sous examen',
+        value: this.countByStatut('sous_examen'),
+        subtitle: "Dossiers en cours d'évaluation",
+        icon: 'fa-hourglass-half',
+        tone: 'blue',
+        progress: Math.min(100, Math.round((this.countByStatut('sous_examen') / total) * 100)),
+      },
+      {
+        title: 'Présélectionnées',
+        value: this.countByStatut('preselectionne') + this.countByStatut('selectionne'),
+        subtitle: 'Candidatures à statut favorable',
+        icon: 'fa-check-circle',
+        tone: 'green',
+        progress: Math.min(
+          100,
+          Math.round(
+            ((this.countByStatut('preselectionne') + this.countByStatut('selectionne')) / total) *
+              100,
+          ),
+        ),
+      },
+      {
+        title: 'Rejetées',
+        value: this.countByStatut('rejete'),
+        subtitle: 'Candidatures non retenues',
+        icon: 'fa-times-circle',
+        tone: 'orange',
+        progress: Math.min(100, Math.round((this.countByStatut('rejete') / total) * 100)),
+      },
+    ];
+  }
+
+  get deadlineCountdown(): DeadlineCountdown {
+    const diff = this.deadlineDate.getTime() - this.countdownNow;
+    if (diff <= 0) {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+    }
+
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return { days, hours, minutes, seconds, expired: false };
+  }
+
+  get dashboardTimeline(): DashboardTimelineItem[] {
+    return [...this.mesCandidatures]
+      .sort(
+        (a, b) =>
+          new Date(b.date_soumission || '').getTime() - new Date(a.date_soumission || '').getTime(),
+      )
+      .slice(0, 4)
+      .map((candidature) => ({
+        title: candidature.master_nom || 'Candidature',
+        subtitle: candidature.date_soumission
+          ? `Soumise le ${new Date(candidature.date_soumission).toLocaleDateString('fr-FR')}`
+          : 'Soumise récemment',
+        statusLabel: this.getStatutLabel(candidature.statut),
+        tone: this.getTimelineTone(candidature.statut),
+        icon: this.getStatutFaIcon(candidature.statut),
+      }));
+  }
+
+  private getTimelineTone(statut?: string): 'success' | 'warning' | 'info' {
+    const value = (statut || '').toLowerCase();
+    if (['selectionne', 'inscrit', 'valide', 'traitee'].includes(value)) {
+      return 'success';
+    }
+    if (['rejete', 'non_admis', 'non_preselectionne'].includes(value)) {
+      return 'warning';
+    }
+    return 'info';
+  }
+
+  openQuickAction(actionKey: QuickActionCard['key']): void {
+    if (actionKey === 'notifications') {
+      this.switchView('notifications');
+      return;
+    }
+
+    const offer =
+      this.getOffresFiltrees().find((item) => item.statut === 'ouvert') ||
+      this.offresInscription[0];
+    if (!offer) {
+      this.toastService.show('Aucune offre disponible pour ouvrir le stepper.', 'warning');
+      return;
+    }
+
+    this.startSubmissionWizard(offer);
+  }
+
   countByStatut(statut: string): number {
     return this.mesCandidatures.filter((c) => c.statut === statut).length;
+  }
+
+  getStatusChipClass(statut?: string): string {
+    const value = (statut || 'en_attente').toLowerCase();
+
+    if (['selectionne', 'inscrit', 'valide', 'traitee'].includes(value)) {
+      return 'status-chip--success';
+    }
+
+    if (['rejete', 'non_admis', 'non_preselectionne', 'dossier_non_depose'].includes(value)) {
+      return 'status-chip--danger';
+    }
+
+    if (
+      ['sous_examen', 'soumis', 'preselectionne', 'dossier_depose', 'paiement_soumis'].includes(
+        value,
+      )
+    ) {
+      return 'status-chip--info';
+    }
+
+    return 'status-chip--warning';
   }
 
   get documentsDeposes(): number {
@@ -1010,6 +1392,90 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return labels[statut] || statut;
   }
 
+  getStatutIcon(statut?: string): string {
+    const icons: Record<string, string> = {
+      selectionne: 'check_circle',
+      en_attente: 'schedule',
+      soumis: 'send',
+      rejete: 'cancel',
+      preselectionne: 'verified',
+      sous_examen: 'manage_search',
+      dossier_depose: 'folder_open',
+      inscrit: 'person_check',
+      paiement_soumis: 'payments',
+      valide: 'task_alt',
+      traitee: 'done_all',
+      confirme: 'done',
+      propose: 'thumb_up',
+    };
+
+    return icons[statut || ''] || 'info';
+  }
+
+  getStatutFaIcon(statut?: string): string {
+    const icons: Record<string, string> = {
+      selectionne: 'fa-circle-check',
+      en_attente: 'fa-clock',
+      soumis: 'fa-paper-plane',
+      rejete: 'fa-circle-xmark',
+      preselectionne: 'fa-badge-check',
+      sous_examen: 'fa-magnifying-glass',
+      dossier_depose: 'fa-folder-open',
+      inscrit: 'fa-user-check',
+      paiement_soumis: 'fa-money-check-dollar',
+      valide: 'fa-square-check',
+      traitee: 'fa-check-double',
+      confirme: 'fa-check',
+      propose: 'fa-thumbs-up',
+    };
+
+    return icons[statut || ''] || 'fa-circle-info';
+  }
+
+  getOffresFiltrees(): Offre[] {
+    const q = this.rechercheOffre.toLowerCase().trim();
+    const dateFilter = (this.rechercheDateOffre || '').trim();
+
+    return this.offresInscription.filter((o) => {
+      const matchesText =
+        !q ||
+        o.titre.toLowerCase().includes(q) ||
+        (o.description && o.description.toLowerCase().includes(q)) ||
+        (o.specialite && o.specialite.toLowerCase().includes(q));
+
+      const matchesDate = !dateFilter || String(o.date_limite || '') === dateFilter;
+
+      return matchesText && matchesDate;
+    });
+  }
+
+  reinitialiserRechercheOffres(): void {
+    this.rechercheOffre = '';
+    this.rechercheDateOffre = '';
+  }
+
+  private getOffresFiltreesParType(type: Offre['type'], sousType?: string): Offre[] {
+    return this.getOffresFiltrees().filter(
+      (o) => o.type === type && (!sousType || o.sous_type === sousType),
+    );
+  }
+
+  voirRecapitulatif(candidature: Candidature): void {
+    this.closeActionMenu();
+    this.selectedCandidatureForEdit = candidature;
+    this.toastService.show(
+      `Affichage du récapitulatif pour la candidature ${candidature.numero}`,
+      'info',
+    );
+  }
+
+  suivreCandidature(candidature: Candidature): void {
+    this.closeActionMenu();
+    this.selectedDossierNumber = this.getDossierNumber(candidature);
+    this.switchView('suivi');
+    this.toastService.show(`Ouverture du suivi pour la candidature ${candidature.numero}`, 'info');
+  }
+
   loadMesCandidatures(): void {
     const token = this.authService.getAccessToken();
     if (!token) {
@@ -1032,11 +1498,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
             peut_modifier: item.peut_modifier ?? false,
             statut_inscription: item.statut_inscription ?? '',
             motif_rejet: item.motif_rejet ?? '',
+            historique_statut: Array.isArray(item.historique_statut)
+              ? item.historique_statut
+              : Array.isArray(item.historiqueStatut)
+                ? item.historiqueStatut
+                : [],
           }));
+          this.isDashboardLoading = false;
           this.loadNotifications();
         },
         error: (error) => {
           console.error('Erreur chargement candidatures:', error);
+          this.isDashboardLoading = false;
         },
       });
   }
@@ -1053,24 +1526,77 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (data) => {
-          this.offresInscription = (data || []).map((offre: any) => ({
-            id: Number(offre.id),
-            titre: offre.titre,
-            type: offre.type,
-            sous_type: offre.sous_type,
-            specialite: offre.specialite,
-            description: offre.description,
-            date_limite: offre.date_limite,
-            places: offre.places,
-            statut: offre.statut,
-            document_officiel_pdf_url: offre.document_officiel_pdf_url || null,
-          }));
+          const mappedOffres = (data || [])
+            .filter((offre: any) => isPublicOffer(offre) && offre.statut === 'ouvert')
+            .map((offre: any) => ({
+              id: Number(offre.id),
+              titre: offre.titre,
+              type: offre.type,
+              sous_type: offre.sous_type,
+              specialite: offre.specialite,
+              description: offre.description,
+              date_limite: offre.date_limite,
+              places: offre.places,
+              statut: offre.statut,
+              document_officiel_pdf_url: offre.document_officiel_pdf_url || null,
+              est_cache: !!offre.est_cache,
+              est_visible: offre.est_visible,
+              publie_par_responsable: offre.publie_par_responsable,
+              nombre_candidats_inscrits: Number(offre.nombre_candidats_inscrits || 0),
+            }));
+          this.isOffresInscriptionFallback = mappedOffres.length === 0;
+          this.offresInscription = mappedOffres.length
+            ? mappedOffres
+            : this.getFallbackOffresInscription();
           this.loadNotifications();
         },
         error: (error) => {
           console.error('Erreur chargement offres:', error);
+          this.isOffresInscriptionFallback = true;
+          this.toastService.show(
+            'Impossible de charger les offres de préinscription (service indisponible).',
+            'error',
+          );
+          if (!this.offresInscription.length) {
+            this.offresInscription = this.getFallbackOffresInscription();
+          }
         },
       });
+  }
+
+  private getFallbackOffresInscription(): Offre[] {
+    return [
+      {
+        id: 101,
+        titre: 'Master Recherche Génie Logiciel',
+        type: 'master',
+        sous_type: 'recherche',
+        description: 'Offre temporaire affichée quand le service candidature est indisponible.',
+        date_limite: '2026-07-22',
+        places: 30,
+        statut: 'ouvert',
+      },
+      {
+        id: 102,
+        titre: 'Master Professionnel Sciences de Données',
+        type: 'master',
+        sous_type: 'professionnel',
+        description: 'Carte de secours pour continuer la navigation côté candidat.',
+        date_limite: '2026-07-22',
+        places: 35,
+        statut: 'ouvert',
+      },
+      {
+        id: 103,
+        titre: 'Cycle d' + "'" + 'Ingénieur Informatique',
+        type: 'cycle_ingenieur',
+        specialite: 'Informatique, Génie logiciel',
+        description: 'Carte de secours si les offres réelles ne sont pas récupérables.',
+        date_limite: '2026-07-22',
+        places: 50,
+        statut: 'ouvert',
+      },
+    ];
   }
 
   loadMesDossiers(): void {
@@ -1284,7 +1810,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return 'Information';
   }
 
-  // ✅ AJOUT - Méthode chargerHistorique
   chargerHistorique(): void {
     const token = this.authService.getAccessToken();
 
@@ -1293,6 +1818,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       params.annee = this.filtreAnnee;
     }
 
+    this.isHistoriqueLoading = true;
+
     this.http
       .get('http://localhost:8003/api/candidatures/historique/', {
         headers: { Authorization: `Bearer ${token}` },
@@ -1300,27 +1827,165 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (data: any) => {
-          this.historique = data;
+          this.historique = Array.isArray(data) ? data : [];
+          this.isHistoriqueLoading = false;
         },
         error: (error) => {
           console.error('Erreur chargement historique:', error);
+          this.isHistoriqueLoading = false;
         },
       });
   }
 
-  // ✅ NOUVELLES MÉTHODES - Filtrer les offres par type
+  getTimelineFromHistorique(candidature: Candidature): WorkflowStage[] {
+    const history = candidature.historique_statut || candidature.historiqueStatut || [];
+    if (!Array.isArray(history) || history.length === 0) {
+      return this.workflowTimeline(candidature);
+    }
+
+    const sortedHistory = [...history].sort((a, b) => {
+      const rawA = String(a?.date || a?.updated_at || a?.created_at || '');
+      const rawB = String(b?.date || b?.updated_at || b?.created_at || '');
+      const dateA = new Date(rawA).getTime();
+      const dateB = new Date(rawB).getTime();
+
+      if (Number.isNaN(dateA) && Number.isNaN(dateB)) {
+        return 0;
+      }
+      if (Number.isNaN(dateA)) {
+        return 1;
+      }
+      if (Number.isNaN(dateB)) {
+        return -1;
+      }
+
+      return dateA - dateB;
+    });
+
+    const timeline = sortedHistory.map((step) => {
+      const rawStatus = String(step?.statut || step?.etat || step?.state || '').trim();
+      const label =
+        String(step?.libelle || step?.label || '').trim() ||
+        this.formatHistoriqueStatusLabel(rawStatus);
+      const hint =
+        String(step?.commentaire || step?.motif || '').trim() ||
+        String(step?.date || step?.updated_at || step?.created_at || '').trim();
+
+      return {
+        label,
+        state: this.mapHistoriqueStatusState(rawStatus),
+        hint: hint || undefined,
+      };
+    });
+
+    return timeline.filter((step, index) => {
+      if (index === 0) {
+        return true;
+      }
+
+      const previousStep = timeline[index - 1];
+      return !(previousStep.label === step.label && previousStep.state === step.state);
+    });
+  }
+
+  getCurrentTimelineStatusLabel(candidature: Candidature): string {
+    const timeline = this.getTimelineFromHistorique(candidature);
+    for (let index = timeline.length - 1; index >= 0; index -= 1) {
+      if (timeline[index].state === 'rejected') {
+        return timeline[index].label;
+      }
+    }
+
+    for (let index = timeline.length - 1; index >= 0; index -= 1) {
+      if (timeline[index].state === 'current') {
+        return timeline[index].label;
+      }
+    }
+
+    for (let index = timeline.length - 1; index >= 0; index -= 1) {
+      if (timeline[index].state === 'done') {
+        return timeline[index].label;
+      }
+    }
+
+    return 'En attente';
+  }
+
+  getTimelineActiveIndex(candidature: Candidature): number {
+    const timeline = this.getTimelineFromHistorique(candidature);
+    if (!timeline.length) {
+      return 0;
+    }
+
+    const rejectedIndex = timeline.findIndex((step) => step.state === 'rejected');
+    if (rejectedIndex >= 0) {
+      return rejectedIndex;
+    }
+
+    const currentIndex = timeline.findIndex((step) => step.state === 'current');
+    if (currentIndex >= 0) {
+      return currentIndex;
+    }
+
+    const doneIndexes = timeline
+      .map((step, index) => ({ step, index }))
+      .filter((entry) => entry.step.state === 'done')
+      .map((entry) => entry.index);
+
+    return doneIndexes.length ? doneIndexes[doneIndexes.length - 1] : 0;
+  }
+
+  private mapHistoriqueStatusState(status: string): WorkflowStageState {
+    const normalized = (status || '').toLowerCase();
+
+    if (
+      [
+        'rejete',
+        'rejetee',
+        'non_admis',
+        'non_admise',
+        'non_preselectionne',
+        'dossier_non_depose',
+        'echec',
+      ].includes(normalized)
+    ) {
+      return 'rejected';
+    }
+
+    if (
+      ['selectionne', 'inscrit', 'dossier_depose', 'preselectionne', 'valide', 'soumis'].includes(
+        normalized,
+      )
+    ) {
+      return 'done';
+    }
+
+    if (['en_attente', 'sous_examen', 'en_cours', 'pending'].includes(normalized)) {
+      return 'current';
+    }
+
+    return 'pending';
+  }
+
+  private formatHistoriqueStatusLabel(status: string): string {
+    const raw = (status || '').trim();
+    if (!raw) {
+      return 'Mise a jour du dossier';
+    }
+
+    return this.getStatutLabel(raw).replaceAll('_', ' ');
+  }
+
   mastersRecherche(): Offre[] {
-    return this.offresInscription.filter((o) => o.type === 'master' && o.sous_type === 'recherche');
+    return this.getOffresFiltreesParType('master', 'recherche');
   }
 
   mastersProfessionnels(): Offre[] {
-    return this.offresInscription.filter(
-      (o) => o.type === 'master' && o.sous_type === 'professionnel',
-    );
+    return this.getOffresFiltreesParType('master', 'professionnel');
   }
 
   cyclesIngenieur(): Offre[] {
-    return this.offresInscription.filter((o) => o.type === 'cycle_ingenieur');
+    return this.getOffresFiltreesParType('cycle_ingenieur');
   }
 
   dejaCandidature(masterId: number): boolean {
@@ -1329,7 +1994,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return this.mesCandidatures.some((c) => c.master_id === offre.id);
   }
 
-  postuler(offre: Offre): void {
+  postuler(offre: Offre, payload: Record<string, unknown> = {}): void {
     if (!this.actionPermissions.preinscription) {
       this.notifyActionBlocked("Action préinscription désactivée par l'administration.");
       return;
@@ -1350,7 +2015,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.http
       .post(
         'http://localhost:8003/api/candidatures/create/',
-        { master_id: offre.id },
+        {
+          master_id: offre.id,
+          ...payload,
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       )
       .subscribe({
@@ -1403,6 +2071,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.wizardOffre = offre;
     this.wizardCurrentStep = 1;
     this.wizardMaxAllowedStep = 1;
+    this.wizardTouched = {
+      nom: false,
+      prenom: false,
+      cinPasseport: false,
+      dateNaissance: false,
+      email: false,
+      telephone: false,
+      etablissementOrigine: false,
+      confirmationText: false,
+    };
+    this.wizardUploadedFiles = Array.from({ length: this.wizardRequiredDocs.length }, () => null);
+    this.wizardDragOverIndex = null;
     const firstName = this.profileData?.first_name || this.currentUser?.first_name || '';
     const lastName = this.profileData?.last_name || this.currentUser?.last_name || '';
     const phone = this.profileData?.phone || this.currentUser?.phone || '';
@@ -1433,6 +2113,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       moyenne3Annee: '',
       session3Annee: '',
       natureCandidature: '',
+      etablissementExterne: '',
+      specialiteExterne: '',
       moyenne4Annee: '',
       session4Annee: '',
       nombreRedoublement: '',
@@ -1448,17 +2130,27 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   closeSubmissionWizard(): void {
     this.showSubmissionWizardModal = false;
     this.wizardOffre = null;
+    this.wizardSubmitting = false;
   }
 
   private openWizardFromUrl(step: number): void {
-    const boundedStep = Math.min(3, Math.max(1, step));
-    this.currentView = 'offres-inscription';
-    this.showSubmissionWizardModal = true;
-    this.wizardMaxAllowedStep = 3;
+    const boundedStep = Math.min(this.wizardTotalSteps, Math.max(1, step));
+    const defaultOffer =
+      this.getOffresFiltrees().find((item) => item.statut === 'ouvert') ||
+      this.offresInscription[0];
+
+    if (!defaultOffer) {
+      this.toastService.show('Aucune offre disponible pour ouvrir le parcours.', 'warning');
+      return;
+    }
+
+    this.startSubmissionWizard(defaultOffer);
     this.wizardCurrentStep = boundedStep;
+    this.wizardMaxAllowedStep = Math.max(this.wizardMaxAllowedStep, boundedStep);
   }
 
   canGoToWizardStep(step: number): boolean {
+    if (this.wizardAllowFreeNavigation) return true;
     return step >= 1 && step <= this.wizardMaxAllowedStep;
   }
 
@@ -1480,10 +2172,65 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.wizardCurrentStep < 3) {
+    if (this.wizardCurrentStep < this.wizardTotalSteps) {
       this.wizardCurrentStep += 1;
       this.wizardMaxAllowedStep = Math.max(this.wizardMaxAllowedStep, this.wizardCurrentStep);
     }
+  }
+
+  private parseWizardNumeric(value: string): number | null {
+    const parsed = Number(
+      String(value ?? '')
+        .replace(',', '.')
+        .trim(),
+    );
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private isScoreRangeValid(value: string): boolean {
+    const parsed = this.parseWizardNumeric(value);
+    return parsed !== null && parsed >= 0 && parsed <= 20;
+  }
+
+  isWizardScoreInvalid(value: string): boolean {
+    return !!String(value || '').trim() && !this.isScoreRangeValid(value);
+  }
+
+  isValidEmail(value: string): boolean {
+    const email = String(value || '').trim();
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private areWizardScoresInRange(values: string[]): boolean {
+    return values.every((value) => this.isScoreRangeValid(value));
+  }
+
+  getWizardComputedScore(): number {
+    const moyennes: number[] = [
+      this.parseWizardNumeric(this.wizardData.moyenneBacPrincipale) ?? 0,
+      this.parseWizardNumeric(this.wizardData.moyenne1Annee) ?? 0,
+      this.parseWizardNumeric(this.wizardData.moyenne2Annee) ?? 0,
+      this.parseWizardNumeric(this.wizardData.moyenne3Annee) ?? 0,
+    ];
+
+    const hasFourthYear = this.parseWizardNumeric(this.wizardData.moyenne4Annee);
+    if (hasFourthYear !== null) {
+      moyennes.push(hasFourthYear);
+    }
+
+    const hasIng1 = this.parseWizardNumeric(this.wizardData.moyenneIng1);
+    if (hasIng1 !== null) {
+      moyennes.push(hasIng1);
+    }
+
+    const sum = moyennes.reduce((acc, value) => acc + value, 0);
+    const count = Math.max(moyennes.length, 1);
+    return Number((sum / count).toFixed(2));
+  }
+
+  getWizardComputedScoreDisplay(): string {
+    return `${this.getWizardComputedScore().toFixed(2)} / 20`;
   }
 
   isWizardMrglOffer(): boolean {
@@ -1502,9 +2249,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     );
   }
 
-  private isWizardStepValid(step: number): boolean {
+  shouldShowWizardMrglFourthYearFields(): boolean {
+    return this.isWizardMrglOffer() && this.wizardData.natureDiplome === 'Maitrise';
+  }
+
+  isWizardStepValid(step: number): boolean {
     if (step === 1) {
-      return [
+      const baseRequired = [
         this.wizardData.nom,
         this.wizardData.prenom,
         this.wizardData.cinPasseport,
@@ -1513,73 +2264,22 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.telephone,
         this.wizardData.etablissementOrigine,
       ].every((value) => !!String(value || '').trim());
+
+      return baseRequired && this.isValidEmail(this.wizardData.email);
     }
 
     if (step === 2) {
-      if (this.isWizardMrglOffer()) {
-        return [
-          this.wizardData.specialiteBac,
-          this.wizardData.anneeBac,
-          this.wizardData.moyenneBacPrincipale,
-          this.wizardData.noteMathBac,
-          this.wizardData.noteFrancaisBac,
-          this.wizardData.noteAnglaisBac,
-          this.wizardData.certificationB2,
-          this.wizardData.specialiteDiplome,
-          this.wizardData.anneeObtentionDiplome,
-          this.wizardData.natureDiplome,
-          this.wizardData.moyenne1Annee,
-          this.wizardData.session1Annee,
-          this.wizardData.moyenne2Annee,
-          this.wizardData.session2Annee,
-          this.wizardData.moyenne3Annee,
-          this.wizardData.session3Annee,
-          this.wizardData.natureCandidature,
-          this.wizardData.nombreRedoublement,
-        ].every((value) => !!String(value || '').trim());
-      }
-
-      if (this.isWizardMrmiOffer()) {
-        const baseMrmiValid = [
-          this.wizardData.specialiteBac,
-          this.wizardData.anneeBac,
-          this.wizardData.moyenneBacPrincipale,
-          this.wizardData.specialiteDiplome,
-          this.wizardData.anneeObtentionDiplome,
-          this.wizardData.natureDiplome,
-          this.wizardData.moyenne1Annee,
-          this.wizardData.session1Annee,
-          this.wizardData.moyenne2Annee,
-          this.wizardData.session2Annee,
-          this.wizardData.moyenne3Annee,
-          this.wizardData.session3Annee,
-          this.wizardData.natureCandidature,
-          this.wizardData.nombreRedoublement,
-        ].every((value) => !!String(value || '').trim());
-
-        if (!baseMrmiValid) {
-          return false;
-        }
-
-        if (this.isWizardMrmiIng1EquivalentSelected()) {
-          return [
-            this.wizardData.moyenneIng1,
-            this.wizardData.sessionReussiteIng1,
-            this.wizardData.nombreRedoublementIng1,
-          ].every((value) => !!String(value || '').trim());
-        }
-
-        return true;
-      }
-
-      return [
+      const baseBacFieldsValid = [
         this.wizardData.specialiteBac,
         this.wizardData.anneeBac,
         this.wizardData.moyenneBacPrincipale,
-        this.wizardData.noteMathBac,
-        this.wizardData.noteFrancaisBac,
-        this.wizardData.noteAnglaisBac,
-        this.wizardData.certificationB2,
+      ].every((value) => !!String(value || '').trim());
+
+      if (!baseBacFieldsValid || !this.isScoreRangeValid(this.wizardData.moyenneBacPrincipale)) {
+        return false;
+      }
+
+      const licenceFields = [
         this.wizardData.specialiteDiplome,
         this.wizardData.anneeObtentionDiplome,
         this.wizardData.natureDiplome,
@@ -1589,19 +2289,159 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.session2Annee,
         this.wizardData.moyenne3Annee,
         this.wizardData.session3Annee,
-        this.wizardData.nombreRedoublement,
       ].every((value) => !!String(value || '').trim());
+
+      if (!licenceFields) {
+        return false;
+      }
+
+      const licenceScores = [
+        this.wizardData.moyenne1Annee,
+        this.wizardData.moyenne2Annee,
+        this.wizardData.moyenne3Annee,
+      ];
+      if (!this.areWizardScoresInRange(licenceScores)) {
+        return false;
+      }
+
+      if (this.isWizardMrglOffer() || this.isWizardMrmiOffer()) {
+        if (!this.wizardData.natureCandidature || !this.wizardData.nombreRedoublement) {
+          return false;
+        }
+      }
+
+      if (this.wizardData.natureCandidature === 'Étudiant Externe') {
+        if (!this.wizardData.etablissementExterne || !this.wizardData.specialiteExterne) {
+          return false;
+        }
+      }
+
+      if (this.isWizardMrglOffer() && this.shouldShowWizardMrglFourthYearFields()) {
+        if (
+          !this.wizardData.moyenne4Annee ||
+          !this.isScoreRangeValid(this.wizardData.moyenne4Annee)
+        ) {
+          return false;
+        }
+      }
+
+      if (this.isWizardMrmiIng1EquivalentSelected()) {
+        if (!this.wizardData.moyenneIng1 || !this.isScoreRangeValid(this.wizardData.moyenneIng1)) {
+          return false;
+        }
+      }
+
+      if (this.isWizardMrglOffer()) {
+        const mrglBacFieldsValid = [
+          this.wizardData.noteMathBac,
+          this.wizardData.noteFrancaisBac,
+          this.wizardData.noteAnglaisBac,
+          this.wizardData.certificationB2,
+        ].every((value) => !!String(value || '').trim());
+
+        if (!mrglBacFieldsValid) {
+          return false;
+        }
+
+        return this.areWizardScoresInRange([
+          this.wizardData.noteMathBac,
+          this.wizardData.noteFrancaisBac,
+          this.wizardData.noteAnglaisBac,
+        ]);
+      }
+
+      return true;
     }
 
     if (step === 3) {
-      // Check if confirmation declaration is checked AND confirmation text is provided
-      return (
-        this.wizardData.confirmationDeclaration === true &&
-        !!String(this.wizardData.confirmationText || '').trim()
-      );
+      if (!this.wizardOffre) {
+        return false;
+      }
+
+      if (this.isWizardMrglOffer() || this.isWizardMrmiOffer()) {
+        return (
+          this.wizardData.confirmationDeclaration === true &&
+          String(this.wizardData.confirmationText || '')
+            .trim()
+            .toLowerCase() === 'je confirme'
+        );
+      }
+
+      return true;
     }
 
     return true;
+  }
+
+  get wizardUploadedCount(): number {
+    return this.wizardUploadedFiles.filter((file) => !!file).length;
+  }
+
+  get wizardUploadCompletion(): number {
+    if (!this.wizardRequiredDocs.length) {
+      return 0;
+    }
+    return Math.round((this.wizardUploadedCount / this.wizardRequiredDocs.length) * 100);
+  }
+
+  onWizardDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.wizardDragOverIndex = index;
+  }
+
+  onWizardDrop(event: DragEvent, index: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.wizardDragOverIndex = null;
+
+    const file = event.dataTransfer?.files?.[0] || null;
+    if (file) {
+      this.setWizardFile(index, file);
+    }
+  }
+
+  onWizardFileSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    if (file) {
+      this.setWizardFile(index, file);
+    }
+    input.value = '';
+  }
+
+  getWizardUploadedFileName(index: number): string {
+    return this.wizardUploadedFiles[index]?.name || '';
+  }
+
+  hasWizardUploadedFile(index: number): boolean {
+    return !!this.wizardUploadedFiles[index];
+  }
+
+  getWizardDocHint(index: number, fallbackHint: string): string {
+    const file = this.wizardUploadedFiles[index];
+    return file ? `✅ ${file.name}` : fallbackHint;
+  }
+
+  removeWizardFile(index: number): void {
+    if (index < 0 || index >= this.wizardUploadedFiles.length) {
+      return;
+    }
+    this.wizardUploadedFiles[index] = null;
+  }
+
+  private setWizardFile(index: number, file: File): void {
+    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+      this.toastService.show('Format invalide. Utilisez PDF, JPG ou PNG.', 'warning');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.toastService.show('Fichier trop volumineux (max 5 Mo).', 'warning');
+      return;
+    }
+
+    this.wizardUploadedFiles[index] = file;
   }
 
   submitWizardCandidature(): void {
@@ -1609,9 +2449,147 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.isWizardStepValid(3)) {
+      this.toastService.show(
+        'Veuillez compléter la validation et la synthèse avant envoi.',
+        'warning',
+      );
+      return;
+    }
+
     const offre = this.wizardOffre;
-    this.closeSubmissionWizard();
-    this.postuler(offre);
+    const formationCode = this.getWizardFormationCode(offre);
+    const academicData = this.buildWizardAcademicDataPayload();
+
+    if (!formationCode) {
+      this.toastService.show(
+        "Impossible d'identifier la formation pour calculer le score.",
+        'error',
+      );
+      return;
+    }
+
+    const wizardPayload: Record<string, unknown> = {
+      nature_candidature: this.wizardData.natureCandidature,
+      etablissement_externe: this.wizardData.etablissementExterne,
+      specialite_externe: this.wizardData.specialiteExterne,
+      etablissement_origine: this.wizardData.etablissementOrigine,
+      selected_diplome: this.wizardData.specialiteDiplome,
+      diplome_reference: this.wizardData.natureDiplome,
+      formation_code: formationCode,
+      score_previsualisation: this.getWizardComputedScore(),
+      academic_data: academicData,
+    };
+
+    this.wizardSubmitting = true;
+    this.postuler(offre, wizardPayload);
+    setTimeout(() => {
+      this.closeSubmissionWizard();
+    }, 450);
+  }
+
+  private getWizardFormationCode(offre: Offre): string {
+    const code = this.getPreinscriptionDetailCode(offre);
+    const map: Record<string, string> = {
+      mpgl: 'MPGL',
+      mpds: 'MPDS',
+      mp3i: 'MP3I',
+      mrgl: 'MRGL',
+      mrmi: 'MRMI',
+      ing_info_gl: 'ING_INFO_GL',
+      ing_em: 'ING_EM',
+    };
+
+    return code ? map[code] || '' : '';
+  }
+
+  private buildWizardAcademicDataPayload(): Record<string, unknown> {
+    const n = (value: string): number | null => this.parseWizardNumeric(value);
+
+    const common = {
+      session: this.wizardData.session3Annee || this.wizardData.session2Annee || 'Principale',
+      redoublements: Number(this.wizardData.nombreRedoublement || '0'),
+    };
+
+    return {
+      common,
+      glDs: {
+        moy1: n(this.wizardData.moyenne1Annee),
+        moy2: n(this.wizardData.moyenne2Annee),
+        moy3: n(this.wizardData.moyenne3Annee),
+      },
+      i3: {
+        moyBac: n(this.wizardData.moyenneBacPrincipale),
+        moyL1: n(this.wizardData.moyenne1Annee),
+        moyL2: n(this.wizardData.moyenne2Annee),
+        moyL3: n(this.wizardData.moyenne3Annee),
+        session1Annee: this.wizardData.session1Annee,
+        session2Annee: this.wizardData.session2Annee,
+        session3Annee: this.wizardData.session3Annee,
+        nombreRedoublement: Number(this.wizardData.nombreRedoublement || '0'),
+      },
+      mrglParcours: this.wizardData.natureDiplome === 'Maitrise' ? 'maitrise' : 'licence',
+      mrglLicence: {
+        moyBac: n(this.wizardData.moyenneBacPrincipale),
+        note_math_bac: n(this.wizardData.noteMathBac),
+        note_francais_bac: n(this.wizardData.noteFrancaisBac),
+        note_anglais_bac: n(this.wizardData.noteAnglaisBac),
+        certification_b2: this.wizardData.certificationB2 === 'oui',
+        annee_obtention_diplome: this.wizardData.anneeObtentionDiplome,
+        moy1: n(this.wizardData.moyenne1Annee),
+        moy2: n(this.wizardData.moyenne2Annee),
+        moy3: n(this.wizardData.moyenne3Annee),
+        session1Annee: this.wizardData.session1Annee,
+        session2Annee: this.wizardData.session2Annee,
+        session3Annee: this.wizardData.session3Annee,
+        nombreRedoublement: Number(this.wizardData.nombreRedoublement || '0'),
+      },
+      mrglMaitrise: {
+        moyBac: n(this.wizardData.moyenneBacPrincipale),
+        note_math_bac: n(this.wizardData.noteMathBac),
+        note_francais_bac: n(this.wizardData.noteFrancaisBac),
+        note_anglais_bac: n(this.wizardData.noteAnglaisBac),
+        certification_b2: this.wizardData.certificationB2 === 'oui',
+        moy1: n(this.wizardData.moyenne1Annee),
+        moy2: n(this.wizardData.moyenne2Annee),
+        moy3: n(this.wizardData.moyenne3Annee),
+        moy4: n(this.wizardData.moyenne4Annee),
+        session1Annee: this.wizardData.session1Annee,
+        session2Annee: this.wizardData.session2Annee,
+        session3Annee: this.wizardData.session3Annee,
+        session4Annee: this.wizardData.session4Annee,
+        nombreRedoublement: Number(this.wizardData.nombreRedoublement || '0'),
+      },
+      mrmiParcours: this.isWizardMrmiIng1EquivalentSelected() ? 'cas2' : 'cas1',
+      mrmiCas1: {
+        moyBac: n(this.wizardData.moyenneBacPrincipale),
+        moyL1: n(this.wizardData.moyenne1Annee),
+        moyL2: n(this.wizardData.moyenne2Annee),
+        moyL3: n(this.wizardData.moyenne3Annee),
+        session1Annee: this.wizardData.session1Annee,
+        session2Annee: this.wizardData.session2Annee,
+        session3Annee: this.wizardData.session3Annee,
+        nombreRedoublement: Number(this.wizardData.nombreRedoublement || '0'),
+      },
+      mrmiCas2: {
+        moyIng1: n(this.wizardData.moyenneIng1),
+        sessionReussiteIng1: this.wizardData.sessionReussiteIng1,
+        nombreRedoublementIng1: Number(this.wizardData.nombreRedoublementIng1 || '0'),
+      },
+      ingParcours: 'cas1',
+      ingCas1: {
+        moy1: n(this.wizardData.moyenne1Annee),
+        moy2: n(this.wizardData.moyenne2Annee),
+        session1Annee: this.wizardData.session1Annee,
+        session2Annee: this.wizardData.session2Annee,
+        nombreRedoublement: Number(this.wizardData.nombreRedoublement || '0'),
+      },
+      ingCas2: {
+        m1: n(this.wizardData.moyenne1Annee),
+        m2: n(this.wizardData.moyenne2Annee),
+        m3: n(this.wizardData.moyenne3Annee),
+      },
+    };
   }
 
   accederAuDossier(candidature: Candidature): void {
@@ -1631,11 +2609,23 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
   }
 
-  getDossierNumber(candidatureNumero: string): string | null {
+  getDossierNumber(candidatureOrNumero: string | Candidature): string | null {
+    const numeroCandidature =
+      typeof candidatureOrNumero === 'string' ? candidatureOrNumero : candidatureOrNumero.numero;
     const dossier = this.dossiersCandidature.find(
-      (d) => d.numero_candidature === candidatureNumero,
+      (d) => d.numero_candidature === numeroCandidature,
     );
-    return dossier ? dossier.numero_dossier : null;
+
+    if (dossier) {
+      return dossier.numero_dossier;
+    }
+
+    if (typeof candidatureOrNumero !== 'string') {
+      const tokens = (candidatureOrNumero.numero || '').split('-').filter(Boolean);
+      return tokens.length >= 2 ? tokens.slice(0, 2).join('-') : candidatureOrNumero.numero || null;
+    }
+
+    return null;
   }
 
   dossiersAffiches(): DossierCandidature[] {
@@ -1719,6 +2709,128 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return this.mesCandidatures.filter((c) => this.isCycleIngenieur(c));
   }
 
+  get candidatureTotalCount(): number {
+    return this.mesCandidatures.length;
+  }
+
+  get candidaturePendingCount(): number {
+    return this.mesCandidatures.filter((candidature) => this.isPendingCandidature(candidature))
+      .length;
+  }
+
+  get candidatureValidatedCount(): number {
+    return this.mesCandidatures.filter((candidature) => this.isValidatedCandidature(candidature))
+      .length;
+  }
+
+  hasMissingPieces(candidature: Candidature): boolean {
+    return candidature.dossier_depose !== true || candidature.dossier_valide !== true;
+  }
+
+  private normalizeStatus(value: string | undefined | null): string {
+    return (value || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_');
+  }
+
+  isAdmitted(candidature: Candidature): boolean {
+    const etat = this.normalizeStatus(candidature.etat_candidature);
+    const statut = this.normalizeStatus(candidature.statut);
+    return (
+      etat.includes('admis') ||
+      etat.includes('selectionne') ||
+      ['selectionne', 'admis', 'inscrit'].includes(statut)
+    );
+  }
+
+  isFicheInscriptionDeposee(candidature: Candidature): boolean {
+    const statutInscription = this.normalizeStatus(candidature.statut_inscription);
+    return ['paiement_soumis', 'valide', 'confirme'].includes(statutInscription);
+  }
+
+  get admittedCandidatures(): Candidature[] {
+    return [...this.mesCandidatures]
+      .filter((candidature) => this.isAdmitted(candidature))
+      .sort((a, b) => a.numero.localeCompare(b.numero));
+  }
+
+  getCandidatureStatusStepper(_candidature: Candidature): string[] {
+    return ['Reçu', 'Vérifié', 'Admis'];
+  }
+
+  getCandidatureStatusIndex(candidature: Candidature): number {
+    const status = (candidature.statut || '').toLowerCase();
+
+    if (['selectionne', 'inscrit', 'valide', 'traitee'].includes(status)) {
+      return 2;
+    }
+
+    if (
+      [
+        'preselectionne',
+        'sous_examen',
+        'dossier_depose',
+        'paiement_soumis',
+        'rejete',
+        'non_admis',
+        'non_preselectionne',
+      ].includes(status) ||
+      candidature.dossier_valide === true
+    ) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  getStatusBadgeClass(statut?: string): string {
+    const value = (statut || '').toLowerCase();
+
+    if (this.isValidatedStatus(value)) {
+      return 'chip-success';
+    }
+
+    if (this.isRejectedStatus(value)) {
+      return 'chip-danger';
+    }
+
+    if (['preselectionne', 'sous_examen', 'soumis'].includes(value)) {
+      return 'chip-info';
+    }
+
+    return 'chip-warning';
+  }
+
+  private isValidatedStatus(status: string): boolean {
+    return ['selectionne', 'inscrit', 'valide', 'traitee'].includes(status);
+  }
+
+  private isRejectedStatus(status: string): boolean {
+    return ['rejete', 'non_admis', 'non_preselectionne'].includes(status);
+  }
+
+  private isValidatedCandidature(candidature: Candidature): boolean {
+    return this.isValidatedStatus((candidature.statut || '').toLowerCase());
+  }
+
+  private isPendingCandidature(candidature: Candidature): boolean {
+    const status = (candidature.statut || '').toLowerCase();
+    return (
+      [
+        'en_attente',
+        'soumis',
+        'sous_examen',
+        'preselectionne',
+        'dossier_depose',
+        'paiement_soumis',
+      ].includes(status) ||
+      (!this.isValidatedCandidature(candidature) && !this.isRejectedStatus(status))
+    );
+  }
+
   isCycleIngenieur(candidature: Candidature): boolean {
     const nom = (candidature.master_nom || '').toLowerCase();
     return nom.includes('ingénieur') || nom.includes('ingenieur');
@@ -1736,7 +2848,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const rawConfirmed =
       candidature.statut_inscription === 'valide' || candidature.statut === 'inscrit';
 
-    // Verrouillage séquentiel: une étape n'est validée que si toutes les précédentes le sont.
     const submitted = rawSubmitted;
     const preselected = submitted && rawPreselected;
     const dossierDone = preselected && rawDossierDone;
@@ -1852,7 +2963,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
               : 'pending',
         hint:
           (isSelected || isSelectionWaiting) && !inscriptionConfirmed
-            ? 'En attente de confirmation d’inscription'
+            ? "En attente de confirmation d'inscription"
             : undefined,
       },
     ];
@@ -1886,7 +2997,26 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   canAccessInscriptionEtape(candidature: Candidature): boolean {
-    return ['selectionne', 'inscrit'].includes(candidature.statut);
+    const statut = this.normalizeStatus(candidature.statut);
+    const etat = this.normalizeStatus(candidature.etat_candidature);
+    return (
+      ['selectionne', 'inscrit'].includes(statut) ||
+      etat.includes('selectionne') ||
+      etat.includes('admis')
+    );
+  }
+
+  isWithinInscriptionDeadline(candidature: Candidature): boolean {
+    if (!candidature.date_limite_modification) {
+      return true;
+    }
+
+    const deadline = new Date(candidature.date_limite_modification).getTime();
+    if (Number.isNaN(deadline)) {
+      return true;
+    }
+
+    return deadline >= Date.now();
   }
 
   workflowProcessGuide(): Array<{ title: string; description: string }> {
@@ -1947,6 +3077,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       this.notifyActionBlocked(
         "Vous devez terminer les étapes précédentes (présélection, dépôt dossier, sélection) avant l'inscription en ligne.",
       );
+      return;
+    }
+
+    if (!this.isWithinInscriptionDeadline(candidature)) {
+      this.notifyActionBlocked("Le délai d'inscription est dépassé pour cette candidature.");
       return;
     }
 
@@ -2065,6 +3200,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.isWithinInscriptionDeadline(candidature)) {
+      this.notifyActionBlocked("Le délai d'inscription est dépassé pour cette candidature.");
+      return;
+    }
+
     this.selectedCandidatureForInscription = candidature;
     fileInput.value = '';
     fileInput.click();
@@ -2083,9 +3223,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const reference = prompt('Entrez la référence de paiement (inscription.tn):', '');
+    const reference = prompt("Entrez la référence de la fiche d'inscription (inscription.tn):", '');
     if (!reference || !reference.trim()) {
-      this.showAlertMessage('❌ Référence de paiement obligatoire');
+      this.showAlertMessage("❌ Référence de la fiche d'inscription obligatoire");
       return;
     }
 
@@ -2100,7 +3240,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     this.selectedDossierNumber = numeroDossier;
     this.syncDossierPreferenceFormFromSelection();
-    this.switchView('importer');
+    this.switchView('mon-dossier', { preserveDossierSelection: true });
+  }
+
+  ouvrirRecapDossierDepuisCandidature(candidatureNumero: string): void {
+    const numeroDossier = this.getDossierNumber(candidatureNumero);
+    if (!numeroDossier) {
+      this.showAlertMessage('Aucun dossier associé à cette candidature pour le moment.');
+      return;
+    }
+    this.ouvrirDossierDepuisTable(numeroDossier);
   }
 
   resetSelectionDossier(): void {
@@ -2318,6 +3467,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           etablissementOrigine: "Institut Supérieur de l'Informatique et des Mathématiques (ISIMM)",
           capaciteAccueille: '30',
           typeDiplome: 'Licence en Sciences de l' + 'Informatique',
+          coefficients: 'Bac (40%), Licence (60%)',
           datesImportantes: 'Inscription sur le site web : www.isimm.rnu.tn/public/formulaires',
         },
         {
@@ -2326,6 +3476,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           capaciteAccueille: '05',
           typeDiplome:
             'Licence en Sciences de l' + 'Informatique ou en Informatique de Gestion (uniquement)',
+          coefficients: 'Moyenne Générale > 12/20',
           datesImportantes:
             'Du jour de la publication de cet avis jusqu au 22 juillet 2025. Proclamation de la liste des étudiants présélectionnés : Le 28 juillet 2025. Dépôt des dossiers numériques : Du 28 juillet au 31 juillet 2025. Proclamation de la liste finale : Le 08 août 2025.',
         },
@@ -2339,6 +3490,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         capaciteAccueille: String(offre.places || 0),
         typeDiplome:
           offre.type === 'cycle_ingenieur' ? 'Cycle préparatoire / ingénieur' : 'Licence',
+        coefficients: 'Standard ISIMM',
         datesImportantes: `Date limite : ${new Date(offre.date_limite).toLocaleDateString('fr-FR')}`,
       },
     ];
@@ -2416,6 +3568,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.isWithinInscriptionDeadline(candidature)) {
+      this.notifyActionBlocked("Paiement refusé: le délai d'inscription est dépassé.");
+      return;
+    }
+
     const token = this.authService.getAccessToken();
     const formData = new FormData();
 
@@ -2430,12 +3587,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: () => {
-          this.showAlertMessage('✅ Paiement soumis avec succès !');
+          this.showAlertMessage("✅ Fiche d'inscription déposée avec succès !");
           candidature.statut_inscription = 'paiement_soumis';
         },
         error: (error) => {
           console.error('Erreur:', error);
-          this.showAlertMessage('❌ Erreur lors de la soumission du paiement');
+          this.showAlertMessage("❌ Erreur lors du dépôt de la fiche d'inscription");
         },
       });
   }
@@ -2528,6 +3685,19 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     );
   }
 
+  setProfileTab(tab: ProfileTab): void {
+    this.activeProfileTab = tab;
+  }
+
+  enableProfileEdit(): void {
+    this.isProfileEditMode = true;
+  }
+
+  cancelProfileEdit(): void {
+    this.isProfileEditMode = false;
+    this.profileData = { ...this.currentUser };
+  }
+
   updateProfile(): void {
     const token = this.authService.getAccessToken();
 
@@ -2539,6 +3709,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         next: () => {
           this.showAlertMessage('✅ Profil mis à jour avec succès !');
           this.currentUser = { ...this.currentUser, ...this.profileData };
+          this.isProfileEditMode = false;
         },
         error: (error) => {
           console.error('Erreur:', error);
@@ -2585,31 +3756,23 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       });
   }
 
-  onDragOver(event: DragEvent): void {
+  // ── Drag & Drop enrichi ──
+  onDragOver(event: DragEvent, docId?: number): void {
     event.preventDefault();
     event.stopPropagation();
+    if (docId !== undefined) {
+      this.dragOverDocId = docId;
+    }
   }
 
-  private isAllowedUploadFile(file: File): boolean {
-    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
-    const extension = (file.name.split('.').pop() || '').toLowerCase();
-
-    if (!allowedExtensions.includes(extension)) {
-      this.showAlertMessage('❌ Format non supporté. Utilisez PDF, JPG ou PNG.');
-      return false;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
-      return false;
-    }
-
-    return true;
+  onDragLeave(): void {
+    this.dragOverDocId = null;
   }
 
-  onDocumentDrop(event: DragEvent, document: Document): void {
+  onDocumentDrop(event: DragEvent, doc: Document): void {
     event.preventDefault();
     event.stopPropagation();
+    this.dragOverDocId = null;
 
     const files = event.dataTransfer?.files;
     if (!files || files.length === 0) {
@@ -2621,7 +3784,86 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.selectedDocumentFiles[document.id] = file;
+    this.selectedDocumentFiles[doc.id] = file;
+  }
+
+  // ── Aperçu document ──
+  ouvrirApercu(doc: Document): void {
+    this.apercuDoc = doc;
+  }
+
+  isPdf(url?: string): boolean {
+    return !!url && /\.pdf(?:$|[?#])/i.test(url);
+  }
+
+  getApercuPdfUrl(url?: string): SafeResourceUrl | null {
+    if (!url) {
+      return null;
+    }
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  fermerApercu(): void {
+    this.apercuDoc = null;
+  }
+
+  telechargerDocument(doc: Document): void {
+    if (doc.fichier_url) {
+      window.open(doc.fichier_url, '_blank');
+    }
+  }
+
+  getDocumentStatusLabel(doc: Document): 'Validé' | 'Erreur' | 'Manquant' {
+    if (this.uploadErrors[doc.id]) {
+      return 'Erreur';
+    }
+    return doc.depose ? 'Validé' : 'Manquant';
+  }
+
+  getDocumentStatusIcon(doc: Document): string {
+    const status = this.getDocumentStatusLabel(doc);
+    if (status === 'Validé') {
+      return 'fa-check-circle';
+    }
+    if (status === 'Erreur') {
+      return 'fa-exclamation-circle';
+    }
+    return 'fa-clock';
+  }
+
+  // ── Finalisation dossier ──
+  finaliserDossier(): void {
+    if (this.completionPercent < 100) {
+      this.toastService.show(
+        'Veuillez déposer tous les documents obligatoires avant de finaliser.',
+        'warning',
+      );
+      return;
+    }
+    this.finalisationLoading = true;
+    // Appel API ici — remplacer le setTimeout par l'appel réel
+    // this.dossierService.finaliserDossier(this.selectedDossierNumber).subscribe(...)
+    setTimeout(() => {
+      this.finalisationLoading = false;
+      this.toastService.show('Dossier finalisé avec succès !', 'success');
+    }, 1500);
+  }
+
+  private isAllowedUploadFile(file: File): boolean {
+    const allowedExtensions = ['pdf'];
+    const extension = (file.name.split('.').pop() || '').toLowerCase();
+
+    if (!allowedExtensions.includes(extension)) {
+      this.showAlertMessage('❌ Format non supporté. Utilisez uniquement le format PDF.');
+      return false;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showAlertMessage('❌ Fichier trop volumineux (max 5 Mo)');
+      return false;
+    }
+
+    return true;
   }
 
   onDocumentFileSelected(event: Event, document: Document): void {
@@ -2634,9 +3876,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     if (!this.isAllowedUploadFile(file)) {
       input.value = '';
+      this.uploadErrors[document.id] = 'Format invalide ou taille > 5 Mo.';
       return;
     }
 
+    this.uploadErrors[document.id] = '';
     this.selectedDocumentFiles[document.id] = file;
   }
 
@@ -2736,10 +3980,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           });
 
           this.selectedDocumentFiles[document.id] = null;
+          this.uploadErrors[document.id] = '';
           if (onSuccess) onSuccess();
         },
         error: (error) => {
           console.error('Erreur:', error);
+          this.uploadErrors[document.id] = "Erreur d'envoi. Réessayez.";
           if (onError) onError();
         },
       });
@@ -2799,11 +4045,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    if (!bytes) return '';
+    return bytes < 1024 * 1024
+      ? (bytes / 1024).toFixed(1) + ' Ko'
+      : (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
   }
 
   voirFichier(fichier: FichierHistorique): void {

@@ -52,7 +52,7 @@
       </div>
 
       <div *ngIf="currentStep === 2" class="step-panel">
-        <h2>Diplôme et formation</h2>
+        <h2>Informations Bac</h2>
         <div class="grid-2">
           <div class="form-group">
             <label>Formation demandée</label>
@@ -75,6 +75,35 @@
               <option value="">Sélectionner un diplôme</option>
               <option *ngFor="let d of diplomeOptions" [value]="d">{{ d }}</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>Nature de candidature</label>
+            <select [(ngModel)]="natureCandidature" name="nature_candidature">
+              <option value="">Sélectionner</option>
+              <option value="Étudiant ISIMM">Étudiant ISIMM</option>
+              <option value="Étudiant Externe">Étudiant Externe</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2" *ngIf="natureCandidature === 'Étudiant Externe'">
+          <div class="form-group">
+            <label>Etablissement de l'étudiant externe</label>
+            <input
+              type="text"
+              [(ngModel)]="etablissementExterne"
+              name="etablissement_externe"
+              placeholder="Nom de l'établissement"
+            />
+          </div>
+          <div class="form-group">
+            <label>Spécialité de l'étudiant externe</label>
+            <input
+              type="text"
+              [(ngModel)]="specialiteExterne"
+              name="specialite_externe"
+              placeholder="Spécialité"
+            />
           </div>
         </div>
 
@@ -130,7 +159,7 @@
       </div>
 
       <div *ngIf="currentStep === 3" class="step-panel">
-        <h2>Note et moyenne</h2>
+        <h2>Informations Licence</h2>
         <div class="grid-2">
           <div class="form-group">
             <label>Session de réussite</label>

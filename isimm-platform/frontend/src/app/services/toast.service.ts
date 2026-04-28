@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -12,9 +12,7 @@ export interface ToastMessage {
   providedIn: 'root',
 })
 export class ToastService {
-  private readonly messageSubject = new BehaviorSubject<ToastMessage | null>(null);
-  readonly message$ = this.messageSubject.asObservable();
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  constructor(private toastr: ToastrService) {}
 
   private normalizeText(text: string): string {
     return String(text ?? '')
@@ -25,22 +23,26 @@ export class ToastService {
 
   show(text: string, type: ToastType = 'info', durationMs: number = 3500): void {
     const normalized = this.normalizeText(text);
-    this.messageSubject.next({ text: normalized || 'Notification', type });
+    const message = normalized || 'Notification';
+    const title = 'ISIMM';
+    const options = { timeOut: durationMs };
 
-    if (this.timer) {
-      clearTimeout(this.timer);
+    if (type === 'success') {
+      this.toastr.success(message, title, options);
+      return;
     }
-
-    this.timer = setTimeout(() => {
-      this.clear();
-    }, durationMs);
+    if (type === 'warning') {
+      this.toastr.warning(message, title, options);
+      return;
+    }
+    if (type === 'error') {
+      this.toastr.error(message, title, options);
+      return;
+    }
+    this.toastr.info(message, title, options);
   }
 
   clear(): void {
-    this.messageSubject.next(null);
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
+    this.toastr.clear();
   }
 }

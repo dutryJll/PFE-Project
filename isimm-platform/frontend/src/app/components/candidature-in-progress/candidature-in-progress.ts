@@ -79,6 +79,9 @@ export class CandidatureInProgressComponent implements OnInit {
 
   selectedFormation: FormationCode | '' = '';
   selectedDiplome = '';
+  natureCandidature: 'Étudiant ISIMM' | 'Étudiant Externe' | '' = '';
+  etablissementExterne = '';
+  specialiteExterne = '';
   mpGlDs = {
     etablissementOrigine: '',
     diplomeReference: '',
@@ -156,8 +159,8 @@ export class CandidatureInProgressComponent implements OnInit {
 
   steps = [
     { no: 1, label: 'Informations personnelles' },
-    { no: 2, label: 'Diplôme et formation' },
-    { no: 3, label: 'Note et moyenne' },
+    { no: 2, label: 'Informations Bac' },
+    { no: 3, label: 'Informations Licence' },
     { no: 4, label: 'Synthèse et validation' },
   ];
 
@@ -240,13 +243,20 @@ export class CandidatureInProgressComponent implements OnInit {
 
     if (this.currentStep === 2) {
       const diplomeOk = this.diplomes.some((d) => !!d.etablissement.trim() && !!d.annee.trim());
-      const hasBase = !!this.selectedFormation && !!this.selectedDiplome && diplomeOk;
+      const hasBase =
+        !!this.selectedFormation && !!this.selectedDiplome && !!this.natureCandidature && diplomeOk;
       if (!hasBase) {
         return false;
       }
 
       if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
-        return !!this.mpGlDs.etablissementOrigine.trim() && !!this.mpGlDs.diplomeReference.trim();
+        if (!this.mpGlDs.etablissementOrigine.trim() || !this.mpGlDs.diplomeReference.trim()) {
+          return false;
+        }
+      }
+
+      if (this.natureCandidature === 'Étudiant Externe') {
+        return !!this.etablissementExterne.trim() && !!this.specialiteExterne.trim();
       }
 
       return true;
@@ -317,6 +327,86 @@ export class CandidatureInProgressComponent implements OnInit {
     });
   }
 
+  private isScoreInRange(value: string): boolean {
+    const parsed = Number(
+      String(value ?? '')
+        .replace(',', '.')
+        .trim(),
+    );
+    if (!Number.isFinite(parsed)) {
+      return false;
+    }
+    return parsed >= 0 && parsed <= 20;
+  }
+
+  private areScoresInRange(values: string[]): boolean {
+    return values.every((value) => this.isScoreInRange(value));
+  }
+
+  private getStep3ScoreValues(): string[] {
+    const values: string[] = [];
+
+    if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
+      values.push(this.academic.glDs.moy1, this.academic.glDs.moy2, this.academic.glDs.moy3);
+    }
+
+    if (this.selectedFormation === 'MP3I') {
+      values.push(
+        this.academic.i3.moyBac,
+        this.academic.i3.moyL1,
+        this.academic.i3.moyL2,
+        this.academic.i3.moyL3,
+      );
+    }
+
+    if (this.selectedFormation === 'MRGL') {
+      if (this.mrglParcours === 'licence') {
+        values.push(
+          this.academic.mrglLicence.moy1,
+          this.academic.mrglLicence.moy2,
+          this.academic.mrglLicence.moy3,
+          this.academic.mrglLicence.moyBac,
+          this.academic.mrglLicence.noteMathBac,
+          this.academic.mrglLicence.bonusLangue,
+          this.academic.mrglLicence.bonusAnneeDiplome,
+        );
+      } else {
+        values.push(
+          this.academic.mrglMaitrise.moy1,
+          this.academic.mrglMaitrise.moy2,
+          this.academic.mrglMaitrise.moy3,
+          this.academic.mrglMaitrise.moy4,
+          this.academic.mrglMaitrise.moyBac,
+          this.academic.mrglMaitrise.noteMathBac,
+          this.academic.mrglMaitrise.bonusLangue,
+        );
+      }
+    }
+
+    if (this.selectedFormation === 'MRMI') {
+      if (this.mrmiParcours === 'cas1') {
+        values.push(
+          this.academic.mrmiCas1.moyBac,
+          this.academic.mrmiCas1.moyL1,
+          this.academic.mrmiCas1.moyL2,
+          this.academic.mrmiCas1.moyL3,
+        );
+      } else {
+        values.push(this.academic.mrmiCas2.moyIng1);
+      }
+    }
+
+    if (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') {
+      if (this.ingParcours === 'cas1') {
+        values.push(this.academic.ingCas1.moy1, this.academic.ingCas1.moy2);
+      } else {
+        values.push(this.academic.ingCas2.m1, this.academic.ingCas2.m2, this.academic.ingCas2.m3);
+      }
+    }
+
+    return values.filter((value) => String(value ?? '').trim() !== '');
+  }
+
   private isStep3Valid(): boolean {
     const commonValid = this.hasValues([
       this.academic.commun.session,
@@ -328,44 +418,52 @@ export class CandidatureInProgressComponent implements OnInit {
     }
 
     if (this.selectedFormation === 'MPGL' || this.selectedFormation === 'MPDS') {
-      return this.hasValues([
-        this.academic.glDs.moy1,
-        this.academic.glDs.moy2,
-        this.academic.glDs.moy3,
-      ]);
+      return (
+        this.hasValues([
+          this.academic.glDs.moy1,
+          this.academic.glDs.moy2,
+          this.academic.glDs.moy3,
+        ]) && this.areScoresInRange(this.getStep3ScoreValues())
+      );
     }
 
     if (this.selectedFormation === 'MP3I') {
-      return this.hasValues([
-        this.academic.i3.moyBac,
-        this.academic.i3.moyL1,
-        this.academic.i3.moyL2,
-        this.academic.i3.moyL3,
-      ]);
+      return (
+        this.hasValues([
+          this.academic.i3.moyBac,
+          this.academic.i3.moyL1,
+          this.academic.i3.moyL2,
+          this.academic.i3.moyL3,
+        ]) && this.areScoresInRange(this.getStep3ScoreValues())
+      );
     }
 
     if (this.selectedFormation === 'MRGL') {
       if (this.mrglParcours === 'licence') {
-        return this.hasValues([
-          this.academic.mrglLicence.moy1,
-          this.academic.mrglLicence.moy2,
-          this.academic.mrglLicence.moy3,
-          this.academic.mrglLicence.moyBac,
-          this.academic.mrglLicence.noteMathBac,
-          this.academic.mrglLicence.bonusLangue,
-          this.academic.mrglLicence.bonusAnneeDiplome,
-        ]);
+        return (
+          this.hasValues([
+            this.academic.mrglLicence.moy1,
+            this.academic.mrglLicence.moy2,
+            this.academic.mrglLicence.moy3,
+            this.academic.mrglLicence.moyBac,
+            this.academic.mrglLicence.noteMathBac,
+            this.academic.mrglLicence.bonusLangue,
+            this.academic.mrglLicence.bonusAnneeDiplome,
+          ]) && this.areScoresInRange(this.getStep3ScoreValues())
+        );
       }
 
-      return this.hasValues([
-        this.academic.mrglMaitrise.moy1,
-        this.academic.mrglMaitrise.moy2,
-        this.academic.mrglMaitrise.moy3,
-        this.academic.mrglMaitrise.moy4,
-        this.academic.mrglMaitrise.moyBac,
-        this.academic.mrglMaitrise.noteMathBac,
-        this.academic.mrglMaitrise.bonusLangue,
-      ]);
+      return (
+        this.hasValues([
+          this.academic.mrglMaitrise.moy1,
+          this.academic.mrglMaitrise.moy2,
+          this.academic.mrglMaitrise.moy3,
+          this.academic.mrglMaitrise.moy4,
+          this.academic.mrglMaitrise.moyBac,
+          this.academic.mrglMaitrise.noteMathBac,
+          this.academic.mrglMaitrise.bonusLangue,
+        ]) && this.areScoresInRange(this.getStep3ScoreValues())
+      );
     }
 
     if (this.selectedFormation === 'MRMI') {
@@ -378,35 +476,42 @@ export class CandidatureInProgressComponent implements OnInit {
             this.academic.mrmiCas1.moyL1,
             this.academic.mrmiCas1.moyL2,
             this.academic.mrmiCas1.moyL3,
-          ])
+          ]) &&
+          this.areScoresInRange(this.getStep3ScoreValues())
         );
       }
 
-      return this.hasValues([
-        this.academic.mrmiCas2.moyIng1,
-        this.academic.mrmiCas2.sMalus,
-        this.academic.mrmiCas2.prPenalite,
-        this.academic.mrmiCas2.equivalence80,
-      ]);
+      return (
+        this.hasValues([
+          this.academic.mrmiCas2.moyIng1,
+          this.academic.mrmiCas2.sMalus,
+          this.academic.mrmiCas2.prPenalite,
+          this.academic.mrmiCas2.equivalence80,
+        ]) && this.areScoresInRange(this.getStep3ScoreValues())
+      );
     }
 
     if (this.selectedFormation === 'ING_INFO_GL' || this.selectedFormation === 'ING_EM') {
       if (this.ingParcours === 'cas1') {
-        return this.hasValues([
-          this.academic.ingCas1.moy1,
-          this.academic.ingCas1.moy2,
-          this.academic.ingCas1.sessionAnnee1,
-          this.academic.ingCas1.sessionAnnee2,
-        ]);
+        return (
+          this.hasValues([
+            this.academic.ingCas1.moy1,
+            this.academic.ingCas1.moy2,
+            this.academic.ingCas1.sessionAnnee1,
+            this.academic.ingCas1.sessionAnnee2,
+          ]) && this.areScoresInRange(this.getStep3ScoreValues())
+        );
       }
 
-      return this.hasValues([
-        this.academic.ingCas2.m1,
-        this.academic.ingCas2.m2,
-        this.academic.ingCas2.m3,
-        this.academic.ingCas2.r1,
-        this.academic.ingCas2.r2,
-      ]);
+      return (
+        this.hasValues([
+          this.academic.ingCas2.m1,
+          this.academic.ingCas2.m2,
+          this.academic.ingCas2.m3,
+          this.academic.ingCas2.r1,
+          this.academic.ingCas2.r2,
+        ]) && this.areScoresInRange(this.getStep3ScoreValues())
+      );
     }
 
     return false;
@@ -428,6 +533,14 @@ export class CandidatureInProgressComponent implements OnInit {
           label: 'Diplome (profil)',
           value: this.mpGlDs.diplomeReference || '-',
         },
+      );
+    }
+
+    lines.push({ label: 'Nature de candidature', value: this.natureCandidature || '-' });
+    if (this.natureCandidature === 'Étudiant Externe') {
+      lines.push(
+        { label: 'Etablissement externe', value: this.etablissementExterne || '-' },
+        { label: 'Spécialité externe', value: this.specialiteExterne || '-' },
       );
     }
 
@@ -523,6 +636,11 @@ export class CandidatureInProgressComponent implements OnInit {
       return;
     }
 
+    if (!this.areScoresInRange(this.getStep3ScoreValues())) {
+      alert('❌ Les moyennes et notes doivent être comprises entre 0 et 20.');
+      return;
+    }
+
     if (!this.offreId) {
       alert('✅ Formulaire complété (mode démonstration).');
       this.router.navigate(['/candidat/dashboard'], { queryParams: { view: 'candidatures' } });
@@ -544,8 +662,11 @@ export class CandidatureInProgressComponent implements OnInit {
           master_id: this.offreId,
           formation_code: this.selectedFormation,
           selected_diplome: this.selectedDiplome,
+          nature_candidature: this.natureCandidature,
           etablissement_origine: this.mpGlDs.etablissementOrigine,
+          etablissement_externe: this.etablissementExterne,
           diplome_reference: this.mpGlDs.diplomeReference,
+          specialite_externe: this.specialiteExterne,
           diplomes: this.diplomes,
           academic_data: {
             common: this.academic.commun,

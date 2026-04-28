@@ -1,24 +1,6 @@
 <router-outlet />
 
-<div
-  class="app-toast"
-  *ngIf="toastService.message$ | async as toast"
-  [class.toast-success]="toast.type === 'success'"
-  [class.toast-info]="toast.type === 'info'"
-  [class.toast-warning]="toast.type === 'warning'"
-  [class.toast-error]="toast.type === 'error'"
-  (click)="toastService.clear()"
->
-  <span class="toast-icon" aria-hidden="true">
-    <i
-      class="fas"
-      [ngClass]="{
-        'fa-check-circle': toast.type === 'success',
-        'fa-circle-info': toast.type === 'info',
-        'fa-triangle-exclamation': toast.type === 'warning',
-        'fa-circle-xmark': toast.type === 'error',
-      }"
-    ></i>
-  </span>
-  <span>{{ toast.text }}</span>
-</div>
+<button class="theme-toggle" type="button" (click)="toggleTheme()" aria-label="Basculer le thème">
+  <i class="fas" [ngClass]="(themeService.isDark$ | async) ? 'fa-sun' : 'fa-moon'"></i>
+  <span>{{ (themeService.isDark$ | async) ? 'Mode clair' : 'Mode sombre' }}</span>
+</button>

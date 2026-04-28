@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ToastService } from './services/toast.service';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -13,5 +13,9 @@ import { ToastService } from './services/toast.service';
 export class AppComponent {
   title = 'frontend';
 
-  constructor(public toastService: ToastService) {}
+  constructor(public themeService: ThemeService) {}
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
 }

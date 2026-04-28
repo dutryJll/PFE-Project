@@ -99,7 +99,7 @@
         </div>
 
         <div *ngIf="isLoading" class="loading-placeholder">
-          <p>Chargement des dossiers...</p>
+          <app-skeleton-loader variant="table" [rows]="6"></app-skeleton-loader>
         </div>
 
         <div *ngIf="!isLoading && filteredCandidatures.length === 0" class="empty-state">

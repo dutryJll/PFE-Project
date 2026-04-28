@@ -1,0 +1,187 @@
+@startuml
+title Sprint 1 - Diagramme MVC base sur les fichiers reels de la plateforme
+
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam ArrowColor #2F6DB3
+
+package "View (Angular)" #EAF4FF {
+  class "frontend/src/app/components/login-candidat/login-candidat.component.ts\nLoginCandidatComponent" as FLoginCandidat <<View File>> {
+    +email: string
+    +password: string
+    +onLogin(): void
+  }
+
+  class "frontend/src/app/components/login-admin/login-admin.component.ts\nLoginAdminComponent" as FLoginAdmin <<View File>> {
+    +email: string
+    +password: string
+    +onLogin(): void
+  }
+
+  class "frontend/src/app/components/login-commission/login-commission.component.ts\nLoginCommissionComponent" as FLoginCommission <<View File>> {
+    +username: string
+    +password: string
+    +onLogin(): void
+  }
+
+  class "frontend/src/app/services/auth.service.ts\nAuthService" as FAuthService <<Service File>> {
+    +login(email: string, password: string): Observable<LoginResponse>
+    +register(userData: any): Observable<any>
+    +logout(): void
+    +getCurrentUser(): UserDto
+    +getMyEnabledActions(): Observable<string[]>
+  }
+
+  class "frontend/src/app/services/auth.ts\ninterface User" as FUserDto <<Model File>> {
+    +id: number
+    +email: string
+    +username: string
+    +role: string
+    +first_name: string
+    +last_name: string
+  }
+
+  class "frontend/src/app/services/auth.ts\ninterface LoginResponse" as FLoginResponse <<Model File>> {
+    +access: string
+    +refresh: string
+    +user: User
+  }
+}
+
+package "Controller (Django REST views)" #E8FFF5 {
+  class "services/auth-service/auth_app/views.py\nmodule views" as BAuthViews <<Controller File>> {
+    +register(request): Response
+    +login(request): Response
+    +verify_email(request, token): Response
+    +get_profile(request): Response
+    +update_profile(request): Response
+    +list_users(request): Response
+    +create_user(request): Response
+    +user_detail_update(request, user_id): Response
+    +delete_user(request, user_id): Response
+    +update_user_account_status(request, user_id): Response
+    +create_commission_member(request): Response
+    +list_commission_members(request): Response
+    +delete_commission_member(request, user_id): Response
+    +set_password_with_token(request, token): Response
+    +verify_token(request, token): Response
+    +action_roles_matrix(request): Response
+    +update_action_roles_matrix(request): Response
+    +my_enabled_actions(request): Response
+  }
+
+  class "services/auth-service/auth_app/urls.py\nurlpatterns" as BAuthUrls <<Routing File>> {
+    +/register/
+    +/login/
+    +/profile/
+    +/users/
+    +/my-actions/
+  }
+
+  class "rest_framework_simplejwt.tokens.RefreshToken" as BJwt <<External JWT>> {
+    +for_user(user): token pair
+  }
+}
+
+package "Model (Django ORM + DRF serializers)" #FFF4E8 {
+  class "services/auth-service/auth_app/models.py\nclass User" as MUser <<Model File>> {
+    +id: int
+    +email: string
+    +username: string
+    +first_name: string
+    +last_name: string
+    +role: string
+    +is_active: bool
+    +is_email_verified: bool
+    +email_verification_token: UUID
+    +phone: string
+    +address: text
+    +date_inscription: datetime
+    +derniere_connexion: datetime
+  }
+
+  class "services/auth-service/auth_app/models.py\nclass ActionRole" as MActionRole <<Model File>> {
+    +action_no: int
+    +action_name: string
+    +target_role: string
+    +enabled: bool
+  }
+
+  class "services/auth-service/auth_app/models.py\nclass ActionLog" as MActionLog <<Model File>> {
+    +action: string
+    +module: string
+    +description: text
+    +succes: bool
+    +timestamp: datetime
+  }
+
+  class "services/auth-service/auth_app/models.py\nclass Role" as MRole <<Model File>> {
+    +nom: string
+    +description: text
+    +actif: bool
+  }
+
+  class "services/auth-service/auth_app/models.py\nclass Permission" as MPermission <<Model File>> {
+    +code: string
+    +nom: string
+    +module: string
+  }
+
+  class "services/auth-service/auth_app/serializers.py\nclass UserSerializer" as SUser <<Serializer File>> {
+    +to_representation(user): dict
+    +update(instance, validated_data): User
+  }
+
+  class "services/auth-service/auth_app/serializers.py\nclass RegisterSerializer" as SRegister <<Serializer File>> {
+    +validate(data): dict
+    +create(validated_data): User
+  }
+
+  class "services/auth-service/auth_app/serializers.py\nclass ActionRoleSerializer" as SActionRole <<Serializer File>> {
+    +to_representation(action_role): dict
+  }
+}
+
+class Utilisateur <<Actor>>
+
+Utilisateur --> FLoginCandidat : saisit email/password
+Utilisateur --> FLoginAdmin : saisit email/password
+Utilisateur --> FLoginCommission : saisit username/password
+
+FLoginCandidat --> FAuthService : login()
+FLoginAdmin --> FAuthService : login()
+FLoginCommission --> FAuthService : login()
+FAuthService --> BAuthViews : HTTP /api/auth/*
+FAuthService --> FUserDto
+FAuthService --> FLoginResponse
+
+BAuthUrls --> BAuthViews : mappe les routes
+BAuthViews --> SUser : serialisation profil/users
+BAuthViews --> SRegister : inscription
+BAuthViews --> SActionRole : matrice actions
+BAuthViews --> MUser : acces ORM
+BAuthViews --> MActionRole : lecture actions par role
+BAuthViews --> MActionLog : audit
+BAuthViews --> BJwt : generation JWT
+
+SUser --> MUser
+SRegister --> MUser
+SActionRole --> MActionRole
+MActionLog --> MUser
+MRole "0..*" -- "0..*" MPermission : permissions
+
+note right of MUser
+Dans la plateforme actuelle, les roles sont des valeurs de role:
+candidat, commission, responsable_commission, admin.
+Il n existe pas de sous-classes Admin/Doctor/Receptionist.
+end note
+
+note bottom of BAuthViews
+Les carres representent ici les fichiers exacts de la plateforme
+(frontend Angular + auth API Django) comme demande.
+end note
+
+@enduml

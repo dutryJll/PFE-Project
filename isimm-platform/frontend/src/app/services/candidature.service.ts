@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -62,6 +62,17 @@ export class CandidatureService {
   deposerDossierNumerique(candidatureId: number, payload: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/${candidatureId}/deposer-dossier/`, payload, {
       headers: this.getHeaders(),
+    });
+  }
+
+  deposerDossierNumeriqueWithProgress(
+    candidatureId: number,
+    payload: any,
+  ): Observable<HttpEvent<any>> {
+    return this.http.post<any>(`${this.apiUrl}/${candidatureId}/deposer-dossier/`, payload, {
+      headers: this.getHeaders(),
+      observe: 'events',
+      reportProgress: true,
     });
   }
 

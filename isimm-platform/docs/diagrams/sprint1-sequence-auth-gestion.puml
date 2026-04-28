@@ -1,0 +1,116 @@
+@startuml
+title Sprint 1 - Diagrammes de sequence (Authentification + Gestion utilisateurs)
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam sequence {
+  ArrowColor #2F6DB3
+  LifeLineBorderColor #2F6DB3
+  LifeLineBackgroundColor #EAF4FF
+  ParticipantBorderColor #2F6DB3
+  ParticipantBackgroundColor #F7FBFF
+  ActorBorderColor #2F6DB3
+}
+
+== 1) Authentification ==
+
+actor "Utilisateur" as User
+participant "frontend/src/app/components/login-candidat/login-candidat.component.ts\nLoginCandidatComponent" as LoginCmp
+participant "frontend/src/app/services/auth.service.ts\nAuthService" as AuthServiceTs
+participant "services/auth-service/auth_app/urls.py\nurlpatterns (/api/auth/)" as AuthUrls
+participant "services/auth-service/auth_app/views.py\nlogin(request)" as LoginView
+database "services/auth-service/auth_app/models.py\nUser (auth_users)" as UserModel
+participant "rest_framework_simplejwt/tokens.py\nRefreshToken" as JwtProvider
+participant "services/auth-service/auth_app/views.py\nmy_enabled_actions(request)" as ActionsView
+database "services/auth-service/auth_app/models.py\nActionRole" as ActionRoleModel
+
+User -> LoginCmp: Saisir email + password
+LoginCmp -> AuthServiceTs: onLogin()
+AuthServiceTs -> AuthUrls: POST /api/auth/login/
+AuthUrls -> LoginView: route vers login(request)
+LoginView -> UserModel: filter(email/username) + check_password()
+
+alt Identifiants invalides
+  UserModel --> LoginView: utilisateur introuvable ou mot de passe invalide
+  LoginView --> AuthServiceTs: 401 Unauthorized
+  AuthServiceTs --> LoginCmp: erreur de connexion
+  LoginCmp --> User: afficher message erreur
+else Compte desactive
+  UserModel --> LoginView: user trouve, is_active = false
+  LoginView --> AuthServiceTs: 403 Forbidden
+  AuthServiceTs --> LoginCmp: compte desactive
+  LoginCmp --> User: afficher message acces refuse
+else Identifiants valides
+  UserModel --> LoginView: user valide
+  LoginView -> JwtProvider: generer access + refresh
+  JwtProvider --> LoginView: tokens JWT
+  LoginView --> AuthServiceTs: 200 OK { user, access, refresh }
+  AuthServiceTs -> AuthServiceTs: localStorage(access, refresh, current_user)
+
+  AuthServiceTs -> AuthUrls: GET /api/auth/my-actions/
+  AuthUrls -> ActionsView: route vers my_enabled_actions(request)
+  ActionsView -> ActionRoleModel: filter(target_role=user.role, enabled=True)
+  ActionRoleModel --> ActionsView: actions autorisees
+  ActionsView --> AuthServiceTs: 200 OK { role, actions[] }
+
+  AuthServiceTs --> LoginCmp: connexion validee + actions
+  LoginCmp --> User: redirection dashboard selon role
+end
+
+newpage
+
+== 2) Gestion des utilisateurs (Admin) ==
+
+actor "Administrateur" as Admin
+participant "frontend/src/app/components/admin/dashboard-admin/dashboard-admin.ts\nDashboardAdminComponent" as DashboardAdmin
+participant "frontend/src/app/services/auth.service.ts\nAuthService.getAccessToken()" as FrontToken
+participant "services/auth-service/auth_app/urls.py\nurlpatterns" as UsersUrls
+participant "services/auth-service/auth_app/views.py\nlist_users(request)" as ListUsersView
+participant "services/auth-service/auth_app/views.py\nuser_detail_update(request, user_id)" as UserUpdateView
+participant "services/auth-service/auth_app/views.py\nupdate_user_account_status(request, user_id)" as StatusView
+participant "services/auth-service/auth_app/views.py\ndelete_user(request, user_id)" as DeleteUserView
+participant "services/auth-service/auth_app/serializers.py\nUserSerializer" as UserSerializer
+database "services/auth-service/auth_app/models.py\nUser (auth_users)" as UsersModel
+database "services/auth-service/auth_app/models.py\nActionLog" as ActionLogModel
+
+Admin -> DashboardAdmin: Ouvrir ecran gestion utilisateurs
+DashboardAdmin -> FrontToken: getAccessToken()
+FrontToken --> DashboardAdmin: access token
+DashboardAdmin -> UsersUrls: GET /api/auth/users/ (Bearer token)
+UsersUrls -> ListUsersView: route vers list_users(request)
+
+alt Admin non autorise
+  ListUsersView --> DashboardAdmin: 403 Acces refuse
+  DashboardAdmin --> Admin: message acces refuse
+else Admin autorise
+  ListUsersView -> UsersModel: User.objects.all().order_by(-date_inscription)
+  UsersModel --> ListUsersView: liste utilisateurs
+  ListUsersView --> DashboardAdmin: 200 OK users[]
+  DashboardAdmin --> Admin: afficher la liste
+end
+
+Admin -> DashboardAdmin: Cliquer Modifier utilisateur
+DashboardAdmin -> UsersUrls: PATCH /api/auth/users/{id}/
+UsersUrls -> UserUpdateView: route vers user_detail_update(...)
+UserUpdateView -> UsersModel: User.objects.get(id)
+UserUpdateView -> UserSerializer: serializer(user, data, partial=True)
+UserSerializer --> UserUpdateView: serializer.save()
+UserUpdateView --> DashboardAdmin: 200 OK utilisateur mis a jour
+
+Admin -> DashboardAdmin: Suspendre ou activer compte
+DashboardAdmin -> UsersUrls: POST /api/auth/users/{id}/account-status/
+UsersUrls -> StatusView: route vers update_user_account_status(...)
+StatusView -> UsersModel: charger user + maj is_active/suspension
+StatusView -> UsersModel: save()
+StatusView -> ActionLogModel: ActionLog.objects.create(...)
+StatusView --> DashboardAdmin: 200 OK user + audit
+
+Admin -> DashboardAdmin: Supprimer utilisateur
+DashboardAdmin -> UsersUrls: DELETE /api/auth/users/{id}/delete/
+UsersUrls -> DeleteUserView: route vers delete_user(...)
+DeleteUserView -> UsersModel: User.objects.get(id)
+DeleteUserView -> UsersModel: delete()
+DeleteUserView --> DashboardAdmin: 200 OK utilisateur supprime
+DashboardAdmin --> Admin: rafraichir la liste
+
+@enduml

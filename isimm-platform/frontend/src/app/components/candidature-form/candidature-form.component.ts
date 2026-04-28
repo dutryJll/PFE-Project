@@ -8,6 +8,8 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth.service';
 
 interface Specialite {
@@ -23,7 +25,14 @@ interface FormationOption {
 @Component({
   selector: 'app-candidature-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule,
+    MatCardModule,
+    MatIconModule,
+  ],
   templateUrl: './candidature-form.component.html',
   styleUrls: ['./candidature-form.component.css'],
 })
@@ -60,6 +69,8 @@ export class CandidatureFormComponent implements OnInit {
     sessionReussite4emeAnnee: '',
     moyenneSemestre1TroisiemeAnnee: null as number | null,
     natureCandidature: '',
+    etablissementExterne: '',
+    specialiteExterne: '',
     nombreAnneesRedoublement: '0',
     classement1ereAnnee: '',
     classement2emeAnnee: '',
@@ -88,6 +99,18 @@ export class CandidatureFormComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   generatedPasswordMessage = '';
+  copiedPassword = false;
+  private copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  currentFormStep = 1;
+  maxUnlockedFormStep = 1;
+  readonly totalFormSteps = 4;
+  readonly formSteps = [
+    { no: 1, label: 'Profil' },
+    { no: 2, label: 'Bac et diplôme' },
+    { no: 3, label: 'Parcours académique' },
+    { no: 4, label: 'Validation' },
+  ];
 
   // Options demandees pour le formulaire master (MRGL)
   specialiteBacOptions: FormationOption[] = [
@@ -204,6 +227,8 @@ export class CandidatureFormComponent implements OnInit {
       sessionReussite4emeAnnee: [''],
       moyenneSemestre1TroisiemeAnnee: [null],
       natureCandidature: [''],
+      etablissementExterne: [''],
+      specialiteExterne: [''],
       nombreAnneesRedoublement: ['0'],
       classement1ereAnnee: [''],
       classement2emeAnnee: [''],
@@ -354,6 +379,248 @@ export class CandidatureFormComponent implements OnInit {
     );
   }
 
+  isEtudiantExterneSelected(): boolean {
+    return this.formData.natureCandidature === 'Étudiant Externe';
+  }
+
+  shouldShowMrglFourthYearFields(): boolean {
+    return this.masterParcours === 'mrgl' && this.formData.natureDiplome === 'Maitrise';
+  }
+
+  private isValidNote(value: number | null): boolean {
+    return value === null || (value >= 0 && value <= 20);
+  }
+
+  private hasValue(value: unknown): boolean {
+    return String(value ?? '') !== '';
+  }
+
+  isFormStepAccessible(step: number): boolean {
+    return step >= 1 && step <= this.maxUnlockedFormStep;
+  }
+
+  goToFormStep(step: number): void {
+    if (!this.isFormStepAccessible(step)) {
+      return;
+    }
+
+    this.currentFormStep = step;
+    this.errorMessage = '';
+  }
+
+  previousFormStep(): void {
+    if (this.currentFormStep > 1) {
+      this.currentFormStep -= 1;
+      this.errorMessage = '';
+    }
+  }
+
+  nextFormStep(): void {
+    if (!this.isFormStepValid(this.currentFormStep)) {
+      this.errorMessage = this.getFormStepValidationMessage(this.currentFormStep);
+      return;
+    }
+
+    if (this.currentFormStep < this.totalFormSteps) {
+      this.currentFormStep += 1;
+      this.maxUnlockedFormStep = Math.max(this.maxUnlockedFormStep, this.currentFormStep);
+      this.errorMessage = '';
+    }
+  }
+
+  private isFormStepValid(step: number): boolean {
+    if (step === 1) {
+      return (
+        this.formData.prenom.trim() !== '' &&
+        this.formData.nom.trim() !== '' &&
+        this.formData.dateNaissance.trim() !== '' &&
+        this.formData.cin.trim() !== '' &&
+        this.formData.email.trim() !== '' &&
+        this.formData.telephone.trim() !== ''
+      );
+    }
+
+    if (step === 2) {
+      const baseValid =
+        this.formData.specialiteBac.trim() !== '' &&
+        this.formData.anneeBac !== '' &&
+        this.formData.moyenneBacSessionPrincipale !== null &&
+        this.formData.etablissementUniversitaireOrigine.trim() !== '' &&
+        this.formData.specialiteDiplomeObtenu.trim() !== '' &&
+        this.formData.anneeObtentionDernierDiplome !== '' &&
+        this.formData.natureDiplome.trim() !== '';
+
+      if (!baseValid) {
+        return false;
+      }
+
+      if (this.masterParcours === 'mrgl') {
+        return (
+          this.formData.noteMathBac !== null &&
+          this.formData.noteFrancaisBac !== null &&
+          this.formData.noteAnglaisBac !== null &&
+          this.formData.certificationB2.trim() !== ''
+        );
+      }
+
+      if (this.isProfessionalMasterSelected()) {
+        return this.formData.typeLicence.trim() !== '';
+      }
+
+      return true;
+    }
+
+    if (step === 3) {
+      const requiredAcademicFields =
+        this.formData.moyenne1ereAnnee !== null &&
+        this.formData.sessionReussite1ereAnnee.trim() !== '' &&
+        this.formData.moyenne2emeAnnee !== null &&
+        this.formData.sessionReussite2emeAnnee.trim() !== '' &&
+        this.formData.natureCandidature.trim() !== '' &&
+        this.hasValue(this.formData.nombreAnneesRedoublement);
+
+      if (!requiredAcademicFields || !this.validateScoresRange()) {
+        return false;
+      }
+
+      if (this.shouldShowTroisiemeAnneeFields()) {
+        if (
+          this.formData.moyenne3emeAnnee === null ||
+          this.formData.sessionReussite3emeAnnee.trim() === ''
+        ) {
+          return false;
+        }
+      }
+
+      if (this.shouldShowMrglFourthYearFields()) {
+        if (
+          this.formData.moyenne4emeAnnee === null ||
+          this.formData.sessionReussite4emeAnnee.trim() === ''
+        ) {
+          return false;
+        }
+      }
+
+      if (this.isEtudiantExterneSelected()) {
+        return (
+          this.formData.etablissementExterne.trim() !== '' &&
+          this.formData.specialiteExterne.trim() !== ''
+        );
+      }
+
+      return true;
+    }
+
+    return true;
+  }
+
+  private getFormStepValidationMessage(step: number): string {
+    if (step === 1) {
+      return 'Complétez les informations personnelles obligatoires avant de continuer.';
+    }
+
+    if (step === 2) {
+      return 'Complétez les champs obligatoires du bac et du diplôme avant de continuer.';
+    }
+
+    if (step === 3) {
+      return 'Complétez les informations académiques obligatoires avant de continuer.';
+    }
+
+    return 'Veuillez compléter les champs requis avant de continuer.';
+  }
+
+  private getScoreValues(): number[] {
+    const values: Array<number | null> = [
+      this.formData.moyenne1ereAnnee,
+      this.formData.moyenne2emeAnnee,
+      this.formData.moyenne3emeAnnee,
+      this.formData.moyenne4emeAnnee,
+      this.formData.moyenneIng1,
+    ];
+
+    return values.filter((value): value is number => value !== null);
+  }
+
+  getAcademicAveragePreview(): number | null {
+    const scores = this.getScoreValues();
+    if (scores.length === 0) {
+      return null;
+    }
+
+    const total = scores.reduce((sum, value) => sum + value, 0);
+    return Number((total / scores.length).toFixed(2));
+  }
+
+  getEstimatedScorePreview(): number | null {
+    if (this.formData.moyenneBacSessionPrincipale === null) {
+      return null;
+    }
+
+    const academicAvg = this.getAcademicAveragePreview();
+    if (academicAvg === null) {
+      return null;
+    }
+
+    const redoublementPenalty =
+      Math.min(Number(this.formData.nombreAnneesRedoublement || '0'), 3) * 0.25;
+    const weightedScore =
+      this.formData.moyenneBacSessionPrincipale * 0.4 + academicAvg * 0.6 - redoublementPenalty;
+
+    return Number(Math.max(0, weightedScore).toFixed(2));
+  }
+
+  getEstimatedScoreDisplay(): string {
+    const score = this.getEstimatedScorePreview();
+    return score === null ? 'En attente des notes' : `${score.toFixed(2)} / 20`;
+  }
+
+  copyGeneratedPassword(): void {
+    if (!this.generatedPasswordMessage) {
+      return;
+    }
+
+    navigator.clipboard
+      .writeText(this.generatedPasswordMessage)
+      .then(() => {
+        this.copiedPassword = true;
+        if (this.copyFeedbackTimer) {
+          clearTimeout(this.copyFeedbackTimer);
+        }
+        this.copyFeedbackTimer = setTimeout(() => {
+          this.copiedPassword = false;
+        }, 1400);
+      })
+      .catch(() => {
+        this.copiedPassword = false;
+      });
+  }
+
+  private validateScoresRange(): boolean {
+    const scoreFields: Array<number | null> = [
+      this.formData.moyenneBacSessionPrincipale,
+      this.formData.noteMathBac,
+      this.formData.noteFrancaisBac,
+      this.formData.noteAnglaisBac,
+      this.formData.moyenne1ereAnnee,
+      this.formData.moyenne2emeAnnee,
+      this.formData.moyenne3emeAnnee,
+      this.formData.moyenne4emeAnnee,
+      this.formData.moyenneSemestre1TroisiemeAnnee,
+      this.formData.moyenneSessionPrincipale1ereAnnee,
+      this.formData.moyenneSessionControle1ereAnnee,
+      this.formData.moyenneSessionPrincipale2emeAnnee,
+      this.formData.moyenneSessionControle2emeAnnee,
+      this.formData.moyenneSessionPrincipale1ereAnneeRedoublement,
+      this.formData.moyenneSessionControle1ereAnneeRedoublement,
+      this.formData.moyenneSessionPrincipale2emeAnneeRedoublement,
+      this.formData.moyenneSessionControle2emeAnneeRedoublement,
+      this.formData.moyenneIng1,
+    ];
+
+    return scoreFields.every((value) => this.isValidNote(value));
+  }
+
   // Mettre à jour les validations selon le type de candidature
   updateValidations(): void {
     if (!this.candidatureForm) return;
@@ -390,14 +657,30 @@ export class CandidatureFormComponent implements OnInit {
       return;
     }
 
-    if (this.shouldShowTroisiemeAnneeFields()) {
-      if (
-        this.formData.moyenne3emeAnnee === null ||
-        !this.formData.sessionReussite3emeAnnee ||
-        this.formData.moyenneSemestre1TroisiemeAnnee === null
-      ) {
+    if (!this.validateScoresRange()) {
+      this.errorMessage = 'Les moyennes et notes doivent etre comprises entre 0 et 20.';
+      return;
+    }
+
+    if (this.isEtudiantExterneSelected()) {
+      if (!this.formData.etablissementExterne.trim() || !this.formData.specialiteExterne.trim()) {
         this.errorMessage =
-          'Veuillez renseigner les champs obligatoires de la 3ème année et le classement.';
+          "Veuillez renseigner l'établissement et la spécialité pour un étudiant externe.";
+        return;
+      }
+    }
+
+    if (this.shouldShowTroisiemeAnneeFields()) {
+      const isIngenieur = this.typeCandidature === 'ingenieur';
+      const missingTroisiemeAnneeFields =
+        this.formData.moyenne3emeAnnee === null || !this.formData.sessionReussite3emeAnnee;
+      const missingIngenieurSemestre1 =
+        isIngenieur && this.formData.moyenneSemestre1TroisiemeAnnee === null;
+
+      if (missingTroisiemeAnneeFields || missingIngenieurSemestre1) {
+        this.errorMessage = isIngenieur
+          ? 'Veuillez renseigner tous les champs obligatoires de la 3ème année.'
+          : 'Veuillez renseigner la moyenne et la session de réussite de la 3ème année.';
         return;
       }
     }
@@ -408,11 +691,11 @@ export class CandidatureFormComponent implements OnInit {
         this.formData.noteFrancaisBac === null ||
         this.formData.noteAnglaisBac === null ||
         !this.formData.certificationB2 ||
-        this.formData.moyenne4emeAnnee === null ||
-        !this.formData.sessionReussite4emeAnnee
+        (this.shouldShowMrglFourthYearFields() &&
+          (this.formData.moyenne4emeAnnee === null || !this.formData.sessionReussite4emeAnnee))
       ) {
         this.errorMessage =
-          'Veuillez renseigner les notes du bac, la certification B2, la moyenne et la session de réussite de 4ème année pour MRGL.';
+          'Veuillez renseigner les notes du bac, la certification B2, et les champs de 4ème année si vous avez choisi la Maîtrise pour MRGL.';
         return;
       }
     }
@@ -510,6 +793,8 @@ export class CandidatureFormComponent implements OnInit {
       type_candidature: this.typeCandidature,
       etablissement_origine: this.formData.etablissementUniversitaireOrigine,
       diplome_obtenu: this.formData.natureDiplome,
+      etablissement_externe: this.formData.etablissementExterne,
+      specialite_externe: this.formData.specialiteExterne,
       annees_rattrapage: Number(this.formData.nombreAnneesRedoublement || '0'),
       bsp: 0,
       notes_academiques: {

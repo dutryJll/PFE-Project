@@ -9,19 +9,19 @@
           <mxGeometry x="40" y="20" width="760" height="30" as="geometry"/>
         </mxCell>
 
-        <mxCell id="ah1" value="Utilisateur" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="ah1" value="login-commission.component.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="80" y="80" width="130" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="ah2" value="Frontend Angular" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="ah2" value="auth.service.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="300" y="80" width="160" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="ah3" value="Auth API /api/auth/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="ah3" value="auth_app/urls.py + views.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="560" y="80" width="180" height="40" as="geometry"/>
         </mxCell>
         <mxCell id="ah4" value="User Store (User/Role)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="850" y="80" width="190" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="ah5" value="Token Service (JWT)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="ah5" value="views.py (RefreshToken)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="1140" y="80" width="180" height="40" as="geometry"/>
         </mxCell>
 
@@ -73,7 +73,7 @@
         <mxCell id="am8" value="7b) Generer access_token + refresh_token" style="endArrow=block;html=1;strokeWidth=1.2;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry"><mxPoint x="650" y="680" as="sourcePoint"/><mxPoint x="1230" y="680" as="targetPoint"/></mxGeometry>
         </mxCell>
-        <mxCell id="am9" value="8) Retour tokens + expiry" style="endArrow=open;dashed=1;html=1;strokeWidth=1.2;" edge="1" parent="1">
+        <mxCell id="am9" value="8) Retour access + refresh (views.py)" style="endArrow=open;dashed=1;html=1;strokeWidth=1.2;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry"><mxPoint x="1230" y="740" as="sourcePoint"/><mxPoint x="650" y="740" as="targetPoint"/></mxGeometry>
         </mxCell>
         <mxCell id="am10" value="9) Enregistrer AUTHENTICATION(token_secret, refresh_token, token_expiry, user_id)" style="endArrow=block;html=1;strokeWidth=1.2;" edge="1" parent="1">
@@ -109,19 +109,19 @@
           <mxGeometry x="40" y="20" width="860" height="30" as="geometry"/>
         </mxCell>
 
-        <mxCell id="uh1" value="Administrateur" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="uh1" value="dashboard-admin.html" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="80" y="80" width="150" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="uh2" value="Frontend Angular" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="uh2" value="dashboard-admin.ts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="320" y="80" width="170" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="uh3" value="Auth API /api/auth/users/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="uh3" value="auth_app/urls.py + views.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="600" y="80" width="200" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="uh4" value="User Repository" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="uh4" value="models.py (User)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="920" y="80" width="160" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="uh5" value="Role/Permission Store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="uh5" value="models.py (ActionRole)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#1F4E78;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="1180" y="80" width="190" height="40" as="geometry"/>
         </mxCell>
 

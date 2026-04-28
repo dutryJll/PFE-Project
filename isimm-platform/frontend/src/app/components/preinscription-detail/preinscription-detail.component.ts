@@ -2,16 +2,35 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
 import { environment } from '../../../environments/environment';
 import { OffreRichContentService } from '../../services/offre-rich-content.service';
+import { isPublicOffer, PublicOfferLike } from '../../shared/public-offer';
 
-interface OfferItem {
+interface OfferItem extends PublicOfferLike {
   id: number;
   titre?: string;
   specialite?: string;
   type?: string;
   document_officiel_pdf_url?: string | null;
-  [key: string]: any;
+}
+
+interface OffreMasterPublicDetail {
+  id: number;
+  titre: string;
+  description: string;
+  type_formation?: string;
+  date_debut_visibilite?: string | null;
+  date_fin_visibilite?: string | null;
+  date_limite_preinscription?: string | null;
+  date_limite_depot_dossier?: string | null;
+  capacites_detaillees?: Array<{
+    categorie?: string;
+    origine?: string;
+    quota?: number;
+    diplome?: string;
+  }>;
+  statut_public?: 'ouvert' | 'ferme';
 }
 
 interface DetailTable {
@@ -31,6 +50,18 @@ interface FormationDetail {
   scoreTableTitle?: string;
   scoreTable?: DetailTable;
   importantDates?: string[];
+}
+
+interface TimelineStep {
+  title: string;
+  subtitle: string;
+  state: 'done' | 'current' | 'pending';
+}
+
+interface RequiredDocumentItem {
+  label: string;
+  icon: string;
+  type: string;
 }
 
 const FORMATION_DETAILS: Record<string, FormationDetail> = {
@@ -252,7 +283,7 @@ const FORMATION_DETAILS: Record<string, FormationDetail> = {
 @Component({
   selector: 'app-preinscription-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, MatIconModule],
   templateUrl: './preinscription-detail.component.html',
   styleUrl: './preinscription-detail.component.css',
 })
@@ -265,6 +296,45 @@ export class PreinscriptionDetailComponent implements OnInit {
   isLoadingOffer = false;
   hasSyncedContent = false;
   syncedOfferId: number | null = null;
+
+  readonly candidatureSteps: TimelineStep[] = [
+    {
+      title: 'Inscription',
+      subtitle: 'Creation de compte et validation de la preinscription.',
+      state: 'done',
+    },
+    {
+      title: 'Depot',
+      subtitle: 'Soumission du dossier numerique et verification automatique.',
+      state: 'current',
+    },
+    {
+      title: 'Selection',
+      subtitle: 'Classement, deliberation de commission et resultat final.',
+      state: 'pending',
+    },
+  ];
+
+  private readonly requiredDocsByTrack: Record<string, RequiredDocumentItem[]> = {
+    default: [
+      { label: 'Carte d identite nationale (CIN)', icon: 'badge', type: 'PDF / Image' },
+      { label: 'Diplome principal ou attestation', icon: 'workspace_premium', type: 'PDF' },
+      { label: 'Releves de notes (toutes annees)', icon: 'table_chart', type: 'PDF' },
+      { label: 'Curriculum Vitae', icon: 'description', type: 'PDF' },
+    ],
+    mrmi: [
+      { label: 'CIN / Passeport', icon: 'badge', type: 'PDF / Image' },
+      { label: 'Diplome en Electronique / Instrumentation', icon: 'memory', type: 'PDF' },
+      { label: 'Releves L1-L2-L3 ou equivalent', icon: 'insights', type: 'PDF' },
+      { label: 'CV technique', icon: 'article', type: 'PDF' },
+    ],
+    ing_info_gl: [
+      { label: 'CIN / Passeport', icon: 'badge', type: 'PDF / Image' },
+      { label: 'Attestation de reussite (prepa/licence)', icon: 'school', type: 'PDF' },
+      { label: 'Releves de notes details', icon: 'leaderboard', type: 'PDF' },
+      { label: 'Lettre de motivation', icon: 'mail', type: 'PDF' },
+    ],
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -283,8 +353,155 @@ export class PreinscriptionDetailComponent implements OnInit {
     }
 
     if (Number.isFinite(offerId) && offerId > 0) {
-      this.loadSyncedContent(offerId, codeParam);
+      this.loadRealtimePublicOffer(offerId, codeParam);
     }
+  }
+
+  get requiredDocuments(): RequiredDocumentItem[] {
+    const key = this.normalizeTrackCode(this.detail?.code || this.code);
+    return this.requiredDocsByTrack[key] || this.requiredDocsByTrack['default'];
+  }
+
+  isEtablissementColumn(header: string): boolean {
+    const normalized = this.normalizeHeader(header);
+    return normalized.includes('etablissement') || normalized.includes('origine');
+  }
+
+  getPlacesColumnIndex(headers: string[]): number {
+    const explicitPlaces = headers.findIndex((header) => {
+      const normalized = this.normalizeHeader(header);
+      return normalized.includes('places');
+    });
+    if (explicitPlaces >= 0) {
+      return explicitPlaces;
+    }
+
+    const capaciteColumn = headers.findIndex((header) => {
+      const normalized = this.normalizeHeader(header);
+      return normalized.includes('capacite') && !normalized.includes('total');
+    });
+    if (capaciteColumn >= 0) {
+      return capaciteColumn;
+    }
+
+    return headers.findIndex((header) => this.normalizeHeader(header).includes('capacite'));
+  }
+
+  getPlaceProgress(row: string[], headers: string[]): { valueLabel: string; percent: number } {
+    const placesIndex = this.getPlacesColumnIndex(headers);
+    if (placesIndex < 0) {
+      return { valueLabel: '-', percent: 0 };
+    }
+
+    const valueLabel = row[placesIndex] || '-';
+    const places = this.extractNumber(valueLabel);
+    if (places === null) {
+      return { valueLabel, percent: 0 };
+    }
+
+    const totalIndex = headers.findIndex((header) => {
+      const normalized = this.normalizeHeader(header);
+      return normalized.includes('total');
+    });
+
+    let denominator: number | null = null;
+    if (totalIndex >= 0) {
+      denominator = this.extractNumber(row[totalIndex]);
+    }
+
+    if (!denominator || denominator <= 0) {
+      const tableRows = this.detail?.table?.rows || [];
+      const maxObserved = tableRows
+        .map((currentRow) => this.extractNumber(currentRow[placesIndex]))
+        .filter((value): value is number => value !== null)
+        .reduce((max, current) => Math.max(max, current), 0);
+      denominator = maxObserved > 0 ? maxObserved : places;
+    }
+
+    const percent = Math.max(0, Math.min(100, Math.round((places / denominator) * 100)));
+    return { valueLabel, percent };
+  }
+
+  private normalizeTrackCode(value: string): string {
+    const normalized = (value || '').toLowerCase().trim();
+    if (normalized.includes('mrmi')) {
+      return 'mrmi';
+    }
+    if (normalized.includes('ing')) {
+      return 'ing_info_gl';
+    }
+    return normalized;
+  }
+
+  private normalizeHeader(value: string): string {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  private extractNumber(value: string | undefined): number | null {
+    if (!value) {
+      return null;
+    }
+    const match = String(value).match(/\d+(?:[.,]\d+)?/);
+    if (!match) {
+      return null;
+    }
+    const parsed = Number(match[0].replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private loadRealtimePublicOffer(offerId: number, codeParam: string): void {
+    this.http
+      .get<OffreMasterPublicDetail>(`${this.candidatureApiBase}/offres-master/${offerId}/public/`)
+      .subscribe({
+        next: (offer) => {
+          const rows = Array.isArray(offer.capacites_detaillees)
+            ? offer.capacites_detaillees.map((row) => [
+                row?.categorie || '-',
+                row?.origine || '-',
+                String(row?.quota ?? '-'),
+                row?.diplome || '-',
+              ])
+            : [];
+
+          const dates = [
+            this.formatDateLine(
+              'Visibilite',
+              offer.date_debut_visibilite,
+              offer.date_fin_visibilite,
+            ),
+            offer.date_limite_preinscription
+              ? `Date limite preinscription: ${offer.date_limite_preinscription}`
+              : '',
+            offer.date_limite_depot_dossier
+              ? `Date limite depot dossier: ${offer.date_limite_depot_dossier}`
+              : '',
+            offer.statut_public
+              ? `Statut: ${offer.statut_public === 'ouvert' ? 'Ouverte' : 'Fermee'}`
+              : '',
+          ].filter((line) => !!line);
+
+          this.hasSyncedContent = true;
+          this.syncedOfferId = offerId;
+          this.detail = {
+            code: codeParam || String(offerId),
+            title: offer.titre,
+            intro: offer.description || 'Offre publiee par la commission.',
+            description: offer.description || '',
+            sourceLabel: 'Version commission publiee (temps reel)',
+            tableTitle: 'Capacite & diplomes',
+            table: {
+              headers: ['Categorie', 'Etablissement', 'Quota', 'Diplome requis'],
+              rows,
+            },
+            importantDates: dates,
+          };
+        },
+        error: () => {
+          this.loadSyncedContent(offerId, codeParam);
+        },
+      });
   }
 
   private loadSyncedContent(offerId: number, codeParam: string): void {
@@ -337,7 +554,10 @@ export class PreinscriptionDetailComponent implements OnInit {
 
     this.http.get<OfferItem[]>(`${this.candidatureApiBase}/offres-inscription/`).subscribe({
       next: (offers) => {
-        const match = this.findOfferByCode(code, offers || []);
+        const match = this.findOfferByCode(
+          code,
+          (offers || []).filter((offer) => isPublicOffer(offer) && offer.statut === 'ouvert'),
+        );
         this.pdfUrl = match?.document_officiel_pdf_url || null;
         this.isLoadingOffer = false;
       },
@@ -346,6 +566,16 @@ export class PreinscriptionDetailComponent implements OnInit {
         this.isLoadingOffer = false;
       },
     });
+  }
+
+  private formatDateLine(label: string, start?: string | null, end?: string | null): string {
+    if (!start && !end) {
+      return '';
+    }
+    if (start && end) {
+      return `${label}: du ${start} au ${end}`;
+    }
+    return `${label}: ${start || end}`;
   }
 
   private findOfferByCode(code: string, offers: OfferItem[]): OfferItem | undefined {

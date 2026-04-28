@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslatePipe } from '../../pipes/translate.pipe';
+import { isPublicOffer } from '../../shared/public-offer';
 
 interface ReferentielMasters {
   metadata?: any;
@@ -146,16 +147,18 @@ export class MastersComponent implements OnInit {
     // Load public offers (visible to candidates)
     this.http.get<MasterOffer[]>(`${this.candidatureApiBase}/offres-inscription/`).subscribe({
       next: (offers) => {
-        offers.forEach((offer) => {
-          if (!offer.document_officiel_pdf_url) {
-            return;
-          }
+        offers
+          .filter((offer) => isPublicOffer(offer) && offer.statut === 'ouvert')
+          .forEach((offer) => {
+            if (!offer.document_officiel_pdf_url) {
+              return;
+            }
 
-          const code = this.resolveOfferCode(offer);
-          if (code) {
-            this.masterPdfUrls.set(code, offer.document_officiel_pdf_url);
-          }
-        });
+            const code = this.resolveOfferCode(offer);
+            if (code) {
+              this.masterPdfUrls.set(code, offer.document_officiel_pdf_url);
+            }
+          });
         this.isLoadingOffers = false;
         console.log('✅ PDF URLs loaded for offers');
       },
