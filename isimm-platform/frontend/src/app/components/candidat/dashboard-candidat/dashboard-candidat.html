@@ -1804,35 +1804,30 @@
         >
           <i class="fas fa-plus"></i> Nouvelle réclamation
         </button>
-        <div class="table-container" *ngIf="reclamations.length > 0; else noReclamations">
-          <table class="candidatures-table reclamations-table">
-            <thead>
-              <tr>
-                <th>Identifiant</th>
-                <th>Objet</th>
-                <th>Master concerne</th>
-                <th>etat</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let reclamation of reclamations">
-                <td>
-                  <strong>{{ reclamation.identifiant }}</strong>
-                </td>
-                <td>{{ getObjetLabel(reclamation.objet) }}</td>
-                <td>{{ reclamation.master_nom }}</td>
-                <td>
-                  <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
-                    {{ getStatutReclamationLabel(reclamation.statut) }}
-                  </span>
-                </td>
-                <td>
-                  <button class="btn-doc" (click)="voirReclamation(reclamation)">Consulter</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="reclamations-list" *ngIf="reclamations.length > 0; else noReclamations">
+          <details class="reclamation-card" *ngFor="let reclamation of reclamations">
+            <summary class="reclamation-summary">
+              <div class="reclamation-summary-main">
+                <strong>{{ reclamation.identifiant }}</strong>
+                <span class="reclamation-objet">{{ getObjetLabel(reclamation.objet) }}</span>
+              </div>
+              <span class="reclamation-statut" [ngClass]="'statut-' + reclamation.statut">
+                {{ getStatutReclamationLabel(reclamation.statut) }}
+              </span>
+            </summary>
+
+            <div class="reclamation-body">
+              <p><strong>Master concerné:</strong> {{ reclamation.master_nom }}</p>
+              <p><strong>Date:</strong> {{ reclamation.date | date: 'dd/MM/yyyy HH:mm' }}</p>
+              <p><strong>Motif:</strong> {{ reclamation.motif }}</p>
+              <p *ngIf="reclamation.reponse">
+                <strong>Réponse commission:</strong> {{ reclamation.reponse }}
+              </p>
+              <div class="reclamation-actions">
+                <button class="btn-doc" (click)="voirReclamation(reclamation)">Consulter</button>
+              </div>
+            </div>
+          </details>
         </div>
 
         <ng-template #noReclamations>
@@ -2040,7 +2035,9 @@
               {{ wizardOffre?.titre || 'Soumettre ma candidature' }}
             </h2>
             <div class="wizard-card-badges">
-              <span class="wizard-chip wizard-chip--info">Master</span>
+              <span class="wizard-chip wizard-chip--info">
+                {{ wizardOffre?.type === 'cycle_ingenieur' ? 'Ingénieur' : 'Master' }}
+              </span>
               <span class="wizard-chip wizard-chip--accent">Score automatique</span>
               <span class="wizard-chip wizard-chip--success">Formulaire guidé</span>
             </div>
@@ -2828,11 +2825,8 @@
           </div>
         </div>
 
-        <!-- Confirmation MRGL / MRMI -->
-        <div
-          class="wizard-card confirmation-card"
-          *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()"
-        >
+        <!-- Déclaration obligatoire pour toutes les formations -->
+        <div class="wizard-card confirmation-card">
           <div class="wizard-card-header">
             <i class="fas fa-file-signature"></i>
             <h4>Déclaration sur l'honneur</h4>

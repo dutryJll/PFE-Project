@@ -2241,6 +2241,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return this.wizardOffre?.titre === 'Mastère Recherche en micro-électronique et instrumentation';
   }
 
+  isWizardIngenieurOffer(): boolean {
+    return this.wizardOffre?.type === 'cycle_ingenieur';
+  }
+
   isWizardMrmiIng1EquivalentSelected(): boolean {
     return (
       this.isWizardMrmiOffer() &&
@@ -2358,16 +2362,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         return false;
       }
 
-      if (this.isWizardMrglOffer() || this.isWizardMrmiOffer()) {
-        return (
-          this.wizardData.confirmationDeclaration === true &&
-          String(this.wizardData.confirmationText || '')
-            .trim()
-            .toLowerCase() === 'je confirme'
-        );
-      }
-
-      return true;
+      return (
+        this.wizardData.confirmationDeclaration === true &&
+        String(this.wizardData.confirmationText || '')
+          .trim()
+          .toLowerCase() === 'je confirme'
+      );
     }
 
     return true;

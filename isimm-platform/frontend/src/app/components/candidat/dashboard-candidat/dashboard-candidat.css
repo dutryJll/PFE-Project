@@ -3071,6 +3071,34 @@
   color: #334155;
 }
 
+.reclamation-summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.reclamation-summary::-webkit-details-marker {
+  display: none;
+}
+
+.reclamation-summary-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reclamation-objet {
+  color: #334155;
+  font-weight: 500;
+}
+
+.reclamation-actions {
+  margin-top: 0.9rem;
+}
+
 .empty-reclamations {
   border: 1px dashed #cbd5e1;
   border-radius: 10px;

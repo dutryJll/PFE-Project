@@ -39,6 +39,15 @@ export class NouvelleReclamationComponent implements OnInit {
     motif: '',
   };
 
+  // File and type support for justificatif upload
+  justificatifFile: File | null = null;
+  selectedFileName = '';
+
+  // New field: type de reclamation (can be used to further classify)
+  // We'll store it alongside formData as `type`
+  // Note: kept separate for clarity in template binding
+  reclamationType = '';
+
   isSubmitting = false;
 
   constructor(
@@ -195,7 +204,6 @@ export class NouvelleReclamationComponent implements OnInit {
     if (this.isSubmitting) {
       return;
     }
-
     if (!this.formData.master_id || !this.formData.objet || !this.formData.motif.trim()) {
       alert('Veuillez remplir tous les champs obligatoires.');
       return;
@@ -204,18 +212,21 @@ export class NouvelleReclamationComponent implements OnInit {
     this.isSubmitting = true;
     const token = this.authService.getAccessToken();
 
+    const payload = new FormData();
+    payload.append('master_id', String(Number(this.formData.master_id)));
+    payload.append('objet', this.formData.objet);
+    payload.append('motif', this.formData.motif.trim());
+    if (this.reclamationType) {
+      payload.append('type', this.reclamationType);
+    }
+    if (this.justificatifFile) {
+      payload.append('justificatif', this.justificatifFile, this.justificatifFile.name);
+    }
+
     this.http
-      .post(
-        'http://localhost:8003/api/reclamations/creer/',
-        {
-          master_id: Number(this.formData.master_id),
-          objet: this.formData.objet,
-          motif: this.formData.motif.trim(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .post('http://localhost:8003/api/reclamations/creer/', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: () => {
           alert('Reclamation envoyee avec succes.');
@@ -228,6 +239,38 @@ export class NouvelleReclamationComponent implements OnInit {
           alert("Erreur lors de l'envoi de la reclamation.");
         },
       });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    if (!file) {
+      return;
+    }
+
+    if (!this.isAllowedUploadFile(file)) {
+      alert('Fichier non autorisé ou trop volumineux (max 5 Mo).');
+      return;
+    }
+
+    this.justificatifFile = file;
+    this.selectedFileName = file.name;
+  }
+
+  clearSelectedFile(): void {
+    this.justificatifFile = null;
+    this.selectedFileName = '';
+  }
+
+  isAllowedUploadFile(file: File): boolean {
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowed.includes(file.type)) {
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return false;
+    }
+    return true;
   }
 
   cancel(): void {

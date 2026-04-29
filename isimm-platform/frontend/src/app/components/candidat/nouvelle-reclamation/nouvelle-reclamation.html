@@ -33,6 +33,47 @@
       </div>
 
       <div class="form-group">
+        <label for="type">Type de réclamation</label>
+        <select id="type" name="type" [(ngModel)]="reclamationType">
+          <option value="">-- Selectionner un type --</option>
+          <option value="score">Score</option>
+          <option value="statut">Statut</option>
+          <option value="dossier">Dossier</option>
+          <option value="paiement">Paiement</option>
+          <option value="autre">Autre</option>
+        </select>
+        <small class="hint"
+          >(Facultatif) Permet d'ajouter un type pour faciliter le traitement.</small
+        >
+      </div>
+
+      <div class="form-group">
+        <label>Joindre un justificatif (optionnel)</label>
+        <div class="upload-zone" (click)="$event.preventDefault(); fileInput.click()">
+          <input
+            #fileInput
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            style="display: none"
+            (change)="onFileSelected($event)"
+          />
+          <div class="upload-content">
+            <i class="fas fa-upload"></i>
+            <div>
+              <strong>Déposer un fichier ou cliquer pour sélectionner</strong>
+              <div class="upload-hint">PDF, JPG, PNG — max 5 Mo</div>
+            </div>
+          </div>
+        </div>
+        <div class="selected-file" *ngIf="selectedFileName">
+          <span>{{ selectedFileName }}</span>
+          <button type="button" class="btn-secondary small" (click)="clearSelectedFile()">
+            Supprimer
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label for="motif">Description du probleme *</label>
         <textarea
           id="motif"
