@@ -28,6 +28,7 @@ from .models import (
     FormuleScore,
     ListeAdmission,
     Master,
+    Reclamation,
     OffreMaster,
     InscriptionEnLigne,
     InscriptionRapprochementAudit,
@@ -55,6 +56,7 @@ from .emails import (
     envoyer_email_inscription_validee,
 )
 from .notifications import creer_notification_avec_email
+from decimal import Decimal, InvalidOperation
 
 
 logger = logging.getLogger(__name__)
@@ -2450,6 +2452,138 @@ def calculer_score_final_et_statut(request, candidature_id):
             'nb_dettes': int(_as_float(payload.get('nb_dettes'), 0) or 0),
             'notes_detaillees': notes_detaillees,
         },
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def repondre_reclamation(request, reclamation_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        reclamation = Reclamation.objects.select_related('candidature__candidat', 'master_concerne').get(
+            id=reclamation_id
+        )
+    except Reclamation.DoesNotExist:
+        return Response({'error': 'Reclamation non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    reponse = str(request.data.get('reponse') or '').strip()
+    if not reponse:
+        return Response({'error': 'La reponse est obligatoire.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    reclamation.reponse = reponse
+    reclamation.statut = 'traitee'
+    reclamation.traitee_par = request.user
+    reclamation.date_traitement = timezone.now()
+    reclamation.save(update_fields=['reponse', 'statut', 'traitee_par', 'date_traitement', 'updated_at'])
+
+    candidat = reclamation.candidature.candidat
+    titre = f"Réclamation traitée - {reclamation.identifiant}"
+    message = (
+        f"Bonjour {candidat.get_full_name() or candidat.username},\n\n"
+        f"Votre réclamation {reclamation.identifiant} pour {reclamation.master_concerne.nom} a été traitée.\n"
+        f"Réponse: {reponse}\n\n"
+        "Cordialement,\n"
+        "Commission ISIMM"
+    )
+    email_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Votre réclamation a été traitée</h2>
+        <p>Bonjour <strong>{candidat.get_full_name() or candidat.username}</strong>,</p>
+        <p>Votre réclamation <strong>{reclamation.identifiant}</strong> a été marquée comme <strong>Traitée</strong>.</p>
+        <p><strong>Réponse de la commission :</strong></p>
+        <p style="background:#f8fafc;border-left:4px solid #1d4ed8;padding:12px;border-radius:8px;">{reponse}</p>
+        <hr/>
+        <p style="color:#999;font-size:12px;">Commission ISIMM</p>
+      </body>
+    </html>
+    """
+
+    creer_notification_avec_email(
+        user=candidat,
+        titre=titre,
+        message=message,
+        notif_type='success',
+        dedup_key=f"reclamation-traitee-{reclamation.id}-{reclamation.updated_at.isoformat()}",
+        email_html=email_html,
+    )
+
+    return Response(
+        {
+            'success': True,
+            'reclamation_id': reclamation.id,
+            'statut': reclamation.statut,
+            'reponse': reclamation.reponse,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rectifier_score_reclamation(request, reclamation_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        reclamation = Reclamation.objects.select_related('candidature__candidat', 'master_concerne').get(
+            id=reclamation_id
+        )
+    except Reclamation.DoesNotExist:
+        return Response({'error': 'Reclamation non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    candidature = reclamation.candidature
+    try:
+        score = Decimal(str(request.data.get('score')))
+    except (InvalidOperation, TypeError, ValueError):
+        return Response({'error': 'Score invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if score < 0 or score > 20:
+        return Response({'error': 'Le score doit etre entre 0 et 20.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    candidature.score = score
+    candidature.save(update_fields=['score', 'updated_at'])
+
+    candidat = candidature.candidat
+    titre = f"Rectification de score - {candidature.numero}"
+    message = (
+        f"Bonjour {candidat.get_full_name() or candidat.username},\n\n"
+        f"Votre score a été rectifié à {score} pour la candidature {candidature.numero}.\n\n"
+        "Cordialement,\n"
+        "Commission ISIMM"
+    )
+    email_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Rectification de score</h2>
+        <p>Bonjour <strong>{candidat.get_full_name() or candidat.username}</strong>,</p>
+        <p>La commission a rectifié votre score à <strong>{score}</strong> pour la candidature <strong>{candidature.numero}</strong>.</p>
+        <hr/>
+        <p style="color:#999;font-size:12px;">Commission ISIMM</p>
+      </body>
+    </html>
+    """
+
+    creer_notification_avec_email(
+        user=candidat,
+        titre=titre,
+        message=message,
+        notif_type='info',
+        dedup_key=f"reclamation-score-{reclamation.id}-{candidature.updated_at.isoformat()}",
+        email_html=email_html,
+    )
+
+    return Response(
+        {
+            'success': True,
+            'candidature_id': candidature.id,
+            'score': str(candidature.score),
+        },
+        status=status.HTTP_200_OK,
     )
 
     donnees.moyenne_generale = moyenne_generale

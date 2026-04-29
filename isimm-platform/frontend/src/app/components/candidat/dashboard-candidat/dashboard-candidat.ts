@@ -12,6 +12,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ReclamationDetailDialogComponent } from './reclamation-detail-dialog.component';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
@@ -257,6 +259,7 @@ function normalizeActionLabel(value: string): string {
     MatCardModule,
     MatChipsModule,
     MatIconModule,
+    MatDialogModule,
     MatProgressBarModule,
     MatTabsModule,
     MatStepperModule,
@@ -767,6 +770,99 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     },
   ];
 
+  // Historique UI helpers
+  historiqueFilterYear: string = '';
+  historiqueFilterResult: '' | 'success' | 'waiting' | 'rejected' | '' = '';
+
+  get filteredHistorique(): HistoriqueItem[] {
+    return (this.historique || []).filter((item) => {
+      if (
+        this.historiqueFilterYear &&
+        String(item.annee_universitaire || '') !== this.historiqueFilterYear
+      ) {
+        return false;
+      }
+      if (this.historiqueFilterResult) {
+        const normalized = (item.statut_final || '').toLowerCase();
+        if (
+          this.historiqueFilterResult === 'success' &&
+          !['selectionne', 'inscrit', 'valide'].includes(normalized)
+        )
+          return false;
+        if (
+          this.historiqueFilterResult === 'waiting' &&
+          ['en_attente', 'sous_examen', 'soumis', 'preselectionne'].indexOf(normalized) === -1
+        )
+          return false;
+        if (
+          this.historiqueFilterResult === 'rejected' &&
+          ['rejete', 'non_admis', 'non_preselectionne'].indexOf(normalized) === -1
+        )
+          return false;
+      }
+      return true;
+    });
+  }
+
+  get historiqueTotalCount(): number {
+    return (this.historique || []).length;
+  }
+
+  get historiqueYears(): string[] {
+    return Array.from(
+      new Set(
+        (this.historique || [])
+          .map((item) => String(item.annee_universitaire || '').trim())
+          .filter((annee) => annee.length > 0),
+      ),
+    ).sort((left, right) => right.localeCompare(left));
+  }
+
+  get historiqueBestScore(): number | null {
+    const scores = (this.historique || [])
+      .map((h) => Number(h.score || 0))
+      .filter((s) => !Number.isNaN(s));
+    if (!scores.length) return null;
+    return Math.max(...scores);
+  }
+
+  get historiqueAdmissionsCount(): number {
+    return (this.historique || []).filter((h) =>
+      ['selectionne', 'inscrit', 'valide'].includes(
+        ((h.statut_final || '') as string).toLowerCase(),
+      ),
+    ).length;
+  }
+
+  downloadHistoriquePdf(item: HistoriqueItem): void {
+    try {
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const title = `Dossier - ${item.numero || ''}`;
+      doc.setFontSize(14);
+      doc.text(title, 40, 60);
+      const rows = [
+        ['Année', item.annee_universitaire || '-'],
+        ['N° Candidature', item.numero || '-'],
+        ['Master', item.master_nom || '-'],
+        ['Score', String(item.score ?? '-')],
+        ['Classement', String(item.classement ?? '-')],
+        ['Résultat', this.getStatutLabel(item.statut_final || '')],
+      ];
+      // simple table
+      // @ts-ignore
+      autoTable(doc, {
+        startY: 90,
+        head: [['Champ', 'Valeur']],
+        body: rows,
+        styles: { fontSize: 11 },
+      });
+      doc.save(`${item.numero || 'historique'}.pdf`);
+    } catch (e) {
+      console.error('Erreur génération PDF historique:', e);
+      this.toastService.show('Impossible de générer le PDF.', 'error');
+    }
+  }
+
   showModalReclamation: boolean = false;
   nouvelleReclamation: any = {
     master_id: '',
@@ -823,6 +919,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
+    private dialog: MatDialog,
     private sanitizer: DomSanitizer,
   ) {}
 
@@ -3271,7 +3368,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       this.selectedDossierNumber || '';
   }
 
-  voirDetails(candidature: Candidature): void {
+  voirDetails(candidature: Candidature | HistoriqueItem): void {
     this.selectedOffreDetail =
       this.offresInscription.find((offre) => offre.titre === candidature.master_nom) || null;
     this.currentView = 'offres-inscription';
@@ -3680,9 +3777,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   voirReclamation(reclamation: Reclamation): void {
-    this.showAlertMessage(
-      `Détails réclamation: ${reclamation.identifiant}\n\n${reclamation.motif}`,
-    );
+    this.dialog.open(ReclamationDetailDialogComponent, {
+      width: '640px',
+      maxHeight: '80vh',
+      data: reclamation,
+    });
   }
 
   setProfileTab(tab: ProfileTab): void {

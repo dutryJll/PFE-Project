@@ -1761,10 +1761,51 @@
     </div>
 
     <div *ngIf="currentView === 'historique'" class="view-content">
-      <div class="section-card">
+      <div class="section-card historique-shell">
         <h2>Historique des candidatures</h2>
+
+        <div class="historique-kpis">
+          <div class="kpi-card">
+            <small>Total candidatures</small>
+            <strong>{{ historiqueTotalCount }}</strong>
+          </div>
+          <div class="kpi-card">
+            <small>Meilleur score</small>
+            <strong>{{
+              historiqueBestScore !== null ? historiqueBestScore + ' / 20' : '-'
+            }}</strong>
+          </div>
+          <div class="kpi-card">
+            <small>Admissions</small>
+            <strong>{{ historiqueAdmissionsCount }}</strong>
+          </div>
+        </div>
+
+        <div class="historique-filters">
+          <select [(ngModel)]="historiqueFilterYear">
+            <option value="">Toutes les années</option>
+            <option *ngFor="let y of historiqueYears" [value]="y">
+              {{ y }}
+            </option>
+          </select>
+
+          <select [(ngModel)]="historiqueFilterResult">
+            <option value="">Tous les résultats</option>
+            <option value="success">Succès</option>
+            <option value="waiting">Attente</option>
+            <option value="rejected">Rejet</option>
+          </select>
+
+          <button
+            class="btn-secondary"
+            (click)="historiqueFilterYear = ''; historiqueFilterResult = ''"
+          >
+            Réinitialiser
+          </button>
+        </div>
+
         <div class="table-container">
-          <table class="candidatures-table">
+          <table class="candidatures-table candidatures-historique">
             <thead>
               <tr>
                 <th>Année</th>
@@ -1772,21 +1813,53 @@
                 <th>Master</th>
                 <th>Score</th>
                 <th>Classement</th>
-                <th>Resultat</th>
+                <th>Résultat</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of historique">
+              <tr *ngFor="let item of filteredHistorique">
                 <td>{{ item.annee_universitaire }}</td>
                 <td>{{ item.numero }}</td>
                 <td>{{ item.master_nom }}</td>
                 <td>{{ item.score || '-' }}</td>
                 <td>{{ item.classement || '-' }}</td>
                 <td>
-                  <span class="statut-badge" [ngClass]="'badge-' + item.statut_final">{{
-                    getStatutLabel(item.statut_final)
-                  }}</span>
+                  <span
+                    class="badge modern-badge"
+                    [ngClass]="{
+                      'badge-success': ['selectionne', 'inscrit', 'valide'].includes(
+                        (item.statut_final || '').toLowerCase()
+                      ),
+                      'badge-wait': [
+                        'en_attente',
+                        'sous_examen',
+                        'soumis',
+                        'preselectionne',
+                      ].includes((item.statut_final || '').toLowerCase()),
+                      'badge-reject': ['rejete', 'non_admis', 'non_preselectionne'].includes(
+                        (item.statut_final || '').toLowerCase()
+                      ),
+                    }"
+                  >
+                    {{ getStatutLabel(item.statut_final) }}
+                  </span>
                 </td>
+                <td>
+                  <button class="btn-icon" title="Voir détails" (click)="voirDetails(item)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button
+                    class="btn-icon"
+                    title="Télécharger PDF"
+                    (click)="downloadHistoriquePdf(item)"
+                  >
+                    <i class="fas fa-download"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredHistorique.length === 0">
+                <td colspan="7" class="empty-row">Aucun élément trouvé pour ce filtre.</td>
               </tr>
             </tbody>
           </table>

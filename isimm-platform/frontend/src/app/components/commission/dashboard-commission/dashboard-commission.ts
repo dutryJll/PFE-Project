@@ -113,6 +113,7 @@ interface ListeGenerationApiPayload {
 
 interface Reclamation {
   id: number;
+  candidature_id?: number;
   candidat_nom: string;
   objet: string;
   master_nom?: string;
@@ -122,6 +123,7 @@ interface Reclamation {
   date: string;
   statut: string;
   reponse?: string;
+  priorite?: 'haut' | 'moyen' | 'bas';
 }
 
 interface DossierOCR {
@@ -793,6 +795,16 @@ export class DashboardCommissionComponent implements OnInit {
   showModalOCR: boolean = false;
   fichierOCR: File | null = null;
   selectedOCRCandidature: Candidature | null = null;
+
+  // Modal reponse reclamation
+  showModalReponseReclamation: boolean = false;
+  reclamationSelectionnee: Reclamation | null = null;
+  reponseReclamationText: string = '';
+
+  // Modal rectifier score
+  showModalRectifierScore: boolean = false;
+  reclamationScoreSelectionnee: Reclamation | null = null;
+  scoreRectification: number | null = null;
 
   candidatureVotes: Record<number, CandidatureVoteAvis[]> = {};
 
@@ -4572,6 +4584,29 @@ export class DashboardCommissionComponent implements OnInit {
     return '';
   }
 
+  getReclamationPriority(reclamation: Reclamation): 'haut' | 'moyen' | 'bas' {
+    if (reclamation.priorite) {
+      return reclamation.priorite;
+    }
+    if (reclamation.statut === 'en_cours') {
+      return 'haut';
+    }
+    if (reclamation.statut === 'en_attente') {
+      return 'moyen';
+    }
+    return 'bas';
+  }
+
+  getReclamationPriorityLabel(prio: 'haut' | 'moyen' | 'bas'): string {
+    if (prio === 'haut') return 'Haut';
+    if (prio === 'moyen') return 'Moyen';
+    return 'Bas';
+  }
+
+  getReclamationPriorityClass(prio: 'haut' | 'moyen' | 'bas'): string {
+    return prio === 'haut' ? 'prio-haut' : prio === 'moyen' ? 'prio-moyen' : 'prio-bas';
+  }
+
   get reclamationsFiltered(): Reclamation[] {
     const search = this.reclamationSearch.trim().toLowerCase();
 
@@ -4603,33 +4638,146 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   traiterReclamation(reclamation: Reclamation): void {
+    this.ouvrirModalReponseReclamation(reclamation);
+  }
+
+  ouvrirModalReponseReclamation(reclamation: Reclamation): void {
     if (!this.actionPermissions.traiterReclamations) {
       this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
       return;
     }
 
-    const reponse = prompt('Saisir la réponse à la réclamation :');
-    if (reponse) {
-      const token = this.authService.getAccessToken();
+    this.reclamationSelectionnee = reclamation;
+    this.reponseReclamationText = reclamation.reponse || '';
+    this.showModalReponseReclamation = true;
+  }
 
-      this.http
-        .post(
-          `http://localhost:8003/api/reclamations/${reclamation.id}/repondre/`,
-          { reponse },
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        .subscribe({
-          next: () => {
-            reclamation.statut = 'traitee';
-            reclamation.reponse = reponse;
-            this.showAlertMessage('✅ Réclamation traitée');
-          },
-          error: (error) => {
-            console.error('Erreur:', error);
-            this.showAlertMessage('❌ Erreur lors du traitement');
-          },
-        });
+  fermerModalReponseReclamation(): void {
+    this.showModalReponseReclamation = false;
+    this.reclamationSelectionnee = null;
+    this.reponseReclamationText = '';
+  }
+
+  soumettreReponseReclamation(): void {
+    if (!this.reclamationSelectionnee) {
+      return;
     }
+
+    const reponse = this.reponseReclamationText.trim();
+    if (!reponse) {
+      this.showAlertMessage('❌ Veuillez saisir une réponse');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    this.http
+      .post(
+        `http://localhost:8003/api/reclamations/${this.reclamationSelectionnee.id}/repondre/`,
+        { reponse },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.reclamationSelectionnee!.statut = 'traitee';
+          this.reclamationSelectionnee!.reponse = reponse;
+          this.showAlertMessage('✅ Réclamation traitée');
+          this.fermerModalReponseReclamation();
+        },
+        error: (error) => {
+          console.error('Erreur:', error);
+          this.showAlertMessage('❌ Erreur lors du traitement');
+        },
+      });
+  }
+
+  ouvrirModalRectifierScore(reclamation: Reclamation): void {
+    if (!this.actionPermissions.traiterReclamations) {
+      this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
+      return;
+    }
+
+    this.reclamationScoreSelectionnee = reclamation;
+    this.scoreRectification = null;
+    this.showModalRectifierScore = true;
+  }
+
+  fermerModalRectifierScore(): void {
+    this.showModalRectifierScore = false;
+    this.reclamationScoreSelectionnee = null;
+    this.scoreRectification = null;
+  }
+
+  soumettreRectificationScore(): void {
+    if (!this.reclamationScoreSelectionnee) return;
+    const score = Number(this.scoreRectification);
+    if (isNaN(score) || score < 0 || score > 20) {
+      this.showAlertMessage('❌ Valeur de score invalide (0-20)');
+      return;
+    }
+
+    const token = this.authService.getAccessToken();
+    this.http
+      .post(
+        `http://localhost:8003/api/reclamations/${this.reclamationScoreSelectionnee.id}/rectifier-score/`,
+        { score },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          // update local candidature score if we can find it
+          const candId = Number(this.reclamationScoreSelectionnee!.candidature_id);
+          if (Number.isFinite(candId) && candId > 0) {
+            const cand = this.candidatures.find((c) => c.id === candId);
+            if (cand) {
+              cand.score = score;
+            }
+          } else {
+            // try match by name
+            const cand = this.candidatures.find(
+              (c) =>
+                (c.candidat_nom || '').toLowerCase() ===
+                (this.reclamationScoreSelectionnee!.candidat_nom || '').toLowerCase(),
+            );
+            if (cand) cand.score = score;
+          }
+
+          this.showAlertMessage('✅ Score rectifié');
+          this.fermerModalRectifierScore();
+        },
+        error: (error) => {
+          console.error('Erreur rectification score:', error);
+          this.showAlertMessage('❌ Erreur lors de la rectification');
+        },
+      });
+  }
+
+  voirDossierAssocieReclamation(reclamation: Reclamation): void {
+    if (
+      !this.actionPermissions.consultationDossier &&
+      !this.actionPermissions.consultationCandidature
+    ) {
+      this.notifyActionBlocked("Consultation dossier désactivée par l'administration.");
+      return;
+    }
+
+    let candidatureId = Number(reclamation.candidature_id);
+    if (!Number.isFinite(candidatureId) || candidatureId <= 0) {
+      const candidate = this.candidatures.find(
+        (cand) =>
+          (cand.candidat_nom || '').toLowerCase() ===
+          (reclamation.candidat_nom || '').toLowerCase(),
+      );
+      candidatureId = Number(candidate?.id);
+    }
+
+    if (!Number.isFinite(candidatureId) || candidatureId <= 0) {
+      this.showAlertMessage('❌ Dossier associé introuvable pour cette réclamation.');
+      return;
+    }
+
+    this.router.navigate(['/commission/dossier', candidatureId], {
+      queryParams: { source: 'reclamations', reclamation: reclamation.id },
+    });
   }
 
   // ========================================

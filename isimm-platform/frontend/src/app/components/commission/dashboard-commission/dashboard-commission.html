@@ -2251,6 +2251,7 @@
               <tr>
                 <th>Identifiant</th>
                 <th>Objet</th>
+                <th>Priorité</th>
                 <th>Master concerné</th>
                 <th>État</th>
                 <th>Détails</th>
@@ -2265,6 +2266,14 @@
                 <td>
                   <strong>{{ reclamation.objet }}</strong>
                   <div class="muted-line">{{ reclamation.candidat_nom }}</div>
+                </td>
+                <td>
+                  <span
+                    class="priority-badge"
+                    [ngClass]="getReclamationPriorityClass(getReclamationPriority(reclamation))"
+                  >
+                    {{ getReclamationPriorityLabel(getReclamationPriority(reclamation)) }}
+                  </span>
                 </td>
                 <td>{{ getReclamationMaster(reclamation) }}</td>
                 <td>
@@ -2282,23 +2291,42 @@
                   </div>
                 </td>
                 <td>
-                  <button
-                    class="btn-action voir"
-                    *ngIf="
-                      isResponsable &&
-                      actionPermissions.traiterReclamations &&
-                      reclamation.statut !== 'traitee'
-                    "
-                    (click)="traiterReclamation(reclamation)"
-                  >
-                    <i class="fas fa-reply"></i> Traiter
-                  </button>
-                  <span
-                    class="muted-line"
-                    *ngIf="!isResponsable || reclamation.statut === 'traitee'"
-                  >
-                    {{ reclamation.statut === 'traitee' ? 'Déjà traité' : 'Consultation' }}
-                  </span>
+                  <div class="reclamation-action-stack">
+                    <button
+                      class="btn-action voir"
+                      *ngIf="
+                        isResponsable &&
+                        actionPermissions.traiterReclamations &&
+                        reclamation.statut !== 'traitee'
+                      "
+                      (click)="ouvrirModalReponseReclamation(reclamation)"
+                    >
+                      <i class="fas fa-reply"></i> Répondre
+                    </button>
+
+                    <button
+                      class="btn-action dossier"
+                      *ngIf="isResponsable"
+                      (click)="voirDossierAssocieReclamation(reclamation)"
+                    >
+                      <i class="fas fa-folder-open"></i> Voir le dossier associé
+                    </button>
+
+                    <button
+                      class="btn-action rectifier"
+                      *ngIf="isResponsable"
+                      (click)="ouvrirModalRectifierScore(reclamation)"
+                    >
+                      <i class="fas fa-pen"></i> Rectifier Score
+                    </button>
+
+                    <span
+                      class="muted-line"
+                      *ngIf="!isResponsable || reclamation.statut === 'traitee'"
+                    >
+                      {{ reclamation.statut === 'traitee' ? 'Déjà traité' : 'Consultation' }}
+                    </span>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -3171,6 +3199,89 @@
         >
           <i class="fas fa-folder-open"></i> Consulter le dossier
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL RÉPONSE RÉCLAMATION -->
+  <div
+    *ngIf="showModalReponseReclamation"
+    class="modal-overlay"
+    (click)="fermerModalReponseReclamation()"
+  >
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>💬 Répondre à la réclamation</h2>
+        <button class="btn-close" (click)="fermerModalReponseReclamation()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="reclamation-modal-info">
+          <p><strong>ID:</strong> #{{ reclamationSelectionnee?.id }}</p>
+          <p><strong>Candidat:</strong> {{ reclamationSelectionnee?.candidat_nom }}</p>
+          <p><strong>Objet:</strong> {{ reclamationSelectionnee?.objet }}</p>
+          <p><strong>Motif:</strong> {{ reclamationSelectionnee?.motif }}</p>
+        </div>
+
+        <div class="form-group">
+          <label>Réponse au candidat *</label>
+          <textarea
+            [(ngModel)]="reponseReclamationText"
+            name="reponseReclamationText"
+            rows="5"
+            placeholder="Saisissez votre réponse..."
+            required
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="fermerModalReponseReclamation()">
+            Annuler
+          </button>
+          <button type="button" class="btn-primary" (click)="soumettreReponseReclamation()">
+            <i class="fas fa-paper-plane"></i> Envoyer la réponse
+          </button>
+        </div>
+      </div>
+
+      <!-- ✅ MODAL RECTIFIER SCORE -->
+      <div
+        *ngIf="showModalRectifierScore"
+        class="modal-overlay"
+        (click)="fermerModalRectifierScore()"
+      >
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>✏️ Rectifier le score</h2>
+            <button class="btn-close" (click)="fermerModalRectifierScore()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="reclamation-modal-info">
+              <p><strong>ID:</strong> #{{ reclamationScoreSelectionnee?.id }}</p>
+              <p><strong>Candidat:</strong> {{ reclamationScoreSelectionnee?.candidat_nom }}</p>
+              <p><strong>Objet:</strong> {{ reclamationScoreSelectionnee?.objet }}</p>
+            </div>
+
+            <div class="form-group">
+              <label>Nouveau score (0-20) *</label>
+              <input type="number" min="0" max="20" [(ngModel)]="scoreRectification" />
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="fermerModalRectifierScore()">
+                Annuler
+              </button>
+              <button type="button" class="btn-primary" (click)="soumettreRectificationScore()">
+                <i class="fas fa-paper-plane"></i> Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

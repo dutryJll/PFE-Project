@@ -285,6 +285,31 @@
   border-color: rgba(37, 99, 235, 0.65);
 }
 
+/* Reclamation priority badges */
+.priority-badge {
+  display: inline-block;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #fff;
+}
+.prio-haut {
+  background: #ef4444;
+}
+.prio-moyen {
+  background: #f59e0b;
+}
+.prio-bas {
+  background: #10b981;
+}
+
+.btn-action.rectifier {
+  background: linear-gradient(90deg, #f97316, #fb923c);
+  color: white;
+  border: none;
+}
+
 .nav-item.logout {
   color: #fca5a5;
   margin-top: auto;
@@ -1383,6 +1408,36 @@
 
 .reclamation-actions {
   margin-top: 1rem;
+}
+
+.reclamation-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.btn-action.dossier {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.btn-action.dossier:hover {
+  background: #dbeafe;
+}
+
+.reclamation-modal-info {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.reclamation-modal-info p {
+  margin: 0.3rem 0;
+  color: #334155;
 }
 
 /* ========================================

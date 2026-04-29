@@ -38,6 +38,12 @@ urlpatterns = [
     path('ocr/test/', views.ocr_test_diagnostic, name='ocr_test_diagnostic'),
     path('<int:candidature_id>/calculer-score/', views.calculer_score_candidature, name='calculer_score'),
     path('<int:candidature_id>/calculer-score-final/', views.calculer_score_final_et_statut, name='calculer_score_final_et_statut'),
+    path('reclamations/<int:reclamation_id>/repondre/', views.repondre_reclamation, name='repondre_reclamation'),
+    path(
+        'reclamations/<int:reclamation_id>/rectifier-score/',
+        views.rectifier_score_reclamation,
+        name='rectifier_score_reclamation',
+    ),
     path('master/<int:master_id>/generer-liste-manuelle/', views.generer_liste_manuelle, name='generer_liste_manuelle'),
     path('master/<int:master_id>/liste-admission-recente/', views.liste_admission_recente, name='liste_admission_recente'),
     path('master/<int:master_id>/generer-listes/', views.generer_listes_admission, name='generer_listes'),

@@ -399,6 +399,105 @@
   color: #059669;
 }
 
+/* Historique improvements */
+.historique-shell .historique-kpis {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0 18px;
+}
+.historique-shell .kpi-card {
+  background: #fff;
+  border: 1px solid #e6eef9;
+  padding: 14px 18px;
+  border-radius: 12px;
+  min-width: 140px;
+  box-shadow: 0 8px 20px rgba(15, 43, 77, 0.06);
+}
+.historique-shell .kpi-card small {
+  display: block;
+  color: #6b7280;
+}
+.historique-shell .kpi-card strong {
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.historique-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.historique-filters select,
+.historique-filters input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e6eef9;
+}
+.historique-filters .btn-secondary {
+  padding: 8px 10px;
+}
+
+.candidatures-table.candidatures-historique {
+  width: 100%;
+  border-collapse: collapse;
+}
+.candidatures-table.candidatures-historique th,
+.candidatures-table.candidatures-historique td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.candidatures-table.candidatures-historique thead th {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modern-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  display: inline-block;
+}
+.badge-success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.badge-wait {
+  background: #fff7ed;
+  color: #92400e;
+}
+.badge-reject {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.btn-icon {
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #334155;
+}
+.btn-icon:hover {
+  background: #f1f5f9;
+}
+.empty-row {
+  text-align: center;
+  padding: 18px;
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .historique-shell .historique-kpis {
+    flex-direction: column;
+  }
+  .historique-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .step-pill-connector {
   background: #dce8f6;
 }
