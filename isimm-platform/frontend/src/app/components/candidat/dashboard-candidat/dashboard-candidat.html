@@ -2,6 +2,15 @@
   <aside class="sidebar">
     <div class="logo-section">
       <div class="logo-icon">🎓</div>
+      <span
+        class="ws-indicator"
+        [ngClass]="{
+          online: socketConnectionStatus === ConnectionStatus.CONNECTED,
+          connecting: socketConnectionStatus === ConnectionStatus.CONNECTING,
+          offline: socketConnectionStatus !== ConnectionStatus.CONNECTED,
+        }"
+        [title]="socketConnectionStatus"
+      ></span>
       <h2>ISIMM</h2>
       <p class="user-role">Espace Candidat</p>
     </div>
@@ -117,95 +126,183 @@
 
   <main class="main-content">
     <div *ngIf="currentView === 'dashboard'" class="view-content">
-      <div *ngIf="showAlert" class="alert-banner urgent">
-        <i class="fas fa-exclamation-triangle"></i>
-        <div class="alert-content">
-          <strong>N'attendez pas le dernier moment !</strong>
-          <p>
-            Vous avez jusqu'au <strong>jeudi 12 mars, 23h59 heure de Tunis</strong> pour finaliser
-            vos actions.
-          </p>
+      <div class="alert-bar" id="alert">
+        <svg
+          class="alert-icon"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path
+            d="M10 2L18 16H2L10 2z"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            fill="none"
+          ></path>
+          <line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-linecap="round"></line>
+          <circle cx="10" cy="14.5" r="0.6" fill="#854F0B" stroke="none"></circle>
+        </svg>
+        <div>
+          <div class="countdown-row">
+            <div class="cd-cell">
+              <div class="cd-num" id="cd-j">{{ formatNumber(countdown.days) }}</div>
+              <div class="cd-lbl">Jours</div>
+            </div>
+            <div class="cd-cell">
+              <div class="cd-num" id="cd-h">{{ formatNumber(countdown.hours) }}</div>
+              <div class="cd-lbl">Heures</div>
+            </div>
+            <div class="cd-cell">
+              <div class="cd-num" id="cd-m">{{ formatNumber(countdown.minutes) }}</div>
+              <div class="cd-lbl">Minutes</div>
+            </div>
+            <div class="cd-cell">
+              <div class="cd-num" id="cd-s">{{ formatNumber(countdown.seconds) }}</div>
+              <div class="cd-lbl">Secondes</div>
+            </div>
+          </div>
+          <div class="alert-text">
+            Délai limite : <strong>jeudi 12 mars, 23h59 heure de Tunis</strong> — finalisez vos
+            actions avant expiration.
+          </div>
         </div>
-        <button class="btn-alert" (click)="closeAlert()"><i class="fas fa-times"></i></button>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
-            <i class="fas fa-file-alt"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ mesCandidatures.length }}</h3>
-            <p>Candidatures</p>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ countByStatut('en_attente') }}</h3>
-            <p>En attente</p>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7)">
-            <i class="fas fa-folder-open"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ dossiersCandidature.length }}</h3>
-            <p>Dossiers</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
-        <h2 class="role-features-title">Fonctionnalités de votre rôle</h2>
-        <p class="role-features-subtitle">
-          Ces actions sont disponibles dans la plateforme selon votre profil candidat.
-        </p>
-        <div class="role-actions-list">
-          <button
-            type="button"
-            class="role-action-chip role-action-link"
-            *ngFor="let actionName of customRoleActions"
-            (click)="openCustomRoleAction(actionName)"
-            [title]="actionName"
+        <button
+          class="btn-close-alert"
+          onclick="document.getElementById('alert').style.display = 'none'"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
           >
-            {{ actionName }}
-          </button>
+            <line x1="2" y1="2" x2="10" y2="10"></line>
+            <line x1="10" y1="2" x2="2" y2="10"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card" (click)="sendPrompt('Voir mes candidatures')">
+          <div class="stat-icon si-blue">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
+              <path d="M4 1h6l4 4v10H4V1z"></path>
+              <path d="M10 1v4h4"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-num">{{ mesCandidatures.length }}</div>
+            <div class="stat-lbl">Candidatures</div>
+          </div>
+        </div>
+
+        <div class="stat-card" (click)="sendPrompt('Voir les candidatures en attente')">
+          <div class="stat-icon si-amber">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
+              <circle cx="8" cy="8" r="6"></circle>
+              <path d="M8 5v3l2 2"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-num">{{ countByStatut('en_attente') }}</div>
+            <div class="stat-lbl">En attente</div>
+          </div>
+        </div>
+
+        <div class="stat-card" (click)="sendPrompt('Voir mes dossiers de candidature')">
+          <div class="stat-icon si-teal">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
+              <path d="M2 13V5l6-3 6 3v8l-6 2-6-2z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-num">{{ dossiersCandidature.length }}</div>
+            <div class="stat-lbl">Dossiers</div>
+          </div>
+        </div>
+
+        <div class="stat-card" (click)="sendPrompt('Voir mes notifications non lues')">
+          <div class="stat-icon si-purple">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
+              <path d="M8 2a5 5 0 015 5v3l1 2H2l1-2V7a5 5 0 015-5z"></path>
+              <path d="M6 13a2 2 0 004 0"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-num">{{ notificationsNonLues }}</div>
+            <div class="stat-lbl">Notifications</div>
+          </div>
         </div>
       </div>
 
-      <div class="section-card">
-        <h2>Activités récentes</h2>
-        <div class="activites-list">
-          <div class="activity-item">
-            <div class="activity-icon check-icon">
-              <i class="fas fa-check-circle"></i>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Notifications récentes</div>
+          <div class="notif-list">
+            <div class="notif-item unread">
+              <div class="notif-dot"></div>
+              <div class="notif-content">
+                <div class="notif-title">Dossier en cours d'examen</div>
+                <div class="notif-sub">
+                  Votre dossier MRGL a été pris en charge par la commission
+                </div>
+              </div>
+              <div class="notif-time">Il y a 2h</div>
             </div>
-            <div class="activity-content">
-              <strong>Suivi candidature</strong>
-              <small>Votre dernière candidature est bien enregistrée.</small>
+            <div class="notif-item unread">
+              <div class="notif-dot"></div>
+              <div class="notif-content">
+                <div class="notif-title">Pièce manquante détectée</div>
+                <div class="notif-sub">Votre CV n'a pas encore été déposé</div>
+              </div>
+              <div class="notif-time">Hier</div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot read"></div>
+              <div class="notif-content">
+                <div class="notif-title">Candidature soumise avec succès</div>
+                <div class="notif-sub">Master Génie Logiciel 2025-2026</div>
+              </div>
+              <div class="notif-time">14/04</div>
             </div>
           </div>
-          <div class="activity-item">
-            <div class="activity-icon file-icon">
-              <i class="fas fa-file-upload"></i>
+        </div>
+
+        <div class="deadline-card">
+          <div class="card-title" style="margin-bottom: 0.6rem">Dates importantes</div>
+          <div class="deadline-row">
+            <div class="dl-left">
+              <div class="dl-dot" style="background: #e24b4a"></div>
+              <div>
+                <div class="dl-name">Dépôt dossier</div>
+                <div class="dl-date">12 mars 2025, 23h59</div>
+              </div>
             </div>
-            <div class="activity-content">
-              <strong>Dépôt de dossier</strong>
-              <small>Un nouveau document a été ajouté à votre dossier.</small>
-            </div>
+            <span class="dl-badge dlb-hot">2 jours</span>
           </div>
-          <div class="activity-item">
-            <div class="activity-icon user-icon">
-              <i class="fas fa-user-edit"></i>
+          <div class="deadline-row">
+            <div class="dl-left">
+              <div class="dl-dot" style="background: #ba7517"></div>
+              <div>
+                <div class="dl-name">Résultats présélection</div>
+                <div class="dl-date">25 mars 2025</div>
+              </div>
             </div>
-            <div class="activity-content">
-              <strong>Profil mis à jour</strong>
-              <small>Vos informations personnelles sont à jour.</small>
+            <span class="dl-badge dlb-warn">15 jours</span>
+          </div>
+          <div class="deadline-row">
+            <div class="dl-left">
+              <div class="dl-dot" style="background: #1d9e75"></div>
+              <div>
+                <div class="dl-name">Inscription administrative</div>
+                <div class="dl-date">10 avril 2025</div>
+              </div>
             </div>
+            <span class="dl-badge dlb-ok">31 jours</span>
           </div>
         </div>
       </div>
@@ -215,8 +312,27 @@
       <div class="profile-shell">
         <div class="profile-hero-card">
           <div class="profile-avatar">
-            {{ (profileData.first_name || currentUser?.first_name || '?').charAt(0) }}
-            {{ (profileData.last_name || currentUser?.last_name || '?').charAt(0) }}
+            <img
+              *ngIf="avatarPreview || profileData.avatar_url || currentUser?.avatar_url"
+              [src]="avatarPreview || profileData.avatar_url || currentUser?.avatar_url"
+              alt="Avatar"
+            />
+            <span *ngIf="!(avatarPreview || profileData.avatar_url || currentUser?.avatar_url)">
+              {{ (profileData.first_name || currentUser?.first_name || '?').charAt(0) }}
+              {{ (profileData.last_name || currentUser?.last_name || '?').charAt(0) }}
+            </span>
+          </div>
+          <div class="profile-avatar-actions">
+            <button type="button" class="btn-link-inline" (click)="changePhoto()">
+              Modifier la photo
+            </button>
+            <input
+              type="file"
+              id="avatarFileInput"
+              accept="image/*"
+              style="display: none"
+              (change)="onAvatarFileSelected($event)"
+            />
           </div>
           <div class="profile-hero-text">
             <h2>{{ profileData.first_name }} {{ profileData.last_name }}</h2>
@@ -248,6 +364,27 @@
               <input type="email" [value]="profileData.email" readonly class="readonly" />
             </div>
 
+            <div class="form-row">
+              <div class="form-group">
+                <label>Numéro de téléphone</label>
+                <input
+                  type="tel"
+                  [(ngModel)]="profileData.phone"
+                  name="phone"
+                  placeholder="(+216) 00 000 000"
+                />
+              </div>
+              <div class="form-group">
+                <label>Adresse</label>
+                <input
+                  type="text"
+                  [(ngModel)]="profileData.address"
+                  name="address"
+                  placeholder="Adresse postale"
+                />
+              </div>
+            </div>
+
             <details class="profile-collapse">
               <summary>Noms complémentaires</summary>
               <div class="profile-collapse-body form-row">
@@ -271,6 +408,83 @@
             </details>
 
             <details class="profile-collapse">
+              <summary>Cursus Académique</summary>
+              <div class="profile-collapse-body form-row">
+                <div class="form-group">
+                  <label>Dernier Diplôme</label>
+                  <input type="text" [(ngModel)]="profileData.diplome_last" name="diplome_last" />
+                </div>
+                <div class="form-group">
+                  <label>Établissement</label>
+                  <input type="text" [(ngModel)]="profileData.etablissement" name="etablissement" />
+                </div>
+              </div>
+              <div class="profile-collapse-body form-row">
+                <div class="form-group">
+                  <label>Année du Bac</label>
+                  <input type="text" [(ngModel)]="profileData.annee_bac" name="annee_bac" />
+                </div>
+                <div class="form-group">
+                  <label>Moyenne Générale</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="profileData.moyenne_generale"
+                    name="moyenne_generale"
+                  />
+                </div>
+              </div>
+            </details>
+
+            <details class="profile-collapse">
+              <summary>Sécurité & Compte</summary>
+              <div class="profile-collapse-body form-group">
+                <label>Changer le mot de passe</label>
+                <div class="form-row">
+                  <div class="form-group">
+                    <input
+                      type="password"
+                      [(ngModel)]="passwordForm.current_password"
+                      name="current_password"
+                      placeholder="Ancien mot de passe"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <input
+                      type="password"
+                      [(ngModel)]="passwordForm.new_password"
+                      name="new_password"
+                      placeholder="Nouveau mot de passe"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <input
+                      type="password"
+                      [(ngModel)]="passwordForm.confirm_password"
+                      name="confirm_password"
+                      placeholder="Confirmer le mot de passe"
+                    />
+                  </div>
+                </div>
+                <div style="margin-top: 8px">
+                  <button type="button" class="btn-primary" (click)="changePassword()">
+                    Changer le mot de passe
+                  </button>
+                </div>
+              </div>
+              <div class="profile-collapse-body form-group" style="margin-top: 8px">
+                <label>Authentification à deux facteurs</label>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px">
+                  <button type="button" class="btn-outline" (click)="toggleTwoFactor()">
+                    {{ twoFactorEnabled ? 'Désactiver' : 'Activer' }}
+                  </button>
+                  <span class="twofa-status"
+                    >Status: {{ twoFactorEnabled ? 'Activée' : 'Désactivée' }}</span
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details class="profile-collapse">
               <summary>Informations facultatives</summary>
               <div class="profile-collapse-body form-group">
                 <label>Notes complémentaires</label>
@@ -285,6 +499,9 @@
               </button>
             </div>
           </form>
+          <button class="floating-save btn-primary" type="button" (click)="updateProfile()">
+            Enregistrer les modifications
+          </button>
         </div>
       </div>
     </div>
@@ -293,14 +510,6 @@
       <div class="section-card">
         <div class="section-header-export">
           <h2>Préinscription</h2>
-          <button
-            type="button"
-            class="btn-secondary btn-validate-modern"
-            (click)="validateMenuSection('offres-inscription', $event)"
-          >
-            <i class="fas fa-check"></i>
-            Valider
-          </button>
         </div>
 
         <div class="offres-hero">
@@ -325,17 +534,6 @@
               <span class="hero-stat-value">{{ mastersProfessionnels().length }}</span>
               <span class="hero-stat-label">Masters pro</span>
             </div>
-          </div>
-        </div>
-
-        <div *ngIf="isOffresInscriptionFallback" class="offres-fallback-banner">
-          <i class="fas fa-triangle-exclamation"></i>
-          <div>
-            <strong>Mode secours activé</strong>
-            <p>
-              Le service candidature est indisponible pour le moment. Les cartes ci-dessous sont
-              affichées à titre temporaire pour vous permettre de continuer la navigation.
-            </p>
           </div>
         </div>
 
@@ -2111,8 +2309,6 @@
               <span class="wizard-chip wizard-chip--info">
                 {{ wizardOffre?.type === 'cycle_ingenieur' ? 'Ingénieur' : 'Master' }}
               </span>
-              <span class="wizard-chip wizard-chip--accent">Score automatique</span>
-              <span class="wizard-chip wizard-chip--success">Formulaire guidé</span>
             </div>
           </div>
         </div>
@@ -2153,7 +2349,7 @@
       >
         <i class="fas fa-chart-line"></i>
         <span>Score estimé en temps réel :</span>
-        <strong class="score-live">{{ getWizardComputedScoreDisplay() }}</strong>
+        <strong class="score-live">{{ getWizardComputedScore().toFixed(2) }}</strong>
         <small>calculé automatiquement selon vos moyennes</small>
       </div>
 
@@ -2217,7 +2413,8 @@
               <div
                 class="wz-field"
                 [class.wz-field--error]="
-                  wizardTouched.cinPasseport && !wizardData.cinPasseport.trim()
+                  wizardTouched.cinPasseport &&
+                  (!wizardData.cinPasseport.trim() || !isWizardCINValid(wizardData.cinPasseport))
                 "
               >
                 <label
@@ -2230,12 +2427,23 @@
                   name="wzCin"
                   (blur)="wizardTouched.cinPasseport = true"
                   placeholder="Ex: 12345678"
+                  maxlength="8"
                 />
                 <span
                   class="wz-error"
                   *ngIf="wizardTouched.cinPasseport && !wizardData.cinPasseport.trim()"
                 >
-                  Le numéro CIN/Passeport est obligatoire
+                  Le numéro CIN/Passeport est obligatoire et doit contenir 8 chiffres
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.cinPasseport &&
+                    wizardData.cinPasseport.trim() &&
+                    !isWizardCINValid(wizardData.cinPasseport)
+                  "
+                >
+                  Le CIN doit contenir exactement 8 chiffres
                 </span>
               </div>
               <div
@@ -2292,21 +2500,37 @@
               </div>
               <div
                 class="wz-field"
-                [class.wz-field--error]="wizardTouched.telephone && !wizardData.telephone.trim()"
+                [class.wz-field--error]="
+                  wizardTouched.telephone &&
+                  (!wizardData.telephone.trim() || !isWizardPhoneValid(wizardData.telephone))
+                "
               >
                 <label><i class="fas fa-phone"></i> Téléphone <span class="req">*</span></label>
                 <input
-                  type="tel"
+                  type="text"
                   [(ngModel)]="wizardData.telephone"
                   name="wzTel"
+                  inputmode="tel"
+                  maxlength="12"
+                  (input)="wizardData.telephone = sanitizeWizardPhoneInput(wizardData.telephone)"
                   (blur)="wizardTouched.telephone = true"
-                  placeholder="Ex: 55 000 000"
+                  placeholder="Ex: +21655000000"
                 />
                 <span
                   class="wz-error"
                   *ngIf="wizardTouched.telephone && !wizardData.telephone.trim()"
                 >
                   Le numéro de téléphone est obligatoire
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.telephone &&
+                    wizardData.telephone.trim() &&
+                    !isWizardPhoneValid(wizardData.telephone)
+                  "
+                >
+                  Le téléphone doit commencer par +216
                 </span>
               </div>
             </div>
@@ -2407,11 +2631,24 @@
               <div class="wz-field">
                 <label><i class="fas fa-calendar"></i> Année Bac <span class="req">*</span></label>
                 <input
-                  type="number"
+                  type="text"
                   [(ngModel)]="wizardData.anneeBac"
                   name="wzAnneeBac"
+                  inputmode="numeric"
+                  maxlength="4"
+                  (input)="wizardData.anneeBac = sanitizeWizardDigits(wizardData.anneeBac, 4)"
+                  (blur)="wizardTouched.anneeBac = true"
                   placeholder="Ex: 2022"
+                  [class.input-error]="
+                    wizardTouched.anneeBac && !isWizardYearValid(wizardData.anneeBac)
+                  "
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="wizardTouched.anneeBac && !isWizardYearValid(wizardData.anneeBac)"
+                >
+                  L'année du Bac doit contenir 4 chiffres
+                </span>
               </div>
               <div class="wz-field">
                 <label
@@ -2425,8 +2662,19 @@
                   max="20"
                   [(ngModel)]="wizardData.moyenneBacPrincipale"
                   name="wzMoyBac"
+                  (blur)="wizardTouched.moyenneBacPrincipale = true"
                   placeholder="Ex: 14.50"
+                  [class.input-error]="isWizardScoreInvalid(wizardData.moyenneBacPrincipale)"
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.moyenneBacPrincipale &&
+                    isWizardScoreInvalid(wizardData.moyenneBacPrincipale)
+                  "
+                >
+                  Les notes ne doivent pas dépasser 20
+                </span>
               </div>
             </div>
 
@@ -2444,8 +2692,16 @@
                   max="20"
                   [(ngModel)]="wizardData.noteMathBac"
                   name="wzMathBac"
+                  (blur)="wizardTouched.noteMathBac = true"
                   placeholder="/ 20"
+                  [class.input-error]="isWizardScoreInvalid(wizardData.noteMathBac)"
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="wizardTouched.noteMathBac && isWizardScoreInvalid(wizardData.noteMathBac)"
+                >
+                  Les notes ne doivent pas dépasser 20
+                </span>
               </div>
               <div class="wz-field">
                 <label
@@ -2459,8 +2715,19 @@
                   max="20"
                   [(ngModel)]="wizardData.noteFrancaisBac"
                   name="wzFrBac"
+                  (blur)="wizardTouched.noteFrancaisBac = true"
                   placeholder="/ 20"
+                  [class.input-error]="isWizardScoreInvalid(wizardData.noteFrancaisBac)"
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.noteFrancaisBac &&
+                    isWizardScoreInvalid(wizardData.noteFrancaisBac)
+                  "
+                >
+                  Les notes ne doivent pas dépasser 20
+                </span>
               </div>
               <div class="wz-field">
                 <label
@@ -2473,8 +2740,18 @@
                   max="20"
                   [(ngModel)]="wizardData.noteAnglaisBac"
                   name="wzEnBac"
+                  (blur)="wizardTouched.noteAnglaisBac = true"
                   placeholder="/ 20"
+                  [class.input-error]="isWizardScoreInvalid(wizardData.noteAnglaisBac)"
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.noteAnglaisBac && isWizardScoreInvalid(wizardData.noteAnglaisBac)
+                  "
+                >
+                  Les notes ne doivent pas dépasser 20
+                </span>
               </div>
             </div>
             <div class="wz-field" *ngIf="isWizardMrglOffer()">
@@ -2611,9 +2888,22 @@
                         max="20"
                         [(ngModel)]="wizardData.moyenne1Annee"
                         name="wzMoy1"
+                        (blur)="wizardTouched.moyenne1Annee = true"
                         placeholder="/ 20"
-                        [class.input-error]="isWizardScoreInvalid(wizardData.moyenne1Annee)"
+                        [class.input-error]="
+                          wizardTouched.moyenne1Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne1Annee)
+                        "
                       />
+                      <span
+                        class="wz-error"
+                        *ngIf="
+                          wizardTouched.moyenne1Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne1Annee)
+                        "
+                      >
+                        Les notes ne doivent pas dépasser 20
+                      </span>
                     </td>
                     <td>
                       <select
@@ -2638,8 +2928,22 @@
                         max="20"
                         [(ngModel)]="wizardData.moyenne2Annee"
                         name="wzMoy2"
+                        (blur)="wizardTouched.moyenne2Annee = true"
                         placeholder="/ 20"
+                        [class.input-error]="
+                          wizardTouched.moyenne2Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne2Annee)
+                        "
                       />
+                      <span
+                        class="wz-error"
+                        *ngIf="
+                          wizardTouched.moyenne2Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne2Annee)
+                        "
+                      >
+                        Les notes ne doivent pas dépasser 20
+                      </span>
                     </td>
                     <td>
                       <select
@@ -2664,8 +2968,22 @@
                         max="20"
                         [(ngModel)]="wizardData.moyenne3Annee"
                         name="wzMoy3"
+                        (blur)="wizardTouched.moyenne3Annee = true"
                         placeholder="/ 20"
+                        [class.input-error]="
+                          wizardTouched.moyenne3Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne3Annee)
+                        "
                       />
+                      <span
+                        class="wz-error"
+                        *ngIf="
+                          wizardTouched.moyenne3Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne3Annee)
+                        "
+                      >
+                        Les notes ne doivent pas dépasser 20
+                      </span>
                     </td>
                     <td>
                       <select
@@ -2690,8 +3008,22 @@
                         max="20"
                         [(ngModel)]="wizardData.moyenne4Annee"
                         name="wzMoy4"
+                        (blur)="wizardTouched.moyenne4Annee = true"
                         placeholder="/ 20"
+                        [class.input-error]="
+                          wizardTouched.moyenne4Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne4Annee)
+                        "
                       />
+                      <span
+                        class="wz-error"
+                        *ngIf="
+                          wizardTouched.moyenne4Annee &&
+                          isWizardScoreInvalid(wizardData.moyenne4Annee)
+                        "
+                      >
+                        Les notes ne doivent pas dépasser 20
+                      </span>
                     </td>
                     <td>
                       <select
@@ -2716,8 +3048,20 @@
                         max="20"
                         [(ngModel)]="wizardData.moyenneIng1"
                         name="wzMoyIng1"
+                        (blur)="wizardTouched.moyenneIng1 = true"
                         placeholder="/ 20"
+                        [class.input-error]="
+                          wizardTouched.moyenneIng1 && isWizardScoreInvalid(wizardData.moyenneIng1)
+                        "
                       />
+                      <span
+                        class="wz-error"
+                        *ngIf="
+                          wizardTouched.moyenneIng1 && isWizardScoreInvalid(wizardData.moyenneIng1)
+                        "
+                      >
+                        Les notes ne doivent pas dépasser 20
+                      </span>
                     </td>
                     <td>
                       <select
@@ -2803,7 +3147,7 @@
                   <small>Moyenne pondérée de vos notes saisies</small>
                 </div>
               </div>
-              <div class="score-live-value">{{ getWizardComputedScoreDisplay() }}</div>
+              <div class="score-live-value">{{ getWizardComputedScore().toFixed(2) }}</div>
             </div>
           </div>
         </div>
@@ -2873,7 +3217,7 @@
               </div>
               <div class="recap-item recap-item--score">
                 <span class="recap-label"><i class="fas fa-chart-line"></i> Score estimé</span>
-                <strong class="score-highlight">{{ getWizardComputedScoreDisplay() }}</strong>
+                <strong class="score-highlight">{{ getWizardComputedScore().toFixed(2) }}</strong>
               </div>
             </div>
 
@@ -2912,13 +3256,16 @@
               candidature.
             </p>
             <div class="wz-field">
-              <label class="checkbox-label-inline">
+              <label class="checkbox-label">
                 <input
                   type="checkbox"
                   [(ngModel)]="wizardData.confirmationDeclaration"
                   name="wzConfirm"
+                  class="checkbox-input"
                 />
-                <span>J'accepte cette déclaration <span class="req">*</span></span>
+                <span class="checkbox-label-text"
+                  >J'accepte cette déclaration <span class="req">*</span></span
+                >
               </label>
             </div>
             <div

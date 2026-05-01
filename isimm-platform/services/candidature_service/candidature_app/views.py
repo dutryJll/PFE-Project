@@ -1775,6 +1775,101 @@ def update_status(request, candidature_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def commission_decision_candidature(request, candidature_id):
+    if getattr(request.user, 'role', None) not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    decision = str(request.data.get('decision', '')).strip().lower()
+    motif_rejet = str(request.data.get('motif_rejet', '')).strip()
+
+    decision_to_status = {
+        'accepter': 'preselectionne',
+        'accept': 'preselectionne',
+        'valider': 'preselectionne',
+        'refuser': 'rejete',
+        'reject': 'rejete',
+        'rejeter': 'rejete',
+    }
+
+    nouveau_statut = decision_to_status.get(decision)
+    if not nouveau_statut:
+        return Response(
+            {'error': "decision invalide. Valeurs attendues: accepter ou refuser."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    ancien_statut = candidature.statut
+    if ancien_statut == nouveau_statut:
+        return Response(
+            {'success': True, 'message': 'Statut deja a jour.', 'candidature': CandidatureSerializer(candidature).data},
+            status=status.HTTP_200_OK,
+        )
+
+    candidature.statut = nouveau_statut
+    candidature.date_changement_statut = timezone.now()
+    candidature.peut_modifier = False
+
+    if nouveau_statut == 'rejete':
+        candidature.motif_rejet = motif_rejet or 'Refus commission.'
+    else:
+        candidature.motif_rejet = ''
+
+    candidature.save(update_fields=['statut', 'motif_rejet', 'date_changement_statut', 'peut_modifier', 'updated_at'])
+    candidature.ajouter_historique(
+        ancien_statut,
+        nouveau_statut,
+        request.user,
+        f"Decision commission: {decision}",
+    )
+
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)(
+            'candidatures_updates',
+            {
+                'type': 'candidature_status_changed',
+                'candidature_id': candidature.id,
+                'candidate_user_id': candidature.candidat_id,
+                'new_status': nouveau_statut,
+                'updated_at': timezone.now().isoformat(),
+            },
+        )
+
+    try:
+        envoyer_email_changement_statut(candidature, ancien_statut, nouveau_statut)
+    except Exception as exc:
+        logger.exception("Erreur envoi email changement statut %s: %s", candidature.id, exc)
+
+    _safe_create_notification(
+        user=candidature.candidat,
+        titre='Décision de la commission',
+        message=(
+            'Votre candidature a été acceptée par la commission.'
+            if nouveau_statut == 'preselectionne'
+            else 'Votre candidature a été refusée par la commission.'
+        ),
+        notif_type='success' if nouveau_statut == 'preselectionne' else 'danger',
+        dedup_key=f"commission-decision-{candidature.id}-{nouveau_statut}-{timezone.now().date().isoformat()}",
+    )
+
+    serializer = CandidatureSerializer(candidature)
+    return Response(
+        {
+            'success': True,
+            'message': f'Statut change de "{ancien_statut}" a "{nouveau_statut}"',
+            'candidature': serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def send_member_credentials(request):
     email = request.data.get('email')
     password = request.data.get('password')

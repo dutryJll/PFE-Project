@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router'; // ✅ RouterLink supprimé
 import { CandidatureService } from '../../../services/candidature.service';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface Candidature {
   id: number;
@@ -29,18 +33,39 @@ interface Candidature {
   };
 }
 
+type CommissionDecision = 'accepter' | 'refuser';
+
 @Component({
   selector: 'app-consulter-candidatures',
   standalone: true,
-  imports: [CommonModule, FormsModule], // ✅ RouterLink supprimé
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+  ], // ✅ RouterLink supprimé
   templateUrl: './consulter-candidatures.html',
   styleUrl: './consulter-candidatures.css',
 })
 export class ConsulterCandidaturesComponent implements OnInit {
   candidatures: Candidature[] = [];
   candidaturesFiltrees: Candidature[] = [];
+  displayedColumns: string[] = [
+    'ranking',
+    'candidate',
+    'cin',
+    'type',
+    'speciality',
+    'score',
+    'status',
+    'actions',
+  ];
   selectedCandidature: Candidature | null = null;
   detailRequested: boolean = false;
+  loading = false;
+  requestedCandidatureId: number | null = null;
 
   filtres = {
     type: '',
@@ -55,107 +80,85 @@ export class ConsulterCandidaturesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadCandidatures();
-
     this.route.paramMap.subscribe((params) => {
       const rawId = params.get('id');
       const id = rawId ? Number(rawId) : NaN;
 
       if (rawId && !Number.isNaN(id)) {
         this.detailRequested = true;
-        this.selectedCandidature = this.candidatures.find((item) => item.id === id) || null;
+        this.requestedCandidatureId = id;
       } else {
         this.detailRequested = false;
+        this.requestedCandidatureId = null;
         this.selectedCandidature = null;
       }
+
+      this.syncSelectedCandidature();
     });
+
+    this.loadCandidatures();
   }
 
   loadCandidatures(): void {
-    this.candidatures = [
-      {
-        id: 1,
-        first_name: 'Ahmed',
-        last_name: 'Ben Ali',
-        cin: '12345678',
-        email: 'ahmed@example.com',
-        type: 'master',
-        type_candidature: 'master',
-        voeux: ['Master Génie Logiciel', 'Master Data Science'],
-        score: 17.5,
-        statut: 'validee',
-        date_soumission: '2026-02-15T10:30:00',
+    this.loading = true;
+    this.candidatureService.getCandidaturesCommissionClassees().subscribe({
+      next: (response: any) => {
+        const rawList = Array.isArray(response) ? response : response?.results || [];
+        this.candidatures = rawList.map((item: any) => this.mapApiCandidature(item));
+        this.appliquerFiltres();
+        this.loading = false;
+        this.syncSelectedCandidature();
       },
-      {
-        id: 2,
-        first_name: 'Fatma',
-        last_name: 'Trabelsi',
-        cin: '87654321',
-        email: 'fatma@example.com',
-        type: 'ingenieur',
-        type_candidature: 'ingenieur',
-        specialite: 'Génie Informatique',
-        score: 15.2,
-        statut: 'en_cours',
-        date_soumission: '2026-02-16T11:00:00',
+      error: () => {
+        this.loading = false;
+        this.candidatures = [];
+        this.candidaturesFiltrees = [];
       },
-      {
-        id: 3,
-        first_name: 'Mohamed',
-        last_name: 'Karoui',
-        cin: '11223344',
-        email: 'mohamed@example.com',
-        type: 'master',
-        type_candidature: 'master',
-        voeux: ['Master Data Science'],
-        score: 16.8,
-        statut: 'validee',
-        date_soumission: '2026-02-17T14:00:00',
-      },
-      {
-        id: 4,
-        first_name: 'Sarra',
-        last_name: 'Mansouri',
-        cin: '99887766',
-        email: 'sarra@example.com',
-        type: 'ingenieur',
-        type_candidature: 'ingenieur',
-        specialite: 'Génie Électrique',
-        score: 14.5,
-        statut: 'en_cours',
-        date_soumission: '2026-02-18T09:30:00',
-      },
-      {
-        id: 5,
-        first_name: 'Youssef',
-        last_name: 'Bouzid',
-        cin: '55443322',
-        email: 'youssef@example.com',
-        type: 'master',
-        type_candidature: 'master',
-        voeux: ['Master Microélectronique'],
-        score: 13.2,
-        statut: 'rejetee',
-        date_soumission: '2026-02-19T16:00:00',
-      },
-    ];
+    });
+  }
 
-    this.candidaturesFiltrees = [...this.candidatures];
+  private mapApiCandidature(item: any): Candidature {
+    return {
+      id: Number(item.id),
+      first_name: item.candidat_nom || item.first_name || '-',
+      last_name: item.last_name || '',
+      cin: item.candidat_cin || item.cin || '-',
+      email: item.candidat_email || item.email || '-',
+      type: item.type_concours || item.type || (item.concours ? 'ingenieur' : 'master'),
+      type_candidature: item.type_concours || item.type_candidature || 'master',
+      voeux: Array.isArray(item.voeux) ? item.voeux : item.master_nom ? [item.master_nom] : [],
+      specialite: item.specialite || item.master_nom || '-',
+      score: Number(item.score || 0),
+      statut: item.statut || 'soumis',
+      date_soumission: item.date_soumission || '',
+      selected: false,
+    };
+  }
+
+  private syncSelectedCandidature(): void {
+    if (!this.requestedCandidatureId) {
+      return;
+    }
+
+    this.selectedCandidature =
+      this.candidatures.find((item) => item.id === this.requestedCandidatureId) || null;
   }
 
   appliquerFiltres(): void {
-    this.candidaturesFiltrees = this.candidatures.filter((c) => {
-      const matchType = !this.filtres.type || c.type === this.filtres.type;
-      const matchStatut = !this.filtres.statut || c.statut === this.filtres.statut;
-      const matchRecherche =
-        !this.filtres.recherche ||
-        c.first_name.toLowerCase().includes(this.filtres.recherche.toLowerCase()) ||
-        c.last_name.toLowerCase().includes(this.filtres.recherche.toLowerCase()) ||
-        c.cin.includes(this.filtres.recherche) ||
-        c.email.toLowerCase().includes(this.filtres.recherche.toLowerCase());
+    this.candidaturesFiltrees = [...this.candidatures]
+      .filter((c) => {
+        const matchType = !this.filtres.type || c.type === this.filtres.type;
+        const matchStatut = !this.filtres.statut || c.statut === this.filtres.statut;
+        const matchRecherche =
+          !this.filtres.recherche ||
+          c.first_name.toLowerCase().includes(this.filtres.recherche.toLowerCase()) ||
+          c.last_name.toLowerCase().includes(this.filtres.recherche.toLowerCase()) ||
+          c.cin.includes(this.filtres.recherche) ||
+          c.email.toLowerCase().includes(this.filtres.recherche.toLowerCase());
 
-      return matchType && matchStatut && matchRecherche;
-    });
+        return matchType && matchStatut && matchRecherche;
+      })
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   }
 
   resetFiltres(): void {
@@ -165,6 +168,10 @@ export class ConsulterCandidaturesComponent implements OnInit {
       recherche: '',
     };
     this.candidaturesFiltrees = [...this.candidatures];
+  }
+
+  getFullName(candidature: Candidature): string {
+    return [candidature.first_name, candidature.last_name].filter(Boolean).join(' ').trim();
   }
 
   countByType(type: string): number {
@@ -249,6 +256,33 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
 
   voirDossier(candidature: Candidature): void {
     this.router.navigate(['/commission/dossier', candidature.id]);
+  }
+
+  deciderCandidature(candidature: Candidature, decision: CommissionDecision): void {
+    const motifRejet = decision === 'refuser' ? 'Refus commission.' : '';
+
+    this.candidatureService
+      .deciderCandidatureCommission(candidature.id, decision, motifRejet)
+      .subscribe({
+        next: (response) => {
+          const updated = response?.candidature
+            ? this.mapApiCandidature(response.candidature)
+            : candidature;
+          this.candidatures = this.candidatures.map((item) =>
+            item.id === updated.id ? updated : item,
+          );
+          this.appliquerFiltres();
+          this.syncSelectedCandidature();
+        },
+      });
+  }
+
+  accepter(candidature: Candidature): void {
+    this.deciderCandidature(candidature, 'accepter');
+  }
+
+  refuser(candidature: Candidature): void {
+    this.deciderCandidature(candidature, 'refuser');
   }
 
   deposerDossier(candidature: Candidature): void {

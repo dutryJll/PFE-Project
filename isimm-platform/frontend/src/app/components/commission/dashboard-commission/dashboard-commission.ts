@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { CandidatureService } from '../../../services/candidature.service';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { MatCardModule } from '@angular/material/card';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -39,6 +42,7 @@ interface Candidature {
   notes_preinscription?: string;
   decision_responsable?: 'valide' | 'non_valide' | '';
   date_soumission?: string;
+  date_changement_statut?: string;
   classement?: string | number;
   total_candidats?: number;
 }
@@ -375,6 +379,7 @@ export class DashboardCommissionComponent implements OnInit {
   currentView: CommissionView = 'dashboard';
   currentUser: any = null;
   currentDate: Date = new Date();
+  Number = Number;
   isResponsable: boolean = false;
 
   actionPermissions: CommissionActionPermissions = {
@@ -632,6 +637,41 @@ export class DashboardCommissionComponent implements OnInit {
   candidaturesResponsable: Candidature[] = [];
   candidaturesResponsableFiltrees: Candidature[] = [];
   private responsableCandidaturesFromApi: boolean = false;
+
+  // Master Candidatures list (ranked)
+  candidaturesMasterRankedListExportFormat: ExportFormat = 'xlsx';
+  candidaturesMasterTableColumns: string[] = [
+    'ranking',
+    'nom',
+    'score',
+    'diplome',
+    'documents',
+    'actions',
+  ];
+
+  get candidaturesMasterFiltered(): Candidature[] {
+    return this.candidaturesResponsableFiltrees
+      .filter((c) => c.type_concours !== 'ingenieur')
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+    if (
+      !this.selectedCandidaturePreview ||
+      !this.candidaturesFiltrees.some((item) => item.id === this.selectedCandidaturePreview?.id)
+    ) {
+      this.selectedCandidaturePreview = this.candidaturesFiltrees[0] || null;
+    }
+  }
+
+  get candidaturesMasterViewFiltered(): Candidature[] {
+    return this.candidaturesFiltrees
+      .filter((c) => c.type_concours !== 'ingenieur')
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  }
+
+  get candidaturesMasterCount(): number {
+    return this.candidaturesMasterFiltered.length;
+  }
+
   responsibleNotifications: ResponsibleNotificationItem[] = [];
   filtreResponsibleNotificationType: '' | 'info' | 'warning' = '';
   filtreResponsibleNotificationStatut: '' | 'ouvert' | 'ferme' = '';
@@ -819,13 +859,20 @@ export class DashboardCommissionComponent implements OnInit {
     diplomeConforme: '',
   };
 
+  // WebSocket status
+  public ConnectionStatus = ConnectionStatus;
+  public socketConnectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
+  private wsStatusSub: Subscription | null = null;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
+    private candidatureService: CandidatureService,
     private dialog: MatDialog,
+    private webSocketService: WebSocketService,
   ) {}
 
   ngOnInit(): void {
@@ -867,6 +914,26 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.loadDerniereListeGenereeDepuisBackend();
+
+    // Start or attach to WebSocket connection and expose status for UI
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${protocol}://localhost:8003/ws/candidatures/`;
+    this.webSocketService.connect(wsUrl).subscribe({
+      next: () => {},
+      error: (err) => console.warn('WebSocket service connection error (commission):', err),
+    });
+
+    this.wsStatusSub = this.webSocketService.connectionStatus$.subscribe((status) => {
+      this.socketConnectionStatus = status;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.wsStatusSub) {
+      this.wsStatusSub.unsubscribe();
+      this.wsStatusSub = null;
+    }
+    this.webSocketService.disconnect();
   }
 
   private loadNotifications(): void {
@@ -1119,7 +1186,7 @@ export class DashboardCommissionComponent implements OnInit {
     return [...rows].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   }
 
-  private getCandidateEtablissement(candidature: Candidature): string {
+  getCandidateEtablissement(candidature: Candidature): string {
     const directValue = (candidature.etablissement_origine || '').trim();
     if (directValue) {
       return directValue;
@@ -2344,11 +2411,61 @@ export class DashboardCommissionComponent implements OnInit {
     );
   }
 
+  getDashboardDossiersTraitesCount(): number {
+    return (
+      this.getTotalResponsableAcceptes() +
+      this.getTotalResponsableInscrits() +
+      this.getTotalResponsableRejetes()
+    );
+  }
+
+  getDashboardDossiersNonTraitesCount(): number {
+    return Math.max(
+      this.getTotalResponsableCandidatures() - this.getDashboardDossiersTraitesCount(),
+      0,
+    );
+  }
+
+  getDashboardAdmisCount(): number {
+    return this.getTotalResponsableAcceptes();
+  }
+
+  getDashboardInscritsCount(): number {
+    return this.getTotalResponsableInscrits();
+  }
+
+  getDashboardTauxTraitement(): number {
+    return this.getRate(
+      this.getDashboardDossiersTraitesCount(),
+      this.getTotalResponsableCandidatures(),
+    );
+  }
+
+  getDashboardTauxNonTraites(): number {
+    return this.getRate(
+      this.getDashboardDossiersNonTraitesCount(),
+      this.getTotalResponsableCandidatures(),
+    );
+  }
+
+  getDashboardTauxAcceptation(): number {
+    return this.getTauxResponsableAcceptationGlobal();
+  }
+
+  getDashboardTauxInscription(): number {
+    return this.getTauxResponsableInscriptionGlobal();
+  }
+
   getRate(numerator: number, denominator: number): number {
     if (!denominator) {
       return 0;
     }
     return Math.round((numerator / denominator) * 1000) / 10;
+  }
+
+  getDonutDasharray(percentage: number): string {
+    const safeValue = Math.max(0, Math.min(100, Math.round(Number(percentage) || 0)));
+    return `${safeValue} ${100 - safeValue}`;
   }
 
   getResponsibleMasterLabel(stat: ResponsableMasterStat): string {
@@ -3258,8 +3375,58 @@ export class DashboardCommissionComponent implements OnInit {
       scoreMax: null,
       etablissement: '',
     };
-    this.selectedCandidaturePreview = null;
     this.candidaturesFiltrees = [...this.candidatures];
+    this.selectedCandidaturePreview = this.candidaturesFiltrees[0] || null;
+  }
+
+  openPanel(index: number): void {
+    this.selectedCandidaturePreview = this.candidaturesFiltrees[index] || null;
+  }
+
+  closePanel(): void {
+    this.selectedCandidaturePreview = null;
+  }
+
+  getSelectionStatusBadgeClass(statut: string): string {
+    switch ((statut || '').toLowerCase()) {
+      case 'soumis':
+        return 'b-recv';
+      case 'sous_examen':
+        return 'b-exam';
+      case 'preselectionne':
+      case 'selectionne':
+      case 'inscrit':
+        return 'b-valid';
+      case 'rejete':
+      case 'annule':
+        return 'b-reject';
+      default:
+        return 'b-recv';
+    }
+  }
+
+  getSelectionStatusLabel(statut: string): string {
+    switch ((statut || '').toLowerCase()) {
+      case 'soumis':
+        return 'Reçu';
+      case 'sous_examen':
+        return 'En examen';
+      case 'preselectionne':
+      case 'selectionne':
+      case 'inscrit':
+        return 'Validé';
+      case 'rejete':
+      case 'annule':
+        return 'Rejeté';
+      case 'dossier_depose':
+        return 'Dossier déposé';
+      default:
+        return statut || 'Inconnu';
+    }
+  }
+
+  filterTable(): void {
+    this.appliquerFiltresResponsable();
   }
 
   voirDossier(candidature: Candidature): void {
@@ -3274,6 +3441,69 @@ export class DashboardCommissionComponent implements OnInit {
       queryParams: { source: 'liste-generation' },
     });
     this.closeActionMenu();
+  }
+
+  accepterCandidature(candidature: Candidature): void {
+    this.candidatureService.deciderCandidatureCommission(candidature.id, 'accepter').subscribe({
+      next: (response: { candidature?: Partial<Candidature> }) => {
+        const updated = response?.candidature;
+        if (updated) {
+          this.candidatures = this.candidatures.map((item) => {
+            if (item.id !== updated.id) {
+              return item;
+            }
+
+            return {
+              ...item,
+              statut: updated.statut ?? item.statut,
+              date_changement_statut: updated.date_changement_statut ?? item.date_changement_statut,
+            };
+          });
+          this.appliquerFiltres();
+        }
+        this.toastService.show('Candidature acceptée.', 'success');
+      },
+      error: (error: any) => {
+        this.toastService.show(
+          error?.error?.error || 'Impossible de valider la candidature.',
+          'error',
+        );
+      },
+    });
+  }
+
+  refuserCandidature(candidature: Candidature): void {
+    const motifRejet = window.prompt('Motif du refus (optionnel)', '') || '';
+
+    this.candidatureService
+      .deciderCandidatureCommission(candidature.id, 'refuser', motifRejet)
+      .subscribe({
+        next: (response: { candidature?: Partial<Candidature> }) => {
+          const updated = response?.candidature;
+          if (updated) {
+            this.candidatures = this.candidatures.map((item) => {
+              if (item.id !== updated.id) {
+                return item;
+              }
+
+              return {
+                ...item,
+                statut: updated.statut ?? item.statut,
+                date_changement_statut:
+                  updated.date_changement_statut ?? item.date_changement_statut,
+              };
+            });
+            this.appliquerFiltres();
+          }
+          this.toastService.show('Candidature refusée.', 'warning');
+        },
+        error: (error: any) => {
+          this.toastService.show(
+            error?.error?.error || 'Impossible de refuser la candidature.',
+            'error',
+          );
+        },
+      });
   }
 
   // ========================================
@@ -3441,6 +3671,18 @@ export class DashboardCommissionComponent implements OnInit {
 
   private getScopedCandidatures(source: Candidature[]): Candidature[] {
     return source.filter((candidature) => this.isCandidatureInScope(candidature));
+  }
+
+  getScoreCalculeLabel(candidature: Candidature): string {
+    const value = Number(candidature.score);
+    if (!Number.isFinite(value)) {
+      return '--';
+    }
+    return value.toFixed(2);
+  }
+
+  hasPiecesJointes(candidature: Candidature): boolean {
+    return Boolean(candidature.dossier_depose);
   }
 
   private getCandidatureAcademicYear(candidature: Candidature): string {
@@ -4974,6 +5216,44 @@ export class DashboardCommissionComponent implements OnInit {
       this.candidaturesResponsableExportFormat,
       'candidatures-responsable',
       'Liste de candidature (Responsable)',
+    );
+  }
+
+  generateMasterRankedList(): void {
+    // Prefer the list from the currently visible table, fallback to responsible view list.
+    const masterCandidatures =
+      this.candidaturesMasterViewFiltered.length > 0
+        ? [...this.candidaturesMasterViewFiltered]
+        : [...this.candidaturesMasterFiltered];
+
+    if (masterCandidatures.length === 0) {
+      this.toastService.show('Aucune candidature Master à exporter.', 'warning');
+      return;
+    }
+
+    // Create ranked list with ranking
+    const rankedRows: ExportRow[] = masterCandidatures.map((cand, index) => ({
+      Classement: (index + 1).toString(),
+      Candidat: cand.candidat_nom || cand.candidat_email,
+      CIN: cand.candidat_cin || '-',
+      Master: cand.master_nom || cand.specialite,
+      Diplôme: cand.specialite || '-',
+      Score: cand.score,
+      Email: cand.candidat_email,
+      Statut: this.getStatusDisplayLabel(cand.statut),
+      'Dossier déposé': cand.dossier_depose ? 'Oui' : 'Non',
+    }));
+
+    this.exportRows(
+      rankedRows,
+      this.candidaturesMasterRankedListExportFormat,
+      'master-candidatures-classees',
+      'Liste Classée - Candidatures Master',
+    );
+
+    this.toastService.show(
+      `Liste classée générée: ${masterCandidatures.length} candidat(s) Master.`,
+      'success',
     );
   }
 

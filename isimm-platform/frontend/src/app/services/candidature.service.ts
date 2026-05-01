@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpEvent, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -56,6 +56,37 @@ export class CandidatureService {
   // POUR ADMIN/COMMISSION : Récupérer toutes les candidatures
   getAllCandidatures(): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
+  }
+
+  // POUR COMMISSION : récupérer la liste classée des candidatures masters
+  getCandidaturesCommissionClassees(masterId?: number | string): Observable<any> {
+    let params = new HttpParams().set('type', 'masters');
+    if (
+      masterId !== undefined &&
+      masterId !== null &&
+      `${masterId}`.trim() !== '' &&
+      `${masterId}` !== 'all'
+    ) {
+      params = params.set('master_id', `${masterId}`);
+    }
+
+    return this.http.get(`${this.apiUrl}/responsable/candidatures/`, {
+      headers: this.getHeaders(),
+      params,
+    });
+  }
+
+  // POUR COMMISSION : accepter ou refuser une candidature
+  deciderCandidatureCommission(
+    candidatureId: number,
+    decision: 'accepter' | 'refuser',
+    motifRejet?: string,
+  ): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${candidatureId}/commission-decision/`,
+      { decision, motif_rejet: motifRejet || '' },
+      { headers: this.getHeaders() },
+    );
   }
 
   // Déposer ou ajuster le dossier numérique pour une candidature présélectionnée

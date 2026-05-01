@@ -25,6 +25,11 @@ urlpatterns = [
     path('<int:candidature_id>/modifier/', views.modifier_candidature, name='modifier_candidature'),
     path('<int:candidature_id>/changer-statut/', views.changer_statut_candidature, name='changer_statut'),
     path('<int:candidature_id>/update-status/', views.update_status, name='update_status'),
+    path(
+        '<int:candidature_id>/commission-decision/',
+        views.commission_decision_candidature,
+        name='commission_decision_candidature',
+    ),
     path('<int:candidature_id>/annuler/', views.annuler_candidature, name='annuler_candidature'),
     path('corbeille/', views.corbeille_candidatures, name='corbeille_candidatures'),
     path('configuration/<int:master_id>/', views.gerer_configuration_appel, name='gerer_configuration'),

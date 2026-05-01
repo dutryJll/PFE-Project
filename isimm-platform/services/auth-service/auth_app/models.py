@@ -27,9 +27,11 @@ class User(AbstractUser):
     reset_password_expire = models.DateTimeField(null=True, blank=True)
     
     # Autres champs
+    avatar_url = models.CharField(max_length=500, blank=True, default='', verbose_name='Avatar')
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Téléphone")
     address = models.TextField(blank=True, null=True, verbose_name="Adresse")
     date_of_birth = models.DateField(null=True, blank=True, verbose_name="Date de naissance")
+    two_factor_enabled = models.BooleanField(default=False, verbose_name='Double authentification activée')
     
     # Timestamps
     date_inscription = models.DateTimeField(auto_now_add=True, verbose_name="Date d'inscription")

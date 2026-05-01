@@ -17,6 +17,7 @@ import { ReclamationDetailDialogComponent } from './reclamation-detail-dialog.co
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { isPublicOffer } from '../../../shared/public-offer';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -379,7 +380,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     email: boolean;
     telephone: boolean;
     etablissementOrigine: boolean;
+    anneeBac: boolean;
     confirmationText: boolean;
+    moyenneBacPrincipale: boolean;
+    noteMathBac: boolean;
+    noteFrancaisBac: boolean;
+    noteAnglaisBac: boolean;
+    moyenne1Annee: boolean;
+    moyenne2Annee: boolean;
+    moyenne3Annee: boolean;
+    moyenne4Annee: boolean;
+    moyenneIng1: boolean;
   } = {
     nom: false,
     prenom: false,
@@ -388,7 +399,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     email: false,
     telephone: false,
     etablissementOrigine: false,
+    anneeBac: false,
     confirmationText: false,
+    moyenneBacPrincipale: false,
+    noteMathBac: false,
+    noteFrancaisBac: false,
+    noteAnglaisBac: false,
+    moyenne1Annee: false,
+    moyenne2Annee: false,
+    moyenne3Annee: false,
+    moyenne4Annee: false,
+    moyenneIng1: false,
   };
   readonly wizardRequiredDocs: Array<{ label: string; icon: string; hint: string }> = [
     {
@@ -491,8 +512,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   private countdownTimerId: ReturnType<typeof setInterval> | null = null;
   private ws: WebSocket | null = null;
   private reconnectTimerId: ReturnType<typeof setTimeout> | null = null;
+  private wsReconnectAttempts: number = 0;
+  private readonly wsReconnectMaxAttempts: number = 3;
   private queryParamsSub: Subscription | null = null;
   private readonly wsReconnectDelayMs = 3000;
+  public ConnectionStatus = ConnectionStatus;
+  public socketConnectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
+  private socketStatusSub: Subscription | null = null;
 
   mesCandidatures: Candidature[] = [
     {
@@ -708,9 +734,19 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     first_name: '',
     last_name: '',
     email: '',
+    avatar_url: '',
     phone: '',
     address: '',
+    diplome_last: '',
+    etablissement: '',
+    annee_bac: '',
+    moyenne_generale: '',
+    two_factor_enabled: false,
   };
+
+  twoFactorEnabled: boolean = false;
+  avatarFile: File | null = null;
+  avatarPreview: string | null = null;
 
   passwordForm: any = {
     current_password: '',
@@ -921,11 +957,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     private toastService: ToastService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
+    private webSocketService: WebSocketService,
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
+    this.avatarPreview = this.currentUser?.avatar_url || null;
+    this.twoFactorEnabled = !!this.currentUser?.two_factor_enabled;
+    this.profileData.two_factor_enabled = this.twoFactorEnabled;
     this.initializeDossierPreferenceForm();
 
     const requestedView = this.route.snapshot.queryParamMap.get('view') as CandidatView | null;
@@ -990,7 +1030,28 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       this.chargerHistorique();
     }
     this.startCountdownClock();
-    this.connectStatusWebSocket();
+    // Start WebSocket via centralized service (handles reconnection/backoff/heartbeat)
+    const wsUrl = this.buildWebSocketUrl();
+    this.webSocketService.connect(wsUrl).subscribe({
+      next: () => {},
+      error: (err) => console.warn('WebSocket service connection error:', err),
+    });
+
+    // Subscribe to incoming candidature status messages
+    this.webSocketService.getMessagesByType('candidature_status_changed').subscribe((msg) => {
+      const userId = this.currentUser?.id;
+      if (!userId || msg['candidate_user_id'] !== userId) {
+        return;
+      }
+      this.loadMesCandidatures();
+      this.loadMesDossiers();
+      this.loadNotifications();
+    });
+
+    // Subscribe to connection status for UI indicator
+    this.socketStatusSub = this.webSocketService.connectionStatus$.subscribe((status) => {
+      this.socketConnectionStatus = status;
+    });
   }
 
   ngOnDestroy(): void {
@@ -1000,6 +1061,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
     this.stopCountdownClock();
     this.disconnectStatusWebSocket();
+    if (this.socketStatusSub) {
+      this.socketStatusSub.unsubscribe();
+      this.socketStatusSub = null;
+    }
   }
 
   private startCountdownClock(): void {
@@ -1007,6 +1072,33 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.countdownTimerId = setInterval(() => {
       this.countdownNow = Date.now();
     }, 1000);
+  }
+
+  get countdown(): DeadlineCountdown {
+    const now = this.countdownNow || Date.now();
+    const target = this.deadlineDate.getTime();
+    let diff = Math.max(0, target - now);
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    diff -= days * 24 * 60 * 60 * 1000;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    diff -= hours * 60 * 60 * 1000;
+    const minutes = Math.floor(diff / (1000 * 60));
+    diff -= minutes * 60 * 1000;
+    const seconds = Math.floor(diff / 1000);
+
+    return {
+      days,
+      hours,
+      minutes,
+      seconds,
+      expired: target <= now,
+    };
+  }
+
+  formatNumber(n: number): string {
+    const v = Math.max(0, Math.floor(n || 0));
+    return v < 10 ? `0${v}` : String(v);
   }
 
   private stopCountdownClock(): void {
@@ -1047,7 +1139,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         }
 
         const userId = this.currentUser?.id;
-        if (!userId || payload.candidate_user_id !== userId) {
+        if (!userId || payload['candidate_user_id'] !== userId) {
           return;
         }
 
@@ -1072,6 +1164,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     if (this.reconnectTimerId) {
       return;
     }
+
+    this.wsReconnectAttempts++;
+    if (this.wsReconnectAttempts >= this.wsReconnectMaxAttempts) {
+      console.warn(
+        `WebSocket reconnection attempts (${this.wsReconnectAttempts}) exceeded max (${this.wsReconnectMaxAttempts}). Disabling WebSocket. App will use HTTP polling.`,
+      );
+      return;
+    }
+
     this.reconnectTimerId = setTimeout(() => {
       this.reconnectTimerId = null;
       this.connectStatusWebSocket();
@@ -1283,6 +1384,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     return true;
+  }
+
+  // Exposed for the inline onclick handlers in the stat-grid
+  public sendPrompt(text: string): void {
+    try {
+      this.toastService.show(text, 'info');
+      console.log('sendPrompt:', text);
+    } catch (e) {
+      console.log('sendPrompt fallback:', text);
+    }
   }
 
   private notifyActionBlocked(message: string): void {
@@ -1613,14 +1724,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   loadOffresInscription(): void {
     const token = this.authService.getAccessToken();
-    if (!token) {
-      return;
-    }
+
+    // Allow loading public offers even when user is not authenticated.
+    const httpOptions = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 
     this.http
-      .get<Offre[]>('http://localhost:8003/api/candidatures/offres-inscription/', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      .get<Offre[]>('http://localhost:8003/api/candidatures/offres-inscription/', httpOptions)
       .subscribe({
         next: (data) => {
           const mappedOffres = (data || [])
@@ -1641,22 +1750,32 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
               publie_par_responsable: offre.publie_par_responsable,
               nombre_candidats_inscrits: Number(offre.nombre_candidats_inscrits || 0),
             }));
-          this.isOffresInscriptionFallback = mappedOffres.length === 0;
-          this.offresInscription = mappedOffres.length
-            ? mappedOffres
-            : this.getFallbackOffresInscription();
+          // debugger: log raw response when no offers found to help identify backend mismatch
+          if (!Array.isArray(data) || (Array.isArray(mappedOffres) && mappedOffres.length === 0)) {
+            console.warn("Aucune offre publique/ouverte retournée par l'API offres-inscription.", {
+              raw: data,
+            });
+          }
+
+          this.isOffresInscriptionFallback = false;
+          // If backend returned no public/open offers, use local fallback so the UI is not empty
+          if (Array.isArray(mappedOffres) && mappedOffres.length === 0) {
+            this.offresInscription = this.getFallbackOffresInscription();
+            this.isOffresInscriptionFallback = true;
+          } else {
+            this.offresInscription = mappedOffres;
+          }
           this.loadNotifications();
         },
         error: (error) => {
           console.error('Erreur chargement offres:', error);
+          // Use fallback offers when API unreachable
           this.isOffresInscriptionFallback = true;
+          this.offresInscription = this.getFallbackOffresInscription();
           this.toastService.show(
-            'Impossible de charger les offres de préinscription (service indisponible).',
-            'error',
+            "Impossible de charger les offres de préinscription pour le moment. Affichage d'offres de secours.",
+            'warning',
           );
-          if (!this.offresInscription.length) {
-            this.offresInscription = this.getFallbackOffresInscription();
-          }
         },
       });
   }
@@ -2176,7 +2295,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       email: false,
       telephone: false,
       etablissementOrigine: false,
+      anneeBac: false,
       confirmationText: false,
+      moyenneBacPrincipale: false,
+      noteMathBac: false,
+      noteFrancaisBac: false,
+      noteAnglaisBac: false,
+      moyenne1Annee: false,
+      moyenne2Annee: false,
+      moyenne3Annee: false,
+      moyenne4Annee: false,
+      moyenneIng1: false,
     };
     this.wizardUploadedFiles = Array.from({ length: this.wizardRequiredDocs.length }, () => null);
     this.wizardDragOverIndex = null;
@@ -2284,9 +2413,28 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  sanitizeWizardDigits(value: string, maxLength: number): string {
+    return String(value ?? '')
+      .replace(/\D/g, '')
+      .slice(0, maxLength);
+  }
+
+  sanitizeWizardPhoneInput(value: string): string {
+    const raw = String(value ?? '').replace(/[^\d+]/g, '');
+    const normalized = raw.startsWith('+')
+      ? `+${raw.slice(1).replace(/\+/g, '')}`
+      : `+${raw.replace(/\+/g, '')}`;
+
+    return normalized.slice(0, 12);
+  }
+
   private isScoreRangeValid(value: string): boolean {
     const parsed = this.parseWizardNumeric(value);
     return parsed !== null && parsed >= 0 && parsed <= 20;
+  }
+
+  isWizardYearValid(value: string): boolean {
+    return /^\d{4}$/.test(String(value || '').trim());
   }
 
   isWizardScoreInvalid(value: string): boolean {
@@ -2327,7 +2475,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   getWizardComputedScoreDisplay(): string {
-    return `${this.getWizardComputedScore().toFixed(2)} / 20`;
+    return `${this.getWizardComputedScore().toFixed(2)}`;
+  }
+
+  isWizardCINValid(value: string): boolean {
+    const cin = String(value || '').trim();
+    return /^\d{8}$/.test(cin);
+  }
+
+  isWizardPhoneValid(value: string): boolean {
+    const phone = String(value || '').trim();
+    return phone.startsWith('+216');
   }
 
   isWizardMrglOffer(): boolean {
@@ -2366,7 +2524,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.etablissementOrigine,
       ].every((value) => !!String(value || '').trim());
 
-      return baseRequired && this.isValidEmail(this.wizardData.email);
+      if (
+        !baseRequired ||
+        !this.isValidEmail(this.wizardData.email) ||
+        !this.isWizardCINValid(this.wizardData.cinPasseport) ||
+        !this.isWizardPhoneValid(this.wizardData.telephone)
+      ) {
+        return false;
+      }
+
+      return true;
     }
 
     if (step === 2) {
@@ -2376,7 +2543,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.moyenneBacPrincipale,
       ].every((value) => !!String(value || '').trim());
 
-      if (!baseBacFieldsValid || !this.isScoreRangeValid(this.wizardData.moyenneBacPrincipale)) {
+      if (
+        !baseBacFieldsValid ||
+        !this.isWizardYearValid(this.wizardData.anneeBac) ||
+        !this.isScoreRangeValid(this.wizardData.moyenneBacPrincipale)
+      ) {
         return false;
       }
 
@@ -3795,19 +3966,38 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   cancelProfileEdit(): void {
     this.isProfileEditMode = false;
     this.profileData = { ...this.currentUser };
+    this.avatarPreview = this.currentUser?.avatar_url || null;
+    this.avatarFile = null;
   }
 
   updateProfile(): void {
     const token = this.authService.getAccessToken();
 
+    const formData = new FormData();
+    formData.append('first_name', this.profileData.first_name || '');
+    formData.append('last_name', this.profileData.last_name || '');
+    formData.append('phone', this.profileData.phone || '');
+    formData.append('address', this.profileData.address || '');
+    formData.append('diplome_last', this.profileData.diplome_last || '');
+    formData.append('etablissement', this.profileData.etablissement || '');
+    formData.append('annee_bac', this.profileData.annee_bac || '');
+    formData.append('moyenne_generale', this.profileData.moyenne_generale || '');
+
+    if (this.avatarFile) {
+      formData.append('avatar', this.avatarFile);
+    }
+
     this.http
-      .put('http://localhost:8001/api/auth/profile/update/', this.profileData, {
+      .put('http://localhost:8001/api/auth/profile/update/', formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
-        next: () => {
+        next: (response: any) => {
           this.showAlertMessage('✅ Profil mis à jour avec succès !');
-          this.currentUser = { ...this.currentUser, ...this.profileData };
+          this.currentUser = { ...this.currentUser, ...this.profileData, ...response };
+          this.profileData = { ...this.currentUser };
+          this.avatarPreview = response?.avatar_url || this.avatarPreview;
+          this.avatarFile = null;
           this.isProfileEditMode = false;
         },
         error: (error) => {
@@ -3853,6 +4043,54 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           this.showAlertMessage('❌ Erreur lors du changement de mot de passe');
         },
       });
+  }
+
+  toggleTwoFactor(): void {
+    const token = this.authService.getAccessToken();
+
+    this.http
+      .post(
+        'http://localhost:8001/api/auth/profile/two-factor/',
+        { enabled: !this.twoFactorEnabled },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.twoFactorEnabled = !!response?.two_factor_enabled;
+          this.profileData.two_factor_enabled = this.twoFactorEnabled;
+          this.currentUser = { ...this.currentUser, two_factor_enabled: this.twoFactorEnabled };
+          this.showAlertMessage(
+            this.twoFactorEnabled
+              ? '✅ Authentification à deux facteurs activée'
+              : '✅ Authentification à deux facteurs désactivée',
+          );
+        },
+        error: (error) => {
+          console.error('Erreur 2FA:', error);
+          this.showAlertMessage('❌ Impossible de modifier la double authentification');
+        },
+      });
+  }
+
+  changePhoto(): void {
+    const el = document.getElementById('avatarFileInput') as HTMLInputElement | null;
+    if (el) {
+      el.click();
+    }
+  }
+
+  onAvatarFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input || !input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    this.avatarFile = file;
+    this.avatarPreview = URL.createObjectURL(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      this.avatarPreview = String(ev.target?.result || this.avatarPreview || null);
+      // Optionally update profileData with avatar preview/base64 or send to backend on save
+    };
+    reader.readAsDataURL(file);
   }
 
   // ── Drag & Drop enrichi ──

@@ -425,7 +425,7 @@
   font-size: 11px;
 }
 
-.wz-field input,
+.wz-field input:not([type='checkbox']),
 .wz-field select,
 .wz-field textarea {
   width: 100%;
@@ -849,7 +849,7 @@
   pointer-events: auto !important;
 }
 
-.wizard-step-body .wz-field input,
+.wizard-step-body .wz-field input:not([type='checkbox']),
 .wizard-step-body .wz-field select,
 .wizard-step-body .wz-field textarea {
   display: block !important;
@@ -867,6 +867,26 @@
   -webkit-text-fill-color: #0f172a !important;
   box-shadow: 0 2px 8px rgba(29, 95, 174, 0.08) !important;
   position: relative !important;
+  z-index: 3 !important;
+}
+
+.wizard-step-body .wz-field input[type='checkbox'] {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1.5px solid #94a3b8 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  accent-color: #2563eb !important;
+  position: static !important;
   z-index: 3 !important;
 }
 

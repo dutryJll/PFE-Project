@@ -1,3 +1,9 @@
+import os
+from pathlib import Path
+import uuid
+
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -13,7 +19,6 @@ from django.utils import timezone
 from django.core.mail import send_mail, get_connection
 from django.conf import settings
 from django.db import transaction
-import uuid
 
 from .models import User, ActionRole, ActionLog
 from .serializers import UserSerializer, RegisterSerializer
@@ -239,6 +244,13 @@ def update_profile(request):
     """Modifier profil"""
     user = request.user
     data = request.data
+
+    uploaded_avatar = request.FILES.get('avatar')
+    if uploaded_avatar is not None:
+        file_extension = Path(uploaded_avatar.name).suffix or '.jpg'
+        avatar_name = f"avatars/{user.id}-{uuid.uuid4().hex}{file_extension}"
+        saved_path = default_storage.save(avatar_name, ContentFile(uploaded_avatar.read()))
+        user.avatar_url = default_storage.url(saved_path)
     
     user.first_name = data.get('first_name', user.first_name)
     user.last_name = data.get('last_name', user.last_name)
@@ -250,6 +262,25 @@ def update_profile(request):
         UserSerializer(user).data,
         status=status.HTTP_200_OK
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_two_factor(request):
+    """Activer ou désactiver la double authentification du compte."""
+    user = request.user
+    enabled_value = request.data.get('enabled')
+
+    if enabled_value is None:
+        user.two_factor_enabled = not user.two_factor_enabled
+    else:
+        if isinstance(enabled_value, bool):
+            user.two_factor_enabled = enabled_value
+        else:
+            user.two_factor_enabled = str(enabled_value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+    user.save(update_fields=['two_factor_enabled'])
+    return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
 
 # ========================================

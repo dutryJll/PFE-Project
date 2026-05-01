@@ -1,8 +1,17 @@
 <div class="dashboard-commission">
-  <!-- ✅ MENU LATÉRAL -->
+  <!-- MENU LATÉRAL -->
   <aside class="sidebar">
     <div class="logo-section">
-      <div class="logo-icon">👨‍🏫</div>
+      <div class="logo-icon">ISIMM</div>
+      <span
+        class="ws-indicator"
+        [ngClass]="{
+          online: socketConnectionStatus === ConnectionStatus.CONNECTED,
+          connecting: socketConnectionStatus === ConnectionStatus.CONNECTING,
+          offline: socketConnectionStatus !== ConnectionStatus.CONNECTED,
+        }"
+        [title]="socketConnectionStatus"
+      ></span>
       <h2>ISIMM</h2>
       <p class="user-role">{{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}</p>
       <small class="user-role-master" *ngIf="hasUserScopeLabel()">
@@ -139,7 +148,7 @@
     </div>
   </aside>
 
-  <!-- ✅ CONTENU PRINCIPAL -->
+  <!-- CONTENU PRINCIPAL -->
   <main class="main-content">
     <header class="content-header">
       <h1>{{ getViewTitle() }}</h1>
@@ -148,137 +157,178 @@
       </div>
     </header>
 
-    <!-- ✅ TABLEAU DE BORD -->
+    <!-- TABLEAU DE BORD -->
     <div *ngIf="currentView === 'dashboard'" class="view-content">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
-            <i class="fas fa-book"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ specialites.length }}</h3>
-            <p>Spécialités</p>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)">
-            <i class="fas fa-file-alt"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ candidatures.length }}</h3>
-            <p>Candidatures</p>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">
-            <i class="fas fa-folder-open"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ nbDossiersDeposes }}</h3>
-            <p>Dossiers déposés</p>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7)">
-            <i class="fas fa-list-alt"></i>
-          </div>
-          <div class="stat-details">
-            <h3>{{ listes.length }}</h3>
-            <p>Listes</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h2>📈 Statistiques Programmes (Commission)</h2>
-        <p>Vue synthétique par master/cycle avec taux d'acceptation et d'inscription.</p>
-        <div
-          class="table-container"
-          *ngIf="getDashboardProgramStats().length > 0; else noDashboardStats"
-        >
-          <table class="stats-table">
-            <thead>
-              <tr>
-                <th>Programme</th>
-                <th>Type</th>
-                <th>Total</th>
-                <th>Acceptés</th>
-                <th>Inscrits</th>
-                <th>Rejetés</th>
-                <th>Taux acceptation</th>
-                <th>Taux inscription</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let stat of getDashboardProgramStats()">
-                <td>
-                  <strong>{{ stat.label }}</strong>
-                </td>
-                <td>{{ stat.type === 'ingenieur' ? 'Ingénieur' : 'Master' }}</td>
-                <td>{{ stat.total }}</td>
-                <td class="success">{{ stat.acceptes }}</td>
-                <td class="success">{{ stat.inscrits }}</td>
-                <td class="danger">{{ stat.rejetes }}</td>
-                <td>{{ stat.tauxAcceptation }}%</td>
-                <td>{{ stat.tauxInscription }}%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <ng-template #noDashboardStats>
-          <div class="empty-state">Aucune donnée statistique disponible.</div>
-        </ng-template>
-      </div>
-
-      <div class="section-card role-features-card" *ngIf="customRoleActions.length > 0">
-        <h2 class="role-features-title">⚙️ Fonctionnalités de votre rôle</h2>
-        <p class="role-features-subtitle">
-          Ces actions sont disponibles dans la plateforme selon votre profil.
-        </p>
-        <div class="role-actions-list">
-          <button
-            type="button"
-            class="role-action-chip role-action-link"
-            *ngFor="let actionName of customRoleActions"
-            (click)="openCustomRoleAction(actionName)"
-            [title]="actionName"
-          >
-            {{ actionName }}
-          </button>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h2>📊 Activités récentes</h2>
-        <div class="activites-list">
-          <div class="activity-item">
-            <div class="activity-icon check-icon">
-              <i class="fas fa-check-circle"></i>
+      <div class="section">
+        <div class="section-title">Dashboard — statistiques dossiers</div>
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="donut-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="var(--color-border-tertiary)"
+                  stroke-width="5"
+                ></circle>
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="#1D9E75"
+                  stroke-width="5"
+                  [attr.stroke-dasharray]="
+                    getDashboardTauxTraitement() + ' ' + (100 - getDashboardTauxTraitement())
+                  "
+                  stroke-linecap="round"
+                ></circle>
+                <text
+                  x="22"
+                  y="26"
+                  text-anchor="middle"
+                  font-size="10"
+                  font-weight="500"
+                  fill="var(--color-text-primary)"
+                >
+                  {{ getDashboardTauxTraitement() }}%
+                </text>
+              </svg>
             </div>
-            <div class="activity-content">
-              <strong>Validation de dossiers</strong>
-              <small>Plusieurs dossiers ont été validés aujourd'hui.</small>
+            <div class="stat-text">
+              <div class="stat-num">{{ getDashboardDossiersTraitesCount() }}</div>
+              <div class="stat-lbl">Dossiers traités</div>
+              <div class="stat-trend trend-up">+{{ getTotalResponsableAcceptes() }} acceptés</div>
             </div>
           </div>
-          <div class="activity-item">
-            <div class="activity-icon file-icon">
-              <i class="fas fa-file-alt"></i>
+
+          <div class="stat-card">
+            <div class="donut-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="var(--color-border-tertiary)"
+                  stroke-width="5"
+                ></circle>
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="#E24B4A"
+                  stroke-width="5"
+                  [attr.stroke-dasharray]="
+                    getDashboardTauxNonTraites() + ' ' + (100 - getDashboardTauxNonTraites())
+                  "
+                  stroke-linecap="round"
+                ></circle>
+                <text
+                  x="22"
+                  y="26"
+                  text-anchor="middle"
+                  font-size="10"
+                  font-weight="500"
+                  fill="var(--color-text-primary)"
+                >
+                  {{ getDashboardTauxNonTraites() }}%
+                </text>
+              </svg>
             </div>
-            <div class="activity-content">
-              <strong>Mise à jour des candidatures</strong>
-              <small>Les statuts ont été actualisés par la commission.</small>
+            <div class="stat-text">
+              <div class="stat-num">{{ getDashboardDossiersNonTraitesCount() }}</div>
+              <div class="stat-lbl">Non traités</div>
+              <div class="stat-trend trend-warn">À traiter</div>
             </div>
           </div>
-          <div class="activity-item">
-            <div class="activity-icon list-icon">
-              <i class="fas fa-list-alt"></i>
+
+          <div class="stat-card">
+            <div class="donut-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="var(--color-border-tertiary)"
+                  stroke-width="5"
+                ></circle>
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="#378ADD"
+                  stroke-width="5"
+                  [attr.stroke-dasharray]="
+                    getDashboardTauxAcceptation() + ' ' + (100 - getDashboardTauxAcceptation())
+                  "
+                  stroke-linecap="round"
+                ></circle>
+                <text
+                  x="22"
+                  y="26"
+                  text-anchor="middle"
+                  font-size="10"
+                  font-weight="500"
+                  fill="var(--color-text-primary)"
+                >
+                  {{ getDashboardTauxAcceptation() }}%
+                </text>
+              </svg>
             </div>
-            <div class="activity-content">
-              <strong>Préparation des listes</strong>
-              <small>Les listes de pré-sélection sont en cours de finalisation.</small>
+            <div class="stat-text">
+              <div class="stat-num">{{ getDashboardAdmisCount() }}</div>
+              <div class="stat-lbl">Admis</div>
+              <div class="stat-trend trend-up">Taux acceptation</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="donut-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="var(--color-border-tertiary)"
+                  stroke-width="5"
+                ></circle>
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="16"
+                  fill="none"
+                  stroke="#BA7517"
+                  stroke-width="5"
+                  [attr.stroke-dasharray]="
+                    getDashboardTauxInscription() + ' ' + (100 - getDashboardTauxInscription())
+                  "
+                  stroke-linecap="round"
+                ></circle>
+                <text
+                  x="22"
+                  y="26"
+                  text-anchor="middle"
+                  font-size="10"
+                  font-weight="500"
+                  fill="var(--color-text-primary)"
+                >
+                  {{ getDashboardTauxInscription() }}%
+                </text>
+              </svg>
+            </div>
+            <div class="stat-text">
+              <div class="stat-num">{{ getDashboardInscritsCount() }}</div>
+              <div class="stat-lbl">Inscrits</div>
+              <div class="stat-trend" style="color: var(--color-text-secondary)">
+                Taux inscription
+              </div>
             </div>
           </div>
         </div>
@@ -288,7 +338,7 @@
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>🔔 Notifications</h2>
+          <h2>Notifications</h2>
           <p class="subtitle">Toutes vos alertes système et métier.</p>
           <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
         </div>
@@ -345,7 +395,7 @@
               >{{ notificationsFilteredUnreadCount }} non lue(s) dans le filtre</span
             >
             <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()">
-              ✓ Marquer tous comme lus
+              Marquer tous comme lus
             </button>
           </div>
           <article
@@ -374,7 +424,7 @@
       </div>
     </div>
 
-    <!-- ✅ PROFIL -->
+    <!-- PROFIL -->
     <div *ngIf="currentView === 'profil'" class="view-content">
       <div class="profile-shell">
         <div class="profile-hero-card">
@@ -392,7 +442,7 @@
         </div>
 
         <div class="section-card profile-form-card">
-          <h2>📋 Informations personnelles</h2>
+          <h2>Informations personnelles</h2>
           <form (ngSubmit)="updateProfile()">
             <div class="form-row">
               <div class="form-group">
@@ -465,7 +515,7 @@
         </div>
 
         <div class="section-card profile-form-card">
-          <h2>🔐 Modifier le mot de passe</h2>
+          <h2>Modifier le mot de passe</h2>
           <form (ngSubmit)="changePassword()">
             <div class="form-group">
               <label>Mot de passe actuel *</label>
@@ -515,12 +565,12 @@
       </div>
     </div>
 
-    <!-- ✅ LES MASTERS -->
+    <!-- LES MASTERS -->
     <div *ngIf="currentView === 'masters'" class="view-content masters-view">
       <div class="section-card">
         <div class="masters-header">
           <div class="masters-title-group">
-            <h2>📚 Les Masters</h2>
+            <h2>Les Masters</h2>
             <p class="masters-subtitle">Suivi des candidatures et des dossiers par spécialité</p>
           </div>
           <div class="filter-tabs">
@@ -570,7 +620,7 @@
         <div class="offer-management-hero">
           <div class="offer-management-copy">
             <p class="offres-kicker">Espace responsable</p>
-            <h2>Offre de préinscription</h2>
+            <h2>Offre de Préinscription</h2>
             <p>
               Centralisez ici la publication de l'appel, le calendrier, les capacités, la
               description et le PDF officiel signé.
@@ -595,7 +645,7 @@
         <div class="section-subcard">
           <div class="subcard-head">
             <div>
-              <h3>Liste des offres de préinscription</h3>
+              <h3>Liste des offres de Préinscription</h3>
               <p class="offer-navigation-hint">
                 Clique sur le titre de l'offre ou sur le bouton Ouvrir page d'édition pour aller
                 vers l'éditeur dédié.
@@ -887,214 +937,212 @@
       "
       class="view-content"
     >
-      <div class="section-card">
-        <div class="candidatures-header">
-          <div>
-            <h2>
-              📂
-              {{
-                isCurrentView('candidatures-ingenieur')
-                  ? 'Candidatures Ingénieur'
-                  : 'Liste de candidature (Master + Ingénieur)'
-              }}
-            </h2>
-          </div>
-          <div class="download-box">
-            <button class="btn-secondary" (click)="resetFiltresResponsable()">
-              <i class="fas fa-undo"></i> Réinitialiser filtres
-            </button>
-            <select [(ngModel)]="candidaturesResponsableExportFormat" class="export-select">
-              <option value="csv">CSV</option>
-              <option value="json">JSON</option>
-              <option value="pdf">PDF</option>
-              <option value="xlsx">Excel</option>
-            </select>
-            <button
-              class="btn-download"
-              [disabled]="candidaturesResponsableFiltrees.length === 0"
-              (click)="exportCandidaturesResponsable()"
-            >
-              <i class="fas fa-download"></i> Exporter cette liste
-            </button>
-          </div>
-        </div>
-
-        <div class="filters-section">
-          <div class="filters-grid">
-            <div class="filter-item">
-              <label class="filter-label">Master</label>
-              <select
-                class="filter-select"
-                [(ngModel)]="selectedMasterForCandidatures"
-                (change)="appliquerFiltresResponsable()"
-              >
-                <option [ngValue]="'all'">Tous les masters</option>
-                <option *ngFor="let m of masterOptions" [ngValue]="m.id">{{ m.nom }}</option>
-              </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Type</label>
-              <select
-                class="filter-select"
-                [(ngModel)]="filtres.concours"
-                (change)="appliquerFiltresResponsable()"
-              >
-                <option value="">Tous</option>
-                <option value="masters">Master</option>
-                <option value="ingenieur">Ingénieur</option>
-              </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Année universitaire</label>
-              <select
-                class="filter-select"
-                [(ngModel)]="filtreAnneeUniversitaire"
-                (change)="onResponsableOfferFiltersChanged()"
-              >
-                <option value="courante">Courante ({{ getCurrentAcademicYear() }})</option>
-                <option value="precedente">Précédente ({{ getPreviousAcademicYear() }})</option>
-                <option value="toutes">Toutes les années</option>
-              </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Portée des offres</label>
-              <select
-                class="filter-select"
-                [(ngModel)]="filtrePorteeOffres"
-                (change)="onResponsableOfferFiltersChanged()"
-              >
-                <option value="specialite">Offres ouvertes de ma spécialité</option>
-                <option value="toutes_ouvertes">Toutes les offres ouvertes</option>
-              </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Statut</label>
-              <select
-                class="filter-select"
-                [(ngModel)]="filtres.statut"
-                (change)="appliquerFiltresResponsable()"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="soumis">Soumis</option>
-                <option value="sous_examen">En analyse</option>
-                <option value="preselectionne">Présélectionné</option>
-                <option value="dossier_depose">Dossier déposé</option>
-                <option value="selectionne">Sélectionné</option>
+      <div class="section">
+        <div class="section-title">Candidatures Master — filtres dynamiques + prévisualisation</div>
+        <div class="layout-split">
+          <div class="card" style="padding: 0.75rem">
+            <div class="filters-row">
+              <input
+                id="f-nom"
+                placeholder="Nom, CIN..."
+                [(ngModel)]="filtres.recherche"
+                (input)="filterTable()"
+              />
+              <select id="f-statut" [(ngModel)]="filtres.statut" (change)="filterTable()">
+                <option value="">Tous statuts</option>
+                <option value="soumis">Reçu</option>
+                <option value="sous_examen">En examen</option>
+                <option value="preselectionne">Validé</option>
                 <option value="rejete">Rejeté</option>
               </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Recherche</label>
               <input
-                class="filter-input"
-                type="text"
-                [(ngModel)]="filtres.recherche"
-                (input)="appliquerFiltresResponsable()"
-                placeholder="Nom, CIN, Email..."
+                id="f-score-min"
+                type="number"
+                placeholder="Score min"
+                min="0"
+                max="20"
+                style="width: 90px"
+                [(ngModel)]="filtres.scoreMin"
+                (input)="filterTable()"
+              />
+              <input
+                id="f-etab"
+                placeholder="Établissement..."
+                style="width: 120px"
+                [(ngModel)]="filtres.etablissement"
+                (input)="filterTable()"
               />
             </div>
-          </div>
-          <p class="subtitle" style="margin-top: 0.5rem">
-            Offres ouvertes éligibles: {{ offresEligiblesCount }} (Année:
-            {{ getAcademicYearLabel(filtreAnneeUniversitaire) }})
-          </p>
-        </div>
 
-        <div class="stats-grid" style="margin: 1rem 0">
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ candidaturesResponsableFiltrees.length }}</h3>
-              <p>Total filtré</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ candidaturesResponsableMastersCount }}</h3>
-              <p>Master</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ candidaturesResponsableIngenieurCount }}</h3>
-              <p>Ingénieur</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ candidaturesResponsableDossiersDeposesCount }}</h3>
-              <p>Dossiers déposés</p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="table-container"
-          *ngIf="candidaturesResponsableFiltrees.length > 0; else noCandidaturesResponsableView"
-        >
-          <table class="candidatures-table">
-            <thead>
-              <tr>
-                <th>N°</th>
-                <th>Candidat</th>
-                <th>Type</th>
-                <th>Spécialité</th>
-                <th>Score</th>
-                <th>Dossier</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let c of candidaturesResponsableFiltrees">
-                <td>
-                  <strong>{{ c.numero }}</strong>
-                </td>
-                <td>
-                  <strong>{{ c.candidat_nom }}</strong>
-                  <div class="muted-line">{{ c.candidat_email }}</div>
-                </td>
-                <td>{{ c.type_concours === 'ingenieur' ? 'Ingénieur' : 'Master' }}</td>
-                <td>{{ c.specialite }}</td>
-                <td>{{ c.score }}</td>
-                <td>{{ c.dossier_depose ? 'Déposé' : 'Non déposé' }}</td>
-                <td>{{ getStatusDisplayLabel(c.statut) }}</td>
-                <td>
-                  <button class="btn-action voir" (click)="voirDossier(c)">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button
-                    class="btn-action"
-                    title="Valider (Pré-sélectionner)"
-                    [disabled]="
-                      c.statut === 'preselectionne' ||
-                      c.statut === 'selectionne' ||
-                      c.statut === 'rejete'
-                    "
-                    (click)="validerCandidatureRapide(c)"
+            <div class="table-wrap">
+              <table id="cand-table">
+                <thead>
+                  <tr>
+                    <th>Candidat</th>
+                    <th>Établissement</th>
+                    <th>Score</th>
+                    <th>Statut</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="cand-body">
+                  <tr
+                    *ngFor="let candidature of candidaturesMasterViewFiltered; let i = index"
+                    (click)="openPanel(i)"
+                    [class.selected]="selectedCandidaturePreview?.id === candidature.id"
+                    style="cursor: pointer"
                   >
-                    <i class="fas fa-check"></i>
-                  </button>
-                  <button class="btn-action" (click)="ouvrirModalAvis(c)">
-                    <i class="fas fa-comment-dots"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                    <td>
+                      <strong>{{ candidature.candidat_nom }}</strong
+                      ><br />
+                      <span style="color: var(--color-text-secondary); font-size: 11px">{{
+                        candidature.numero
+                      }}</span>
+                    </td>
+                    <td>{{ getCandidateEtablissement(candidature) }}</td>
+                    <td>{{ candidature.score || '-' }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="getSelectionStatusBadgeClass(candidature.statut)"
+                        >{{ getSelectionStatusLabel(candidature.statut) }}</span
+                      >
+                    </td>
+                    <td>
+                      <button
+                        class="btn-eye"
+                        type="button"
+                        (click)="$event.stopPropagation(); openPanel(i)"
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        >
+                          <ellipse cx="8" cy="8" rx="6" ry="4"></ellipse>
+                          <circle cx="8" cy="8" r="2"></circle>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <ng-template #noCandidaturesResponsableView>
-          <div class="empty-state">Aucune candidature ne correspond aux filtres appliqués.</div>
-        </ng-template>
+          <div
+            class="side-panel"
+            *ngIf="selectedCandidaturePreview as candidature; else spPlaceholder"
+          >
+            <div class="side-hdr">
+              <div>
+                <div class="side-name">{{ candidature.candidat_nom }}</div>
+                <div class="side-meta">
+                  {{ candidature.numero }} · {{ getCandidateEtablissement(candidature) }}
+                </div>
+              </div>
+              <button class="btn-eye" type="button" (click)="closePanel()">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <line x1="4" y1="4" x2="12" y2="12"></line>
+                  <line x1="12" y1="4" x2="4" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div class="side-divider"></div>
+
+            <div class="score-big">{{ candidature.score || '-' }}</div>
+            <div class="score-lbl">Score / 20</div>
+
+            <div class="side-divider"></div>
+
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                color: var(--color-text-secondary);
+                margin-bottom: 0.35rem;
+              "
+            >
+              Pièces du dossier
+            </div>
+            <div class="doc-list">
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span>
+                <span class="doc-row-name">CIN</span>
+                <button class="btn-preview" type="button" (click)="voirDossier(candidature)">
+                  Aperçu
+                </button>
+              </div>
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span>
+                <span class="doc-row-name">Diplôme</span>
+                <button class="btn-preview" type="button" (click)="voirDossier(candidature)">
+                  Aperçu
+                </button>
+              </div>
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span>
+                <span class="doc-row-name">Relevé de notes</span>
+                <button class="btn-preview" type="button" (click)="voirDossier(candidature)">
+                  Aperçu
+                </button>
+              </div>
+            </div>
+
+            <div class="side-divider"></div>
+
+            <div class="side-actions">
+              <button
+                class="btn-full primary"
+                type="button"
+                (click)="ouvrirModalValidationPreselection(candidature)"
+              >
+                Valider sélection
+              </button>
+              <button class="btn-full" type="button" (click)="voirDossier(candidature)">
+                Donner un avis
+              </button>
+              <button class="btn-full danger" type="button" (click)="modifierScore(candidature)">
+                Rejeter
+              </button>
+            </div>
+          </div>
+
+          <ng-template #spPlaceholder>
+            <div
+              class="card"
+              id="sp-placeholder"
+              style="padding: 0.85rem; display: flex; align-items: center; justify-content: center"
+            >
+              <div style="text-align: center; color: var(--color-text-secondary)">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 28 28"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.2"
+                  style="margin: 0 auto 0.4rem; display: block"
+                >
+                  <ellipse cx="14" cy="14" rx="10" ry="7"></ellipse>
+                  <circle cx="14" cy="14" r="3"></circle>
+                </svg>
+                <div style="font-size: 12px">Cliquez sur un candidat<br />pour prévisualiser</div>
+              </div>
+            </div>
+          </ng-template>
+        </div>
       </div>
     </div>
 
-    <!-- ✅ CONCOURS CYCLE D'INGÉNIEUR -->
+    <!-- CONCOURS CYCLE D'INGÉNIEUR -->
     <div *ngIf="isCurrentView('concours-ingenieur')" class="view-content concours-view">
       <div class="section-card">
         <div class="concours-header">
           <div class="concours-title-group">
-            <h2>🎓 Concours Cycle d'Ingénieur</h2>
+            <h2>Concours Cycle d'Ingénieur</h2>
             <p class="concours-subtitle">Candidatures pour les programmes de cycle ingénieur</p>
           </div>
           <div class="filter-tabs">
@@ -1142,7 +1190,7 @@
       </div>
     </div>
 
-    <!-- ✅ CANDIDATURES AVEC MENU KEBAB ET FILTRES AVANCÉS -->
+    <!-- CANDIDATURES AVEC MENU KEBAB ET FILTRES AVANCÉS -->
     <div
       *ngIf="
         currentView === 'candidatures' &&
@@ -1152,7 +1200,7 @@
     >
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>📋 Gestion des candidatures</h2>
+          <h2>Gestion des candidatures</h2>
           <div class="download-box">
             <select [(ngModel)]="candidaturesMembreExportFormat" class="export-select">
               <option value="csv">CSV</option>
@@ -1255,7 +1303,7 @@
                 </td>
                 <td>
                   <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
-                    {{ candidature.dossier_depose ? '✅ Déposé' : '❌ Non déposé' }}
+                    {{ candidature.dossier_depose ? 'Déposé' : 'Non déposé' }}
                   </span>
                 </td>
                 <td>
@@ -1319,7 +1367,7 @@
                         (click)="ouvrirModalValidationPreselection(candidature)"
                       >
                         <i class="fas fa-check-double"></i>
-                        <span>Valider présélection</span>
+                        <span>Valider sélection</span>
                       </button>
 
                       <button
@@ -1349,7 +1397,7 @@
       </div>
     </div>
 
-    <!-- ✅ VALIDER DOSSIERS -->
+    <!-- VALIDER DOSSIERS -->
     <div
       *ngIf="currentView === 'valider-dossier' && actionPermissions.verifierDossiers"
       class="view-content validation-view"
@@ -1357,7 +1405,7 @@
       <div class="section-card">
         <div class="validation-header">
           <div>
-            <h2>✅ Validation des dossiers</h2>
+            <h2>Validation des dossiers</h2>
             <p class="validation-subtitle">
               Étude de dossier de candidature et décision de validation par la commission
             </p>
@@ -1472,13 +1520,13 @@
       </div>
     </div>
 
-    <!-- ✅ TOUS LES DOSSIERS -->
+    <!-- TOUS LES DOSSIERS -->
     <div
       *ngIf="currentView === 'dossiers' && actionPermissions.consultationDossier"
       class="view-content"
     >
       <div class="section-card">
-        <h2>📁 Tous les dossiers</h2>
+        <h2>Tous les dossiers</h2>
         <div class="table-container">
           <table class="candidatures-table">
             <thead>
@@ -1505,7 +1553,7 @@
                 </td>
                 <td>
                   <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
-                    {{ candidature.dossier_depose ? '✅ Déposé' : '❌ Non déposé' }}
+                    {{ candidature.dossier_depose ? 'Déposé' : 'Non déposé' }}
                   </span>
                 </td>
                 <td>
@@ -1520,14 +1568,14 @@
       </div>
     </div>
 
-    <!-- ✅ LISTES (RESPONSABLE) -->
+    <!-- LISTES (RESPONSABLE) -->
     <div
       *ngIf="currentView === 'listes' && isResponsable && canAccessView('listes')"
       class="view-content"
     >
       <div class="section-card">
         <div class="listes-header">
-          <h2>📋 Gestion des listes</h2>
+          <h2>Gestion des listes</h2>
           <div class="listes-actions">
             <button
               class="btn-primary"
@@ -1581,143 +1629,245 @@
         <div class="section-subcard" *ngIf="typeListe === 'selection'">
           <div class="subcard-head">
             <div>
-              <h3>Candidatures présélectionnées</h3>
+              <h3>Sélectionné</h3>
               <p class="muted-line">
-                Cochez les candidatures une par une puis générez la liste de sélection ou la liste
-                d'attente.
+                Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
+                finale responsable, puis génération de la liste présélectionnée par score.
               </p>
             </div>
-            <div class="listes-actions">
-              <button
-                class="btn-primary"
-                [disabled]="getPreselectionCheckedCount() === 0"
-                (click)="genererListeSelectionDepuisCandidaturesCochees()"
-              >
-                <i class="fas fa-list-check"></i> Générer liste sélection
-              </button>
-              <button
-                class="btn-primary"
-                [disabled]="getPreselectionCheckedCount() === 0"
-                (click)="genererListeAttenteDepuisCandidaturesCochees()"
-              >
-                <i class="fas fa-clock"></i> Générer liste d'attente
+            <div class="download-box" *ngIf="isResponsable">
+              <input
+                type="number"
+                min="1"
+                [(ngModel)]="preselectionQuota"
+                class="filter-input"
+                style="width: 120px"
+                placeholder="100"
+              />
+              <button class="btn-download" (click)="genererListePreselectionParScore()">
+                <i class="fas fa-sort-amount-down"></i> Générer liste par score
               </button>
             </div>
           </div>
 
-          <div
-            class="table-container"
-            *ngIf="getPreselectionWorkflowRows().length > 0; else noSelectionRows"
-          >
-            <table class="candidatures-table">
-              <thead>
-                <tr>
-                  <th style="width: 60px">
-                    <input
-                      type="checkbox"
-                      [checked]="areAllPreselectionRowsChecked()"
-                      (change)="toggleAllPreselectionRows($any($event.target).checked)"
-                      title="Tout cocher"
-                    />
-                  </th>
-                  <th>N°</th>
-                  <th>Candidat</th>
-                  <th>Année</th>
-                  <th>Score</th>
-                  <th>Avis membres</th>
-                  <th>Notes préinscription</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let candidature of getPreselectionWorkflowRows()">
-                  <td>
-                    <input
-                      type="checkbox"
-                      [checked]="isPreselectionRowChecked(candidature.id)"
-                      (change)="togglePreselectionRow(candidature, $any($event.target).checked)"
-                    />
-                  </td>
-                  <td>
-                    <strong>{{ candidature.numero }}</strong>
-                  </td>
-                  <td>
-                    <strong>{{ candidature.candidat_nom }}</strong>
-                    <div class="muted-line">{{ candidature.specialite }}</div>
-                  </td>
-                  <td>{{ candidature.annee_universitaire || getCurrentAcademicYear() }}</td>
-                  <td>{{ candidature.score }}</td>
-                  <td>{{ getAllVotesDisplay(candidature.id) }}</td>
-                  <td>{{ candidature.notes_preinscription || 'Non renseignées' }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="filters-section" style="margin-top: 1rem">
+            <div class="filters-grid">
+              <div class="filter-item">
+                <label class="filter-label">Année universitaire</label>
+                <select
+                  class="filter-select"
+                  [(ngModel)]="filtreAnneeUniversitaire"
+                  (change)="filterTable()"
+                >
+                  <option value="courante">Courante ({{ getCurrentAcademicYear() }})</option>
+                  <option value="precedente">Précédente ({{ getPreviousAcademicYear() }})</option>
+                  <option value="toutes">Toutes les années</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Décision responsable</label>
+                <select class="filter-select" [(ngModel)]="filtres.statut" (change)="filterTable()">
+                  <option value="">Toutes</option>
+                  <option value="preselectionne">Validé</option>
+                  <option value="rejete">Non validé</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Recherche</label>
+                <input
+                  class="filter-input"
+                  type="text"
+                  [(ngModel)]="filtres.recherche"
+                  placeholder="N°, nom, email..."
+                  (input)="filterTable()"
+                />
+              </div>
+              <div class="filter-item">
+                <label class="filter-label">Portée</label>
+                <input
+                  class="filter-input"
+                  [value]="getCurrentUserScopeLabel()"
+                  readonly
+                  title="Membre et responsable ne voient que leur spécialité"
+                />
+              </div>
+            </div>
           </div>
 
-          <ng-template #noSelectionRows>
-            <div class="empty-state" style="margin-top: 0.75rem">
-              Aucune candidature présélectionnée disponible pour la sélection.
+          <div class="card" style="padding: 0.75rem">
+            <div class="filters-row">
+              <input
+                id="f-nom"
+                placeholder="N°, nom, email..."
+                [(ngModel)]="filtres.recherche"
+                (input)="filterTable()"
+              />
+              <select id="f-statut" [(ngModel)]="filtres.statut" (change)="filterTable()">
+                <option value="">Tous statuts</option>
+                <option value="soumis">Reçu</option>
+                <option value="sous_examen">En examen</option>
+                <option value="preselectionne">Validé</option>
+                <option value="rejete">Rejeté</option>
+              </select>
+              <input
+                id="f-score-min"
+                type="number"
+                placeholder="Score min"
+                min="0"
+                max="20"
+                style="width: 90px"
+                [(ngModel)]="filtres.scoreMin"
+                (input)="filterTable()"
+              />
+              <input
+                id="f-etab"
+                placeholder="Établissement..."
+                style="width: 120px"
+                [(ngModel)]="filtres.etablissement"
+                (input)="filterTable()"
+              />
+            </div>
+            <div class="table-wrap">
+              <table id="cand-table">
+                <thead>
+                  <tr>
+                    <th>Candidat</th>
+                    <th>Établissement</th>
+                    <th>Score</th>
+                    <th>Statut</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="cand-body">
+                  <tr
+                    *ngFor="let candidature of candidaturesMasterViewFiltered; let i = index"
+                    (click)="openPanel(i)"
+                    style="cursor: pointer"
+                    [class.selected]="selectedCandidaturePreview?.id === candidature.id"
+                  >
+                    <td>
+                      <strong>{{ candidature.candidat_nom }}</strong
+                      ><br /><span style="color: var(--color-text-secondary); font-size: 11px">{{
+                        candidature.numero
+                      }}</span>
+                    </td>
+                    <td>{{ getCandidateEtablissement(candidature) }}</td>
+                    <td>{{ candidature.score || '-' }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="getSelectionStatusBadgeClass(candidature.statut)"
+                        >{{ getSelectionStatusLabel(candidature.statut) }}</span
+                      >
+                    </td>
+                    <td>
+                      <button class="btn-eye" (click)="$event.stopPropagation(); openPanel(i)">
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        >
+                          <ellipse cx="8" cy="8" rx="6" ry="4"></ellipse>
+                          <circle cx="8" cy="8" r="2"></circle>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div
+            class="side-panel"
+            *ngIf="selectedCandidaturePreview as candidature; else spPlaceholder"
+          >
+            <div class="side-hdr">
+              <div>
+                <div class="side-name">{{ candidature.candidat_nom }}</div>
+                <div class="side-meta">
+                  {{ candidature.numero }} · {{ getCandidateEtablissement(candidature) }}
+                </div>
+              </div>
+              <button class="btn-eye" (click)="closePanel()">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <line x1="4" y1="4" x2="12" y2="12"></line>
+                  <line x1="12" y1="4" x2="4" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="side-divider"></div>
+            <div class="score-big">{{ candidature.score || '-' }}</div>
+            <div class="score-lbl">Score / 20</div>
+            <div class="side-divider"></div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                color: var(--color-text-secondary);
+                margin-bottom: 0.35rem;
+              "
+            >
+              Pièces du dossier
+            </div>
+            <div class="doc-list">
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span
+                ><span class="doc-row-name">CIN</span
+                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
+              </div>
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span
+                ><span class="doc-row-name">Diplôme</span
+                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
+              </div>
+              <div class="doc-row">
+                <span class="badge b-valid" style="flex-shrink: 0">✓</span
+                ><span class="doc-row-name">Relevé de notes</span
+                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
+              </div>
+            </div>
+            <div class="side-divider"></div>
+            <div class="side-actions">
+              <button
+                class="btn-full primary"
+                (click)="ouvrirModalValidationPreselection(candidature)"
+              >
+                Valider sélection
+              </button>
+              <button class="btn-full" (click)="ouvrirModalAvis(candidature)">
+                Donner un avis
+              </button>
+              <button class="btn-full danger" (click)="rejeterCandidature(candidature)">
+                Rejeter
+              </button>
+            </div>
+          </div>
+
+          <ng-template #spPlaceholder>
+            <div
+              class="card"
+              id="sp-placeholder"
+              style="padding: 0.85rem; display: flex; align-items: center; justify-content: center"
+            >
+              <div style="text-align: center; color: var(--color-text-secondary)">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 28 28"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.2"
+                  style="margin: 0 auto 0.4rem; display: block"
+                >
+                  <ellipse cx="14" cy="14" rx="10" ry="7"></ellipse>
+                  <circle cx="14" cy="14" r="3"></circle>
+                </svg>
+                <div style="font-size: 12px">Cliquez sur un candidat<br />pour prévisualiser</div>
+              </div>
             </div>
           </ng-template>
-
-          <div
-            class="table-container"
-            *ngIf="generatedSelectionRows.length > 0"
-            style="margin-top: 1rem"
-          >
-            <h3 style="margin: 0 0 0.75rem">Liste de sélection générée</h3>
-            <table class="candidatures-table">
-              <thead>
-                <tr>
-                  <th>N° candidature</th>
-                  <th>Candidat</th>
-                  <th>Spécialité</th>
-                  <th>Score</th>
-                  <th>Statut</th>
-                  <th>Dossier</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let candidature of generatedSelectionRows">
-                  <td>
-                    <strong>{{ candidature.numero }}</strong>
-                  </td>
-                  <td>
-                    <strong>{{ candidature.candidat_nom }}</strong>
-                    <div class="muted-line">{{ candidature.candidat_email }}</div>
-                  </td>
-                  <td>{{ candidature.specialite }}</td>
-                  <td>
-                    <strong class="score-highlight">{{ candidature.score }}</strong>
-                  </td>
-                  <td>
-                    <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
-                      {{ getStatusDisplayLabel(candidature.statut) }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
-                      {{ candidature.dossier_depose ? '✅ Déposé' : '❌ Non déposé' }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="validation-actions">
-                      <button class="btn-action voir" (click)="voirDossier(candidature)">
-                        <i class="fas fa-folder-open"></i> Consulter dossier/documents
-                      </button>
-                      <button
-                        class="btn-action"
-                        [disabled]="!canAnalyzeDossier()"
-                        (click)="openOcrAnalysisPage(candidature)"
-                      >
-                        <i class="fas fa-file-search"></i> Analyser OCR
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
 
         <div class="section-subcard latest-list-card">
@@ -1777,7 +1927,7 @@
             <div class="latest-list-empty">
               <i class="fas fa-circle-info"></i>
               <div>
-                <strong>Aucune liste de sélection n’a encore été générée.</strong>
+                <strong>Aucune liste de sélection n'a encore été générée.</strong>
                 <p class="muted-line">
                   Cochez des candidatures dans la présélection puis cliquez sur Générer liste
                   sélection.
@@ -1856,12 +2006,12 @@
       </div>
     </div>
 
-    <!-- ✅ CONSULTATION DES LISTES -->
+    <!-- CONSULTATION DES LISTES -->
     <div *ngIf="isCurrentView('avis-listes') && canAccessView('avis-listes')" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
           <div>
-            <h2>💬 Présélection</h2>
+            <h2>Présélection</h2>
             <p class="subtitle">
               Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
               finale responsable, puis génération de la liste présélectionnée par score.
@@ -1948,81 +2098,205 @@
           </div>
         </div>
 
-        <div
-          class="preselection-cards-wrap"
-          *ngIf="getPreselectionWorkflowRows().length > 0; else noPreselectionCards"
-        >
-          <div class="preselection-card" *ngFor="let candidature of getPreselectionWorkflowRows()">
-            <div class="preselection-card-head">
-              <div class="preselection-head-left">
-                <div>
-                  <h4>{{ candidature.candidat_nom }}</h4>
-                  <p class="muted-line">{{ candidature.numero }} · {{ candidature.specialite }}</p>
-                </div>
-              </div>
-              <div class="preselection-score-pill">Score: {{ candidature.score }}</div>
-            </div>
-
-            <div class="preselection-card-meta">
-              <span>
-                <i class="fas fa-calendar"></i>
-                {{ candidature.annee_universitaire || getCurrentAcademicYear() }}
-              </span>
-              <span>
-                <i class="fas fa-users"></i>
-                {{ getAllVotesDisplay(candidature.id) }}
-              </span>
-            </div>
-
-            <div class="preselection-card-notes">
-              <strong>Notes saisies (préinscription)</strong>
-              <p>{{ candidature.notes_preinscription || 'Non renseignées' }}</p>
-            </div>
-
-            <div class="preselection-card-actions">
-              <button
-                class="btn-action voir"
-                (click)="consulterCandidaturePreselection(candidature)"
-              >
-                <i class="fas fa-eye"></i> Consulter candidature
-              </button>
-              <button class="btn-action" (click)="ouvrirModalAvis(candidature)">
-                <i class="fas fa-comment-dots"></i> Donner avis
-              </button>
-            </div>
-
-            <div class="preselection-card-decision">
-              <strong>Décision responsable</strong>
-              <ng-container *ngIf="isResponsable; else memberDecisionCardView">
-                <div class="preselection-decision-controls">
-                  <select
-                    class="filter-select"
-                    [ngModel]="candidature.decision_responsable || ''"
-                    (ngModelChange)="setDecisionPreselection(candidature, $event)"
-                  >
-                    <option value="">--</option>
-                    <option value="valide">Validé</option>
-                    <option value="non_valide">Non validé</option>
-                  </select>
-                  <button class="btn-action" (click)="confirmerDecisionPreselection(candidature)">
-                    Confirmer
-                  </button>
-                </div>
-              </ng-container>
-              <ng-template #memberDecisionCardView>
-                <p class="muted-line" style="margin-top: 0.35rem">
-                  {{
-                    candidature.decision_responsable === 'valide'
-                      ? 'Validé'
-                      : candidature.decision_responsable === 'non_valide'
-                        ? 'Non validé'
-                        : '--'
-                  }}
-                </p>
-              </ng-template>
-            </div>
+        <div class="card" style="padding: 0.75rem">
+          <div class="filters-row">
+            <input
+              id="f-presel-nom"
+              placeholder="Nom, CIN..."
+              [(ngModel)]="preselectionSearch"
+              (input)="filterTable()"
+            />
+            <select
+              id="f-presel-decision"
+              [(ngModel)]="preselectionDecisionFilter"
+              (change)="filterTable()"
+            >
+              <option value="">Toutes décisions</option>
+              <option value="valide">Validé</option>
+              <option value="non_valide">Non validé</option>
+            </select>
+            <select
+              id="f-presel-annee"
+              [(ngModel)]="filtreAnneeUniversitaire"
+              (change)="filterTable()"
+            >
+              <option value="courante">Année courante</option>
+              <option value="precedente">Année précédente</option>
+              <option value="toutes">Toutes les années</option>
+            </select>
+            <input
+              id="f-presel-portee"
+              [value]="getCurrentUserScopeLabel()"
+              readonly
+              style="width: 130px"
+              title="Portée automatique selon votre rôle"
+            />
+          </div>
+          <div class="table-wrap">
+            <table id="presel-table">
+              <thead>
+                <tr>
+                  <th>Candidat</th>
+                  <th>Année</th>
+                  <th>Score</th>
+                  <th>Avis</th>
+                  <th>Décision</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="presel-body">
+                <tr
+                  *ngFor="let candidature of getPreselectionWorkflowRows(); let i = index"
+                  (click)="openPanel(i)"
+                  style="cursor: pointer"
+                  [class.selected]="selectedCandidaturePreview?.id === candidature.id"
+                >
+                  <td>
+                    <strong>{{ candidature.candidat_nom }}</strong
+                    ><br /><span style="color: var(--color-text-secondary); font-size: 11px">{{
+                      candidature.numero
+                    }}</span>
+                  </td>
+                  <td>{{ candidature.annee_universitaire || getCurrentAcademicYear() }}</td>
+                  <td>{{ candidature.score || '-' }}</td>
+                  <td>{{ getAllVotesDisplay(candidature.id) }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [ngClass]="
+                        candidature.decision_responsable === 'valide'
+                          ? 'b-valid'
+                          : candidature.decision_responsable === 'non_valide'
+                            ? 'b-reject'
+                            : 'b-recv'
+                      "
+                      >{{
+                        candidature.decision_responsable === 'valide'
+                          ? 'Validé'
+                          : candidature.decision_responsable === 'non_valide'
+                            ? 'Non validé'
+                            : 'En attente'
+                      }}</span
+                    >
+                  </td>
+                  <td>
+                    <button class="btn-eye" (click)="$event.stopPropagation(); openPanel(i)">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <ellipse cx="8" cy="8" rx="6" ry="4"></ellipse>
+                        <circle cx="8" cy="8" r="2"></circle>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
+
+        <div
+          class="side-panel"
+          *ngIf="selectedCandidaturePreview as candidature; else preselPlaceholder"
+        >
+          <div class="side-hdr">
+            <div>
+              <div class="side-name">{{ candidature.candidat_nom }}</div>
+              <div class="side-meta">{{ candidature.numero }} · {{ candidature.specialite }}</div>
+            </div>
+            <button class="btn-eye" (click)="closePanel()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="4" y1="4" x2="12" y2="12"></line>
+                <line x1="12" y1="4" x2="4" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="side-divider"></div>
+          <div class="score-big">{{ candidature.score || '-' }}</div>
+          <div class="score-lbl">Score / 20</div>
+          <div class="side-divider"></div>
+          <div
+            style="
+              font-size: 11px;
+              font-weight: 500;
+              color: var(--color-text-secondary);
+              margin-bottom: 0.35rem;
+            "
+          >
+            Avis des membres
+          </div>
+          <div style="font-size: 12px; margin-bottom: 0.75rem">
+            {{ getAllVotesDisplay(candidature.id) }}
+          </div>
+          <div class="side-divider"></div>
+          <div
+            style="
+              font-size: 11px;
+              font-weight: 500;
+              color: var(--color-text-secondary);
+              margin-bottom: 0.35rem;
+            "
+          >
+            Notes préinscription
+          </div>
+          <div style="font-size: 12px; margin-bottom: 0.75rem">
+            {{ candidature.notes_preinscription || 'Non renseignées' }}
+          </div>
+          <div class="side-divider" *ngIf="isResponsable"></div>
+          <div *ngIf="isResponsable" style="margin-bottom: 0.75rem">
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                color: var(--color-text-secondary);
+                margin-bottom: 0.35rem;
+              "
+            >
+              Décision responsable
+            </div>
+            <select
+              class="filter-select"
+              [ngModel]="candidature.decision_responsable || ''"
+              (ngModelChange)="setDecisionPreselection(candidature, $event)"
+              style="width: 100%; margin-bottom: 0.5rem"
+            >
+              <option value="">En attente</option>
+              <option value="valide">Validé</option>
+              <option value="non_valide">Non validé</option>
+            </select>
+          </div>
+          <div class="side-divider"></div>
+          <div class="side-actions">
+            <button
+              class="btn-full primary"
+              (click)="consulterCandidaturePreselection(candidature)"
+            >
+              Consulter dossier
+            </button>
+            <button class="btn-full" (click)="ouvrirModalAvis(candidature)">Donner un avis</button>
+          </div>
+        </div>
+
+        <ng-template #preselPlaceholder>
+          <div
+            class="card"
+            style="padding: 0.85rem; display: flex; align-items: center; justify-content: center"
+          >
+            <div style="text-align: center; color: var(--color-text-secondary)">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 28 28"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+                style="margin: 0 auto 0.4rem; display: block"
+              >
+                <ellipse cx="14" cy="14" rx="10" ry="7"></ellipse>
+                <circle cx="14" cy="14" r="3"></circle>
+              </svg>
+              <div style="font-size: 12px">Cliquez sur un candidat<br />pour prévisualiser</div>
+            </div>
+          </div>
+        </ng-template>
 
         <ng-template #noPreselectionCards>
           <div class="empty-state" style="margin-top: 0.75rem">
@@ -2030,7 +2304,7 @@
           </div>
         </ng-template>
 
-        <div class="listes-tabs">
+        <div class="listes-tabs" style="margin-top: 2rem">
           <button
             class="liste-tab"
             [class.active]="typeListe === 'preselection'"
@@ -2067,14 +2341,14 @@
       </div>
     </div>
 
-    <!-- ✅ LISTES (MEMBRE - LECTURE SEULE) -->
+    <!-- LISTES (MEMBRE - LECTURE SEULE) -->
     <div
       *ngIf="currentView === 'listes' && !isResponsable && canAccessView('listes')"
       class="view-content"
     >
       <div class="section-card">
         <div class="listes-header">
-          <h2>📋 Listes d'admission (lecture seule)</h2>
+          <h2>Listes d'admission (lecture seule)</h2>
         </div>
 
         <p class="subtitle" style="margin-bottom: 1rem">
@@ -2130,14 +2404,14 @@
       </div>
     </div>
 
-    <!-- ✅ OCR (RESPONSABLE) -->
+    <!-- OCR (RESPONSABLE) -->
     <div
       *ngIf="currentView === 'ocr' && isResponsable && actionPermissions.verifierDossiers"
       class="view-content"
     >
       <div class="section-card">
         <div class="section-header">
-          <h2>🤖 Analyser les documents avec OCR</h2>
+          <h2>Analyser les documents avec OCR</h2>
           <button class="btn-primary" (click)="ouvrirModalOCR()">
             <i class="fas fa-plus"></i> Nouvelle analyse
           </button>
@@ -2178,7 +2452,7 @@
       </div>
     </div>
 
-    <!-- ✅ RÉCLAMATIONS -->
+    <!-- RÉCLAMATIONS -->
     <div
       *ngIf="
         currentView === 'reclamations' &&
@@ -2188,7 +2462,7 @@
     >
       <div class="section-card">
         <div class="section-header">
-          <h2>📢 Réclamations (Tableau)</h2>
+          <h2>Réclamations (Tableau)</h2>
           <span class="muted-line">Monday 13 April 2026</span>
         </div>
 
@@ -2339,7 +2613,7 @@
       </div>
     </div>
 
-    <!-- ✅ PROCÈS-VERBAUX (RESPONSABLE) -->
+    <!-- PROCÈS-VERBAUX (RESPONSABLE) -->
     <div
       *ngIf="
         currentView === 'deliberations' &&
@@ -2350,7 +2624,7 @@
     >
       <div class="section-card">
         <div class="section-header">
-          <h2>📝 Procès-verbaux de délibération</h2>
+          <h2>Procès-verbaux de délibération</h2>
           <div style="display: flex; gap: 10px">
             <button
               class="btn-primary"
@@ -2422,7 +2696,7 @@
       </div>
     </div>
 
-    <!-- ✅ INSCRIPTIONS -->
+    <!-- INSCRIPTIONS -->
     <div
       *ngIf="
         currentView === 'inscriptions' &&
@@ -2432,7 +2706,7 @@
     >
       <div class="section-card">
         <div class="section-header">
-          <h2>📝 Inscriptions en ligne</h2>
+          <h2>Inscriptions en ligne</h2>
           <div class="download-box">
             <select [(ngModel)]="inscriptionsExportFormat" class="export-select">
               <option value="csv">CSV</option>
@@ -2446,7 +2720,7 @@
           </div>
         </div>
         <p class="subtitle" *ngIf="isResponsable">
-          Le responsable pilote l’import, la vérification et la validation finale des inscriptions.
+          Le responsable pilote l'import, la vérification et la validation finale des inscriptions.
         </p>
         <p class="subtitle" *ngIf="!isResponsable">
           Vue membre: suivi des inscriptions confirmées et consultation des vérifications.
@@ -2510,7 +2784,7 @@
           <div class="inscriptions-panel">
             <h3>Import Excel</h3>
             <p class="muted-line">
-              Chargez le fichier d’inscriptions pour lancer le rapprochement.
+              Chargez le fichier d'inscriptions pour lancer le rapprochement.
             </p>
             <div class="form-group" style="margin: 0">
               <label>Fichier des inscriptions</label>
@@ -2566,7 +2840,7 @@
             <div>
               <h3>Suivi harmonisé commission / candidat</h3>
               <p class="muted-line">
-                Même logique que l’espace candidat: statut inscription + dépôt du fichier de
+                Même logique que l'espace candidat: statut inscription + dépôt du fichier de
                 justification.
               </p>
             </div>
@@ -2624,7 +2898,7 @@
 
           <ng-template #noInscriptionCandidates>
             <div class="empty-state" style="margin-top: 0.75rem">
-              Aucune candidature en parcours d’inscription en ligne pour le moment.
+              Aucune candidature en parcours d'inscription en ligne pour le moment.
             </div>
           </ng-template>
         </div>
@@ -2670,13 +2944,13 @@
 
         <ng-template #noInscriptionVerification>
           <div class="empty-state" style="margin-top: 0.75rem">
-            Aucune vérification d’inscription disponible. Importez un fichier Excel pour commencer.
+            Aucune vérification d'inscription disponible. Importez un fichier Excel pour commencer.
           </div>
         </ng-template>
       </div>
     </div>
 
-    <!-- ✅ STATISTIQUES (RESPONSABLE) -->
+    <!-- STATISTIQUES (RESPONSABLE) -->
     <div
       *ngIf="
         currentView === 'statistiques' &&
@@ -2686,7 +2960,7 @@
     >
       <!-- Header -->
       <div class="section-card stats-header">
-        <h2>📊 Statistiques et rapports</h2>
+        <h2>Statistiques et rapports</h2>
         <p class="section-subtitle">Vue d'ensemble des performances et analyses détaillées</p>
       </div>
 
@@ -2737,7 +3011,7 @@
               <div class="kpi-value">{{ getTotalResponsableAcceptes() }}</div>
               <div class="kpi-label">Acceptés / Sélectionnés</div>
               <div class="kpi-trend">
-                {{ getTauxResponsableAcceptationGlobal() }}% d’acceptation
+                {{ getTauxResponsableAcceptationGlobal() }}% d'acceptation
               </div>
             </div>
           </div>
@@ -2747,7 +3021,7 @@
               <div class="kpi-value">{{ getTotalResponsableInscrits() }}</div>
               <div class="kpi-label">Inscrits</div>
               <div class="kpi-trend">
-                {{ getTauxResponsableInscriptionGlobal() }}% d’inscription
+                {{ getTauxResponsableInscriptionGlobal() }}% d'inscription
               </div>
             </div>
           </div>
@@ -2757,7 +3031,7 @@
         <div class="section-card stats-card-header">
           <h3><i class="fas fa-book"></i> Statistiques par master concerné</h3>
           <p>
-            Chaque master suivi par ce responsable avec taux d’acceptation, d’inscription et de
+            Chaque master suivi par ce responsable avec taux d'acceptation, d'inscription et de
             rejet.
           </p>
         </div>
@@ -2840,7 +3114,7 @@
           </div>
         </div>
         <div class="section-card stats-timeline">
-          <h3><i class="fas fa-history"></i> Activité Récente</h3>
+          <h3><i class="fas fa-history"></i> Activité récente</h3>
           <div class="timeline">
             <div class="timeline-item">
               <div class="timeline-marker success"></div>
@@ -2899,12 +3173,12 @@
       </div>
     </div>
 
-    <!-- ✅ MEMBRES (RESPONSABLE) -->
+    <!-- MEMBRES (RESPONSABLE) -->
     <div *ngIf="currentView === 'membres' && isResponsable" class="view-content">
       <!-- Header -->
       <div class="section-card membres-header">
         <div class="membres-header-top">
-          <h2>👥 Membres de la commission</h2>
+          <h2>Membres de la commission</h2>
           <span class="badge-count-lg">{{ membresFiltres.length }} / {{ membres.length }}</span>
         </div>
         <p class="section-subtitle">Gestion des membres avec rôles et statuts</p>
@@ -2991,10 +3265,10 @@
                       <small class="role-badge" [class]="'role-' + membre.role">
                         {{
                           membre.role === 'responsable'
-                            ? '👤 Responsable'
+                            ? 'Responsable'
                             : membre.role === 'evaluateur'
-                              ? '📋 Évaluateur'
-                              : '👁️ Observateur'
+                              ? 'Évaluateur'
+                              : 'Observateur'
                         }}
                       </small>
                     </div>
@@ -3068,12 +3342,12 @@
     </div>
   </main>
 
-  <!-- ✅ MODAL CONSULTATION CANDIDATURE -->
+  <!-- MODAL CONSULTATION CANDIDATURE -->
   <div *ngIf="showModalConsultation" class="modal-overlay" (click)="fermerModalConsultation()">
     <div class="modal-content consultation-modal" (click)="$event.stopPropagation()">
       <div class="modal-header consultation-header">
         <div>
-          <h2>👁️ Consultation candidature</h2>
+          <h2>Consultation candidature</h2>
           <p>Vue détaillée de la candidature, des avis et de la décision responsable.</p>
         </div>
         <button class="btn-close" (click)="fermerModalConsultation()">
@@ -3203,7 +3477,7 @@
     </div>
   </div>
 
-  <!-- ✅ MODAL RÉPONSE RÉCLAMATION -->
+  <!-- MODAL REPONSE RECLAMATION -->
   <div
     *ngIf="showModalReponseReclamation"
     class="modal-overlay"
@@ -3211,7 +3485,7 @@
   >
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>💬 Répondre à la réclamation</h2>
+        <h2>Répondre à la réclamation</h2>
         <button class="btn-close" (click)="fermerModalReponseReclamation()">
           <i class="fas fa-times"></i>
         </button>
@@ -3246,7 +3520,7 @@
         </div>
       </div>
 
-      <!-- ✅ MODAL RECTIFIER SCORE -->
+      <!-- MODAL RECTIFIER SCORE -->
       <div
         *ngIf="showModalRectifierScore"
         class="modal-overlay"
@@ -3254,7 +3528,7 @@
       >
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>✏️ Rectifier le score</h2>
+            <h2>Rectifier le score</h2>
             <button class="btn-close" (click)="fermerModalRectifierScore()">
               <i class="fas fa-times"></i>
             </button>
@@ -3286,68 +3560,204 @@
     </div>
   </div>
 
-  <!-- ✅ MODAL AVIS -->
+  <!-- MODAL AVIS -->
   <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>💬 Donner un avis</h2>
-        <button class="btn-close" (click)="fermerModalAvis()">
-          <i class="fas fa-times"></i>
-        </button>
+    <div
+      class="modal-content"
+      (click)="$event.stopPropagation()"
+      style="width: min(520px, 96vw); max-height: 90vh; overflow: auto"
+    >
+      <div class="modal-hdr">
+        <div class="modal-title">
+          <div class="hdr-icon"><i class="fas fa-file-alt"></i></div>
+          Donner un avis
+        </div>
+        <button class="btn-close" (click)="fermerModalAvis()"><i class="fas fa-times"></i></button>
       </div>
 
-      <div class="modal-body">
-        <div class="candidat-info">
-          <h3>{{ candidatureSelectionnee?.candidat_nom }}</h3>
-          <p><strong>Spécialité :</strong> {{ candidatureSelectionnee?.specialite }}</p>
-          <p><strong>Score :</strong> {{ candidatureSelectionnee?.score }}</p>
+      <form class="modal-body" (ngSubmit)="enregistrerAvis()" *ngIf="candidatureSelectionnee as c">
+        <div class="cand-hero">
+          <div class="avatar">
+            {{ (c.candidat_nom || 'XX').charAt(0)
+            }}{{ ((c.candidat_nom || 'XX').split(' ')[1] || '').charAt(0) }}
+          </div>
+          <div style="flex: 1; min-width: 0">
+            <div class="cand-name">{{ c.candidat_nom }}</div>
+            <div class="cand-meta">
+              {{ c.numero }} · ISIMM · {{ c.specialite }} ·
+              {{ c.annee_universitaire || getCurrentAcademicYear() }}
+            </div>
+          </div>
+          <div class="score-pill">Score : {{ c.score || '-' }} / 20</div>
         </div>
 
-        <form (ngSubmit)="enregistrerAvis()">
-          <div class="form-group">
-            <label>Votre avis *</label>
-            <textarea
-              [(ngModel)]="avisText"
-              name="avis"
-              rows="4"
-              required
-              placeholder="Saisissez votre avis..."
-            ></textarea>
+        <div>
+          <div class="avis-existants-title">
+            Avis déjà enregistrés ({{ getVotesForCandidature(c.id).length }} membres)
           </div>
-
-          <div class="form-group">
-            <label>Recommandation *</label>
-            <select [(ngModel)]="avisRecommandation" name="recommandation" required>
-              <option value="favorable">Favorable</option>
-              <option value="defavorable">Défavorable</option>
-              <option value="reserve">Réservé</option>
-            </select>
+          <div class="avis-list">
+            <div class="avis-item" *ngFor="let vote of getVotesForCandidature(c.id)">
+              <div class="avis-avatar" [ngClass]="vote.diplomeConforme ? 'av-green' : 'av-orange'">
+                {{ (vote.membreNom || 'XX').charAt(0)
+                }}{{ ((vote.membreNom || 'XX').split(' ')[1] || '').charAt(0) }}
+              </div>
+              <div class="avis-content">
+                <div class="avis-author">
+                  {{ vote.membreNom }}
+                  <span style="font-weight: 400; color: var(--color-text-secondary)"
+                    >· {{ vote.role === 'responsable' ? 'Évaluateur' : 'Évaluatrice' }}</span
+                  >
+                </div>
+                <div class="avis-comment">{{ vote.commentaire }}</div>
+              </div>
+              <div>
+                <div
+                  class="avis-badge"
+                  [ngClass]="
+                    vote.recommandation === 'favorable'
+                      ? 'ab-fav'
+                      : vote.recommandation === 'reserve'
+                        ? 'ab-res'
+                        : ''
+                  "
+                >
+                  {{
+                    vote.recommandation === 'favorable'
+                      ? 'Favorable'
+                      : vote.recommandation === 'reserve'
+                        ? 'Réservé'
+                        : 'Défavorable'
+                  }}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>Diplôme requis conforme ? *</label>
-            <select [(ngModel)]="avisDiplomeConforme" name="avisDiplomeConforme" required>
-              <option value="conforme">Conforme</option>
-              <option value="non_conforme">Non conforme</option>
-            </select>
-          </div>
+        <div class="divider"></div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" (click)="fermerModalAvis()">Annuler</button>
-            <button type="submit" class="btn-primary">
-              <i class="fas fa-save"></i> Enregistrer
+        <div>
+          <div class="section-lbl">Votre recommandation <span style="color: #e24b4a">*</span></div>
+          <div class="recomm-grid">
+            <button
+              type="button"
+              class="rec-btn"
+              [ngClass]="{ 'active-fav': avisRecommandation === 'favorable' }"
+              (click)="avisRecommandation = 'favorable'"
+            >
+              <div class="rec-icon ri-fav"><i class="fas fa-check" style="color: #fff"></i></div>
+              <div class="rec-label">Favorable</div>
+            </button>
+            <button
+              type="button"
+              class="rec-btn"
+              [ngClass]="{ 'active-res': avisRecommandation === 'reserve' }"
+              (click)="avisRecommandation = 'reserve'"
+            >
+              <div class="rec-icon ri-res" style="background: #ba7517">
+                <i class="fas fa-minus" style="color: #fff"></i>
+              </div>
+              <div class="rec-label">Réservé</div>
+            </button>
+            <button
+              type="button"
+              class="rec-btn"
+              [ngClass]="{ 'active-def': avisRecommandation === 'defavorable' }"
+              (click)="avisRecommandation = 'defavorable'"
+            >
+              <div class="rec-icon ri-def"><i class="fas fa-times" style="color: #fff"></i></div>
+              <div class="rec-label">Défavorable</div>
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div>
+          <div class="section-lbl">
+            Diplôme requis conforme ? <span style="color: #e24b4a">*</span>
+          </div>
+          <div class="diplome-row">
+            <button
+              type="button"
+              class="dip-btn"
+              [ngClass]="{ 'active-ok': avisDiplomeConforme === 'conforme' }"
+              (click)="avisDiplomeConforme = 'conforme'"
+            >
+              <span class="dip-dot dot-ok"></span>
+              Conforme
+            </button>
+            <button
+              type="button"
+              class="dip-btn"
+              [ngClass]="{ 'active-nok': avisDiplomeConforme === 'non_conforme' }"
+              (click)="avisDiplomeConforme = 'non_conforme'"
+            >
+              <span class="dip-dot dot-nok"></span>
+              Non conforme
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-lbl">
+            Commentaire <span style="color: var(--color-text-secondary)">(optionnel)</span>
+          </div>
+          <textarea
+            class="note-area"
+            id="note-area"
+            rows="3"
+            [(ngModel)]="avisText"
+            name="avisText"
+            placeholder="Détaillez votre avis..."
+            maxlength="400"
+          ></textarea>
+          <div class="char-count">
+            {{ avisText && avisText.length ? avisText.length : 0 }} / 400 caractères
+          </div>
+        </div>
+
+        <div class="req-note">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="8" r="6"></circle>
+            <line x1="8" y1="5" x2="8" y2="8"></line>
+            <circle cx="8" cy="11" r=".5" fill="currentColor" stroke="none"></circle>
+          </svg>
+          Votre avis est visible par le responsable commission. La décision finale lui appartient.
+        </div>
+
+        <div class="modal-ftr">
+          <div class="ftr-left" id="ftr-status">
+            Recommandation sélectionnée :
+            <strong>{{
+              avisRecommandation === 'favorable'
+                ? 'Favorable'
+                : avisRecommandation === 'reserve'
+                  ? 'Réservé'
+                  : 'Défavorable'
+            }}</strong>
+          </div>
+          <div class="ftr-btns">
+            <button type="button" class="btn btn-cancel" (click)="fermerModalAvis()">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="btn btn-save"
+              id="btn-save"
+              [disabled]="!(avisText && avisText.trim())"
+            >
+              <i class="fas fa-check"></i> Enregistrer mon avis
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 
-  <!-- ✅ MODAL AVIS LISTE -->
+  <!-- MODAL AVIS LISTE -->
   <div *ngIf="showModalAvisListe" class="modal-overlay" (click)="fermerModalAvisListe()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>💬 Avis sur la liste</h2>
+        <h2>Avis sur la liste</h2>
         <button class="btn-close" (click)="fermerModalAvisListe()">
           <i class="fas fa-times"></i>
         </button>
@@ -3397,11 +3807,11 @@
     </div>
   </div>
 
-  <!-- ✅ MODAL OCR -->
+  <!-- MODAL OCR -->
   <div *ngIf="showModalOCR" class="modal-overlay" (click)="fermerModalOCR()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>🤖 Analyser un document avec OCR</h2>
+        <h2>Analyser un document avec OCR</h2>
         <button class="btn-close" (click)="fermerModalOCR()">
           <i class="fas fa-times"></i>
         </button>
@@ -3435,11 +3845,11 @@
     </div>
   </div>
 
-  <!-- ✅ MODAL STATUT -->
+  <!-- MODAL STATUT -->
   <div *ngIf="showModalStatut" class="modal-overlay" (click)="fermerModalStatut()">
     <div class="modal-content status-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>🔄 Changer le statut</h2>
+        <h2>Changer le statut</h2>
         <button class="btn-close" (click)="fermerModalStatut()">
           <i class="fas fa-times"></i>
         </button>
@@ -3480,21 +3890,21 @@
       </div>
     </div>
   </div>
-  <!-- ══ MODAL VALIDATION PRÉSÉLECTION ══ -->
+  <!-- MODAL VALIDATION PRESELECTION -->
   <div
     *ngIf="showModalValidationPreselection"
     class="modal-overlay preselection-overlay"
     (click)="fermerModalValidationPreselection()"
   >
     <div class="modal-content preselection-modal" (click)="$event.stopPropagation()">
-      <!-- État normal -->
+      <!-- Etat normal -->
       <ng-container *ngIf="!preselectionValidationSuccess">
         <div class="modal-header">
           <div class="modal-title-group">
             <div class="modal-icon-circle success">
               <i class="fas fa-check"></i>
             </div>
-            <span>Validation présélection</span>
+            <span>Validation sélection</span>
           </div>
           <button class="btn-close" (click)="fermerModalValidationPreselection()">
             <i class="fas fa-times"></i>
@@ -3514,7 +3924,7 @@
             </div>
           </div>
 
-          <!-- Métriques -->
+          <!-- Metriques -->
           <div class="presel-info-row">
             <div class="presel-info-cell">
               <div class="presel-lbl">Score</div>
@@ -3611,12 +4021,12 @@
             </textarea>
           </div>
 
-          <!-- Boîte de confirmation -->
+          <!-- Boite de confirmation -->
           <div class="presel-confirm-box">
             <i class="fas fa-info-circle"></i>
             <p>
               En validant, <strong>{{ c.candidat_nom }}</strong> passera au statut
-              <strong>Présélectionné</strong> et recevra une notification email automatique. Cette
+              <strong>Sélectionné</strong> et recevra une notification email automatique. Cette
               action peut être modifiée avant la clôture de la commission.
             </p>
           </div>
@@ -3633,20 +4043,20 @@
             (click)="confirmerValidationPreselection()"
           >
             <i class="fas" [ngClass]="preselConfirmLoading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-            {{ preselConfirmLoading ? 'Confirmation...' : 'Confirmer la présélection' }}
+            {{ preselConfirmLoading ? 'Confirmation...' : 'Confirmer la sélection' }}
           </button>
         </div>
       </ng-container>
 
-      <!-- État succès -->
+      <!-- Etat succes -->
       <div class="presel-success-state" *ngIf="preselectionValidationSuccess">
         <div class="presel-success-circle">
           <i class="fas fa-check"></i>
         </div>
-        <h3>Présélection validée</h3>
+        <h3>Sélection validée</h3>
         <p>
           <strong>{{ candidatureValidationPreselection?.candidat_nom }}</strong>
-          est maintenant <strong>Présélectionné</strong>.<br />
+          est maintenant <strong>Sélectionné</strong>.<br />
           Son statut a été mis à jour et une notification a été envoyée.
         </p>
         <span class="presel-notif-chip">

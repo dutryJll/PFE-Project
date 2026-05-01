@@ -7,6 +7,7 @@ urlpatterns = [
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
     path('profile/', views.get_profile, name='get_profile'),
     path('profile/update/', views.update_profile, name='update_profile'),
+    path('profile/two-factor/', views.toggle_two_factor, name='toggle_two_factor'),
     
     # Admin
     path('users/', views.list_users, name='list_users'),
