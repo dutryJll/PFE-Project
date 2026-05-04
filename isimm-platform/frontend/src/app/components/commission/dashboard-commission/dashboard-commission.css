@@ -18,6 +18,15 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
+/* Make main content full width with side padding (px-8) */
+.main-content {
+  width: 100%;
+  max-width: none;
+  padding-left: 2rem; /* px-8 */
+  padding-right: 2rem; /* px-8 */
+  box-sizing: border-box;
+}
+
 .section-title {
   font-size: 1.02rem;
   font-weight: 800;

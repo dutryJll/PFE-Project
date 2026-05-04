@@ -26,6 +26,7 @@ from .models import (
     ConfigurationAppel,
     DonneesAcademiques,
     FormuleScore,
+    HistoriqueActionCommission,
     ListeAdmission,
     Master,
     Reclamation,
@@ -60,6 +61,20 @@ from decimal import Decimal, InvalidOperation
 
 
 logger = logging.getLogger(__name__)
+
+
+def _log_commission_action(user, action, specialite, session, nb_candidats, master=None):
+    try:
+        HistoriqueActionCommission.objects.create(
+            responsable=user if getattr(user, 'is_authenticated', False) else None,
+            master=master,
+            action=action,
+            specialite=specialite or '',
+            session=session or '',
+            nb_candidats=max(0, int(nb_candidats or 0)),
+        )
+    except Exception:
+        logger.exception('Impossible de créer une entrée HistoriqueActionCommission')
 
 
 ALLOWED_STATUS_TRANSITIONS = {
@@ -1660,6 +1675,14 @@ def changer_statut_candidature(request, candidature_id):
         request.user,
         'Changement de statut via commission',
     )
+    _log_commission_action(
+        request.user,
+        'Validation individuelle',
+        getattr(candidature.master, 'specialite', '') or getattr(candidature, 'specialite', ''),
+        getattr(candidature, 'annee_universitaire', '') or '',
+        1,
+        candidature.master if hasattr(candidature, 'master') else None,
+    )
 
     channel_layer = get_channel_layer()
     if channel_layer is not None:
@@ -1748,6 +1771,14 @@ def update_status(request, candidature_id):
         request.user,
         'Validation commission (update_status)',
     )
+    _log_commission_action(
+        request.user,
+        'Validation individuelle',
+        getattr(candidature.master, 'specialite', '') or getattr(candidature, 'specialite', ''),
+        getattr(candidature, 'annee_universitaire', '') or '',
+        1,
+        candidature.master if hasattr(candidature, 'master') else None,
+    )
 
     channel_layer = get_channel_layer()
     if channel_layer is not None:
@@ -1825,6 +1856,14 @@ def commission_decision_candidature(request, candidature_id):
         nouveau_statut,
         request.user,
         f"Decision commission: {decision}",
+    )
+    _log_commission_action(
+        request.user,
+        f'Decision commission: {decision}',
+        getattr(candidature.master, 'specialite', '') or getattr(candidature, 'specialite', ''),
+        getattr(candidature, 'annee_universitaire', '') or '',
+        1,
+        candidature.master if hasattr(candidature, 'master') else None,
     )
 
     channel_layer = get_channel_layer()
@@ -2871,6 +2910,15 @@ def generer_liste_manuelle(request, master_id):
             candidature.statut = nouveau_statut
             candidature.save(update_fields=['statut', 'updated_at'])
 
+    _log_commission_action(
+        request.user,
+        'Validation de masse' if type_liste == 'principale' else 'Validation complète',
+        master.specialite,
+        annee_universitaire,
+        len(candidatures),
+        master,
+    )
+
     candidats_payload = [_serialize_candidature_for_liste(cand) for cand in candidatures]
 
     return Response(
@@ -2890,6 +2938,29 @@ def generer_liste_manuelle(request, master_id):
             'candidats': candidats_payload,
         }
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def enregistrer_action_commission(request):
+    if getattr(request.user, 'role', None) not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    action = str(request.data.get('action') or '').strip()
+    specialite = str(request.data.get('specialite') or '').strip()
+    session = str(request.data.get('session') or '').strip()
+    nb_candidats = request.data.get('nb_candidats', 0)
+    master_id = request.data.get('master_id')
+
+    master = None
+    if master_id not in [None, '', 0, '0']:
+        master = Master.objects.filter(id=master_id).first()
+
+    if not action or not specialite:
+        return Response({'error': 'action et specialite sont obligatoires'}, status=status.HTTP_400_BAD_REQUEST)
+
+    _log_commission_action(request.user, action, specialite, session, nb_candidats, master)
+    return Response({'success': True})
 
 
 @api_view(['GET'])

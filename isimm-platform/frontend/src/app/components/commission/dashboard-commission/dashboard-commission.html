@@ -14,8 +14,8 @@
       ></span>
       <h2>ISIMM</h2>
       <p class="user-role">{{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}</p>
-      <small class="user-role-master" *ngIf="hasUserScopeLabel()">
-        {{ getUserMasterOrSpecialiteLabel() }}
+      <small class="user-role-master" *ngIf="isResponsable">
+        Spécialité : {{ getDisplayedResponsableSpecialite() }}
       </small>
     </div>
 
@@ -325,7 +325,7 @@
             </div>
             <div class="stat-text">
               <div class="stat-num">{{ getDashboardInscritsCount() }}</div>
-              <div class="stat-lbl">Inscrits</div>
+              <div class="stat-lbl">inscrits</div>
               <div class="stat-trend" style="color: var(--color-text-secondary)">
                 Taux inscription
               </div>
@@ -506,7 +506,7 @@
             </details>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-primary">Mettre à jour le profil</button>
+              <button type="submit" class="btn-primary">Mettre Ã  jour le profil</button>
               <button type="button" class="btn-outline" (click)="profileData = { ...currentUser }">
                 Annuler
               </button>
@@ -549,7 +549,7 @@
             </div>
 
             <div class="profile-actions">
-              <button type="submit" class="btn-warning">Mettre à jour le mot de passe</button>
+              <button type="submit" class="btn-warning">Mettre Ã  jour le mot de passe</button>
               <button
                 type="button"
                 class="btn-outline"
@@ -933,12 +933,2947 @@
       *ngIf="
         isCurrentView('candidatures-responsable') ||
         isCurrentView('candidatures-master') ||
-        isCurrentView('candidatures-ingenieur')
+        currentView === 'candidatures'
       "
       class="view-content"
     >
-      <div class="section">
-        <div class="section-title">Candidatures Master — filtres dynamiques + prévisualisation</div>
+      <div
+        *ngIf="isCurrentView('candidatures-master') || currentView === 'candidatures'"
+        class="section"
+        style="min-height: 60vh; background: #fff"
+      >
+        <div class="candidatures-master-page" (click)="onFinalSelectionPageClick($event)">
+          <h2 class="sr-only">
+            Page Selection finale avec quotas doubles, decision preselection, dropdown statut,
+            observation et actions PDF/Notifier
+          </h2>
+          <style>
+            .candidatures-master-page * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            .candidatures-master-page {
+              font-family: var(--font-sans);
+              font-size: 13px;
+            }
+            .candidatures-master-page .page {
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+              padding: 0.5rem 0;
+            }
+
+            .candidatures-master-page .stat-row {
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 0.6rem;
+            }
+            .candidatures-master-page .scard {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.85rem 1rem;
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+            }
+            .candidatures-master-page .sicon {
+              width: 36px;
+              height: 36px;
+              border-radius: var(--border-radius-md);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .si-blue {
+              background: #e6f1fb;
+            }
+            .candidatures-master-page .si-teal {
+              background: #e1f5ee;
+            }
+            .candidatures-master-page .si-amber {
+              background: #faeeda;
+            }
+            .candidatures-master-page .si-purple {
+              background: #eeedfe;
+            }
+            .candidatures-master-page .sicon svg {
+              width: 16px;
+              height: 16px;
+            }
+            .candidatures-master-page .snum {
+              font-size: 20px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+              line-height: 1;
+            }
+            .candidatures-master-page .slbl {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+              margin-top: 2px;
+            }
+
+            .candidatures-master-page .quota-card {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.9rem 1rem;
+            }
+            .candidatures-master-page .quota-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+            }
+            .candidatures-master-page .quota-top {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.35rem;
+            }
+            .candidatures-master-page .quota-label {
+              font-size: 12px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+              display: flex;
+              align-items: center;
+              gap: 0.4rem;
+            }
+            .candidatures-master-page .quota-label svg {
+              width: 12px;
+              height: 12px;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .quota-nums {
+              font-size: 12px;
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .quota-nums strong {
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .qtrack {
+              height: 8px;
+              background: var(--color-border-tertiary);
+              border-radius: 4px;
+              overflow: hidden;
+            }
+            .candidatures-master-page .qfill {
+              height: 100%;
+              border-radius: 4px;
+              transition: width 0.4s;
+            }
+            .candidatures-master-page .qf-lp {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .qf-la {
+              background: #185fa5;
+            }
+            .candidatures-master-page .qf-warn {
+              background: #ba7517;
+            }
+            .candidatures-master-page .qf-full {
+              background: #e24b4a;
+            }
+            .candidatures-master-page .quota-hint {
+              font-size: 11px;
+              margin-top: 0.3rem;
+            }
+            .candidatures-master-page .qh-ok {
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .qh-warn {
+              color: #854f0b;
+            }
+            .candidatures-master-page .qh-full {
+              color: #a32d2d;
+            }
+
+            .candidatures-master-page .filter-card {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.85rem 1rem;
+            }
+            .candidatures-master-page .filter-grid {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 0.55rem;
+            }
+            .candidatures-master-page .flbl {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+              margin-bottom: 0.25rem;
+            }
+            .candidatures-master-page .finput {
+              width: 100%;
+              padding: 0.38rem 0.5rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 12px;
+            }
+            .candidatures-master-page .finput:focus {
+              outline: none;
+              border-color: #378add;
+            }
+            .candidatures-master-page .radio-row {
+              display: flex;
+              gap: 0.6rem;
+              margin-top: 0.25rem;
+            }
+            .candidatures-master-page .radio-opt {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              font-size: 12px;
+              color: var(--color-text-primary);
+              cursor: pointer;
+            }
+            .candidatures-master-page .filter-row2 {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 0.55rem;
+              margin-top: 0.55rem;
+            }
+            .candidatures-master-page .filter-actions {
+              display: flex;
+              gap: 0.5rem;
+              margin-top: 0.65rem;
+              align-items: center;
+              flex-wrap: wrap;
+            }
+            .candidatures-master-page .check-label {
+              display: flex;
+              align-items: center;
+              gap: 0.4rem;
+              font-size: 12px;
+              color: var(--color-text-secondary);
+              cursor: pointer;
+            }
+            .candidatures-master-page .toggle {
+              width: 30px;
+              height: 17px;
+              border-radius: 8px;
+              background: var(--color-border-tertiary);
+              border: 0.5px solid var(--color-border-secondary);
+              position: relative;
+              cursor: pointer;
+              flex-shrink: 0;
+              transition: background 0.2s;
+            }
+            .candidatures-master-page .toggle.on {
+              background: #185fa5;
+              border-color: #185fa5;
+            }
+            .candidatures-master-page .toggle::after {
+              content: '';
+              position: absolute;
+              width: 13px;
+              height: 13px;
+              border-radius: 50%;
+              background: #fff;
+              top: 1px;
+              left: 1px;
+              transition: left 0.2s;
+            }
+            .candidatures-master-page .toggle.on::after {
+              left: 14px;
+            }
+
+            .candidatures-master-page .btn {
+              font-size: 12px;
+              padding: 0.4rem 0.85rem;
+              border-radius: var(--border-radius-md);
+              cursor: pointer;
+              border: 0.5px solid;
+              font-weight: 500;
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              transition: all 0.15s;
+            }
+            .candidatures-master-page .btn svg {
+              width: 12px;
+              height: 12px;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .btn-primary {
+              background: #185fa5;
+              border-color: #185fa5;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-primary:hover {
+              background: #1050a0;
+            }
+            .candidatures-master-page .btn-success {
+              background: #1d9e75;
+              border-color: #1d9e75;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-success:hover {
+              background: #0f6e56;
+            }
+            .candidatures-master-page .btn-danger {
+              background: #e24b4a;
+              border-color: #e24b4a;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-danger:hover {
+              background: #a32d2d;
+            }
+            .candidatures-master-page .btn-amber {
+              background: #faeeda;
+              border-color: #ba7517;
+              color: #854f0b;
+            }
+            .candidatures-master-page .btn-amber:hover {
+              background: #fac775;
+            }
+            .candidatures-master-page .btn-sec {
+              background: transparent;
+              border-color: var(--color-border-secondary);
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .btn-sec:hover {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page .btn-pdf {
+              background: #fcebeb;
+              border-color: #e24b4a;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .btn-pdf:hover {
+              background: #f7c1c1;
+            }
+            .candidatures-master-page .btn-notify {
+              background: #e1f5ee;
+              border-color: #1d9e75;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .btn-notify:hover {
+              background: #9fe1cb;
+            }
+
+            .candidatures-master-page .export-wrap {
+              position: relative;
+              display: inline-block;
+            }
+            .candidatures-master-page .export-menu {
+              display: none;
+              position: absolute;
+              left: 0;
+              top: calc(100% + 4px);
+              min-width: 190px;
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-lg);
+              overflow: hidden;
+              z-index: 10;
+            }
+            .candidatures-master-page .export-menu.open {
+              display: block;
+            }
+            .candidatures-master-page .export-item {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              padding: 0.55rem 0.8rem;
+              font-size: 12px;
+              color: var(--color-text-primary);
+              cursor: pointer;
+              border: none;
+              background: transparent;
+              width: 100%;
+              text-align: left;
+            }
+            .candidatures-master-page .export-item:hover {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page .export-item svg {
+              width: 13px;
+              height: 13px;
+              flex-shrink: 0;
+            }
+
+            .candidatures-master-page .bulk-bar {
+              display: none;
+              align-items: center;
+              justify-content: space-between;
+              gap: 0.75rem;
+              padding: 0.65rem 1rem;
+              background: #e6f1fb;
+              border: 0.5px solid #b5d4f4;
+              border-radius: var(--border-radius-lg);
+              flex-wrap: wrap;
+            }
+            .candidatures-master-page .bulk-bar.show {
+              display: flex;
+            }
+            .candidatures-master-page .bulk-text {
+              font-size: 12px;
+              color: #185fa5;
+              font-weight: 500;
+            }
+
+            .candidatures-master-page .table-wrap {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              overflow: hidden;
+            }
+            .candidatures-master-page .table-hdr {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.65rem 1rem;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            }
+            .candidatures-master-page .table-hdr-title {
+              font-size: 13px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .tbl-actions {
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: center;
+            }
+            .candidatures-master-page table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+            }
+            .candidatures-master-page th {
+              background: var(--color-background-secondary);
+              padding: 0.5rem 0.6rem;
+              text-align: left;
+              color: var(--color-text-secondary);
+              font-weight: 500;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              white-space: nowrap;
+              font-size: 11px;
+            }
+            .candidatures-master-page td {
+              padding: 0.45rem 0.6rem;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              color: var(--color-text-primary);
+              vertical-align: middle;
+            }
+            .candidatures-master-page tr:last-child td {
+              border-bottom: none;
+            }
+            .candidatures-master-page tr:hover td {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page tr.selected td {
+              background: #f0f7ff;
+            }
+
+            .candidatures-master-page .badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 3px;
+              font-size: 10px;
+              font-weight: 500;
+              padding: 2px 8px;
+              border-radius: 20px;
+              white-space: nowrap;
+            }
+            .candidatures-master-page .b-presel-oui {
+              background: #e1f5ee;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .b-presel-non {
+              background: #fcebeb;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .b-admissible {
+              background: #e6f1fb;
+              color: #185fa5;
+            }
+            .candidatures-master-page .b-sous-examen {
+              background: #faeeda;
+              color: #854f0b;
+            }
+
+            .candidatures-master-page .score-wrap {
+              display: flex;
+              align-items: center;
+              gap: 0.45rem;
+            }
+            .candidatures-master-page .score-val {
+              font-size: 12px;
+              font-weight: 500;
+              min-width: 26px;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .score-bar {
+              flex: 1;
+              height: 5px;
+              border-radius: 3px;
+              background: var(--color-border-tertiary);
+              overflow: hidden;
+              min-width: 60px;
+            }
+            .candidatures-master-page .score-fill {
+              height: 100%;
+              border-radius: 3px;
+            }
+            .candidatures-master-page .sf-green {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .sf-amber {
+              background: #ba7517;
+            }
+            .candidatures-master-page .sf-red {
+              background: #e24b4a;
+            }
+
+            .candidatures-master-page .statut-select {
+              padding: 0.3rem 0.4rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 11px;
+              cursor: pointer;
+              min-width: 130px;
+            }
+            .candidatures-master-page .statut-select:focus {
+              outline: none;
+              border-color: #378add;
+            }
+            .candidatures-master-page .statut-select.s-lp {
+              background: #e1f5ee;
+              border-color: #1d9e75;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .statut-select.s-la {
+              background: #e6f1fb;
+              border-color: #185fa5;
+              color: #185fa5;
+            }
+            .candidatures-master-page .statut-select.s-refuse {
+              background: #fcebeb;
+              border-color: #e24b4a;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .statut-select.s-empty {
+              background: var(--color-background-secondary);
+            }
+
+            .candidatures-master-page .obs-input {
+              padding: 0.3rem 0.45rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 11px;
+              width: 110px;
+            }
+            .candidatures-master-page .obs-input:focus {
+              outline: none;
+              border-color: #185fa5;
+            }
+
+            .candidatures-master-page .pag-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.55rem 1rem;
+              border-top: 0.5px solid var(--color-border-tertiary);
+            }
+            .candidatures-master-page .pag-info {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .pag-btns {
+              display: flex;
+              gap: 0.3rem;
+            }
+            .candidatures-master-page .pag-btn {
+              width: 26px;
+              height: 26px;
+              border-radius: var(--border-radius-md);
+              border: 0.5px solid var(--color-border-secondary);
+              background: transparent;
+              color: var(--color-text-primary);
+              cursor: pointer;
+              font-size: 11px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .candidatures-master-page .pag-btn.active {
+              background: #185fa5;
+              border-color: #185fa5;
+              color: #fff;
+            }
+            .candidatures-master-page .pag-btn:hover:not(.active) {
+              background: var(--color-background-secondary);
+            }
+
+            .candidatures-master-page .toast {
+              display: none;
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              color: #fff;
+              font-size: 12px;
+              font-weight: 500;
+              padding: 0.55rem 1rem;
+              border-radius: var(--border-radius-lg);
+              gap: 0.5rem;
+              align-items: center;
+              z-index: 999;
+              max-width: 300px;
+            }
+            .candidatures-master-page .toast.show {
+              display: flex;
+            }
+            .candidatures-master-page .t-success {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .t-warn {
+              background: #ba7517;
+            }
+            .candidatures-master-page .t-danger {
+              background: #e24b4a;
+            }
+            .candidatures-master-page .t-info {
+              background: #185fa5;
+            }
+            .candidatures-master-page .toast svg {
+              width: 13px;
+              height: 13px;
+              stroke: #fff;
+              flex-shrink: 0;
+            }
+
+            .candidatures-master-page .confirm-wrap {
+              display: none;
+              position: fixed;
+              inset: 0;
+              background: rgba(0, 0, 0, 0.42);
+              align-items: center;
+              justify-content: center;
+              z-index: 100;
+              padding: 1rem;
+            }
+            .candidatures-master-page .confirm-wrap.show {
+              display: flex;
+            }
+            .candidatures-master-page .confirm-modal {
+              background: var(--color-background-primary);
+              border-radius: var(--border-radius-lg);
+              border: 0.5px solid var(--color-border-secondary);
+              width: min(380px, 100%);
+              padding: 1.25rem;
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+            }
+            .candidatures-master-page .cm-title {
+              font-size: 14px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .cm-text {
+              font-size: 12px;
+              color: var(--color-text-secondary);
+              line-height: 1.5;
+            }
+            .candidatures-master-page .cm-actions {
+              display: flex;
+              gap: 0.5rem;
+              justify-content: flex-end;
+            }
+          </style>
+
+          <div class="page">
+            <!-- ── STAT CARDS ── -->
+            <div class="stat-row">
+              <div class="scard">
+                <div class="sicon si-blue">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
+                    <path d="M4 1h6l4 4v10H4V1z"></path>
+                    <path d="M10 1v4h4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ finalSelectionCandidates.length }}</div>
+                  <div class="slbl">Total candidats</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-teal">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                    <path d="M3 8l4 4 6-6"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ getFinalSelectionLpCount() }}</div>
+                  <div class="slbl">Liste principale</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-purple">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <path d="M8 5v3l2 2"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ getFinalSelectionLaCount() }}</div>
+                  <div class="slbl">Liste d'attente</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-amber">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <line x1="8" y1="5" x2="8" y2="8"></line>
+                    <circle cx="8" cy="11" r=".5" fill="#BA7517" stroke="none"></circle>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ getFinalSelectionAverageScore() | number: '1.2-2' }}</div>
+                  <div class="slbl">Moyenne des scores</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── QUOTAS DOUBLES ── -->
+            <div class="quota-card">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 0.75rem;
+                "
+              >
+                <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary)">
+                  Gestion des quotas - Session {{ finalSelectionFilters.session }}
+                </div>
+                <div style="font-size: 11px; color: var(--color-text-secondary)">
+                  Valides :
+                  <strong style="color: var(--color-text-primary)">
+                    {{ getFinalSelectionValidatedCount() }}
+                  </strong>
+                  - Total Master :
+                  <strong style="color: #185fa5">{{ finalSelectionQuotaLpTotal }}</strong>
+                </div>
+              </div>
+              <div class="quota-grid">
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                        <path d="M2 6l3 3 5-5"></path>
+                      </svg>
+                      Liste principale (LP)
+                    </div>
+                    <div class="quota-nums">
+                      <strong>{{ getFinalSelectionLpCount() }}</strong> /
+                      {{ finalSelectionQuotaLpTotal }} places
+                    </div>
+                  </div>
+                  <div class="qtrack">
+                    <div
+                      class="qfill"
+                      [ngClass]="getFinalSelectionQuotaFillClass('lp')"
+                      [style.width.%]="getFinalSelectionLpPercent()"
+                    ></div>
+                  </div>
+                  <div class="quota-hint" [ngClass]="getFinalSelectionQuotaHintClass('lp')">
+                    {{ getFinalSelectionQuotaHint('lp') }}
+                  </div>
+                </div>
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#185FA5" stroke-width="1.5">
+                        <circle cx="6" cy="6" r="5"></circle>
+                        <path d="M6 4v3l2 2"></path>
+                      </svg>
+                      Liste d'attente (LA)
+                    </div>
+                    <div class="quota-nums">
+                      <strong>{{ getFinalSelectionLaCount() }}</strong> /
+                      {{ finalSelectionQuotaLaTotal }} places
+                    </div>
+                  </div>
+                  <div class="qtrack">
+                    <div
+                      class="qfill"
+                      [ngClass]="getFinalSelectionQuotaFillClass('la')"
+                      [style.width.%]="getFinalSelectionLaPercent()"
+                    ></div>
+                  </div>
+                  <div class="quota-hint" [ngClass]="getFinalSelectionQuotaHintClass('la')">
+                    {{ getFinalSelectionQuotaHint('la') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── FILTRES ── -->
+            <div class="filter-card">
+              <div class="filter-grid">
+                <div>
+                  <div class="flbl">Session principale</div>
+                  <select
+                    class="finput"
+                    [(ngModel)]="finalSelectionFilters.session"
+                    (change)="updateFinalSelectionFiltered()"
+                  >
+                    <option value="2025/2026">2025/2026</option>
+                    <option value="2024/2025">2024/2025</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="flbl">Type candidature</div>
+                  <div class="radio-row">
+                    <label class="radio-opt">
+                      <input
+                        type="radio"
+                        name="finalSelectionType"
+                        value="all"
+                        [(ngModel)]="finalSelectionFilters.type"
+                        (change)="updateFinalSelectionFiltered()"
+                      />
+                      Tous
+                    </label>
+                    <label class="radio-opt">
+                      <input
+                        type="radio"
+                        name="finalSelectionType"
+                        value="interne"
+                        [(ngModel)]="finalSelectionFilters.type"
+                        (change)="updateFinalSelectionFiltered()"
+                      />
+                      Interne
+                    </label>
+                    <label class="radio-opt">
+                      <input
+                        type="radio"
+                        name="finalSelectionType"
+                        value="externe"
+                        [(ngModel)]="finalSelectionFilters.type"
+                        (change)="updateFinalSelectionFiltered()"
+                      />
+                      Externe
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <div class="flbl">Specialite demandee</div>
+                  <select
+                    class="finput"
+                    [(ngModel)]="finalSelectionFilters.specialite"
+                    (change)="updateFinalSelectionFiltered()"
+                  >
+                    <option value="all">Tous les masters</option>
+                    <option *ngFor="let spec of finalSelectionSpecialiteOptions" [value]="spec">
+                      {{ spec }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="filter-row2">
+                <div>
+                  <div class="flbl">Score min</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    [(ngModel)]="finalSelectionFilters.scoreMin"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    (input)="updateFinalSelectionFiltered()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Score max</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    [(ngModel)]="finalSelectionFilters.scoreMax"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    (input)="updateFinalSelectionFiltered()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Recherche</div>
+                  <input
+                    type="text"
+                    class="finput"
+                    [(ngModel)]="finalSelectionFilters.search"
+                    placeholder="Rechercher par nom..."
+                    (input)="updateFinalSelectionFiltered()"
+                  />
+                </div>
+              </div>
+              <div class="filter-actions">
+                <label class="check-label" (click)="toggleFinalSelectionTop100()">
+                  <div class="toggle" [class.on]="finalSelectionTop100On"></div>
+                  Top 100 par score
+                </label>
+                <label class="check-label">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="finalSelectionFilters.hideValides"
+                    (change)="updateFinalSelectionFiltered()"
+                    style="cursor: pointer"
+                  />
+                  Masquer les candidats deja valides
+                </label>
+                <button class="btn btn-sec" type="button" (click)="resetFinalSelectionFilters()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
+                  </svg>
+                  Reinitialiser
+                </button>
+              </div>
+            </div>
+
+            <!-- ── BULK BAR ── -->
+            <div class="bulk-bar" [class.show]="finalSelectionSelectedIds.size > 0">
+              <div class="bulk-text">{{ getFinalSelectionSelectedCountLabel() }}</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+                <select class="finput" [(ngModel)]="finalSelectionBulkAction" style="width: 160px">
+                  <option value="">Action groupee...</option>
+                  <option value="lp">→ Liste principale (LP)</option>
+                  <option value="la">→ Liste d'attente (LA)</option>
+                  <option value="refuse">→ Refuse</option>
+                </select>
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  (click)="applyFinalSelectionBulkAction()"
+                >
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 6l3 3 5-5"></path>
+                  </svg>
+                  Appliquer
+                </button>
+              </div>
+            </div>
+
+            <!-- ── TABLEAU ── -->
+            <div class="table-wrap">
+              <div class="table-hdr">
+                <div class="table-hdr-title">
+                  Liste des candidatures
+                  <span
+                    style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400"
+                  >
+                    ({{ finalSelectionFiltered.length }})
+                  </span>
+                </div>
+                <div class="tbl-actions">
+                  <div class="export-wrap">
+                    <button
+                      class="btn btn-pdf"
+                      type="button"
+                      (click)="toggleFinalSelectionExportMenu($event)"
+                    >
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                        <path d="M3 1h5l3 3v7H3V1z"></path>
+                        <path d="M8 1v3h3"></path>
+                        <line x1="4" y1="7" x2="8" y2="7"></line>
+                        <line x1="4" y1="9" x2="6" y2="9"></line>
+                      </svg>
+                      Generer PV final
+                      <svg
+                        viewBox="0 0 8 5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.2"
+                        style="width: 8px; height: 8px"
+                      >
+                        <path d="M1 1l3 3 3-3"></path>
+                      </svg>
+                    </button>
+                    <div class="export-menu" [class.open]="finalSelectionExportOpen">
+                      <button class="export-item" type="button" (click)="finalSelectionExportPdf()">
+                        <svg viewBox="0 0 12 12" fill="none" stroke="#A32D2D" stroke-width="1.4">
+                          <path d="M3 1h5l3 3v7H3V1z"></path>
+                          <path d="M8 1v3h3"></path>
+                        </svg>
+                        PV officiel PDF
+                      </button>
+                      <button
+                        class="export-item"
+                        type="button"
+                        (click)="finalSelectionExportExcel()"
+                      >
+                        <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.4">
+                          <rect x="1" y="1" width="10" height="10" rx="1"></rect>
+                          <line x1="3" y1="5" x2="9" y2="5"></line>
+                          <line x1="3" y1="7" x2="7" y2="7"></line>
+                        </svg>
+                        Liste Excel
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    class="btn btn-notify"
+                    type="button"
+                    (click)="openFinalSelectionConfirm()"
+                  >
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M1 3h10v7H1z"></path>
+                      <path d="M1 3l5 4 5-4"></path>
+                    </svg>
+                    Publier &amp; Notifier
+                  </button>
+                </div>
+              </div>
+
+              <div style="overflow-x: auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 34px">
+                        <input
+                          type="checkbox"
+                          [checked]="areAllFinalSelectionRowsSelected()"
+                          (change)="toggleFinalSelectionAll($event.target.checked)"
+                          style="cursor: pointer"
+                        />
+                      </th>
+                      <th>Rang</th>
+                      <th>N°</th>
+                      <th>Nom complet</th>
+                      <th>Specialite</th>
+                      <th style="min-width: 130px">Score</th>
+                      <th>Decision preselection</th>
+                      <th style="min-width: 148px">Statut selection</th>
+                      <th>Observation</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let candidate of finalSelectionFiltered"
+                      [class.selected]="isFinalSelectionRowSelected(candidate.id)"
+                    >
+                      <td>
+                        <input
+                          type="checkbox"
+                          [checked]="isFinalSelectionRowSelected(candidate.id)"
+                          (change)="toggleFinalSelectionRow(candidate.id, $event.target.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">{{ candidate.rang }}</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        {{ candidate.num }}
+                      </td>
+                      <td style="font-weight: 500">{{ candidate.nom }}</td>
+                      <td style="color: var(--color-text-secondary)">{{ candidate.spec }}</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">{{ candidate.score | number: '1.1-1' }}</span>
+                          <div class="score-bar">
+                            <div
+                              class="score-fill"
+                              [ngClass]="getFinalSelectionScoreClass(candidate.score)"
+                              [style.width.%]="getFinalSelectionScorePercent(candidate.score)"
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span *ngIf="candidate.presel === 'oui'" class="badge b-presel-oui">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <path d="M2 5l2.5 2.5 3.5-3.5"></path>
+                          </svg>
+                          Oui
+                        </span>
+                        <span *ngIf="candidate.presel === 'non'" class="badge b-presel-non">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <line x1="2" y1="2" x2="8" y2="8"></line>
+                            <line x1="8" y1="2" x2="2" y2="8"></line>
+                          </svg>
+                          Non
+                        </span>
+                      </td>
+                      <td>
+                        <select
+                          class="statut-select"
+                          [ngClass]="getFinalSelectionStatusClass(candidate.statut)"
+                          [(ngModel)]="candidate.statut"
+                          (ngModelChange)="onFinalSelectionStatusChange()"
+                        >
+                          <option value="">— Choisir —</option>
+                          <option value="lp">Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refuse</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          [(ngModel)]="candidate.obs"
+                          placeholder="Observation..."
+                          (change)="onFinalSelectionObservationChange()"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          type="button"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          (click)="finalSelectionConsult(candidate)"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="pag-row">
+                <div class="pag-info">
+                  Affichage 1-{{ finalSelectionFiltered.length }} sur
+                  {{ finalSelectionFiltered.length }}
+                </div>
+                <div class="pag-btns">
+                  <button class="pag-btn active" type="button">1</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONFIRM NOTIFY -->
+          <div class="confirm-wrap" [class.show]="finalSelectionConfirmOpen">
+            <div class="confirm-modal">
+              <div class="cm-title">Publier et notifier les candidats</div>
+              <div class="cm-text">
+                Vous allez notifier :<br />
+                - <strong>{{ getFinalSelectionLpCount() }}</strong> candidats admis (LP)<br />
+                - <strong>{{ getFinalSelectionLaCount() }}</strong> candidats en liste d'attente
+                (LA)<br />
+                - <strong>{{ getFinalSelectionRefuseCount() }}</strong> candidats refuses<br /><br />
+                Cette action est irreversible.
+              </div>
+              <div class="cm-actions">
+                <button class="btn btn-sec" type="button" (click)="hideFinalSelectionConfirm()">
+                  Annuler
+                </button>
+                <button
+                  class="btn btn-notify"
+                  type="button"
+                  (click)="confirmFinalSelectionNotify()"
+                >
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1 3h10v7H1z"></path>
+                    <path d="M1 3l5 4 5-4"></path>
+                  </svg>
+                  Confirmer l'envoi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toast -->
+          <div
+            class="toast"
+            [class.show]="finalSelectionToast.visible"
+            [ngClass]="finalSelectionToast.type"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke-width="2">
+              <path d="M3 8l4 4 6-6"></path>
+            </svg>
+            <span>{{ finalSelectionToast.message }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="false" class="candidatures-master-page">
+          <h2 class="sr-only">
+            Page Sélection finale avec quotas doubles, décision présélection, dropdown statut,
+            observation et actions PDF/Notifier
+          </h2>
+          <style>
+            .candidatures-master-page * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            .candidatures-master-page {
+              font-family: var(--font-sans);
+              font-size: 13px;
+            }
+            .candidatures-master-page .page {
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+              padding: 0.5rem 0;
+            }
+
+            .candidatures-master-page .stat-row {
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 0.6rem;
+            }
+            .candidatures-master-page .scard {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.85rem 1rem;
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+            }
+            .candidatures-master-page .sicon {
+              width: 36px;
+              height: 36px;
+              border-radius: var(--border-radius-md);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .si-blue {
+              background: #e6f1fb;
+            }
+            .candidatures-master-page .si-teal {
+              background: #e1f5ee;
+            }
+            .candidatures-master-page .si-amber {
+              background: #faeeda;
+            }
+            .candidatures-master-page .si-purple {
+              background: #eeedfe;
+            }
+            .candidatures-master-page .sicon svg {
+              width: 16px;
+              height: 16px;
+            }
+            .candidatures-master-page .snum {
+              font-size: 20px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+              line-height: 1;
+            }
+            .candidatures-master-page .slbl {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+              margin-top: 2px;
+            }
+
+            .candidatures-master-page .quota-card {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.9rem 1rem;
+            }
+            .candidatures-master-page .quota-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+            }
+            .candidatures-master-page .quota-top {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.35rem;
+            }
+            .candidatures-master-page .quota-label {
+              font-size: 12px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+              display: flex;
+              align-items: center;
+              gap: 0.4rem;
+            }
+            .candidatures-master-page .quota-label svg {
+              width: 12px;
+              height: 12px;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .quota-nums {
+              font-size: 12px;
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .quota-nums strong {
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .qtrack {
+              height: 8px;
+              background: var(--color-border-tertiary);
+              border-radius: 4px;
+              overflow: hidden;
+            }
+            .candidatures-master-page .qfill {
+              height: 100%;
+              border-radius: 4px;
+              transition: width 0.4s;
+            }
+            .candidatures-master-page .qf-lp {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .qf-la {
+              background: #185fa5;
+            }
+            .candidatures-master-page .qf-warn {
+              background: #ba7517;
+            }
+            .candidatures-master-page .qf-full {
+              background: #e24b4a;
+            }
+            .candidatures-master-page .quota-hint {
+              font-size: 11px;
+              margin-top: 0.3rem;
+            }
+            .candidatures-master-page .qh-ok {
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .qh-warn {
+              color: #854f0b;
+            }
+            .candidatures-master-page .qh-full {
+              color: #a32d2d;
+            }
+
+            .candidatures-master-page .filter-card {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 0.85rem 1rem;
+            }
+            .candidatures-master-page .filter-grid {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 0.55rem;
+            }
+            .candidatures-master-page .flbl {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+              margin-bottom: 0.25rem;
+            }
+            .candidatures-master-page .finput {
+              width: 100%;
+              padding: 0.38rem 0.5rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 12px;
+            }
+            .candidatures-master-page .finput:focus {
+              outline: none;
+              border-color: #378add;
+            }
+            .candidatures-master-page .radio-row {
+              display: flex;
+              gap: 0.6rem;
+              margin-top: 0.25rem;
+            }
+            .candidatures-master-page .radio-opt {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              font-size: 12px;
+              color: var(--color-text-primary);
+              cursor: pointer;
+            }
+            .candidatures-master-page .filter-row2 {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 0.55rem;
+              margin-top: 0.55rem;
+            }
+            .candidatures-master-page .filter-actions {
+              display: flex;
+              gap: 0.5rem;
+              margin-top: 0.65rem;
+              align-items: center;
+              flex-wrap: wrap;
+            }
+            .candidatures-master-page .check-label {
+              display: flex;
+              align-items: center;
+              gap: 0.4rem;
+              font-size: 12px;
+              color: var(--color-text-secondary);
+              cursor: pointer;
+            }
+            .candidatures-master-page .toggle {
+              width: 30px;
+              height: 17px;
+              border-radius: 8px;
+              background: var(--color-border-tertiary);
+              border: 0.5px solid var(--color-border-secondary);
+              position: relative;
+              cursor: pointer;
+              flex-shrink: 0;
+              transition: background 0.2s;
+            }
+            .candidatures-master-page .toggle.on {
+              background: #185fa5;
+              border-color: #185fa5;
+            }
+            .candidatures-master-page .toggle::after {
+              content: '';
+              position: absolute;
+              width: 13px;
+              height: 13px;
+              border-radius: 50%;
+              background: #fff;
+              top: 1px;
+              left: 1px;
+              transition: left 0.2s;
+            }
+            .candidatures-master-page .toggle.on::after {
+              left: 14px;
+            }
+
+            .candidatures-master-page .btn {
+              font-size: 12px;
+              padding: 0.4rem 0.85rem;
+              border-radius: var(--border-radius-md);
+              cursor: pointer;
+              border: 0.5px solid;
+              font-weight: 500;
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              transition: all 0.15s;
+            }
+            .candidatures-master-page .btn svg {
+              width: 12px;
+              height: 12px;
+              flex-shrink: 0;
+            }
+            .candidatures-master-page .btn-primary {
+              background: #185fa5;
+              border-color: #185fa5;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-primary:hover {
+              background: #1050a0;
+            }
+            .candidatures-master-page .btn-success {
+              background: #1d9e75;
+              border-color: #1d9e75;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-success:hover {
+              background: #0f6e56;
+            }
+            .candidatures-master-page .btn-danger {
+              background: #e24b4a;
+              border-color: #e24b4a;
+              color: #fff;
+            }
+            .candidatures-master-page .btn-danger:hover {
+              background: #a32d2d;
+            }
+            .candidatures-master-page .btn-amber {
+              background: #faeeda;
+              border-color: #ba7517;
+              color: #854f0b;
+            }
+            .candidatures-master-page .btn-amber:hover {
+              background: #fac775;
+            }
+            .candidatures-master-page .btn-sec {
+              background: transparent;
+              border-color: var(--color-border-secondary);
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .btn-sec:hover {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page .btn-pdf {
+              background: #fcebeb;
+              border-color: #e24b4a;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .btn-pdf:hover {
+              background: #f7c1c1;
+            }
+            .candidatures-master-page .btn-notify {
+              background: #e1f5ee;
+              border-color: #1d9e75;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .btn-notify:hover {
+              background: #9fe1cb;
+            }
+
+            .candidatures-master-page .export-wrap {
+              position: relative;
+              display: inline-block;
+            }
+            .candidatures-master-page .export-menu {
+              display: none;
+              position: absolute;
+              left: 0;
+              top: calc(100% + 4px);
+              min-width: 190px;
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-lg);
+              overflow: hidden;
+              z-index: 10;
+            }
+            .candidatures-master-page .export-menu.open {
+              display: block;
+            }
+            .candidatures-master-page .export-item {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              padding: 0.55rem 0.8rem;
+              font-size: 12px;
+              color: var(--color-text-primary);
+              cursor: pointer;
+              border: none;
+              background: transparent;
+              width: 100%;
+              text-align: left;
+            }
+            .candidatures-master-page .export-item:hover {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page .export-item svg {
+              width: 13px;
+              height: 13px;
+              flex-shrink: 0;
+            }
+
+            .candidatures-master-page .bulk-bar {
+              display: none;
+              align-items: center;
+              justify-content: space-between;
+              gap: 0.75rem;
+              padding: 0.65rem 1rem;
+              background: #e6f1fb;
+              border: 0.5px solid #b5d4f4;
+              border-radius: var(--border-radius-lg);
+              flex-wrap: wrap;
+            }
+            .candidatures-master-page .bulk-bar.show {
+              display: flex;
+            }
+            .candidatures-master-page .bulk-text {
+              font-size: 12px;
+              color: #185fa5;
+              font-weight: 500;
+            }
+
+            .candidatures-master-page .table-wrap {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              overflow: hidden;
+            }
+            .candidatures-master-page .table-hdr {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.65rem 1rem;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            }
+            .candidatures-master-page .table-hdr-title {
+              font-size: 13px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .tbl-actions {
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: center;
+            }
+            .candidatures-master-page table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+            }
+            .candidatures-master-page th {
+              background: var(--color-background-secondary);
+              padding: 0.5rem 0.6rem;
+              text-align: left;
+              color: var(--color-text-secondary);
+              font-weight: 500;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              white-space: nowrap;
+              font-size: 11px;
+            }
+            .candidatures-master-page td {
+              padding: 0.45rem 0.6rem;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              color: var(--color-text-primary);
+              vertical-align: middle;
+            }
+            .candidatures-master-page tr:last-child td {
+              border-bottom: none;
+            }
+            .candidatures-master-page tr:hover td {
+              background: var(--color-background-secondary);
+            }
+            .candidatures-master-page tr.selected td {
+              background: #f0f7ff;
+            }
+
+            .candidatures-master-page .badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 3px;
+              font-size: 10px;
+              font-weight: 500;
+              padding: 2px 8px;
+              border-radius: 20px;
+              white-space: nowrap;
+            }
+            .candidatures-master-page .b-presel-oui {
+              background: #e1f5ee;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .b-presel-non {
+              background: #fcebeb;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .b-admissible {
+              background: #e6f1fb;
+              color: #185fa5;
+            }
+            .candidatures-master-page .b-sous-examen {
+              background: #faeeda;
+              color: #854f0b;
+            }
+
+            .candidatures-master-page .score-wrap {
+              display: flex;
+              align-items: center;
+              gap: 0.45rem;
+            }
+            .candidatures-master-page .score-val {
+              font-size: 12px;
+              font-weight: 500;
+              min-width: 26px;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .score-bar {
+              flex: 1;
+              height: 5px;
+              border-radius: 3px;
+              background: var(--color-border-tertiary);
+              overflow: hidden;
+              min-width: 60px;
+            }
+            .candidatures-master-page .score-fill {
+              height: 100%;
+              border-radius: 3px;
+            }
+            .candidatures-master-page .sf-green {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .sf-amber {
+              background: #ba7517;
+            }
+            .candidatures-master-page .sf-red {
+              background: #e24b4a;
+            }
+
+            .candidatures-master-page .statut-select {
+              padding: 0.3rem 0.4rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 11px;
+              cursor: pointer;
+              min-width: 130px;
+            }
+            .candidatures-master-page .statut-select:focus {
+              outline: none;
+              border-color: #378add;
+            }
+            .candidatures-master-page .statut-select.s-lp {
+              background: #e1f5ee;
+              border-color: #1d9e75;
+              color: #0f6e56;
+            }
+            .candidatures-master-page .statut-select.s-la {
+              background: #e6f1fb;
+              border-color: #185fa5;
+              color: #185fa5;
+            }
+            .candidatures-master-page .statut-select.s-refuse {
+              background: #fcebeb;
+              border-color: #e24b4a;
+              color: #a32d2d;
+            }
+            .candidatures-master-page .statut-select.s-empty {
+              background: var(--color-background-secondary);
+            }
+
+            .candidatures-master-page .obs-input {
+              padding: 0.3rem 0.45rem;
+              border: 0.5px solid var(--color-border-secondary);
+              border-radius: var(--border-radius-md);
+              background: var(--color-background-primary);
+              color: var(--color-text-primary);
+              font-size: 11px;
+              width: 110px;
+            }
+            .candidatures-master-page .obs-input:focus {
+              outline: none;
+              border-color: #185fa5;
+            }
+
+            .candidatures-master-page .pag-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.55rem 1rem;
+              border-top: 0.5px solid var(--color-border-tertiary);
+            }
+            .candidatures-master-page .pag-info {
+              font-size: 11px;
+              color: var(--color-text-secondary);
+            }
+            .candidatures-master-page .pag-btns {
+              display: flex;
+              gap: 0.3rem;
+            }
+            .candidatures-master-page .pag-btn {
+              width: 26px;
+              height: 26px;
+              border-radius: var(--border-radius-md);
+              border: 0.5px solid var(--color-border-secondary);
+              background: transparent;
+              color: var(--color-text-primary);
+              cursor: pointer;
+              font-size: 11px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .candidatures-master-page .pag-btn.active {
+              background: #185fa5;
+              border-color: #185fa5;
+              color: #fff;
+            }
+            .candidatures-master-page .pag-btn:hover:not(.active) {
+              background: var(--color-background-secondary);
+            }
+
+            .candidatures-master-page .toast {
+              display: none;
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              color: #fff;
+              font-size: 12px;
+              font-weight: 500;
+              padding: 0.55rem 1rem;
+              border-radius: var(--border-radius-lg);
+              gap: 0.5rem;
+              align-items: center;
+              z-index: 999;
+              max-width: 300px;
+            }
+            .candidatures-master-page .toast.show {
+              display: flex;
+            }
+            .candidatures-master-page .t-success {
+              background: #1d9e75;
+            }
+            .candidatures-master-page .t-warn {
+              background: #ba7517;
+            }
+            .candidatures-master-page .t-danger {
+              background: #e24b4a;
+            }
+            .candidatures-master-page .t-info {
+              background: #185fa5;
+            }
+            .candidatures-master-page .toast svg {
+              width: 13px;
+              height: 13px;
+              stroke: #fff;
+              flex-shrink: 0;
+            }
+
+            .candidatures-master-page .confirm-wrap {
+              display: none;
+              position: fixed;
+              inset: 0;
+              background: rgba(0, 0, 0, 0.42);
+              align-items: center;
+              justify-content: center;
+              z-index: 100;
+              padding: 1rem;
+            }
+            .candidatures-master-page .confirm-wrap.show {
+              display: flex;
+            }
+            .candidatures-master-page .confirm-modal {
+              background: var(--color-background-primary);
+              border-radius: var(--border-radius-lg);
+              border: 0.5px solid var(--color-border-secondary);
+              width: min(380px, 100%);
+              padding: 1.25rem;
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+            }
+            .candidatures-master-page .cm-title {
+              font-size: 14px;
+              font-weight: 500;
+              color: var(--color-text-primary);
+            }
+            .candidatures-master-page .cm-text {
+              font-size: 12px;
+              color: var(--color-text-secondary);
+              line-height: 1.5;
+            }
+            .candidatures-master-page .cm-actions {
+              display: flex;
+              gap: 0.5rem;
+              justify-content: flex-end;
+            }
+          </style>
+
+          <div class="page" onclick="closeExport(event)">
+            <!-- ── STAT CARDS ── -->
+            <div class="stat-row">
+              <div class="scard">
+                <div class="sicon si-blue">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
+                    <path d="M4 1h6l4 4v10H4V1z"></path>
+                    <path d="M10 1v4h4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum" id="s-total">6</div>
+                  <div class="slbl">Total candidats</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-teal">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                    <path d="M3 8l4 4 6-6"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum" id="s-lp">6</div>
+                  <div class="slbl">Liste principale</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-purple">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <path d="M8 5v3l2 2"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum" id="s-la">0</div>
+                  <div class="slbl">Liste d'attente</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-amber">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <line x1="8" y1="5" x2="8" y2="8"></line>
+                    <circle cx="8" cy="11" r=".5" fill="#BA7517" stroke="none"></circle>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">16.85</div>
+                  <div class="slbl">Moyenne des scores</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── QUOTAS DOUBLES ── -->
+            <div class="quota-card">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 0.75rem;
+                "
+              >
+                <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary)">
+                  Gestion des quotas — Session 2025/2026
+                </div>
+                <div style="font-size: 11px; color: var(--color-text-secondary)">
+                  Validés :
+                  <strong id="q-validés" style="color: var(--color-text-primary)">6</strong> · Total
+                  Master : <strong style="color: #185fa5">55</strong>
+                </div>
+              </div>
+              <div class="quota-grid">
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                        <path d="M2 6l3 3 5-5"></path>
+                      </svg>
+                      Liste principale (LP)
+                    </div>
+                    <div class="quota-nums"><strong id="q-lp">6</strong> / 55 places</div>
+                  </div>
+                  <div class="qtrack">
+                    <div class="qfill qf-lp" id="qbar-lp" style="width: 11%"></div>
+                  </div>
+                  <div class="quota-hint qh-ok" id="qhint-lp">49 place(s) restante(s) — LP</div>
+                </div>
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#185FA5" stroke-width="1.5">
+                        <circle cx="6" cy="6" r="5"></circle>
+                        <path d="M6 4v3l2 2"></path>
+                      </svg>
+                      Liste d'attente (LA)
+                    </div>
+                    <div class="quota-nums"><strong id="q-la">0</strong> / 20 places</div>
+                  </div>
+                  <div class="qtrack">
+                    <div class="qfill qf-la" id="qbar-la" style="width: 0%"></div>
+                  </div>
+                  <div class="quota-hint qh-ok" id="qhint-la">20 place(s) restante(s) — LA</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── FILTRES ── -->
+            <div class="filter-card">
+              <div class="filter-grid">
+                <div>
+                  <div class="flbl">Session principale</div>
+                  <select class="finput" onchange="filterTable()">
+                    <option>2025/2026</option>
+                    <option>2024/2025</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="flbl">Type candidature</div>
+                  <div class="radio-row">
+                    <label class="radio-opt">
+                      <input
+                        type="radio"
+                        name="type"
+                        value="all"
+                        checked
+                        onchange="filterTable()"
+                      />
+                      Tous
+                    </label>
+                    <label class="radio-opt">
+                      <input type="radio" name="type" value="interne" onchange="filterTable()" />
+                      Interne
+                    </label>
+                    <label class="radio-opt">
+                      <input type="radio" name="type" value="externe" onchange="filterTable()" />
+                      Externe
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <div class="flbl">Spécialité demandée</div>
+                  <select class="finput" onchange="filterTable()">
+                    <option>Tous les masters</option>
+                    <option>Master Génie Logiciel</option>
+                    <option>Master Data Science</option>
+                    <option>Master Réseaux</option>
+                  </select>
+                </div>
+              </div>
+              <div class="filter-row2">
+                <div>
+                  <div class="flbl">Score min</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    id="f-smin"
+                    value="0"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    oninput="filterTable()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Score max</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    id="f-smax"
+                    value="20"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    oninput="filterTable()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Recherche</div>
+                  <input
+                    type="text"
+                    class="finput"
+                    id="f-search"
+                    placeholder="Rechercher par nom..."
+                    oninput="filterTable()"
+                  />
+                </div>
+              </div>
+              <div class="filter-actions">
+                <label class="check-label" onclick="toggleTop100()">
+                  <div class="toggle" id="t100"></div>
+                  Top 100 par score
+                </label>
+                <label class="check-label">
+                  <input
+                    type="checkbox"
+                    id="hide-valides"
+                    onchange="filterTable()"
+                    style="cursor: pointer"
+                  />
+                  Masquer les candidats déjà validés
+                </label>
+                <button class="btn btn-sec" onclick="resetFilters()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
+                  </svg>
+                  Réinitialiser
+                </button>
+              </div>
+            </div>
+
+            <!-- ── BULK BAR ── -->
+            <div class="bulk-bar" id="bulk-bar">
+              <div class="bulk-text" id="bulk-text">0 candidat sélectionné</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+                <select class="finput" id="bulk-action" style="width: 160px">
+                  <option value="">Action groupée...</option>
+                  <option value="lp">→ Liste principale (LP)</option>
+                  <option value="la">→ Liste d'attente (LA)</option>
+                  <option value="refuse">→ Refusé</option>
+                </select>
+                <button class="btn btn-primary" onclick="applyBulkAction()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 6l3 3 5-5"></path>
+                  </svg>
+                  Appliquer
+                </button>
+              </div>
+            </div>
+
+            <!-- ── TABLEAU ── -->
+            <div class="table-wrap">
+              <div class="table-hdr">
+                <div class="table-hdr-title">
+                  Liste des candidatures
+                  <span
+                    style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400"
+                    id="tbl-count"
+                    >(6)</span
+                  >
+                </div>
+                <div class="tbl-actions">
+                  <div class="export-wrap">
+                    <button class="btn btn-pdf" onclick="toggleExport(event)">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                        <path d="M3 1h5l3 3v7H3V1z"></path>
+                        <path d="M8 1v3h3"></path>
+                        <line x1="4" y1="7" x2="8" y2="7"></line>
+                        <line x1="4" y1="9" x2="6" y2="9"></line>
+                      </svg>
+                      Générer PV final
+                      <svg
+                        viewBox="0 0 8 5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.2"
+                        style="width: 8px; height: 8px"
+                      >
+                        <path d="M1 1l3 3 3-3"></path>
+                      </svg>
+                    </button>
+                    <div class="export-menu" id="export-menu">
+                      <button
+                        class="export-item"
+                        onclick="sendPrompt('Générer le PV final en format PDF officiel')"
+                      >
+                        <svg viewBox="0 0 12 12" fill="none" stroke="#A32D2D" stroke-width="1.4">
+                          <path d="M3 1h5l3 3v7H3V1z"></path>
+                          <path d="M8 1v3h3"></path>
+                        </svg>
+                        PV officiel PDF
+                      </button>
+                      <button
+                        class="export-item"
+                        onclick="sendPrompt('Exporter la liste sélection en Excel')"
+                      >
+                        <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.4">
+                          <rect x="1" y="1" width="10" height="10" rx="1"></rect>
+                          <line x1="3" y1="5" x2="9" y2="5"></line>
+                          <line x1="3" y1="7" x2="7" y2="7"></line>
+                        </svg>
+                        Liste Excel
+                      </button>
+                    </div>
+                  </div>
+                  <button class="btn btn-notify" onclick="showConfirmNotify()">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M1 3h10v7H1z"></path>
+                      <path d="M1 3l5 4 5-4"></path>
+                    </svg>
+                    Publier &amp; Notifier
+                  </button>
+                </div>
+              </div>
+
+              <div style="overflow-x: auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 34px">
+                        <input
+                          type="checkbox"
+                          id="check-all"
+                          onchange="toggleAll(this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </th>
+                      <th>Rang</th>
+                      <th>N°</th>
+                      <th>Nom complet</th>
+                      <th>Spécialité</th>
+                      <th style="min-width: 130px">Score</th>
+                      <th>Décision présélection</th>
+                      <th style="min-width: 148px">Statut sélection</th>
+                      <th>Observation</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-body">
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(1, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">1</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00001-GL
+                      </td>
+                      <td style="font-weight: 500">Fatma Gharbi</td>
+                      <td style="color: var(--color-text-secondary)">Master Data Science</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">17.2</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-green" style="width: 86%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-oui">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <path d="M2 5l2.5 2.5 3.5-3.5"></path>
+                          </svg>
+                          Oui
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(1, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(1, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Fatma Gharbi')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(2, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">2</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00002-DS
+                      </td>
+                      <td style="font-weight: 500">Ahmed Ben Ali</td>
+                      <td style="color: var(--color-text-secondary)">Master Génie Logiciel</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">16.5</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-green" style="width: 83%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-oui">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <path d="M2 5l2.5 2.5 3.5-3.5"></path>
+                          </svg>
+                          Oui
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(2, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(2, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Ahmed Ben Ali')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(3, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">3</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00003-GL
+                      </td>
+                      <td style="font-weight: 500">Sana Trabelsi</td>
+                      <td style="color: var(--color-text-secondary)">Master Génie Logiciel</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">15.8</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-green" style="width: 79%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-oui">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <path d="M2 5l2.5 2.5 3.5-3.5"></path>
+                          </svg>
+                          Oui
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(3, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(3, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Sana Trabelsi')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(4, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">4</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00004-DS
+                      </td>
+                      <td style="font-weight: 500">Youssef Mahjoub</td>
+                      <td style="color: var(--color-text-secondary)">Master Data Science</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">14.3</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-amber" style="width: 72%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-non">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <line x1="2" y1="2" x2="8" y2="8"></line>
+                            <line x1="8" y1="2" x2="2" y2="8"></line>
+                          </svg>
+                          Non
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(4, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(4, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Youssef Mahjoub')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(5, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">5</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00005-GL
+                      </td>
+                      <td style="font-weight: 500">Nour Khelif</td>
+                      <td style="color: var(--color-text-secondary)">Master Réseaux</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">12.7</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-amber" style="width: 64%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-non">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <line x1="2" y1="2" x2="8" y2="8"></line>
+                            <line x1="8" y1="2" x2="2" y2="8"></line>
+                          </svg>
+                          Non
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(5, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(5, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Nour Khelif')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onchange="toggleRow(6, this.checked)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">6</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        2603-00006-DS
+                      </td>
+                      <td style="font-weight: 500">Mariem Zouari</td>
+                      <td style="color: var(--color-text-secondary)">Master Data Science</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">11.2</span>
+                          <div class="score-bar">
+                            <div class="score-fill sf-amber" style="width: 56%"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge b-presel-non">
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                          >
+                            <line x1="2" y1="2" x2="8" y2="8"></line>
+                            <line x1="8" y1="2" x2="2" y2="8"></line>
+                          </svg>
+                          Non
+                        </span>
+                      </td>
+                      <td>
+                        <select class="statut-select s-lp" onchange="changeStatut(6, this)">
+                          <option value="">— Choisir —</option>
+                          <option value="lp" selected>Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          value=""
+                          placeholder="Observation..."
+                          onchange="changeObs(6, this.value)"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          onclick="sendPrompt('Consulter dossier de Mariem Zouari')"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="pag-row">
+                <div class="pag-info" id="pag-info">Affichage 1–6 sur 6</div>
+                <div class="pag-btns">
+                  <button class="pag-btn active">1</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONFIRM NOTIFY -->
+          <div class="confirm-wrap" id="confirm-wrap">
+            <div class="confirm-modal">
+              <div class="cm-title">Publier et notifier les candidats</div>
+              <div class="cm-text" id="cm-text">
+                Vous allez notifier :<br />• <strong>6</strong> candidats admis (LP)<br />•
+                <strong>0</strong> candidats en liste d'attente (LA)<br />•
+                <strong>0</strong> candidats refusés<br /><br />Cette action est irréversible.
+              </div>
+              <div class="cm-actions">
+                <button class="btn btn-sec" onclick="hideConfirm()">Annuler</button>
+                <button class="btn btn-notify" onclick="notifierCandidats()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1 3h10v7H1z"></path>
+                    <path d="M1 3l5 4 5-4"></path>
+                  </svg>
+                  Confirmer l'envoi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toast -->
+          <div class="toast" id="toast">
+            <svg viewBox="0 0 16 16" fill="none" stroke-width="2">
+              <path d="M3 8l4 4 6-6"></path>
+            </svg>
+            <span id="toast-text">0 candidats mis à jour</span>
+          </div>
+
+          <script>
+            var top100On = false;
+            var selected = new Set();
+            var candidats = [
+              {
+                id: 1,
+                rang: 1,
+                num: '2603-00001-GL',
+                nom: 'Fatma Gharbi',
+                spec: 'Master Data Science',
+                score: 17.2,
+                interne: true,
+                presel: 'oui',
+                statut: '',
+                obs: '',
+              },
+              {
+                id: 2,
+                rang: 2,
+                num: '2603-00002-DS',
+                nom: 'Ahmed Ben Ali',
+                spec: 'Master Génie Logiciel',
+                score: 16.5,
+                interne: true,
+                presel: 'oui',
+                statut: '',
+                obs: '',
+              },
+              {
+                id: 3,
+                rang: 3,
+                num: '2603-00003-GL',
+                nom: 'Sana Trabelsi',
+                spec: 'Master Génie Logiciel',
+                score: 15.8,
+                interne: false,
+                presel: 'oui',
+                statut: '',
+                obs: '',
+              },
+              {
+                id: 4,
+                rang: 4,
+                num: '2603-00004-DS',
+                nom: 'Youssef Mahjoub',
+                spec: 'Master Data Science',
+                score: 14.3,
+                interne: true,
+                presel: 'non',
+                statut: '',
+                obs: '',
+              },
+              {
+                id: 5,
+                rang: 5,
+                num: '2603-00005-GL',
+                nom: 'Nour Khelif',
+                spec: 'Master Réseaux',
+                score: 12.7,
+                interne: false,
+                presel: 'non',
+                statut: '',
+                obs: '',
+              },
+              {
+                id: 6,
+                rang: 6,
+                num: '2603-00006-DS',
+                nom: 'Mariem Zouari',
+                spec: 'Master Data Science',
+                score: 11.2,
+                interne: true,
+                presel: 'non',
+                statut: '',
+                obs: '',
+              },
+            ];
+            var filtered = candidats.slice();
+
+            function scoreClass(s) {
+              return s > 15 ? 'sf-green' : s >= 10 ? 'sf-amber' : 'sf-red';
+            }
+            function scorePct(s) {
+              return Math.min(100, Math.round((s / 20) * 100));
+            }
+            function preselBadge(p) {
+              return p === 'oui'
+                ? '<span class="badge b-presel-oui"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 5l2.5 2.5 3.5-3.5"/></svg>Oui</span>'
+                : '<span class="badge b-presel-non"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/></svg>Non</span>';
+            }
+            function statutClass(s) {
+              if (s === 'lp') return 's-lp';
+              if (s === 'la') return 's-la';
+              if (s === 'refuse') return 's-refuse';
+              return 's-empty';
+            }
+
+            function renderTable() {
+              var smin = parseFloat(document.getElementById('f-smin').value) || 0;
+              var smax = parseFloat(document.getElementById('f-smax').value) || 20;
+              var search = document.getElementById('f-search').value.toLowerCase();
+              var type = document.querySelector('input[name="type"]:checked').value;
+              var hideVal = document.getElementById('hide-valides').checked;
+              filtered = candidats.filter(function (c) {
+                return (
+                  c.score >= smin &&
+                  c.score <= smax &&
+                  (!search || c.nom.toLowerCase().includes(search)) &&
+                  (type === 'all' ||
+                    (type === 'interne' && c.interne) ||
+                    (type === 'externe' && !c.interne)) &&
+                  (!hideVal || c.statut === '')
+                );
+              });
+              if (top100On)
+                filtered = filtered
+                  .slice()
+                  .sort(function (a, b) {
+                    return b.score - a.score;
+                  })
+                  .slice(0, 100);
+              var tb = document.getElementById('table-body');
+              tb.innerHTML = '';
+              filtered.forEach(function (c) {
+                var chk = selected.has(c.id);
+                var tr = document.createElement('tr');
+                if (chk) tr.className = 'selected';
+                tr.innerHTML =
+                  '<td><input type="checkbox" ' +
+                  (chk ? 'checked' : '') +
+                  ' onchange="toggleRow(' +
+                  c.id +
+                  ',this.checked)" style="cursor:pointer"></td>' +
+                  '<td style="font-weight:500;text-align:center">' +
+                  c.rang +
+                  '</td>' +
+                  '<td style="font-size:11px;color:var(--color-text-secondary)">' +
+                  c.num +
+                  '</td>' +
+                  '<td style="font-weight:500">' +
+                  c.nom +
+                  '</td>' +
+                  '<td style="color:var(--color-text-secondary)">' +
+                  c.spec +
+                  '</td>' +
+                  '<td><div class="score-wrap"><span class="score-val">' +
+                  c.score.toFixed(1) +
+                  '</span><div class="score-bar"><div class="score-fill ' +
+                  scoreClass(c.score) +
+                  '" style="width:' +
+                  scorePct(c.score) +
+                  '%"></div></div></div></td>' +
+                  '<td>' +
+                  preselBadge(c.presel) +
+                  '</td>' +
+                  '<td><select class="statut-select ' +
+                  statutClass(c.statut) +
+                  '" onchange="changeStatut(' +
+                  c.id +
+                  ',this)">' +
+                  '<option value="">— Choisir —</option>' +
+                  '<option value="lp"' +
+                  (c.statut === 'lp' ? ' selected' : '') +
+                  '>Admis (LP)</option>' +
+                  '<option value="la"' +
+                  (c.statut === 'la' ? ' selected' : '') +
+                  ">Liste d'attente (LA)</option>" +
+                  '<option value="refuse"' +
+                  (c.statut === 'refuse' ? ' selected' : '') +
+                  '>Refusé</option>' +
+                  '</select></td>' +
+                  '<td><input type="text" class="obs-input" value="' +
+                  c.obs +
+                  '" placeholder="Observation..." onchange="changeObs(' +
+                  c.id +
+                  ',this.value)"></td>' +
+                  '<td><button class="btn btn-sec" style="font-size:11px;padding:.25rem .5rem" onclick="sendPrompt(\'Consulter dossier de ' +
+                  c.nom +
+                  '\')">Consulter</button></td>';
+                tb.appendChild(tr);
+              });
+              document.getElementById('tbl-count').textContent = '(' + filtered.length + ')';
+              document.getElementById('pag-info').textContent =
+                'Affichage 1–' + filtered.length + ' sur ' + filtered.length;
+              document.getElementById('check-all').checked =
+                filtered.length > 0 &&
+                filtered.every(function (c) {
+                  return selected.has(c.id);
+                });
+            }
+
+            function changeStatut(id, sel) {
+              var c = candidats.find(function (x) {
+                return x.id === id;
+              });
+              if (!c) return;
+              c.statut = sel.value;
+              sel.className = 'statut-select ' + statutClass(c.statut);
+              updateStats();
+            }
+
+            function changeObs(id, val) {
+              var c = candidats.find(function (x) {
+                return x.id === id;
+              });
+              if (c) c.obs = val;
+            }
+
+            function updateStats() {
+              var lp = candidats.filter(function (c) {
+                return c.statut === 'lp';
+              }).length;
+              var la = candidats.filter(function (c) {
+                return c.statut === 'la';
+              }).length;
+              var total = lp + la;
+              document.getElementById('s-lp').textContent = lp;
+              document.getElementById('s-la').textContent = la;
+              document.getElementById('q-lp').textContent = lp;
+              document.getElementById('q-la').textContent = la;
+              document.getElementById('q-validés').textContent = total;
+              var pctLp = Math.min(100, Math.round((lp / 55) * 100));
+              var pctLa = Math.min(100, Math.round((la / 20) * 100));
+              var blp = document.getElementById('qbar-lp');
+              var bla = document.getElementById('qbar-la');
+              blp.style.width = pctLp + '%';
+              bla.style.width = pctLa + '%';
+              blp.className = 'qfill' + (lp > 55 ? ' qf-full' : lp >= 50 ? ' qf-warn' : ' qf-lp');
+              bla.className = 'qfill' + (la > 20 ? ' qf-full' : la >= 18 ? ' qf-warn' : ' qf-la');
+              document.getElementById('qhint-lp').textContent =
+                lp > 55 ? 'Quota dépassé !' : 55 - lp + ' place(s) restante(s) — LP';
+              document.getElementById('qhint-lp').className =
+                'quota-hint ' + (lp > 55 ? 'qh-full' : lp >= 50 ? 'qh-warn' : 'qh-ok');
+              document.getElementById('qhint-la').textContent =
+                la > 20 ? 'Quota dépassé !' : 20 - la + ' place(s) restante(s) — LA';
+              document.getElementById('qhint-la').className =
+                'quota-hint ' + (la > 20 ? 'qh-full' : la >= 18 ? 'qh-warn' : 'qh-ok');
+            }
+
+            function toggleRow(id, checked) {
+              if (checked) selected.add(id);
+              else selected.delete(id);
+              updateBulk();
+              renderTable();
+            }
+            function toggleAll(checked) {
+              filtered.forEach(function (c) {
+                if (checked) selected.add(c.id);
+                else selected.delete(c.id);
+              });
+              updateBulk();
+              renderTable();
+            }
+            function updateBulk() {
+              var n = selected.size;
+              var bar = document.getElementById('bulk-bar');
+              bar.className = 'bulk-bar' + (n > 0 ? ' show' : '');
+              document.getElementById('bulk-text').textContent =
+                n + ' candidat' + (n > 1 ? 's' : '') + ' sélectionné' + (n > 1 ? 's' : '');
+            }
+            function applyBulkAction() {
+              var act = document.getElementById('bulk-action').value;
+              if (!act) {
+                showToast('Choisissez une action groupée', 't-warn');
+                return;
+              }
+              selected.forEach(function (id) {
+                var c = candidats.find(function (x) {
+                  return x.id === id;
+                });
+                if (c) c.statut = act;
+              });
+              selected.clear();
+              updateBulk();
+              updateStats();
+              renderTable();
+              showToast(selected.size + ' candidats mis à jour', 't-success');
+            }
+            function filterTable() {
+              renderTable();
+            }
+            function resetFilters() {
+              document.getElementById('f-smin').value = 0;
+              document.getElementById('f-smax').value = 20;
+              document.getElementById('f-search').value = '';
+              document.querySelector('input[name="type"][value="all"]').checked = true;
+              document.getElementById('hide-valides').checked = false;
+              top100On = false;
+              document.getElementById('t100').className = 'toggle';
+              renderTable();
+            }
+            function toggleTop100() {
+              top100On = !top100On;
+              document.getElementById('t100').className = 'toggle' + (top100On ? ' on' : '');
+              renderTable();
+            }
+            function toggleExport(e) {
+              e.stopPropagation();
+              var m = document.getElementById('export-menu');
+              m.className = 'export-menu' + (m.classList.contains('open') ? '' : ' open');
+            }
+            function closeExport(e) {
+              if (!e.target.closest('.export-wrap')) {
+                document.getElementById('export-menu').className = 'export-menu';
+              }
+            }
+            function showConfirmNotify() {
+              var lp = candidats.filter(function (c) {
+                return c.statut === 'lp';
+              }).length;
+              var la = candidats.filter(function (c) {
+                return c.statut === 'la';
+              }).length;
+              var refuse = candidats.filter(function (c) {
+                return c.statut === 'refuse';
+              }).length;
+              document.getElementById('cm-text').innerHTML =
+                'Vous allez notifier :<br>• <strong>' +
+                lp +
+                '</strong> candidats admis (LP)<br>• <strong>' +
+                la +
+                "</strong> candidats en liste d'attente (LA)<br>• <strong>" +
+                refuse +
+                '</strong> candidats refusés<br><br>Cette action est irréversible.';
+              document.getElementById('confirm-wrap').className = 'confirm-wrap show';
+            }
+            function hideConfirm() {
+              document.getElementById('confirm-wrap').className = 'confirm-wrap';
+            }
+            function notifierCandidats() {
+              hideConfirm();
+              showToast('Résultats publiés — notifications envoyées aux candidats', 't-success');
+            }
+            function showToast(msg, cls) {
+              var t = document.getElementById('toast');
+              document.getElementById('toast-text').textContent = msg;
+              t.className = 'toast show ' + (cls || 't-success');
+              setTimeout(function () {
+                t.className = 'toast';
+              }, 3500);
+            }
+
+            renderTable();
+          </script>
+        </div>
+      </div>
+      <div
+        *ngIf="!isCurrentView('candidatures-master') && currentView !== 'candidatures'"
+        class="section"
+      >
+        <div class="section-title">
+          {{
+            currentView === 'candidatures-ingenieur'
+              ? 'Candidatures Ingénieurs - filtres dynamiques + prévisualisation'
+              : 'Candidatures à évaluer - filtres dynamiques + prévisualisation'
+          }}
+        </div>
         <div class="layout-split">
           <div class="card" style="padding: 0.75rem">
             <div class="filters-row">
@@ -975,9 +3910,18 @@
             </div>
 
             <div class="table-wrap">
-              <table id="cand-table">
+              <table id="cand-table" class="w-full">
                 <thead>
                   <tr>
+                    <th style="width: 36px">
+                      <input
+                        type="checkbox"
+                        id="check-all-candidatures"
+                        (change)="toggleAllCandidatures($event.target.checked)"
+                        [checked]="areAllCandidaturesChecked()"
+                        style="cursor: pointer"
+                      />
+                    </th>
                     <th>Candidat</th>
                     <th>Établissement</th>
                     <th>Score</th>
@@ -992,6 +3936,15 @@
                     [class.selected]="selectedCandidaturePreview?.id === candidature.id"
                     style="cursor: pointer"
                   >
+                    <td>
+                      <input
+                        type="checkbox"
+                        (change)="toggleCandidature(candidature.id, $event.target.checked)"
+                        [checked]="isCandidatureChecked(candidature.id)"
+                        (click)="$event.stopPropagation()"
+                        style="cursor: pointer"
+                      />
+                    </td>
                     <td>
                       <strong>{{ candidature.candidat_nom }}</strong
                       ><br />
@@ -1028,6 +3981,91 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Barre d'actions flottante pour les candidatures sélectionnées -->
+            <div
+              class="candidatures-bulk-bar"
+              *ngIf="
+                selectedCandidaturesIds.length > 0 &&
+                (isCurrentView('candidatures-responsable') || isCurrentView('candidatures-master'))
+              "
+            >
+              <div
+                class="bulk-bar-content"
+                style="display: flex; flex-direction: column; gap: 1rem"
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                  "
+                >
+                  <span class="bulk-bar-counter">
+                    {{ selectedCandidaturesIds.length }} candidat{{
+                      selectedCandidaturesIds.length > 1 ? 's' : ''
+                    }}
+                    sélectionné{{ selectedCandidaturesIds.length > 1 ? 's' : '' }}
+                  </span>
+                </div>
+                <div class="bulk-bar-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+                  <!-- Validation controls removed from Candidatures Master per request -->
+
+                  <button
+                    class="bulk-bar-btn bulk-bar-btn-consult"
+                    (click)="openBulkConsultationCandidaturesModal()"
+                  >
+                    <svg
+                      style="width: 14px; height: 14px; margin-right: 6px"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <ellipse cx="8" cy="8" rx="6" ry="4"></ellipse>
+                      <circle cx="8" cy="8" r="2"></circle>
+                    </svg>
+                    Consulter en masse
+                  </button>
+                  <button
+                    class="bulk-bar-btn bulk-bar-btn-download"
+                    (click)="downloadSelectedCandidaturesAsZip()"
+                  >
+                    <svg
+                      style="width: 14px; height: 14px; margin-right: 6px"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path d="M8 10v-7M4 8l4 4 4-4"></path>
+                      <line x1="2" y1="13" x2="14" y2="13"></line>
+                    </svg>
+                    Télécharger ZIP
+                  </button>
+                  <button
+                    class="bulk-bar-btn bulk-bar-btn-read"
+                    (click)="markAllCandidaturesAsRead()"
+                    *ngIf="selectedCandidaturesIds.length > 0"
+                    [disabled]="!areAllCandidaturesChecked()"
+                    style="background: #e6f5e6; border: 1px solid #c0e0c0; color: #0f7a3f"
+                  >
+                    <svg
+                      style="width: 14px; height: 14px; margin-right: 6px"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path d="M2 2h12v10H2zM5 12l3-3 3 3"></path>
+                    </svg>
+                    Lire tous
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1190,209 +4228,1703 @@
       </div>
     </div>
 
-    <!-- CANDIDATURES AVEC MENU KEBAB ET FILTRES AVANCÉS -->
+    <!-- CANDIDATURES : remplacé par le design fourni par l'utilisateur -->
     <div
       *ngIf="
-        currentView === 'candidatures' &&
+        (currentView === 'candidatures-ingenieur' || currentView === 'avis-listes') &&
         (isResponsable || actionPermissions.consultationCandidature)
       "
       class="view-content"
     >
-      <div class="section-card">
-        <div class="candidatures-header">
-          <h2>Gestion des candidatures</h2>
-          <div class="download-box">
-            <select [(ngModel)]="candidaturesMembreExportFormat" class="export-select">
-              <option value="csv">CSV</option>
-              <option value="json">JSON</option>
-              <option value="pdf">PDF</option>
-              <option value="xlsx">Excel</option>
-            </select>
-            <button
-              class="btn-download"
-              [disabled]="candidaturesFiltrees.length === 0"
-              (click)="exportCandidaturesMembre()"
-            >
-              <i class="fas fa-download"></i> Télécharger la liste complète
-            </button>
+      <!-- Integrated custom style + markup -->
+      <style>
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        :host {
+          display: block;
+        }
+        .page {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          padding: 0.5rem 0;
+        }
+        .stat-row {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 0.6rem;
+        }
+        .scard {
+          background: var(--color-background-primary);
+          border: 0.5px solid var(--color-border-tertiary);
+          border-radius: var(--border-radius-lg);
+          padding: 0.85rem 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+        .sicon {
+          width: 36px;
+          height: 36px;
+          border-radius: var(--border-radius-md);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .si-blue {
+          background: #e6f1fb;
+        }
+        .si-teal {
+          background: #e1f5ee;
+        }
+        .si-amber {
+          background: #faeeda;
+        }
+        .si-purple {
+          background: #eeedfe;
+        }
+        .sicon svg {
+          width: 16px;
+          height: 16px;
+        }
+        .snum {
+          font-size: 20px;
+          font-weight: 500;
+          color: var(--color-text-primary);
+          line-height: 1;
+        }
+        .slbl {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+          margin-top: 2px;
+        }
+        .quota-card {
+          background: var(--color-background-primary);
+          border: 0.5px solid var(--color-border-tertiary);
+          border-radius: var(--border-radius-lg);
+          padding: 0.85rem 1rem;
+        }
+        .quota-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        }
+        .quota-title {
+          font-size: 12px;
+          font-weight: 500;
+          color: var(--color-text-secondary);
+        }
+        .quota-nums {
+          font-size: 13px;
+          color: var(--color-text-primary);
+        }
+        .quota-nums strong {
+          color: #185fa5;
+        }
+        .qtrack {
+          height: 8px;
+          background: var(--color-border-tertiary);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .qfill {
+          height: 100%;
+          border-radius: 4px;
+          background: #1d9e75;
+          transition: width 0.3s;
+        }
+        .quota-hint {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+          margin-top: 0.35rem;
+        }
+        .filter-card {
+          background: var(--color-background-primary);
+          border: 0.5px solid var(--color-border-tertiary);
+          border-radius: var(--border-radius-lg);
+          padding: 0.85rem 1rem;
+        }
+        .filter-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 0.55rem;
+        }
+        .filter-grid2 {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.55rem;
+          margin-top: 0.55rem;
+        }
+        .fg-full {
+          grid-column: 1/-1;
+        }
+        .flbl {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+          margin-bottom: 0.25rem;
+        }
+        .finput {
+          width: 100%;
+          padding: 0.38rem 0.5rem;
+          border: 0.5px solid var(--color-border-secondary);
+          border-radius: var(--border-radius-md);
+          background: var(--color-background-primary);
+          color: var(--color-text-primary);
+          font-size: 12px;
+        }
+        .finput:focus {
+          outline: none;
+          border-color: #378add;
+        }
+        .radio-row {
+          display: flex;
+          gap: 0.6rem;
+          margin-top: 0.25rem;
+        }
+        .radio-opt {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: var(--color-text-primary);
+          cursor: pointer;
+        }
+        .filter-actions {
+          display: flex;
+          gap: 0.5rem;
+          margin-top: 0.65rem;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .btn {
+          font-size: 12px;
+          padding: 0.4rem 0.85rem;
+          border-radius: var(--border-radius-md);
+          cursor: pointer;
+          border: 0.5px solid;
+          font-weight: 500;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          transition: all 0.15s;
+        }
+        .btn svg {
+          width: 12px;
+          height: 12px;
+          flex-shrink: 0;
+        }
+        .btn-primary {
+          background: #185fa5;
+          border-color: #185fa5;
+          color: #fff;
+        }
+        .btn-primary:hover {
+          background: #1050a0;
+        }
+        .btn-secondary {
+          background: transparent;
+          border-color: var(--color-border-secondary);
+          color: var(--color-text-primary);
+        }
+        .btn-secondary:hover {
+          background: var(--color-background-secondary);
+        }
+        .btn-success {
+          background: #1d9e75;
+          border-color: #1d9e75;
+          color: #fff;
+        }
+        .btn-success:hover {
+          background: #0f6e56;
+        }
+        .btn-danger {
+          background: #e24b4a;
+          border-color: #e24b4a;
+          color: #fff;
+        }
+        .top100-toggle {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 12px;
+          color: var(--color-text-secondary);
+          cursor: pointer;
+        }
+        .toggle {
+          width: 28px;
+          height: 16px;
+          border-radius: 8px;
+          border: 0.5px solid var(--color-border-secondary);
+          background: var(--color-border-tertiary);
+          position: relative;
+          cursor: pointer;
+          transition: background 0.2s;
+          flex-shrink: 0;
+        }
+        .toggle.on {
+          background: #185fa5;
+          border-color: #185fa5;
+        }
+        .toggle::after {
+          content: '';
+          position: absolute;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #fff;
+          top: 1px;
+          left: 1px;
+          transition: left 0.2s;
+        }
+        .toggle.on::after {
+          left: 13px;
+        }
+        .search-row {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .search-row .finput {
+          flex: 1;
+          min-width: 140px;
+        }
+        .table-wrap {
+          background: var(--color-background-primary);
+          border: 0.5px solid var(--color-border-tertiary);
+          border-radius: var(--border-radius-lg);
+          overflow: hidden;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+        th {
+          background: var(--color-background-secondary);
+          padding: 0.55rem 0.65rem;
+          text-align: left;
+          color: var(--color-text-secondary);
+          font-weight: 500;
+          border-bottom: 0.5px solid var(--color-border-tertiary);
+          white-space: nowrap;
+        }
+        th.center {
+          text-align: center;
+        }
+        td {
+          padding: 0.5rem 0.65rem;
+          border-bottom: 0.5px solid var(--color-border-tertiary);
+          color: var(--color-text-primary);
+          vertical-align: middle;
+        }
+        td:last-child {
+          border-bottom: none;
+        }
+        tr:last-child td {
+          border-bottom: none;
+        }
+        tr:hover td {
+          background: var(--color-background-secondary);
+        }
+        tr.selected td {
+          background: #f0f7ff;
+        }
+        .score-wrap {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .score-val {
+          font-size: 12px;
+          font-weight: 500;
+          min-width: 28px;
+          color: var(--color-text-primary);
+        }
+        .score-bar {
+          flex: 1;
+          height: 6px;
+          border-radius: 3px;
+          background: var(--color-border-tertiary);
+          overflow: hidden;
+        }
+        .score-fill {
+          height: 100%;
+          border-radius: 3px;
+          transition: width 0.3s;
+        }
+        .sf-green {
+          background: #1d9e75;
+        }
+        .sf-amber {
+          background: #ba7517;
+        }
+        .sf-red {
+          background: #e24b4a;
+        }
+        .badge {
+          display: inline-block;
+          font-size: 10px;
+          font-weight: 500;
+          padding: 2px 8px;
+          border-radius: 20px;
+          white-space: nowrap;
+        }
+        .b-wait {
+          background: #f1efe8;
+          color: #5f5e5a;
+        }
+        .b-presel {
+          background: #e6f1fb;
+          color: #185fa5;
+        }
+        .b-valid {
+          background: #e1f5ee;
+          color: #0f6e56;
+        }
+        .b-reject {
+          background: #fcebeb;
+          color: #a32d2d;
+        }
+        .pag-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.6rem 1rem;
+          border-top: 0.5px solid var(--color-border-tertiary);
+          background: var(--color-background-primary);
+        }
+        .pag-info {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+        }
+        .pag-btns {
+          display: flex;
+          gap: 0.35rem;
+        }
+        .pag-btn {
+          width: 26px;
+          height: 26px;
+          border-radius: var(--border-radius-md);
+          border: 0.5px solid var(--color-border-secondary);
+          background: transparent;
+          color: var(--color-text-primary);
+          cursor: pointer;
+          font-size: 11px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .pag-btn.active {
+          background: #185fa5;
+          border-color: #185fa5;
+          color: #fff;
+        }
+        .pag-btn:hover:not(.active) {
+          background: var(--color-background-secondary);
+        }
+        .export-wrap {
+          position: relative;
+          display: inline-block;
+        }
+        .export-menu {
+          display: none;
+          position: fixed;
+          z-index: 11000;
+          min-width: 220px;
+          background-color: #ffffff;
+          background: var(--color-background-primary, #ffffff);
+          opacity: 1;
+          border: 0.5px solid var(--color-border-secondary);
+          border-radius: var(--border-radius-lg);
+          overflow: visible;
+          pointer-events: auto;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        .export-menu.open {
+          display: block;
+        }
+        .export-section {
+          padding: 0.5rem 0;
+        }
+        .export-section:not(:last-child) {
+          border-bottom: 1px solid var(--color-border-secondary);
+        }
+        .export-section-title {
+          padding: 0.4rem 0.8rem;
+          font-size: 11px;
+          font-weight: 600;
+          color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .export-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.55rem 0.8rem;
+          font-size: 12px;
+          color: var(--color-text-primary);
+          cursor: pointer;
+          border: none;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+        }
+        .export-item:hover {
+          background: var(--color-background-secondary);
+        }
+        .export-item svg {
+          width: 13px;
+          height: 13px;
+          flex-shrink: 0;
+        }
+        .bulk-bar {
+          display: none;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+          padding: 0.65rem 1rem;
+          background: #e6f1fb;
+          border: 0.5px solid #b5d4f4;
+          border-radius: var(--border-radius-lg);
+          flex-wrap: wrap;
+        }
+        .bulk-bar.show {
+          display: flex;
+        }
+        .candidatures-bulk-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+          padding: 0.65rem 1rem;
+          background: #f0f4f8;
+          border: 0.5px solid #cbd5e1;
+          border-radius: 8px;
+          flex-wrap: wrap;
+          margin-top: 0.75rem;
+        }
+        .bulk-bar-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          gap: 1rem;
+        }
+        .bulk-bar-counter {
+          font-size: 12px;
+          font-weight: 600;
+          color: #1e293b;
+          flex-shrink: 0;
+        }
+        .bulk-bar-actions {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .bulk-bar-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.4rem 0.75rem;
+          font-size: 11px;
+          font-weight: 600;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background: white;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .bulk-bar-btn:hover {
+          background: #f8fafc;
+          border-color: #94a3b8;
+        }
+        .bulk-bar-btn-consult {
+          border-color: #3b82f6;
+          color: #3b82f6;
+        }
+        .bulk-bar-btn-consult:hover {
+          background: #eff6ff;
+        }
+        .bulk-bar-btn-download {
+          border-color: #10b981;
+          color: #10b981;
+        }
+        .bulk-bar-btn-download:hover {
+          background: #ecfdf5;
+        }
+        .fade-out {
+          opacity: 0;
+          transform: translateX(-12px);
+          transition:
+            opacity 0.28s ease,
+            transform 0.28s ease;
+        }
+        .bulk-text {
+          font-size: 12px;
+          color: #185fa5;
+          font-weight: 500;
+        }
+        .list-toggle {
+          display: flex;
+          border: 0.5px solid var(--color-border-secondary);
+          border-radius: var(--border-radius-md);
+          overflow: hidden;
+        }
+        .lt-btn {
+          padding: 0.35rem 0.65rem;
+          font-size: 11px;
+          border: none;
+          background: transparent;
+          color: var(--color-text-secondary);
+          cursor: pointer;
+        }
+        .lt-btn.active {
+          background: #185fa5;
+          color: #fff;
+        }
+        .toast {
+          display: none;
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background: #1d9e75;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 500;
+          padding: 0.6rem 1rem;
+          border-radius: var(--border-radius-lg);
+          gap: 0.5rem;
+          align-items: center;
+          z-index: 999;
+          max-width: 280px;
+        }
+        .toast.show {
+          display: flex;
+        }
+        .toast svg {
+          width: 14px;
+          height: 14px;
+          stroke: #fff;
+          flex-shrink: 0;
+        }
+        .confirm-overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.42);
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+        }
+        .confirm-overlay.show {
+          display: flex;
+        }
+        .confirm-modal {
+          background: var(--color-background-primary);
+          border-radius: var(--border-radius-lg);
+          border: 0.5px solid var(--color-border-secondary);
+          width: min(380px, 90%);
+          padding: 1.25rem;
+        }
+        .cm-title {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--color-text-primary);
+          margin-bottom: 0.5rem;
+        }
+        .cm-text {
+          font-size: 12px;
+          color: var(--color-text-secondary);
+          line-height: 1.5;
+          margin-bottom: 1rem;
+        }
+        .cm-actions {
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+        }
+      </style>
+
+      <div class="page">
+        <!-- Stats cards -->
+        <div class="stat-row">
+          <div class="scard">
+            <div class="sicon si-blue">
+              <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
+                <path d="M4 1h6l4 4v10H4V1z"></path>
+                <path d="M10 1v4h4"></path>
+                <line x1="6" y1="9" x2="10" y2="9"></line>
+                <line x1="6" y1="12" x2="10" y2="12"></line>
+              </svg>
+            </div>
+            <div>
+              <div class="snum" id="s-total">{{ candidaturesFiltrees.length }}</div>
+              <div class="slbl">Total candidats</div>
+            </div>
+          </div>
+          <div class="scard">
+            <div class="sicon si-teal">
+              <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                <circle cx="8" cy="5" r="3"></circle>
+                <path d="M2 14c0-3 3-5 6-5s6 2 6 5"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="snum">{{ getInternalCandidatesCount() }}</div>
+              <div class="slbl">Candidats internes</div>
+            </div>
+          </div>
+          <div class="scard">
+            <div class="sicon si-amber">
+              <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
+                <circle cx="8" cy="8" r="6"></circle>
+                <path d="M8 5v3l2 2"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="snum">{{ getAverageScore() | number: '1.1-2' }}</div>
+              <div class="slbl">Moyenne des scores</div>
+            </div>
+          </div>
+          <div class="scard">
+            <div class="sicon si-purple">
+              <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
+                <path d="M3 12V5l5-3 5 3v7l-5 2-5-2z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="snum" id="s-presel">{{ getPreselectedCount() }}</div>
+              <div class="slbl">Présélectionnés</div>
+            </div>
           </div>
         </div>
-        <div class="filters-section">
-          <div class="filters-grid">
-            <div class="filter-item">
-              <label class="filter-label">Concours</label>
-              <select class="filter-select" [(ngModel)]="filtres.concours">
-                <option value="">Tous les concours</option>
-                <option value="masters">Masters</option>
-                <option value="ingenieur">Cycle Ingénieur</option>
+
+        <!-- Quota -->
+        <div class="quota-card">
+          <div class="quota-top">
+            <div class="quota-title">Places occupées - {{ getSelectedMasterName() }}</div>
+            <div class="quota-nums">
+              Validés : <strong id="q-sel">{{ getValidatedCount() }}</strong> / Total Master :
+              <strong>{{ getMasterCapacity() }}</strong>
+            </div>
+          </div>
+          <div class="qtrack">
+            <div class="qfill" id="qfill" [style.width.%]="getQuotaFillPercent()"></div>
+          </div>
+          <div class="quota-hint" id="q-hint">Sélectionnez des candidats pour remplir le quota</div>
+        </div>
+
+        <!-- Filters + table (static demo markup adapted) -->
+        <div class="filter-card">
+          <div class="filter-grid">
+            <div>
+              <div class="flbl">Session principale</div>
+              <select class="finput" [(ngModel)]="selectedAcademicYear" (change)="applyFilters()">
+                <option [ngValue]="getCurrentAcademicYear()">{{ getCurrentAcademicYear() }}</option>
+                <option [ngValue]="getPreviousAcademicYear()">
+                  {{ getPreviousAcademicYear() }}
+                </option>
+                <option [ngValue]="'2023/2024'">2023/2024</option>
+              </select>
+            </div>
+            <!-- Spécialité déplacée après le type de candidature (voir ci-dessous) -->
+            <div>
+              <div class="flbl">Type candidature</div>
+              <div class="radio-row">
+                <label class="radio-opt">
+                  <input
+                    type="radio"
+                    name="candidature-type"
+                    value="all"
+                    [(ngModel)]="selectedCandidatureType"
+                    (change)="applyFilters()"
+                  />
+                  Tous
+                </label>
+                <label class="radio-opt">
+                  <input
+                    type="radio"
+                    name="candidature-type"
+                    value="interne"
+                    [(ngModel)]="selectedCandidatureType"
+                    (change)="applyFilters()"
+                  />
+                  Interne
+                </label>
+                <label class="radio-opt">
+                  <input
+                    type="radio"
+                    name="candidature-type"
+                    value="externe"
+                    [(ngModel)]="selectedCandidatureType"
+                    (change)="applyFilters()"
+                  />
+                  Externe
+                </label>
+              </div>
+            </div>
+
+            <!-- Spécialité demandé placé après le type de candidature -->
+            <div>
+              <div class="flbl">Spécialité demandé</div>
+              <select
+                class="finput"
+                id="f-master"
+                [(ngModel)]="selectedMasterForCandidatures"
+                (change)="updateSpecOptions(); applyFilters()"
+                [disabled]="isResponsable"
+              >
+                <ng-container *ngIf="isResponsable">
+                  <option [value]="selectedMasterForCandidatures">
+                    {{ getUserMasterOrSpecialiteLabel() }}
+                  </option>
+                </ng-container>
+                <ng-container *ngIf="!isResponsable">
+                  <option value="all">Tous</option>
+                  <option *ngFor="let m of masterOptions" [value]="m.id">{{ m.nom }}</option>
+                </ng-container>
               </select>
             </div>
 
-            <div class="filter-item">
-              <label class="filter-label">Statut</label>
-              <select class="filter-select" [(ngModel)]="filtres.statut">
-                <option value="">Tous les statuts</option>
-                <option value="soumis">Soumis</option>
-                <option value="sous_examen">En Analyse</option>
-                <option value="preselectionne">Présélectionné</option>
-                <option value="dossier_depose">Dossiers Validés</option>
-                <option value="rejete">Refusés</option>
+            <div *ngIf="selectedCandidatureType === 'externe'">
+              <div class="flbl">Établissement d'origine</div>
+              <select
+                class="finput"
+                [(ngModel)]="etablissementOrigineFilter"
+                (change)="applyFilters()"
+              >
+                <option value="">Tous</option>
+                <option>ISIMM</option>
+                <option>FST Tunis</option>
+                <option>ENIT</option>
+                <option>FSM</option>
               </select>
             </div>
-
-            <div class="filter-item">
-              <label class="filter-label">Parcours</label>
-              <select class="filter-select" [(ngModel)]="filtres.parcours">
-                <option value="">Tous les parcours</option>
-                <option value="ia">Intelligence Artificielle</option>
-                <option value="securite">Sécurité des Systèmes</option>
-                <option value="web">Ingénierie Web</option>
-                <option value="data">Data Science</option>
+          </div>
+          <div class="filter-grid2" id="extra-filters" style="display: none">
+            <div>
+              <div class="flbl">Spécialité d'origine</div>
+              <select class="finput" id="f-spec" (change)="applyFilters()">
+                <option>Toutes</option>
+                <option>Maths &amp; Info</option>
+                <option>Statistiques</option>
+                <option>Informatique</option>
+                <option>IA &amp; Big Data</option>
               </select>
             </div>
-
-            <div class="filter-item">
-              <label class="filter-label">Recherche</label>
+          </div>
+          <div class="filter-grid2" style="margin-top: 0.55rem">
+            <div>
+              <div class="flbl">Score min</div>
               <input
-                type="text"
-                class="filter-input"
-                placeholder="Nom, CIN, Email..."
-                [(ngModel)]="filtres.recherche"
-                (input)="appliquerFiltres()"
+                type="number"
+                class="finput"
+                id="f-scoremin"
+                value="0"
+                min="0"
+                max="20"
+                step="0.5"
+                (input)="applyFilters()"
+              />
+            </div>
+            <div>
+              <div class="flbl">Score max</div>
+              <input
+                type="number"
+                class="finput"
+                id="f-scoremax"
+                value="20"
+                min="0"
+                max="20"
+                step="0.5"
+                (input)="applyFilters()"
               />
             </div>
           </div>
-
           <div class="filter-actions">
-            <button class="btn-filter" (click)="appliquerFiltres()">
-              <i class="fas fa-search"></i> Rechercher
-            </button>
-            <button class="btn-reset" (click)="resetFiltres()">
-              <i class="fas fa-redo"></i> Réinitialiser
+            <div class="search-row" style="flex: 1">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 13 13"
+                fill="none"
+                stroke="var(--color-text-secondary)"
+                stroke-width="1.3"
+                style="flex-shrink: 0"
+              >
+                <circle cx="5.5" cy="5.5" r="4"></circle>
+                <line x1="8.5" y1="8.5" x2="12" y2="12"></line>
+              </svg>
+              <input
+                type="text"
+                class="finput"
+                id="f-search"
+                placeholder="Rechercher par nom..."
+                (input)="applyFilters()"
+                style="flex: 1"
+              />
+            </div>
+            <label style="display: flex; align-items: center; gap: 8px">
+              <input type="checkbox" [(ngModel)]="hideValidated" (change)="applyFilters()" />
+              <span style="font-size: 12px; color: var(--color-text-secondary)"
+                >Masquer les candidats déjà validés</span
+              >
+            </label>
+            <div class="top100-toggle" (click)="toggleTop100()">
+              <div class="toggle" id="t100-toggle" [class.on]="top100Enabled"></div>
+              Top 100 par score
+            </div>
+            <button class="btn btn-secondary" (click)="resetFilters()">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
+              </svg>
+              Réinitialiser
             </button>
           </div>
         </div>
 
-        <!-- TABLEAU AVEC MENU KEBAB -->
-        <div class="table-container">
-          <table class="candidatures-table">
+        <!-- Bulk action bar (Présélection) -->
+        <div *ngIf="typeListe === 'preselection'" class="bulk-bar" id="bulk-bar">
+          <div class="bulk-text" id="bulk-text">
+            {{ selectedPreselectionCandidateIds.length }} candidat(s) sélectionné(s)
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap">
+            <div style="display: flex; gap: 0.5rem; align-items: center">
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 12px">
+                Seuil de score validation:
+                <input
+                  type="number"
+                  [(ngModel)]="validationScoreThreshold"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  style="width: 60px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px"
+                  placeholder="0"
+                />
+              </label>
+              <button
+                class="btn btn-success"
+                *ngIf="typeListe === 'preselection'"
+                type="button"
+                (click)="showConfirm()"
+              >
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 6l3 3 5-5"></path>
+                </svg>
+                Valider la sélection
+              </button>
+              <button
+                class="btn btn-primary"
+                *ngIf="typeListe === 'preselection'"
+                type="button"
+                (click)="fullAutoValidate()"
+              >
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 3h8M2 6h8M2 9h8"></path>
+                </svg>
+                Tous Valider seulement
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tableau (demo rows) -->
+        <div class="table-action-strip">
+          <div class="export-wrap">
+            <button class="btn btn-secondary" type="button" (click)="toggleExport($event)">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M6 1v7M4 6l2 2 2-2"></path>
+                <path d="M1 10h10"></path>
+              </svg>
+              Générer liste
+              <svg
+                viewBox="0 0 8 5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.2"
+                style="width: 8px; height: 8px"
+              >
+                <path d="M1 1l3 3 3-3"></path>
+              </svg>
+            </button>
+
+            <!-- Export Menu Dropdown -->
+            <div
+              class="export-menu"
+              id="export-menu"
+              [class.open]="exportMenuOpen"
+              [ngStyle]="exportMenuPosition"
+            >
+              <!-- Spécialité Section -->
+              <div class="export-section">
+                <div class="export-section-title">Spécialité Actuelle</div>
+                <button
+                  class="export-item"
+                  type="button"
+                  (click)="exportCandidatures('specialite', 'pdf')"
+                >
+                  <svg viewBox="0 0 14 14" fill="none" stroke="#A32D2D" stroke-width="1.5">
+                    <path d="M3 1h6l4 4v8H3V1z"></path>
+                    <path d="M9 1v4h4"></path>
+                  </svg>
+                  Exporter PDF
+                </button>
+                <button
+                  class="export-item"
+                  type="button"
+                  (click)="exportCandidatures('specialite', 'xlsx')"
+                >
+                  <svg viewBox="0 0 14 14" fill="none" stroke="#10b981" stroke-width="1.5">
+                    <rect x="1" y="1" width="12" height="12" rx="2"></rect>
+                    <line x1="4" y1="5" x2="10" y2="5"></line>
+                    <line x1="4" y1="8" x2="10" y2="8"></line>
+                    <line x1="4" y1="11" x2="7" y2="11"></line>
+                  </svg>
+                  Exporter Excel
+                </button>
+              </div>
+
+              <!-- Master Complet Section -->
+              <div class="export-section">
+                <div class="export-section-title">Master Complet</div>
+                <button
+                  class="export-item"
+                  type="button"
+                  (click)="exportCandidatures('master', 'pdf')"
+                >
+                  <svg viewBox="0 0 14 14" fill="none" stroke="#A32D2D" stroke-width="1.5">
+                    <path d="M3 1h6l4 4v8H3V1z"></path>
+                    <path d="M9 1v4h4"></path>
+                  </svg>
+                  Exporter PDF
+                </button>
+                <button
+                  class="export-item"
+                  type="button"
+                  (click)="exportCandidatures('master', 'xlsx')"
+                >
+                  <svg viewBox="0 0 14 14" fill="none" stroke="#10b981" stroke-width="1.5">
+                    <rect x="1" y="1" width="12" height="12" rx="2"></rect>
+                    <line x1="4" y1="5" x2="10" y2="5"></line>
+                    <line x1="4" y1="8" x2="10" y2="8"></line>
+                    <line x1="4" y1="11" x2="7" y2="11"></line>
+                  </svg>
+                  Exporter Excel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0.65rem 1rem;
+              border-bottom: 0.5px solid var(--color-border-tertiary);
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            "
+          >
+            <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary)">
+              Liste des candidatures
+              <span style="color: var(--color-text-secondary); font-weight: 400" id="table-count"
+                >({{ candidaturesFiltrees.length }})</span
+              >
+            </div>
+          </div>
+
+          <table class="w-full">
             <thead>
               <tr>
-                <th>N° Candidature</th>
-                <th>Candidat</th>
+                <th style="width: 36px">
+                  <input
+                    type="checkbox"
+                    id="check-all"
+                    (change)="toggleAll($event.target.checked)"
+                    [checked]="areAllVisibleTableRowsChecked()"
+                    style="cursor: pointer"
+                  />
+                </th>
+                <th style="width: 56px">Rang</th>
+                <th>N°</th>
+                <th>Nom complet</th>
                 <th>Spécialité</th>
-                <th>Score</th>
-                <th>Dossier</th>
+                <th style="min-width: 140px">Score</th>
                 <th>Statut</th>
-                <th>Actions</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let candidature of candidaturesFiltrees">
+              <tr
+                *ngFor="let c of getVisibleCandidaturesForTable(); let i = index"
+                [class.fade-out]="fadeOutCandidateIds.includes(c.id)"
+              >
                 <td>
-                  <strong class="numero-candidature">{{ candidature.numero }}</strong>
+                  <input
+                    type="checkbox"
+                    (change)="toggleRow(c.id, $event.target.checked)"
+                    [checked]="isVisibleTableRowChecked(c.id)"
+                    style="cursor: pointer"
+                  />
                 </td>
-                <td>
-                  <strong>{{ candidature.candidat_nom }}</strong>
-                  <br />
-                  <small>{{ candidature.candidat_email }}</small>
+                <td style="font-size: 11px; color: var(--color-text-secondary)">
+                  {{ getRank(c) }}
                 </td>
-                <td>{{ candidature.specialite }}</td>
-                <td>
-                  <strong class="score-highlight">{{ candidature.score }}</strong>
+                <td style="font-size: 11px; color: var(--color-text-secondary)">
+                  {{ c.numero || 'CAND-' + (i + 1) }}
                 </td>
+                <td style="font-weight: 500">{{ c.candidat_nom }}</td>
+                <td style="color: var(--color-text-secondary)">{{ c.specialite }}</td>
                 <td>
-                  <span class="dossier-badge" [class.depose]="candidature.dossier_depose">
-                    {{ candidature.dossier_depose ? 'Déposé' : 'Non déposé' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
-                    {{ candidature.statut }}
-                  </span>
-                  <br />
-                  <small> Avis favorables: {{ getFavorableVotesCount(candidature.id) }} </small>
-                </td>
-                <td>
-                  <!-- MENU KEBAB -->
-                  <div class="action-menu-container">
-                    <button class="btn-kebab" (click)="toggleActionMenu(candidature.id)">
-                      <i class="fas fa-ellipsis-v"></i>
-                    </button>
-
-                    <div
-                      class="action-menu-dropdown"
-                      *ngIf="actionMenuOpen === candidature.id"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <button
-                        class="action-menu-item"
-                        *ngIf="actionPermissions.consultationDossier"
-                        (click)="voirDossier(candidature)"
-                      >
-                        <i class="fas fa-eye"></i>
-                        <span>Voir dossier</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item"
-                        *ngIf="canGiveAvis()"
-                        (click)="ouvrirModalAvis(candidature)"
-                      >
-                        <i class="fas fa-comment"></i>
-                        <span>Donner un avis</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item"
-                        *ngIf="canAnalyzeDossier()"
-                        (click)="openOcrAnalysisPage(candidature)"
-                      >
-                        <i class="fas fa-search"></i>
-                        <span>Analyser dossier</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item"
-                        *ngIf="canChangeStatus()"
-                        (click)="modifierScore(candidature)"
-                      >
-                        <i class="fas fa-edit"></i>
-                        <span>Score automatique</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item"
-                        *ngIf="canValidatePreselection(candidature)"
-                        (click)="ouvrirModalValidationPreselection(candidature)"
-                      >
-                        <i class="fas fa-check-double"></i>
-                        <span>Valider sélection</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item"
-                        *ngIf="canChangeStatus()"
-                        (click)="ouvrirModalStatut(candidature)"
-                      >
-                        <i class="fas fa-exchange-alt"></i>
-                        <span>Changer statut</span>
-                      </button>
-
-                      <button
-                        class="action-menu-item danger"
-                        *ngIf="canChangeStatus()"
-                        (click)="rejeterCandidature(candidature)"
-                      >
-                        <i class="fas fa-times-circle"></i>
-                        <span>Rejeter</span>
-                      </button>
+                  <div class="score-wrap">
+                    <span class="score-val">{{ c.score }}</span>
+                    <div class="score-bar">
+                      <div
+                        class="score-fill"
+                        [ngClass]="{
+                          'sf-green': c.score >= 15,
+                          'sf-amber': c.score >= 10 && c.score < 15,
+                          'sf-red': c.score < 10,
+                        }"
+                        [style.width.%]="(c.score / 20) * 100"
+                      ></div>
                     </div>
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    [ngClass]="{
+                      'b-presel': c.statut === 'preselectionne',
+                      'b-wait': c.statut === 'soumis' || c.statut === 'en_attente',
+                      'b-reject': c.statut === 'rejete',
+                      'b-valid': c.statut === 'selectionne',
+                    }"
+                    >{{ getStatusDisplayLabel(c.statut) }}</span
+                  >
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; align-items: center">
+                    <button
+                      class="btn btn-secondary"
+                      style="font-size: 11px; padding: 0.25rem 0.5rem"
+                      (click)="openConsultationMode(c)"
+                    >
+                      Consulter
+                    </button>
+                    <button
+                      *ngIf="typeListe === 'preselection'"
+                      class="btn btn-secondary"
+                      style="
+                        font-size: 11px;
+                        padding: 0.25rem 0.5rem;
+                        background: #e6f5e6;
+                        border: 1px solid #c0e0c0;
+                        color: #0f7a3f;
+                      "
+                      (click)="quickValidate(c)"
+                      title="Valider rapidement"
+                    >
+                      <svg
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        style="width: 12px; height: 12px"
+                      >
+                        <path d="M2 6l3 3 5-5"></path>
+                      </svg>
+                    </button>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
+
+          <div class="pag-row">
+            <div class="pag-info" id="pag-info">
+              Affichage 1–{{ candidaturesFiltrees.length }} sur {{ candidaturesFiltrees.length }}
+            </div>
+            <div class="pag-btns">
+              <button class="pag-btn" (click)="changePage(-1)">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path d="M6 2L4 5l2 3"></path>
+                </svg>
+              </button>
+              <button class="pag-btn active" id="p1" (click)="goPage(1)">1</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: CONSULTATION MASSIVE (Bulk Consultation) -->
+    <div
+      *ngIf="bulkConsultationOpen"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
+      (click)="closeBulkConsultationModal()"
+    >
+      <div
+        style="
+          background: white;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 900px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        "
+        (click)="$event.stopPropagation()"
+      >
+        <!-- Modal Header -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+          "
+        >
+          <div>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b">
+              Consultation en Masse
+            </h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 13px; color: #64748b">
+              Dossier {{ bulkConsultationCurrentIndex + 1 }} /
+              {{ bulkConsultationCandidates.length }}
+            </p>
+          </div>
+          <button
+            style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b"
+            (click)="closeBulkConsultationModal()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div *ngIf="getCurrentBulkConsultationCandidate() as candidature" style="padding: 2rem">
+          <!-- Candidat Info -->
+          <div
+            style="background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem"
+          >
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem">
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  NOM COMPLET
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.candidat_nom }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  N° CANDIDATURE
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.numero }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">EMAIL</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 13px">
+                  {{ candidature.candidat_email }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  SPÉCIALITÉ
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 13px">{{ candidature.specialite }}</p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">SCORE</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.score | number: '1.2' }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">STATUT</p>
+                <span
+                  style="
+                    display: inline-block;
+                    margin-top: 0.5rem;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                  "
+                  [ngClass]="{
+                    'b-presel': candidature.statut === 'preselectionne',
+                    'b-wait':
+                      candidature.statut === 'soumis' || candidature.statut === 'en_attente',
+                    'b-reject': candidature.statut === 'rejete',
+                    'b-valid': candidature.statut === 'selectionne',
+                  }"
+                >
+                  {{ getStatusDisplayLabel(candidature.statut) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dossier Preview (Placeholder) -->
+          <div
+            style="
+              background: #f8fafc;
+              padding: 2rem;
+              border-radius: 8px;
+              border: 1px dashed #cbd5e1;
+              text-align: center;
+              margin-bottom: 1.5rem;
+              min-height: 200px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-direction: column;
+            "
+          >
+            <svg
+              style="width: 48px; height: 48px; margin-bottom: 1rem; color: #94a3b8"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <polyline points="9 14 12 11 15 14"></polyline>
+            </svg>
+            <p style="margin: 0; color: #64748b; font-size: 13px">
+              Cliquez sur 'Consulter dossier' pour voir les détails complets
+            </p>
+            <button
+              class="btn btn-primary"
+              style="margin-top: 1rem"
+              (click)="voirDossier(candidature)"
+            >
+              <i class="fas fa-file"></i> Consulter dossier
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Footer: Navigation et Actions -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            flex-wrap: wrap;
+            gap: 1rem;
+          "
+        >
+          <!-- Navigation Buttons -->
+          <div style="display: flex; gap: 0.75rem">
+            <button
+              class="btn btn-secondary"
+              [disabled]="bulkConsultationCurrentIndex === 0"
+              (click)="bulkConsultationPrevious()"
+              [style.opacity]="bulkConsultationCurrentIndex === 0 ? 0.5 : 1"
+              [style.cursor]="bulkConsultationCurrentIndex === 0 ? 'not-allowed' : 'pointer'"
+            >
+              <svg
+                style="width: 14px; height: 14px; margin-right: 4px"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M10 12L4 7l6-5"></path>
+              </svg>
+              Précédent
+            </button>
+            <button
+              class="btn btn-secondary"
+              [disabled]="bulkConsultationCurrentIndex === bulkConsultationCandidates.length - 1"
+              (click)="bulkConsultationNext()"
+              [style.opacity]="
+                bulkConsultationCurrentIndex === bulkConsultationCandidates.length - 1 ? 0.5 : 1
+              "
+              [style.cursor]="
+                bulkConsultationCurrentIndex === bulkConsultationCandidates.length - 1
+                  ? 'not-allowed'
+                  : 'pointer'
+              "
+            >
+              Suivant
+              <svg
+                style="width: 14px; height: 14px; margin-left: 4px"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 2l6 5-6 5"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 0.75rem">
+            <button
+              class="btn btn-success"
+              (click)="bulkConsultationValidate()"
+              style="
+                background: #10b981;
+                border: 1px solid #10b981;
+                color: white;
+                font-weight: 600;
+                padding: 0.5rem 1rem;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px; margin-right: 6px; display: inline-block"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 6l3 3 5-5"></path>
+              </svg>
+              Valider
+            </button>
+            <button
+              class="btn btn-danger"
+              (click)="bulkConsultationReject()"
+              style="
+                background: #ef4444;
+                border: 1px solid #ef4444;
+                color: white;
+                font-weight: 600;
+                padding: 0.5rem 1rem;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px; margin-right: 6px; display: inline-block"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 10l8-8M10 10L2 2"></path>
+              </svg>
+              Rejeter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: CONSULTATION MASSIVE DE CANDIDATURES (Simple Consultation View) -->
+    <div
+      *ngIf="bulkConsultationCandidaturesOpen"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
+      (click)="closeBulkConsultationCandidaturesModal()"
+    >
+      <div
+        style="
+          background: white;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 900px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        "
+        (click)="$event.stopPropagation()"
+      >
+        <!-- Modal Header -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+          "
+        >
+          <div>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b">
+              Consultation en Masse de Candidatures
+            </h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 13px; color: #64748b">
+              Dossier {{ bulkConsultationCandidaturesCurrentIndex + 1 }} /
+              {{ bulkConsultationCandidatures.length }}
+            </p>
+          </div>
+          <button
+            style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b"
+            (click)="closeBulkConsultationCandidaturesModal()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div *ngIf="getCurrentBulkConsultationCandidature() as candidature" style="padding: 2rem">
+          <!-- Candidat Info -->
+          <div
+            style="background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem"
+          >
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem">
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  NOM COMPLET
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.candidat_nom }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  N° CANDIDATURE
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.numero }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">EMAIL</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 13px">
+                  {{ candidature.candidat_email }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">
+                  ÉTABLISSEMENT
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 13px">
+                  {{ getCandidateEtablissement(candidature) }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">SCORE</p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 14px; font-weight: 600">
+                  {{ candidature.score | number: '1.2' }}
+                </p>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600">STATUT</p>
+                <span
+                  style="
+                    display: inline-block;
+                    margin-top: 0.5rem;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                  "
+                  [ngClass]="{
+                    'b-presel': candidature.statut === 'preselectionne',
+                    'b-wait':
+                      candidature.statut === 'soumis' || candidature.statut === 'en_attente',
+                    'b-reject': candidature.statut === 'rejete',
+                    'b-valid': candidature.statut === 'selectionne',
+                  }"
+                >
+                  {{ getStatusDisplayLabel(candidature.statut) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dossier Preview (Placeholder) -->
+          <div
+            style="
+              background: #f8fafc;
+              padding: 2rem;
+              border-radius: 8px;
+              border: 1px dashed #cbd5e1;
+              text-align: center;
+              margin-bottom: 1.5rem;
+              min-height: 200px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-direction: column;
+            "
+          >
+            <svg
+              style="width: 48px; height: 48px; margin-bottom: 1rem; color: #94a3b8"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <polyline points="9 14 12 11 15 14"></polyline>
+            </svg>
+            <p style="margin: 0; color: #64748b; font-size: 13px">
+              Cliquez sur 'Consulter dossier' pour voir les détails complets
+            </p>
+            <button
+              class="btn btn-primary"
+              style="margin-top: 1rem"
+              (click)="voirDossier(candidature)"
+            >
+              <i class="fas fa-file"></i> Consulter dossier
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Footer: Navigation et Actions -->
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            flex-wrap: wrap;
+            gap: 1rem;
+          "
+        >
+          <!-- Navigation Buttons -->
+          <div style="display: flex; gap: 0.75rem">
+            <button
+              class="btn btn-secondary"
+              [disabled]="bulkConsultationCandidaturesCurrentIndex === 0"
+              (click)="bulkCandidaturesPrevious()"
+              [style.opacity]="bulkConsultationCandidaturesCurrentIndex === 0 ? 0.5 : 1"
+              [style.cursor]="
+                bulkConsultationCandidaturesCurrentIndex === 0 ? 'not-allowed' : 'pointer'
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px; margin-right: 4px"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M10 12L4 7l6-5"></path>
+              </svg>
+              Précédent
+            </button>
+            <button
+              class="btn btn-secondary"
+              [disabled]="
+                bulkConsultationCandidaturesCurrentIndex === bulkConsultationCandidatures.length - 1
+              "
+              (click)="bulkCandidaturesNext()"
+              [style.opacity]="
+                bulkConsultationCandidaturesCurrentIndex === bulkConsultationCandidatures.length - 1
+                  ? 0.5
+                  : 1
+              "
+              [style.cursor]="
+                bulkConsultationCandidaturesCurrentIndex === bulkConsultationCandidatures.length - 1
+                  ? 'not-allowed'
+                  : 'pointer'
+              "
+            >
+              Suivant
+              <svg
+                style="width: 14px; height: 14px; margin-left: 4px"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 2l6 5-6 5"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 0.75rem">
+            <button
+              class="btn btn-success"
+              (click)="markCandidatureAsRead(getCurrentBulkConsultationCandidature())"
+              style="
+                background: #10b981;
+                border: 1px solid #10b981;
+                color: white;
+                font-weight: 600;
+                padding: 0.5rem 1rem;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px; margin-right: 6px; display: inline-block"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 6l3 3 5-5"></path>
+              </svg>
+              Marquer comme Lu
+            </button>
+            <button
+              class="btn btn-default"
+              (click)="closeBulkConsultationCandidaturesModal()"
+              style="
+                background: #6b7280;
+                border: 1px solid #6b7280;
+                color: white;
+                font-weight: 600;
+                padding: 0.5rem 1rem;
+              "
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1503,7 +6035,7 @@
                         candidature.nouveau_statut = 'dossier_depose'; changerStatut(candidature)
                       "
                     >
-                      <i class="fas fa-check"></i> Validerr
+                      <i class="fas fa-check"></i> Valider
                     </button>
                     <button
                       class="btn-action action-reject"
@@ -1598,14 +6130,14 @@
           <button
             class="liste-tab"
             [class.active]="typeListe === 'preselection'"
-            (click)="typeListe = 'preselection'"
+            (click)="setListSection('preselection')"
           >
             Présélection
           </button>
           <button
             class="liste-tab"
             [class.active]="typeListe === 'selection'"
-            (click)="typeListe = 'selection'"
+            (click)="setListSection('selection')"
           >
             Sélection
           </button>
@@ -1629,7 +6161,7 @@
         <div class="section-subcard" *ngIf="typeListe === 'selection'">
           <div class="subcard-head">
             <div>
-              <h3>Sélectionné</h3>
+              <h3>Sélections Présélection</h3>
               <p class="muted-line">
                 Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
                 finale responsable, puis génération de la liste présélectionnée par score.
@@ -1728,7 +6260,7 @@
               />
             </div>
             <div class="table-wrap">
-              <table id="cand-table">
+              <table id="cand-table" class="w-full">
                 <thead>
                   <tr>
                     <th>Candidat</th>
@@ -2007,11 +6539,14 @@
     </div>
 
     <!-- CONSULTATION DES LISTES -->
-    <div *ngIf="isCurrentView('avis-listes') && canAccessView('avis-listes')" class="view-content">
+    <div
+      *ngIf="false && isCurrentView('avis-listes') && canAccessView('avis-listes')"
+      class="view-content"
+    >
       <div class="section-card">
         <div class="candidatures-header">
           <div>
-            <h2>Présélection</h2>
+            <h2>Présélection - {{ getUserMasterOrSpecialiteLabel() }}</h2>
             <p class="subtitle">
               Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
               finale responsable, puis génération de la liste présélectionnée par score.
@@ -2133,7 +6668,7 @@
             />
           </div>
           <div class="table-wrap">
-            <table id="presel-table">
+            <table id="presel-table" class="w-full">
               <thead>
                 <tr>
                   <th>Candidat</th>
@@ -3019,7 +7554,7 @@
             <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
             <div class="kpi-content">
               <div class="kpi-value">{{ getTotalResponsableInscrits() }}</div>
-              <div class="kpi-label">Inscrits</div>
+              <div class="kpi-label">inscrits</div>
               <div class="kpi-trend">
                 {{ getTauxResponsableInscriptionGlobal() }}% d'inscription
               </div>
@@ -3044,7 +7579,7 @@
                 <th>Candidatures</th>
                 <th>Dossiers</th>
                 <th>Acceptés</th>
-                <th>Inscrits</th>
+                <th>inscrits</th>
                 <th>Acceptation</th>
                 <th>Inscription</th>
                 <th>Rejet</th>
@@ -3200,7 +7735,7 @@
           </div>
 
           <div class="filter-group">
-            <label for="filterRole"> <i class="fas fa-user-tag"></i> Rôle </label>
+            <label for="filterRole"> <i class="fas fa-user-tag"></i> rôle </label>
             <select
               id="filterRole"
               class="filter-select"
@@ -3242,7 +7777,7 @@
                 <th>Nom & Prénom</th>
                 <th>Email</th>
                 <th>Téléphone</th>
-                <th>Rôle</th>
+                <th>rôle</th>
                 <th>Master</th>
                 <th>Statut</th>
                 <th>Inscription</th>
@@ -3335,7 +7870,7 @@
         <ng-template #noMembers>
           <div class="empty-state">
             <i class="fas fa-users"></i>
-            <p>Aucun membre ne correspond à vos critères</p>
+            <p>Aucun membre ne correspond Ã  vos critères</p>
           </div>
         </ng-template>
       </div>
@@ -3358,7 +7893,7 @@
       <div class="modal-body" *ngIf="candidatureConsultationSelectionnee as consultation">
         <div class="consultation-hero">
           <div>
-            <div class="consultation-kicker">Dossier n°{{ consultation.numero }}</div>
+            <div class="consultation-kicker">Dossier N°{{ consultation.numero }}</div>
             <h3>{{ consultation.candidat_nom }}</h3>
             <p>{{ consultation.candidat_email }}</p>
           </div>
@@ -3485,7 +8020,7 @@
   >
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Répondre à la réclamation</h2>
+        <h2>Répondre Ã  la réclamation</h2>
         <button class="btn-close" (click)="fermerModalReponseReclamation()">
           <i class="fas fa-times"></i>
         </button>
@@ -4057,13 +8592,13 @@
         <p>
           <strong>{{ candidatureValidationPreselection?.candidat_nom }}</strong>
           est maintenant <strong>Sélectionné</strong>.<br />
-          Son statut a été mis à jour et une notification a été envoyée.
+          Son statut a été mis Ã  jour et une notification a été envoyée.
         </p>
         <span class="presel-notif-chip">
           <i class="fas fa-envelope"></i> Email de notification envoyé
         </span>
         <button type="button" class="btn-primary" (click)="fermerModalValidationPreselection()">
-          Retour à la liste
+          Retour Ã  la liste
         </button>
       </div>
     </div>

@@ -360,8 +360,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   editChoixPriorite: number = 1;
   showSubmissionWizardModal: boolean = false;
   isOffresInscriptionFallback: boolean = false;
-  // Allow clicking any step for quick preview/testing
-  wizardAllowFreeNavigation: boolean = true;
+  // Keep step navigation constrained to completed steps.
+  wizardAllowFreeNavigation: boolean = false;
   wizardCurrentStep: number = 1;
   wizardMaxAllowedStep: number = 1;
   readonly wizardTotalSteps: number = 3;
@@ -381,6 +381,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     telephone: boolean;
     etablissementOrigine: boolean;
     anneeBac: boolean;
+    anneeObtentionDiplome: boolean;
     confirmationText: boolean;
     moyenneBacPrincipale: boolean;
     noteMathBac: boolean;
@@ -400,6 +401,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     telephone: false,
     etablissementOrigine: false,
     anneeBac: false,
+    anneeObtentionDiplome: false,
     confirmationText: false,
     moyenneBacPrincipale: false,
     noteMathBac: false,
@@ -2296,6 +2298,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       telephone: false,
       etablissementOrigine: false,
       anneeBac: false,
+      anneeObtentionDiplome: false,
       confirmationText: false,
       moyenneBacPrincipale: false,
       noteMathBac: false,
@@ -2419,6 +2422,42 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       .slice(0, maxLength);
   }
 
+  sanitizeWizardEmailInput(value: string): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase();
+  }
+
+  sanitizeWizardDecimalInput(value: string): string {
+    const raw = String(value ?? '')
+      .replace(/\s+/g, '')
+      .replace(/\./g, ',');
+    const parts = raw.split(',');
+    const integerPart = parts[0].replace(/\D/g, '');
+    const decimalPart = (parts.slice(1).join('') || '').replace(/\D/g, '').slice(0, 2);
+
+    if (!integerPart && !decimalPart) {
+      return '';
+    }
+
+    const normalizedInteger = integerPart || '0';
+    const integerValue = Number(normalizedInteger);
+
+    if (!Number.isFinite(integerValue)) {
+      return '';
+    }
+
+    if (integerValue >= 20) {
+      return '20';
+    }
+
+    if (decimalPart) {
+      return `${normalizedInteger},${decimalPart}`;
+    }
+
+    return normalizedInteger;
+  }
+
   sanitizeWizardPhoneInput(value: string): string {
     const raw = String(value ?? '').replace(/[^\d+]/g, '');
     const normalized = raw.startsWith('+')
@@ -2435,6 +2474,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   isWizardYearValid(value: string): boolean {
     return /^\d{4}$/.test(String(value || '').trim());
+  }
+
+  isWizardSubmissionAllowed(): boolean {
+    return this.isWizardStepValid(1) && this.isWizardStepValid(2) && this.isWizardStepValid(3);
   }
 
   isWizardScoreInvalid(value: string): boolean {
@@ -2489,7 +2532,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   isWizardMrglOffer(): boolean {
-    return this.wizardOffre?.titre === 'Mastère Recherche en Génie logiciel(MRGL)';
+    const title = String(this.wizardOffre?.titre || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    return (
+      title.includes('mrgl') ||
+      (title.includes('recherche') && title.includes('genie') && title.includes('logiciel'))
+    );
   }
 
   isWizardMrmiOffer(): boolean {
@@ -2548,6 +2598,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         !this.isWizardYearValid(this.wizardData.anneeBac) ||
         !this.isScoreRangeValid(this.wizardData.moyenneBacPrincipale)
       ) {
+        return false;
+      }
+
+      if (!this.isWizardYearValid(this.wizardData.anneeObtentionDiplome)) {
         return false;
       }
 
@@ -2717,9 +2771,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isWizardStepValid(3)) {
+    if (!this.isWizardSubmissionAllowed()) {
       this.toastService.show(
-        'Veuillez compléter la validation et la synthèse avant envoi.',
+        'Veuillez remplir correctement tous les champs requis avant la soumission.',
         'warning',
       );
       return;
@@ -3555,6 +3609,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.router.navigate(['/preinscription/detail', code], {
       queryParams: { offerId: offre.id },
     });
+  }
+
+  canOpenOffreDetail(offre: Offre): boolean {
+    return !!this.getPreinscriptionDetailCode(offre);
   }
 
   fermerDetailOffre(): void {

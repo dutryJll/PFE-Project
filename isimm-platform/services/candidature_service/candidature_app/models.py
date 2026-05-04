@@ -1086,6 +1086,36 @@ class InscriptionRapprochementAudit(models.Model):
         return f"Rapprochement inscriptions #{self.id} ({self.total_rows} lignes)"
 
 
+class HistoriqueActionCommission(models.Model):
+    responsable = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='commission_action_history',
+    )
+    master = models.ForeignKey(
+        Master,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='commission_action_history',
+    )
+    action = models.CharField(max_length=120)
+    specialite = models.CharField(max_length=200)
+    session = models.CharField(max_length=20, default='')
+    nb_candidats = models.PositiveIntegerField(default=0)
+    date_action = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_action']
+        verbose_name = 'Historique Action Commission'
+        verbose_name_plural = 'Historique des Actions Commission'
+
+    def __str__(self):
+        return f"{self.action} - {self.specialite} ({self.nb_candidats})"
+
+
 class HistoriqueCandidature(models.Model):
     candidat_nom = models.CharField(max_length=200)
     candidat_email = models.EmailField()

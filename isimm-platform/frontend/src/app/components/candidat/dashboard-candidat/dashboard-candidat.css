@@ -7049,6 +7049,75 @@
     cursor: pointer;
   }
 
+  /* ── Button group (styled radio) ── */
+  .wz-button-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+  }
+
+  .wz-button-option {
+    display: flex;
+    align-items: center;
+  }
+
+  .wz-button-option input[type='radio'] {
+    display: none;
+  }
+
+  .wz-button-option input[type='radio'] + .button-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+
+  .wz-button-option input[type='radio']:checked + .button-label {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+
+  .wz-button-option input[type='radio']:hover + .button-label {
+    border-color: #3b82f6;
+  }
+
+  /* Compact checkbox for small B2 control */
+  .wz-checkbox-compact {
+    padding-top: 6px;
+  }
+
+  .compact-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .compact-checkbox input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+
+  .compact-label {
+    font-size: 13px;
+    color: #334155;
+  }
+
   /* ── Grades table ── */
   .wz-grades-table-wrap {
     border: 1px solid #dbe3ef;

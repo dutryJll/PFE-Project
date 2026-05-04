@@ -2488,6 +2488,7 @@
                   type="email"
                   [(ngModel)]="wizardData.email"
                   name="wzEmail"
+                  (input)="wizardData.email = sanitizeWizardEmailInput(wizardData.email)"
                   (blur)="wizardTouched.email = true"
                   placeholder="Ex: nom@email.com"
                 />
@@ -2656,14 +2657,18 @@
                   <span class="req">*</span></label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="20"
+                  type="text"
                   [(ngModel)]="wizardData.moyenneBacPrincipale"
                   name="wzMoyBac"
+                  inputmode="decimal"
+                  maxlength="5"
+                  (input)="
+                    wizardData.moyenneBacPrincipale = sanitizeWizardDecimalInput(
+                      wizardData.moyenneBacPrincipale
+                    )
+                  "
                   (blur)="wizardTouched.moyenneBacPrincipale = true"
-                  placeholder="Ex: 14.50"
+                  placeholder="Ex: 14,50"
                   [class.input-error]="isWizardScoreInvalid(wizardData.moyenneBacPrincipale)"
                 />
                 <span
@@ -2686,14 +2691,16 @@
                   <span class="req">*</span></label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="20"
+                  type="text"
                   [(ngModel)]="wizardData.noteMathBac"
                   name="wzMathBac"
+                  inputmode="decimal"
+                  maxlength="5"
+                  (input)="
+                    wizardData.noteMathBac = sanitizeWizardDecimalInput(wizardData.noteMathBac)
+                  "
                   (blur)="wizardTouched.noteMathBac = true"
-                  placeholder="/ 20"
+                  placeholder="Ex: 18,25"
                   [class.input-error]="isWizardScoreInvalid(wizardData.noteMathBac)"
                 />
                 <span
@@ -2709,14 +2716,18 @@
                   <span class="req">*</span></label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="20"
+                  type="text"
                   [(ngModel)]="wizardData.noteFrancaisBac"
                   name="wzFrBac"
+                  inputmode="decimal"
+                  maxlength="5"
+                  (input)="
+                    wizardData.noteFrancaisBac = sanitizeWizardDecimalInput(
+                      wizardData.noteFrancaisBac
+                    )
+                  "
                   (blur)="wizardTouched.noteFrancaisBac = true"
-                  placeholder="/ 20"
+                  placeholder="Ex: 16,00"
                   [class.input-error]="isWizardScoreInvalid(wizardData.noteFrancaisBac)"
                 />
                 <span
@@ -2734,14 +2745,18 @@
                   ><i class="fas fa-globe"></i> Note Anglais Bac <span class="req">*</span></label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="20"
+                  type="text"
                   [(ngModel)]="wizardData.noteAnglaisBac"
                   name="wzEnBac"
+                  inputmode="decimal"
+                  maxlength="5"
+                  (input)="
+                    wizardData.noteAnglaisBac = sanitizeWizardDecimalInput(
+                      wizardData.noteAnglaisBac
+                    )
+                  "
                   (blur)="wizardTouched.noteAnglaisBac = true"
-                  placeholder="/ 20"
+                  placeholder="Ex: 15,75"
                   [class.input-error]="isWizardScoreInvalid(wizardData.noteAnglaisBac)"
                 />
                 <span
@@ -2759,24 +2774,15 @@
                 ><i class="fas fa-certificate"></i> Certification B2
                 <span class="req">*</span></label
               >
-              <div class="wz-radio-group">
-                <label class="wz-radio">
+              <div class="wz-checkbox-compact">
+                <label class="compact-checkbox">
                   <input
-                    type="radio"
-                    [(ngModel)]="wizardData.certificationB2"
-                    name="wzB2"
-                    value="oui"
+                    type="checkbox"
+                    [checked]="wizardData.certificationB2 === 'oui'"
+                    (change)="wizardData.certificationB2 = $event.target.checked ? 'oui' : 'non'"
                   />
-                  Oui
-                </label>
-                <label class="wz-radio">
-                  <input
-                    type="radio"
-                    [(ngModel)]="wizardData.certificationB2"
-                    name="wzB2"
-                    value="non"
-                  />
-                  Non
+                  <span class="compact-mark"></span>
+                  <span class="compact-label">Possède une certification B2</span>
                 </label>
               </div>
             </div>
@@ -2855,11 +2861,33 @@
                   <span class="req">*</span></label
                 >
                 <input
-                  type="number"
+                  type="text"
                   [(ngModel)]="wizardData.anneeObtentionDiplome"
                   name="wzAnneeDip"
+                  inputmode="numeric"
+                  maxlength="4"
+                  (input)="
+                    wizardData.anneeObtentionDiplome = sanitizeWizardDigits(
+                      wizardData.anneeObtentionDiplome,
+                      4
+                    )
+                  "
+                  (blur)="wizardTouched.anneeObtentionDiplome = true"
                   placeholder="Ex: 2024"
+                  [class.input-error]="
+                    wizardTouched.anneeObtentionDiplome &&
+                    !isWizardYearValid(wizardData.anneeObtentionDiplome)
+                  "
                 />
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.anneeObtentionDiplome &&
+                    !isWizardYearValid(wizardData.anneeObtentionDiplome)
+                  "
+                >
+                  L'année d'obtention doit contenir 4 chiffres
+                </span>
               </div>
             </div>
 
@@ -2882,14 +2910,18 @@
                     <td>
                       <input
                         class="grade-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
+                        type="text"
                         [(ngModel)]="wizardData.moyenne1Annee"
                         name="wzMoy1"
+                        inputmode="decimal"
+                        maxlength="5"
+                        (input)="
+                          wizardData.moyenne1Annee = sanitizeWizardDecimalInput(
+                            wizardData.moyenne1Annee
+                          )
+                        "
                         (blur)="wizardTouched.moyenne1Annee = true"
-                        placeholder="/ 20"
+                        placeholder="Ex: 13,50"
                         [class.input-error]="
                           wizardTouched.moyenne1Annee &&
                           isWizardScoreInvalid(wizardData.moyenne1Annee)
@@ -2922,14 +2954,18 @@
                     <td>
                       <input
                         class="grade-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
+                        type="text"
                         [(ngModel)]="wizardData.moyenne2Annee"
                         name="wzMoy2"
+                        inputmode="decimal"
+                        maxlength="5"
+                        (input)="
+                          wizardData.moyenne2Annee = sanitizeWizardDecimalInput(
+                            wizardData.moyenne2Annee
+                          )
+                        "
                         (blur)="wizardTouched.moyenne2Annee = true"
-                        placeholder="/ 20"
+                        placeholder="Ex: 14,00"
                         [class.input-error]="
                           wizardTouched.moyenne2Annee &&
                           isWizardScoreInvalid(wizardData.moyenne2Annee)
@@ -2962,14 +2998,18 @@
                     <td>
                       <input
                         class="grade-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
+                        type="text"
                         [(ngModel)]="wizardData.moyenne3Annee"
                         name="wzMoy3"
+                        inputmode="decimal"
+                        maxlength="5"
+                        (input)="
+                          wizardData.moyenne3Annee = sanitizeWizardDecimalInput(
+                            wizardData.moyenne3Annee
+                          )
+                        "
                         (blur)="wizardTouched.moyenne3Annee = true"
-                        placeholder="/ 20"
+                        placeholder="Ex: 12,75"
                         [class.input-error]="
                           wizardTouched.moyenne3Annee &&
                           isWizardScoreInvalid(wizardData.moyenne3Annee)
@@ -3002,14 +3042,18 @@
                     <td>
                       <input
                         class="grade-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
+                        type="text"
                         [(ngModel)]="wizardData.moyenne4Annee"
                         name="wzMoy4"
+                        inputmode="decimal"
+                        maxlength="5"
+                        (input)="
+                          wizardData.moyenne4Annee = sanitizeWizardDecimalInput(
+                            wizardData.moyenne4Annee
+                          )
+                        "
                         (blur)="wizardTouched.moyenne4Annee = true"
-                        placeholder="/ 20"
+                        placeholder="Ex: 11,25"
                         [class.input-error]="
                           wizardTouched.moyenne4Annee &&
                           isWizardScoreInvalid(wizardData.moyenne4Annee)
@@ -3042,14 +3086,18 @@
                     <td>
                       <input
                         class="grade-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="20"
+                        type="text"
                         [(ngModel)]="wizardData.moyenneIng1"
                         name="wzMoyIng1"
+                        inputmode="decimal"
+                        maxlength="5"
+                        (input)="
+                          wizardData.moyenneIng1 = sanitizeWizardDecimalInput(
+                            wizardData.moyenneIng1
+                          )
+                        "
                         (blur)="wizardTouched.moyenneIng1 = true"
-                        placeholder="/ 20"
+                        placeholder="Ex: 15,00"
                         [class.input-error]="
                           wizardTouched.moyenneIng1 && isWizardScoreInvalid(wizardData.moyenneIng1)
                         "
@@ -3330,7 +3378,7 @@
           <button
             class="wz-btn-submit"
             *ngIf="wizardCurrentStep === wizardTotalSteps"
-            [disabled]="wizardSubmitting || !isWizardStepValid(wizardCurrentStep)"
+            [disabled]="wizardSubmitting || !isWizardSubmissionAllowed()"
             [class.wz-btn--loading]="wizardSubmitting"
             (click)="submitWizardCandidature()"
           >

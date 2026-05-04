@@ -1,0 +1,37 @@
+<div class="preselection-dashboard">
+  <div id="bulk-bar" class="bulk-bar show">
+    <div id="bulk-text" class="bulk-text">{{ selectedIds.length }} candidat(s) sélectionné(s)</div>
+
+    <div class="bulk-actions">
+      <label
+        >Seuil de score validation
+        <input type="number" [(ngModel)]="validationScoreThreshold" min="0" max="20" step="0.5" />
+      </label>
+      <button class="btn-primary" (click)="validateSelection()">Valider la sélection</button>
+      <button class="btn" (click)="fullAutoValidate()">Tous Valider seulement</button>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Nom</th>
+        <th>Score</th>
+        <th>Décision</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of candidatures">
+        <td><input type="checkbox" (change)="toggleSelect(c.id)" /></td>
+        <td>{{ c.nom_complet || c.candidat_nom }}</td>
+        <td>{{ c.score || '-' }}</td>
+        <td>{{ c.decision_preselection || '-' }}</td>
+        <td>
+          <button class="btn" (click)="quickValidate(c)">Validation rapide</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

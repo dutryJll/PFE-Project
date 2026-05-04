@@ -1,0 +1,37 @@
+<div class="candidatures-list">
+  <div id="bulk-bar" class="bulk-bar show">
+    <div id="bulk-text" class="bulk-text">{{ selectedIds.length }} candidat(s) sélectionné(s)</div>
+    <div class="bulk-actions">
+      <button class="btn" (click)="consultMass()">Consulter en masse</button>
+      <button class="btn" (click)="downloadZip()">Télécharger ZIP</button>
+      <button class="btn" (click)="markAllAsRead()">Lire tous</button>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th><input type="checkbox" [checked]="isAllSelected" (change)="toggleSelectAll()" /></th>
+        <th>Nom</th>
+        <th>Spécialité</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of candidatures">
+        <td>
+          <input
+            type="checkbox"
+            [checked]="selectedIds.indexOf(c.id) !== -1"
+            (change)="toggleSelect(c.id)"
+          />
+        </td>
+        <td>{{ c.nom_complet || c.candidat_nom }}</td>
+        <td>{{ c.specialite }}</td>
+        <td>
+          <button class="btn btn-secondary" (click)="consultCandidate(c.id)">Consulter</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

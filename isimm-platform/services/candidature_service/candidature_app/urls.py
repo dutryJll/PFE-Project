@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import views_export
 
 urlpatterns = [
     path('create/', views.create_candidature, name='create_candidature'),
@@ -43,6 +44,7 @@ urlpatterns = [
     path('ocr/test/', views.ocr_test_diagnostic, name='ocr_test_diagnostic'),
     path('<int:candidature_id>/calculer-score/', views.calculer_score_candidature, name='calculer_score'),
     path('<int:candidature_id>/calculer-score-final/', views.calculer_score_final_et_statut, name='calculer_score_final_et_statut'),
+    path('commission/historique/', views.enregistrer_action_commission, name='enregistrer_action_commission'),
     path('reclamations/<int:reclamation_id>/repondre/', views.repondre_reclamation, name='repondre_reclamation'),
     path(
         'reclamations/<int:reclamation_id>/rectifier-score/',
@@ -66,4 +68,5 @@ urlpatterns = [
     path('listes/<int:liste_id>/export/pdf/', views.exporter_liste_pdf, name='exporter_liste_pdf'),
     path('listes/<int:liste_id>/export/excel/', views.exporter_liste_excel, name='exporter_liste_excel'),
     path('send-member-credentials/', views.send_member_credentials, name='send_member_credentials'),
+    path('export/', views_export.export_candidatures, name='export_candidatures'),
 ]
