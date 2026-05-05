@@ -721,6 +721,8 @@ export class DashboardCommissionComponent implements OnInit {
   finalSelectionBulkAction: FinalSelectionDecision = '';
   finalSelectionExportOpen: boolean = false;
   finalSelectionConfirmOpen: boolean = false;
+  finalSelectionConfirmTitle: string = '';
+  finalSelectionConfirmMessage: string = '';
   finalSelectionToast: { message: string; type: string; visible: boolean } = {
     message: '0 candidats mis a jour',
     type: 't-success',
@@ -736,6 +738,15 @@ export class DashboardCommissionComponent implements OnInit {
     search: '',
     hideValides: false,
   };
+
+  // Filter properties for template binding
+  finalSelectionSession: string = '2025/2026';
+  finalSelectionTypeFilter: FinalSelectionTypeFilter = 'all';
+  finalSelectionSpecialtyFilter: string = 'all';
+  finalSelectionScoreMin: number = 0;
+  finalSelectionScoreMax: number = 20;
+  finalSelectionSearchTerm: string = '';
+  finalSelectionHideValidated: boolean = false;
 
   listes: Liste[] = [
     {
@@ -1111,6 +1122,69 @@ export class DashboardCommissionComponent implements OnInit {
       'Resultats publies - notifications envoyees aux candidats',
       't-success',
     );
+  }
+
+  // Missing filter methods
+  applyFinalSelectionFilters(): void {
+    this.finalSelectionFilters = {
+      session: this.finalSelectionSession,
+      type: this.finalSelectionTypeFilter,
+      specialite: this.finalSelectionSpecialtyFilter,
+      scoreMin: this.finalSelectionScoreMin,
+      scoreMax: this.finalSelectionScoreMax,
+      search: this.finalSelectionSearchTerm,
+      hideValides: this.finalSelectionHideValidated,
+    };
+    this.updateFinalSelectionFiltered();
+  }
+
+  onFinalSelectionSessionChange(): void {
+    this.finalSelectionFilters.session = this.finalSelectionSession;
+    this.updateFinalSelectionFiltered();
+  }
+
+  // Missing quota methods
+  getFinalSelectionTotalQuota(): number {
+    return this.finalSelectionQuotaLpTotal;
+  }
+
+  getFinalSelectionLaQuota(): number {
+    return this.finalSelectionQuotaLaTotal;
+  }
+
+  getFinalSelectionLpRemaining(): number {
+    return Math.max(0, this.finalSelectionQuotaLpTotal - this.getFinalSelectionLpCount());
+  }
+
+  getFinalSelectionLaRemaining(): number {
+    return Math.max(0, this.finalSelectionQuotaLaTotal - this.getFinalSelectionLaCount());
+  }
+
+  // Missing selection methods
+  getFinalSelectionSelectedCount(): number {
+    return this.finalSelectionSelectedIds.size;
+  }
+
+  isFinalSelectionAllSelected(): boolean {
+    const rows = this.finalSelectionFiltered;
+    return rows.length > 0 && rows.every((row) => this.finalSelectionSelectedIds.has(row.id));
+  }
+
+  // Missing export/action methods
+  generateFinalSelectionPV(): void {
+    this.showFinalSelectionToast('Generation du PV final...', 't-info');
+  }
+
+  generateFinalSelectionPDFOfficial(): void {
+    this.showFinalSelectionToast('Generation du PV officiel PDF...', 't-info');
+  }
+
+  exportFinalSelectionExcel(): void {
+    this.showFinalSelectionToast('Export Excel en cours...', 't-info');
+  }
+
+  showFinalSelectionConfirm(): void {
+    this.openFinalSelectionConfirm();
   }
 
   finalSelectionExportPdf(): void {
@@ -4827,6 +4901,14 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.router.navigate(['/commission/dossier', candidature.id], {
+      queryParams: { source: 'liste-generation' },
+    });
+    this.closeActionMenu();
+  }
+
+  voirDossierById(candidatureId: number): void {
+    // Navigate to the commission dossier view for a specific candidature id
+    this.router.navigate(['/commission/dossier', candidatureId], {
       queryParams: { source: 'liste-generation' },
     });
     this.closeActionMenu();

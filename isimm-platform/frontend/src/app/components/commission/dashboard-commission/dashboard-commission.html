@@ -3145,7 +3145,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Fatma Gharbi')"
+                          (click)="voirDossierById(1)"
                         >
                           Consulter
                         </button>
@@ -3209,7 +3209,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Ahmed Ben Ali')"
+                          (click)="voirDossierById(2)"
                         >
                           Consulter
                         </button>
@@ -3273,7 +3273,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Sana Trabelsi')"
+                          (click)="voirDossierById(3)"
                         >
                           Consulter
                         </button>
@@ -3338,7 +3338,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Youssef Mahjoub')"
+                          (click)="voirDossierById(4)"
                         >
                           Consulter
                         </button>
@@ -3403,7 +3403,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Nour Khelif')"
+                          (click)="voirDossierById(5)"
                         >
                           Consulter
                         </button>
@@ -3468,7 +3468,7 @@
                         <button
                           class="btn btn-sec"
                           style="font-size: 11px; padding: 0.25rem 0.5rem"
-                          onclick="sendPrompt('Consulter dossier de Mariem Zouari')"
+                          (click)="voirDossierById(6)"
                         >
                           Consulter
                         </button>
@@ -3693,9 +3693,9 @@
                   '" placeholder="Observation..." onchange="changeObs(' +
                   c.id +
                   ',this.value)"></td>' +
-                  '<td><button class="btn btn-sec" style="font-size:11px;padding:.25rem .5rem" onclick="sendPrompt(\'Consulter dossier de ' +
-                  c.nom +
-                  '\')">Consulter</button></td>';
+                  '<td><button class="btn btn-sec" style="font-size:11px;padding:.25rem .5rem" onclick="consulterOne(' +
+                  c.id +
+                  ')">Consulter</button></td>';
                 tb.appendChild(tr);
               });
               document.getElementById('tbl-count').textContent = '(' + filtered.length + ')';
@@ -3857,6 +3857,119 @@
               setTimeout(function () {
                 t.className = 'toast';
               }, 3500);
+            }
+
+            // --- Lightweight carousel / dossier overlay helpers ---
+            var carouselIndex = 0;
+            var carouselList = [];
+
+            function consulterOne(id) {
+              // build the list from current filtered items so navigation matches view
+              carouselList = filtered.map(function (c) {
+                return c.id;
+              });
+              carouselIndex = carouselList.indexOf(id);
+              if (carouselIndex === -1) {
+                // fallback: open single id
+                carouselList = [id];
+                carouselIndex = 0;
+              }
+              openCarousel();
+            }
+
+            function openCarousel() {
+              var id = carouselList[carouselIndex];
+              var c = candidats.find(function (x) {
+                return x.id === id;
+              });
+              if (!c) return;
+              var ov = document.getElementById('carousel-overlay');
+              if (!ov) {
+                ov = document.createElement('div');
+                ov.id = 'carousel-overlay';
+                ov.style.position = 'fixed';
+                ov.style.left = '0';
+                ov.style.top = '0';
+                ov.style.width = '100%';
+                ov.style.height = '100%';
+                ov.style.background = 'rgba(0,0,0,0.6)';
+                ov.style.zIndex = '9999';
+                ov.style.display = 'flex';
+                ov.style.alignItems = 'center';
+                ov.style.justifyContent = 'center';
+                document.body.appendChild(ov);
+              }
+              var cardHtml =
+                '<div style="background:#fff;border-radius:6px;padding:1rem;max-width:980px;width:95%;max-height:90%;overflow:auto;position:relative">' +
+                '<button onclick="fermerCarousel()" style="position:absolute;right:10px;top:10px;padding:.25rem .5rem">Fermer</button>' +
+                '<div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">' +
+                '<div style="flex:1 1 320px;min-width:280px">' +
+                '<h3 style="margin:.25rem 0">' +
+                c.nom +
+                '</h3>' +
+                '<div style="color:var(--color-text-secondary);font-size:.95rem">' +
+                c.num +
+                ' — ' +
+                c.spec +
+                '</div>' +
+                '<div style="margin-top:.75rem"><strong>Score:</strong> ' +
+                c.score.toFixed(1) +
+                '</div>' +
+                '<div style="margin-top:.5rem">' +
+                (c.presel === 'oui'
+                  ? '<span style="color:green">Pré-sélectionné</span>'
+                  : '<span style="color:#888">Non pré-sélectionné</span>') +
+                '</div>' +
+                '</div>' +
+                '<div style="flex:1 1 300px;min-width:240px">' +
+                '<p style="margin:0.25rem 0">Observation:</p>' +
+                '<div style="border:1px solid #eee;padding:.5rem;border-radius:4px;min-height:80px">' +
+                (c.obs || '<em>— aucune —</em>') +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;margin-top:1rem">' +
+                '<div><button onclick="carPrev()" style="margin-right:.5rem">◀ Précédent</button><button onclick="carNext()">Suivant ▶</button></div>' +
+                '<div><button onclick="marquerCourantLu()" style="margin-right:.5rem">Marquer lu</button><button onclick="telechargerZIP()">Télécharger ZIP</button></div>' +
+                '</div>' +
+                '</div>';
+              ov.innerHTML = cardHtml;
+              ov.style.display = 'flex';
+            }
+
+            function fermerCarousel() {
+              var ov = document.getElementById('carousel-overlay');
+              if (ov) ov.style.display = 'none';
+            }
+
+            function carNext() {
+              if (carouselList.length <= 1) return;
+              carouselIndex = (carouselIndex + 1) % carouselList.length;
+              openCarousel();
+            }
+
+            function carPrev() {
+              if (carouselList.length <= 1) return;
+              carouselIndex = (carouselIndex - 1 + carouselList.length) % carouselList.length;
+              openCarousel();
+            }
+
+            function marquerCourantLu() {
+              var id = carouselList[carouselIndex];
+              var c = candidats.find(function (x) {
+                return x.id === id;
+              });
+              if (c) {
+                c.obs = (c.obs ? c.obs + '\n' : '') + '[Lu] ' + new Date().toLocaleString();
+              }
+              renderTable();
+              openCarousel();
+            }
+
+            function telechargerZIP() {
+              // placeholder: collect current candidate id and simulate download
+              var id = carouselList[carouselIndex];
+              showToast('Préparation du ZIP pour candidature ' + id, 't-success');
             }
 
             renderTable();
@@ -6158,249 +6271,7 @@
           </div>
         </div>
 
-        <div class="section-subcard" *ngIf="typeListe === 'selection'">
-          <div class="subcard-head">
-            <div>
-              <h3>Sélections Présélection</h3>
-              <p class="muted-line">
-                Action "Consulter candidature", avis des membres (avec conformité diplôme), décision
-                finale responsable, puis génération de la liste présélectionnée par score.
-              </p>
-            </div>
-            <div class="download-box" *ngIf="isResponsable">
-              <input
-                type="number"
-                min="1"
-                [(ngModel)]="preselectionQuota"
-                class="filter-input"
-                style="width: 120px"
-                placeholder="100"
-              />
-              <button class="btn-download" (click)="genererListePreselectionParScore()">
-                <i class="fas fa-sort-amount-down"></i> Générer liste par score
-              </button>
-            </div>
-          </div>
-
-          <div class="filters-section" style="margin-top: 1rem">
-            <div class="filters-grid">
-              <div class="filter-item">
-                <label class="filter-label">Année universitaire</label>
-                <select
-                  class="filter-select"
-                  [(ngModel)]="filtreAnneeUniversitaire"
-                  (change)="filterTable()"
-                >
-                  <option value="courante">Courante ({{ getCurrentAcademicYear() }})</option>
-                  <option value="precedente">Précédente ({{ getPreviousAcademicYear() }})</option>
-                  <option value="toutes">Toutes les années</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Décision responsable</label>
-                <select class="filter-select" [(ngModel)]="filtres.statut" (change)="filterTable()">
-                  <option value="">Toutes</option>
-                  <option value="preselectionne">Validé</option>
-                  <option value="rejete">Non validé</option>
-                </select>
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Recherche</label>
-                <input
-                  class="filter-input"
-                  type="text"
-                  [(ngModel)]="filtres.recherche"
-                  placeholder="N°, nom, email..."
-                  (input)="filterTable()"
-                />
-              </div>
-              <div class="filter-item">
-                <label class="filter-label">Portée</label>
-                <input
-                  class="filter-input"
-                  [value]="getCurrentUserScopeLabel()"
-                  readonly
-                  title="Membre et responsable ne voient que leur spécialité"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="card" style="padding: 0.75rem">
-            <div class="filters-row">
-              <input
-                id="f-nom"
-                placeholder="N°, nom, email..."
-                [(ngModel)]="filtres.recherche"
-                (input)="filterTable()"
-              />
-              <select id="f-statut" [(ngModel)]="filtres.statut" (change)="filterTable()">
-                <option value="">Tous statuts</option>
-                <option value="soumis">Reçu</option>
-                <option value="sous_examen">En examen</option>
-                <option value="preselectionne">Validé</option>
-                <option value="rejete">Rejeté</option>
-              </select>
-              <input
-                id="f-score-min"
-                type="number"
-                placeholder="Score min"
-                min="0"
-                max="20"
-                style="width: 90px"
-                [(ngModel)]="filtres.scoreMin"
-                (input)="filterTable()"
-              />
-              <input
-                id="f-etab"
-                placeholder="Établissement..."
-                style="width: 120px"
-                [(ngModel)]="filtres.etablissement"
-                (input)="filterTable()"
-              />
-            </div>
-            <div class="table-wrap">
-              <table id="cand-table" class="w-full">
-                <thead>
-                  <tr>
-                    <th>Candidat</th>
-                    <th>Établissement</th>
-                    <th>Score</th>
-                    <th>Statut</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="cand-body">
-                  <tr
-                    *ngFor="let candidature of candidaturesMasterViewFiltered; let i = index"
-                    (click)="openPanel(i)"
-                    style="cursor: pointer"
-                    [class.selected]="selectedCandidaturePreview?.id === candidature.id"
-                  >
-                    <td>
-                      <strong>{{ candidature.candidat_nom }}</strong
-                      ><br /><span style="color: var(--color-text-secondary); font-size: 11px">{{
-                        candidature.numero
-                      }}</span>
-                    </td>
-                    <td>{{ getCandidateEtablissement(candidature) }}</td>
-                    <td>{{ candidature.score || '-' }}</td>
-                    <td>
-                      <span
-                        class="badge"
-                        [ngClass]="getSelectionStatusBadgeClass(candidature.statut)"
-                        >{{ getSelectionStatusLabel(candidature.statut) }}</span
-                      >
-                    </td>
-                    <td>
-                      <button class="btn-eye" (click)="$event.stopPropagation(); openPanel(i)">
-                        <svg
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        >
-                          <ellipse cx="8" cy="8" rx="6" ry="4"></ellipse>
-                          <circle cx="8" cy="8" r="2"></circle>
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div
-            class="side-panel"
-            *ngIf="selectedCandidaturePreview as candidature; else spPlaceholder"
-          >
-            <div class="side-hdr">
-              <div>
-                <div class="side-name">{{ candidature.candidat_nom }}</div>
-                <div class="side-meta">
-                  {{ candidature.numero }} · {{ getCandidateEtablissement(candidature) }}
-                </div>
-              </div>
-              <button class="btn-eye" (click)="closePanel()">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <line x1="4" y1="4" x2="12" y2="12"></line>
-                  <line x1="12" y1="4" x2="4" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-            <div class="side-divider"></div>
-            <div class="score-big">{{ candidature.score || '-' }}</div>
-            <div class="score-lbl">Score / 20</div>
-            <div class="side-divider"></div>
-            <div
-              style="
-                font-size: 11px;
-                font-weight: 500;
-                color: var(--color-text-secondary);
-                margin-bottom: 0.35rem;
-              "
-            >
-              Pièces du dossier
-            </div>
-            <div class="doc-list">
-              <div class="doc-row">
-                <span class="badge b-valid" style="flex-shrink: 0">✓</span
-                ><span class="doc-row-name">CIN</span
-                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
-              </div>
-              <div class="doc-row">
-                <span class="badge b-valid" style="flex-shrink: 0">✓</span
-                ><span class="doc-row-name">Diplôme</span
-                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
-              </div>
-              <div class="doc-row">
-                <span class="badge b-valid" style="flex-shrink: 0">✓</span
-                ><span class="doc-row-name">Relevé de notes</span
-                ><button class="btn-preview" (click)="voirDossier(candidature)">Aperçu</button>
-              </div>
-            </div>
-            <div class="side-divider"></div>
-            <div class="side-actions">
-              <button
-                class="btn-full primary"
-                (click)="ouvrirModalValidationPreselection(candidature)"
-              >
-                Valider sélection
-              </button>
-              <button class="btn-full" (click)="ouvrirModalAvis(candidature)">
-                Donner un avis
-              </button>
-              <button class="btn-full danger" (click)="rejeterCandidature(candidature)">
-                Rejeter
-              </button>
-            </div>
-          </div>
-
-          <ng-template #spPlaceholder>
-            <div
-              class="card"
-              id="sp-placeholder"
-              style="padding: 0.85rem; display: flex; align-items: center; justify-content: center"
-            >
-              <div style="text-align: center; color: var(--color-text-secondary)">
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.2"
-                  style="margin: 0 auto 0.4rem; display: block"
-                >
-                  <ellipse cx="14" cy="14" rx="10" ry="7"></ellipse>
-                  <circle cx="14" cy="14" r="3"></circle>
-                </svg>
-                <div style="font-size: 12px">Cliquez sur un candidat<br />pour prévisualiser</div>
-              </div>
-            </div>
-          </ng-template>
-        </div>
+        <!-- Section 'selection' removed as requested -->
 
         <div class="section-subcard latest-list-card">
           <div class="subcard-head latest-list-head">
