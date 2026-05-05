@@ -6220,8 +6220,9 @@
     >
       <div class="section-card">
         <div class="listes-header">
-          <h2>Gestion des listes</h2>
-          <div class="listes-actions">
+          <h2 *ngIf="typeListe === 'preselection'">Gestion des listes</h2>
+          <h2 *ngIf="typeListe === 'selection'">Sélection finale — Session 2025/2026</h2>
+          <div class="listes-actions" *ngIf="typeListe === 'preselection'">
             <button
               class="btn-primary"
               *ngIf="actionPermissions.preselection"
@@ -6244,6 +6245,7 @@
             class="liste-tab"
             [class.active]="typeListe === 'preselection'"
             (click)="setListSection('preselection')"
+            *ngIf="false"
           >
             Présélection
           </button>
@@ -6252,7 +6254,7 @@
             [class.active]="typeListe === 'selection'"
             (click)="setListSection('selection')"
           >
-            Sélection
+            Sélection finale
           </button>
           <div class="download-box">
             <select [(ngModel)]="listesExportFormat" class="export-select">
@@ -6271,141 +6273,465 @@
           </div>
         </div>
 
-        <!-- Section 'selection' removed as requested -->
-
-        <div class="section-subcard latest-list-card">
-          <div class="subcard-head latest-list-head">
-            <div class="latest-list-title-block">
-              <span class="latest-list-kicker">Aperçu visuel</span>
-              <h3>Dernière liste générée</h3>
-              <p class="muted-line">
-                Un résumé clair, directement visible dans la page, après génération depuis la
-                présélection.
-              </p>
-            </div>
-            <span class="liste-badge active latest-list-badge">
-              {{ derniereListeGeneree?.recommandation || 'Aucune génération' }}
-            </span>
-          </div>
-
-          <ng-container *ngIf="derniereListeGeneree as derniereListe; else noLatestList">
-            <div class="latest-list-hero">
-              <div class="latest-list-icon">
-                <i class="fas fa-list-check"></i>
+        <!-- SÉLECTION FINALE PAGE (for 'selection' tab only) -->
+        <ng-container *ngIf="typeListe === 'selection'">
+          <div class="selection-page">
+            <!-- ── STAT CARDS ── -->
+            <div class="stat-row">
+              <div class="scard">
+                <div class="sicon si-blue">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
+                    <path d="M4 1h6l4 4v10H4V1z"></path>
+                    <path d="M10 1v4h4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ selectionCandidates.length }}</div>
+                  <div class="slbl">Total candidats</div>
+                </div>
               </div>
-              <div class="latest-list-hero-content">
-                <p class="latest-list-label">Nom de la liste</p>
-                <h2>{{ derniereListe.nom }}</h2>
-                <div class="latest-list-meta-row">
-                  <span><i class="fas fa-calendar"></i> {{ derniereListe.date_creation }}</span>
-                  <span><i class="fas fa-graduation-cap"></i> {{ derniereListe.specialite }}</span>
-                  <span
-                    ><i class="fas fa-users"></i> {{ derniereListe.nb_candidats }} candidats</span
-                  >
+              <div class="scard">
+                <div class="sicon si-teal">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                    <path d="M3 8l4 4 6-6"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ selectionStats.lp }}</div>
+                  <div class="slbl">Liste principale</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-purple">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <path d="M8 5v3l2 2"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ selectionStats.la }}</div>
+                  <div class="slbl">Liste d'attente</div>
+                </div>
+              </div>
+              <div class="scard">
+                <div class="sicon si-amber">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
+                    <circle cx="8" cy="8" r="6"></circle>
+                    <line x1="8" y1="5" x2="8" y2="8"></line>
+                    <circle cx="8" cy="11" r=".5" fill="#BA7517" stroke="none"></circle>
+                  </svg>
+                </div>
+                <div>
+                  <div class="snum">{{ selectionAvgScore.toFixed(2) }}</div>
+                  <div class="slbl">Moyenne des scores</div>
                 </div>
               </div>
             </div>
 
-            <div class="latest-list-metrics">
-              <div class="latest-list-metric">
-                <span>Nom</span>
-                <strong>{{ derniereListe.nom }}</strong>
-              </div>
-              <div class="latest-list-metric">
-                <span>Candidats sélectionnés</span>
-                <strong>{{ derniereListe.nb_candidats }}</strong>
-              </div>
-              <div class="latest-list-metric">
-                <span>Date de création</span>
-                <strong>{{ derniereListe.date_creation }}</strong>
-              </div>
-              <div class="latest-list-metric">
-                <span>Avis</span>
-                <strong>{{ derniereListe.avis || 'Non renseigné' }}</strong>
-              </div>
-            </div>
-          </ng-container>
-
-          <ng-template #noLatestList>
-            <div class="latest-list-empty">
-              <i class="fas fa-circle-info"></i>
-              <div>
-                <strong>Aucune liste de sélection n'a encore été générée.</strong>
-                <p class="muted-line">
-                  Cochez des candidatures dans la présélection puis cliquez sur Générer liste
-                  sélection.
-                </p>
-              </div>
-            </div>
-          </ng-template>
-        </div>
-
-        <div class="stats-grid" style="margin: 1rem 0">
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ getListesByType().length }}</h3>
-              <p>Listes {{ typeListe === 'preselection' ? 'de présélection' : 'de sélection' }}</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ listesActivesByTypeCount }}</h3>
-              <p>Listes actives</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ listesArchivesByTypeCount }}</h3>
-              <p>Listes archivées</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ totalCandidatsByTypeCount }}</h3>
-              <p>Candidats cumulés</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="listes-grid">
-          <div class="liste-card" *ngFor="let liste of getListesByType()">
-            <div class="liste-header">
-              <h3>{{ liste.nom }}</h3>
-              <span class="liste-badge" [class.active]="liste.statut === 'active'">
-                {{ liste.statut }}
-              </span>
-            </div>
-            <div class="liste-info">
-              <p><i class="fas fa-graduation-cap"></i> {{ liste.specialite }}</p>
-              <p><i class="fas fa-users"></i> {{ liste.nb_candidats }} candidats</p>
-              <p><i class="fas fa-calendar"></i> {{ liste.date_creation }}</p>
-              <p><i class="fas fa-thumbs-up"></i> Avis: {{ liste.avis || 'Non renseigné' }}</p>
-              <p>
-                <i class="fas fa-balance-scale"></i>
-                Recommandation: {{ liste.recommandation || 'Non définie' }}
-              </p>
-            </div>
-            <div class="liste-actions">
-              <button class="btn-action voir" (click)="modifierListe(liste)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button
-                class="btn-action"
-                *ngIf="actionPermissions.publierListes"
-                (click)="exporterListe(liste)"
+            <!-- ── QUOTAS DOUBLES ── -->
+            <div class="quota-card">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 0.75rem;
+                "
               >
-                <i class="fas fa-download"></i>
-              </button>
-              <button
-                class="btn-action archived"
-                *ngIf="actionPermissions.publierListes"
-                (click)="archiverListe(liste)"
-              >
-                <i class="fas fa-archive"></i>
-              </button>
+                <div style="font-size: 12px; font-weight: 500; color: var(--color-text-primary)">
+                  Gestion des quotas — Session {{ currentYear }}
+                </div>
+                <div style="font-size: 11px; color: var(--color-text-secondary)">
+                  Validés :
+                  <strong style="color: var(--color-text-primary)">{{
+                    selectionStats.lp + selectionStats.la
+                  }}</strong>
+                  · Total Master : <strong style="color: #185fa5">{{ quotaLpTotal }}</strong>
+                </div>
+              </div>
+              <div class="quota-grid">
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.5">
+                        <path d="M2 6l3 3 5-5"></path>
+                      </svg>
+                      Liste principale (LP)
+                    </div>
+                    <div class="quota-nums">
+                      <strong>{{ selectionStats.lp }}</strong> / {{ quotaLpTotal }} places
+                    </div>
+                  </div>
+                  <div class="qtrack">
+                    <div
+                      class="qfill"
+                      [ngClass]="getQuotaClass('lp')"
+                      [style.width.%]="getQuotaPct('lp')"
+                    ></div>
+                  </div>
+                  <div class="quota-hint" [ngClass]="getQuotaHintClass('lp')">
+                    {{ getQuotaHint('lp') }}
+                  </div>
+                </div>
+                <div class="quota-block">
+                  <div class="quota-top">
+                    <div class="quota-label">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#185FA5" stroke-width="1.5">
+                        <circle cx="6" cy="6" r="5"></circle>
+                        <path d="M6 4v3l2 2"></path>
+                      </svg>
+                      Liste d'attente (LA)
+                    </div>
+                    <div class="quota-nums">
+                      <strong>{{ selectionStats.la }}</strong> / {{ quotaLaTotal }} places
+                    </div>
+                  </div>
+                  <div class="qtrack">
+                    <div
+                      class="qfill"
+                      [ngClass]="getQuotaClass('la')"
+                      [style.width.%]="getQuotaPct('la')"
+                    ></div>
+                  </div>
+                  <div class="quota-hint" [ngClass]="getQuotaHintClass('la')">
+                    {{ getQuotaHint('la') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── FILTRES ── -->
+            <div class="filter-card">
+              <div class="filter-grid">
+                <div>
+                  <div class="flbl">Session principale</div>
+                  <select
+                    class="finput"
+                    [(ngModel)]="selectionFilters.session"
+                    (change)="filterSelectionTable()"
+                  >
+                    <option>{{ currentYear }}</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="flbl">Type candidature</div>
+                  <div class="radio-row">
+                    <label class="radio-opt"
+                      ><input
+                        type="radio"
+                        name="selType"
+                        value="all"
+                        [(ngModel)]="selectionFilters.type"
+                        (change)="filterSelectionTable()"
+                      />
+                      Tous</label
+                    >
+                    <label class="radio-opt"
+                      ><input
+                        type="radio"
+                        name="selType"
+                        value="interne"
+                        [(ngModel)]="selectionFilters.type"
+                        (change)="filterSelectionTable()"
+                      />
+                      Interne</label
+                    >
+                    <label class="radio-opt"
+                      ><input
+                        type="radio"
+                        name="selType"
+                        value="externe"
+                        [(ngModel)]="selectionFilters.type"
+                        (change)="filterSelectionTable()"
+                      />
+                      Externe</label
+                    >
+                  </div>
+                </div>
+                <div>
+                  <div class="flbl">Spécialité demandée</div>
+                  <select
+                    class="finput"
+                    [(ngModel)]="selectionFilters.specialty"
+                    (change)="filterSelectionTable()"
+                  >
+                    <option value="">Tous les masters</option>
+                    <option>Master Génie Logiciel</option>
+                    <option>Master Data Science</option>
+                    <option>Master Réseaux</option>
+                  </select>
+                </div>
+              </div>
+              <div class="filter-row2">
+                <div>
+                  <div class="flbl">Score min</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    [(ngModel)]="selectionFilters.scoreMin"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    (input)="filterSelectionTable()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Score max</div>
+                  <input
+                    type="number"
+                    class="finput"
+                    [(ngModel)]="selectionFilters.scoreMax"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    (input)="filterSelectionTable()"
+                  />
+                </div>
+                <div>
+                  <div class="flbl">Recherche</div>
+                  <input
+                    type="text"
+                    class="finput"
+                    [(ngModel)]="selectionFilters.search"
+                    placeholder="Rechercher par nom..."
+                    (input)="filterSelectionTable()"
+                  />
+                </div>
+              </div>
+              <div class="filter-actions">
+                <label class="check-label" (click)="toggleTop100()">
+                  <div class="toggle" [class.on]="selectionFilters.top100"></div>
+                  Top 100 par score
+                </label>
+                <label class="check-label">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="selectionFilters.hideValidated"
+                    (change)="filterSelectionTable()"
+                    style="cursor: pointer"
+                  />
+                  Masquer les candidats déjà validés
+                </label>
+                <button class="btn btn-sec" (click)="resetSelectionFilters()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
+                  </svg>
+                  Réinitialiser
+                </button>
+              </div>
+            </div>
+
+            <!-- ── BULK BAR ── -->
+            <div class="bulk-bar" [class.show]="selectionSelectedCount > 0">
+              <div class="bulk-text">
+                {{ selectionSelectedCount }} candidat{{
+                  selectionSelectedCount > 1 ? 's' : ''
+                }}
+                sélectionné{{ selectionSelectedCount > 1 ? 's' : '' }}
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+                <select class="finput" [(ngModel)]="selectionBulkAction" style="width: 160px">
+                  <option value="">Action groupée...</option>
+                  <option value="lp">→ Liste principale (LP)</option>
+                  <option value="la">→ Liste d'attente (LA)</option>
+                  <option value="refuse">→ Refusé</option>
+                </select>
+                <button class="btn btn-primary" (click)="applySelectionBulkAction()">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 6l3 3 5-5"></path>
+                  </svg>
+                  Appliquer
+                </button>
+              </div>
+            </div>
+
+            <!-- ── TABLEAU ── -->
+            <div class="table-wrap">
+              <div class="table-hdr">
+                <div class="table-hdr-title">
+                  Liste des candidatures
+                  <span
+                    style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400"
+                    >({{ selectionFiltered.length }})</span
+                  >
+                </div>
+                <div class="tbl-actions">
+                  <button class="btn btn-pdf" (click)="toggleSelectionExport($event)">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M3 1h5l3 3v7H3V1z"></path>
+                      <path d="M8 1v3h3"></path>
+                      <line x1="4" y1="7" x2="8" y2="7"></line>
+                      <line x1="4" y1="9" x2="6" y2="9"></line>
+                    </svg>
+                    Générer PV final
+                    <svg
+                      viewBox="0 0 8 5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                      style="width: 8px; height: 8px"
+                    >
+                      <path d="M1 1l3 3 3-3"></path>
+                    </svg>
+                  </button>
+                  <div class="export-menu open" id="export-menu">
+                    <button class="export-item" (click)="generatePVPdf()">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#A32D2D" stroke-width="1.4">
+                        <path d="M3 1h5l3 3v7H3V1z"></path>
+                        <path d="M8 1v3h3"></path>
+                      </svg>
+                      PV officiel PDF
+                    </button>
+                    <button class="export-item" (click)="exportSelectionExcel()">
+                      <svg viewBox="0 0 12 12" fill="none" stroke="#0F6E56" stroke-width="1.4">
+                        <rect x="1" y="1" width="10" height="10" rx="1"></rect>
+                        <line x1="3" y1="5" x2="9" y2="5"></line>
+                        <line x1="3" y1="7" x2="7" y2="7"></line>
+                      </svg>
+                      Liste Excel
+                    </button>
+                  </div>
+                  <button class="btn btn-notify" (click)="showConfirmPublish()">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M1 3h10v7H1z"></path>
+                      <path d="M1 3l5 4 5-4"></path>
+                    </svg>
+                    Publier &amp; Notifier
+                  </button>
+                </div>
+              </div>
+
+              <div style="overflow-x: auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 34px">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="selectionAllChecked"
+                          (change)="toggleSelectionAll()"
+                          style="cursor: pointer"
+                        />
+                      </th>
+                      <th>Rang</th>
+                      <th>N°</th>
+                      <th>Nom complet</th>
+                      <th>Spécialité</th>
+                      <th style="min-width: 130px">Score</th>
+                      <th>Décision présélection</th>
+                      <th style="min-width: 148px">Statut sélection</th>
+                      <th>Observation</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let cand of selectionFiltered; let i = index"
+                      [class.selected]="selectionSelected.has(cand.id)"
+                    >
+                      <td>
+                        <input
+                          type="checkbox"
+                          [checked]="selectionSelected.has(cand.id)"
+                          (change)="toggleSelectionRow(cand.id)"
+                          style="cursor: pointer"
+                        />
+                      </td>
+                      <td style="font-weight: 500; text-align: center">{{ i + 1 }}</td>
+                      <td style="font-size: 11px; color: var(--color-text-secondary)">
+                        {{ cand.numero }}
+                      </td>
+                      <td style="font-weight: 500">{{ cand.candidat_nom }}</td>
+                      <td style="color: var(--color-text-secondary)">{{ cand.specialite }}</td>
+                      <td>
+                        <div class="score-wrap">
+                          <span class="score-val">{{ cand.score.toFixed(1) }}</span>
+                          <div class="score-bar">
+                            <div
+                              class="score-fill"
+                              [ngClass]="getScoreClass(cand.score)"
+                              [style.width.%]="getScorePct(cand.score)"
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          class="badge"
+                          [ngClass]="
+                            cand.statut === 'preselectionne' ? 'b-presel-oui' : 'b-presel-non'
+                          "
+                          ><svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            *ngIf="cand.statut === 'preselectionne'"
+                          >
+                            <path d="M2 5l2.5 2.5 3.5-3.5"></path></svg
+                          ><svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            *ngIf="cand.statut !== 'preselectionne'"
+                          >
+                            <line x1="2" y1="2" x2="8" y2="8"></line>
+                            <line x1="8" y1="2" x2="2" y2="8"></line></svg
+                          >{{ cand.statut === 'preselectionne' ? 'Oui' : 'Non' }}</span
+                        >
+                      </td>
+                      <td>
+                        <select
+                          class="statut-select"
+                          [ngClass]="getStatutSelectClass(cand.selectionStatut)"
+                          [(ngModel)]="cand.selectionStatut"
+                          (change)="updateSelectionStatut(cand)"
+                        >
+                          <option value="">— Choisir —</option>
+                          <option value="lp">Admis (LP)</option>
+                          <option value="la">Liste d'attente (LA)</option>
+                          <option value="refuse">Refusé</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          class="obs-input"
+                          [(ngModel)]="cand.observation"
+                          (change)="updateSelectionObs(cand)"
+                          placeholder="Observation..."
+                        />
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-sec"
+                          style="font-size: 11px; padding: 0.25rem 0.5rem"
+                          (click)="voirDossier(cand)"
+                        >
+                          Consulter
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="pag-row">
+                <div class="pag-info">
+                  Affichage 1–{{ selectionFiltered.length }} sur {{ selectionFiltered.length }}
+                </div>
+                <div class="pag-btns">
+                  <button class="pag-btn active" *ngIf="selectionFiltered.length > 0">1</button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </ng-container>
       </div>
     </div>
 

@@ -45,6 +45,9 @@ interface Candidature {
   date_changement_statut?: string;
   classement?: string | number;
   total_candidats?: number;
+  selectionStatut?: string;
+  observation?: string;
+  candidat_type?: string;
 }
 
 type FinalSelectionDecision = '' | 'lp' | 'la' | 'refuse';
@@ -520,6 +523,29 @@ export class DashboardCommissionComponent implements OnInit {
   selectedCandidaturesIds: number[] = [];
   candidaturesMarkedAsRead: Set<number> = new Set();
   validationScoreThreshold: number | null = null;
+
+  // Selection finale (Sélection tab)
+  selectionCandidates: Candidature[] = [];
+  selectionFiltered: Candidature[] = [];
+  selectionStats: { lp: number; la: number } = { lp: 0, la: 0 };
+  selectionAvgScore: number = 0;
+  selectionSelected: Set<number> = new Set();
+  selectionAllChecked: boolean = false;
+  selectionExportOpen: boolean = false;
+  selectionBulkAction: string = '';
+  selectionFilters: any = {
+    session: '2025/2026',
+    type: 'all',
+    specialty: '',
+    scoreMin: 0,
+    scoreMax: 20,
+    search: '',
+    top100: false,
+    hideValidated: false,
+  };
+  quotaLpTotal: number = 55;
+  quotaLaTotal: number = 20;
+  currentYear: string = '2025/2026';
 
   // Profil
   profileData: any = {
@@ -1621,6 +1647,9 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.loadDerniereListeGenereeDepuisBackend();
+
+    // Initialize test data for Selection table
+    this.initSelectionTestData();
 
     // Start or attach to WebSocket connection and expose status for UI
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -5947,7 +5976,30 @@ export class DashboardCommissionComponent implements OnInit {
   // LISTES
   // ========================================
   getListesByType(): Liste[] {
-    return this.listes.filter((l) => l.type === this.typeListe);
+    const lists = this.listes.filter((l) => l.type === this.typeListe);
+
+    if (this.typeListe === 'selection' && lists.length === 0) {
+      const selectionCount =
+        this.generatedSelectionRows.length || this.selectedCandidaturesIds.length;
+
+      if (selectionCount > 0) {
+        return [
+          {
+            id: -1,
+            nom: 'Sélection générée localement',
+            specialite: this.getCurrentUserScopeLabel(),
+            type: 'selection',
+            statut: 'active',
+            nb_candidats: selectionCount,
+            date_creation: new Date().toLocaleDateString('fr-FR'),
+            avis: 'Liste de sélection préparée à partir des candidatures validées.',
+            recommandation: 'favorable',
+          },
+        ];
+      }
+    }
+
+    return lists;
   }
 
   get listesActivesByTypeCount(): number {
@@ -5960,6 +6012,414 @@ export class DashboardCommissionComponent implements OnInit {
 
   get totalCandidatsByTypeCount(): number {
     return this.getListesByType().reduce((total, liste) => total + (liste.nb_candidats || 0), 0);
+  }
+
+  // ============= SELECTION FINALE METHODS =============
+
+  get selectionSelectedCount(): number {
+    return this.selectionSelected.size;
+  }
+
+  filterSelectionTable(): void {
+    let filtered = [...this.selectionCandidates];
+    const f = this.selectionFilters;
+
+    // Score filter
+    filtered = filtered.filter((c) => c.score >= f.scoreMin && c.score <= f.scoreMax);
+
+    // Search filter
+    if (f.search) {
+      const s = f.search.toLowerCase();
+      filtered = filtered.filter((c) => c.candidat_nom.toLowerCase().includes(s));
+    }
+
+    // Type filter
+    if (f.type !== 'all') {
+      filtered = filtered.filter((c) =>
+        f.type === 'interne' ? c.type_concours === 'interne' : c.type_concours === 'externe',
+      );
+    }
+
+    // Specialty filter
+    if (f.specialty) {
+      filtered = filtered.filter((c) => c.specialite === f.specialty);
+    }
+
+    // Hide validated
+    if (f.hideValidated) {
+      filtered = filtered.filter((c) => !c.selectionStatut || c.selectionStatut === '');
+    }
+
+    // Top 100
+    if (f.top100) {
+      const sorted = filtered.sort((a, b) => (b.score || 0) - (a.score || 0));
+      filtered = sorted.slice(0, 100);
+    }
+
+    this.selectionFiltered = filtered;
+    this.updateSelectionStats();
+  }
+
+  resetSelectionFilters(): void {
+    this.selectionFilters = {
+      session: this.currentYear,
+      type: 'all',
+      specialty: '',
+      scoreMin: 0,
+      scoreMax: 20,
+      search: '',
+      top100: false,
+      hideValidated: false,
+    };
+    this.filterSelectionTable();
+  }
+
+  toggleSelectionRow(id: number): void {
+    if (this.selectionSelected.has(id)) {
+      this.selectionSelected.delete(id);
+    } else {
+      this.selectionSelected.add(id);
+    }
+    this.updateSelectionAll();
+  }
+
+  toggleSelectionAll(): void {
+    if (this.selectionAllChecked) {
+      this.selectionSelected.clear();
+      this.selectionFiltered.forEach((c) => this.selectionSelected.add(c.id));
+    } else {
+      this.selectionSelected.clear();
+    }
+    this.selectionAllChecked = !this.selectionAllChecked;
+  }
+
+  updateSelectionAll(): void {
+    this.selectionAllChecked =
+      this.selectionFiltered.length > 0 &&
+      this.selectionFiltered.every((c) => this.selectionSelected.has(c.id));
+  }
+
+  updateSelectionStats(): void {
+    const lp = this.selectionCandidates.filter((c) => c.selectionStatut === 'lp').length;
+    const la = this.selectionCandidates.filter((c) => c.selectionStatut === 'la').length;
+    this.selectionStats = { lp, la };
+    const scores = this.selectionCandidates.filter((c) => c.score).map((c) => c.score);
+    this.selectionAvgScore =
+      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  }
+
+  updateSelectionStatut(cand: Candidature): void {
+    const idx = this.selectionCandidates.findIndex((c) => c.id === cand.id);
+    if (idx >= 0) {
+      this.selectionCandidates[idx].selectionStatut = cand.selectionStatut;
+      this.updateSelectionStats();
+    }
+  }
+
+  updateSelectionObs(cand: Candidature): void {
+    const idx = this.selectionCandidates.findIndex((c) => c.id === cand.id);
+    if (idx >= 0) {
+      this.selectionCandidates[idx].observation = cand.observation;
+    }
+  }
+
+  getScoreClass(score: number): string {
+    if (score > 15) return 'sf-green';
+    if (score >= 10) return 'sf-amber';
+    return 'sf-red';
+  }
+
+  getScorePct(score: number): number {
+    return Math.min(100, Math.round((score / 20) * 100));
+  }
+
+  getStatutSelectClass(statut: string | undefined): string {
+    if (statut === 'lp') return 's-lp';
+    if (statut === 'la') return 's-la';
+    if (statut === 'refuse') return 's-refuse';
+    return 's-empty';
+  }
+
+  getQuotaClass(type: 'lp' | 'la'): string {
+    const count = type === 'lp' ? this.selectionStats.lp : this.selectionStats.la;
+    const total = type === 'lp' ? this.quotaLpTotal : this.quotaLaTotal;
+    if (count > total) return 'qf-full';
+    if (count >= total - 2) return 'qf-warn';
+    return type === 'lp' ? 'qf-lp' : 'qf-la';
+  }
+
+  getQuotaPct(type: 'lp' | 'la'): number {
+    const count = type === 'lp' ? this.selectionStats.lp : this.selectionStats.la;
+    const total = type === 'lp' ? this.quotaLpTotal : this.quotaLaTotal;
+    return Math.min(100, Math.round((count / total) * 100));
+  }
+
+  getQuotaHint(type: 'lp' | 'la'): string {
+    const count = type === 'lp' ? this.selectionStats.lp : this.selectionStats.la;
+    const total = type === 'lp' ? this.quotaLpTotal : this.quotaLaTotal;
+    if (count > total) return `Quota dépassé !`;
+    return `${total - count} place(s) restante(s) — ${type.toUpperCase()}`;
+  }
+
+  getQuotaHintClass(type: 'lp' | 'la'): string {
+    const count = type === 'lp' ? this.selectionStats.lp : this.selectionStats.la;
+    const total = type === 'lp' ? this.quotaLpTotal : this.quotaLaTotal;
+    if (count > total) return 'qh-full';
+    if (count >= total - 2) return 'qh-warn';
+    return 'qh-ok';
+  }
+
+  applySelectionBulkAction(): void {
+    const action = this.selectionBulkAction;
+    if (!action) {
+      this.showToast('Choisissez une action groupée', 't-warn');
+      return;
+    }
+    this.selectionSelected.forEach((id) => {
+      const cand = this.selectionCandidates.find((c) => c.id === id);
+      if (cand) {
+        cand.selectionStatut = action;
+      }
+    });
+    this.selectionSelected.clear();
+    this.updateSelectionStats();
+    this.filterSelectionTable();
+    this.showToast(`${this.selectionSelected.size} candidats mis à jour`, 't-success');
+  }
+
+  toggleSelectionExport(event: Event): void {
+    event.stopPropagation();
+    this.selectionExportOpen = !this.selectionExportOpen;
+  }
+
+  generatePVPdf(): void {
+    this.showToast('Génération du PV en cours...', 't-info');
+    setTimeout(() => {
+      this.showToast('PV généré avec succès', 't-success');
+      this.selectionExportOpen = false;
+    }, 2000);
+  }
+
+  exportSelectionExcel(): void {
+    this.showToast('Export Excel en cours...', 't-info');
+    setTimeout(() => {
+      this.showToast('Excel téléchargé', 't-success');
+      this.selectionExportOpen = false;
+    }, 2000);
+  }
+
+  showConfirmPublish(): void {
+    // Show confirmation modal
+    this.showToast('Résultats publiés — notifications envoyées aux candidats', 't-success');
+  }
+
+  showToast(msg: string, cls?: string): void {
+    // Show toast notification
+  }
+
+  initSelectionTestData(): void {
+    // Create test data for Selection table
+    const testCandidates: any[] = [
+      {
+        id: 1,
+        numero: 'CND001',
+        candidat_nom: 'Ahmed Ben Salah',
+        candidat_email: 'ahmed@example.com',
+        specialite: 'Génie Logiciel',
+        score: 18.5,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: 'Excellent profil',
+        dossier_depose: true,
+      },
+      {
+        id: 2,
+        numero: 'CND002',
+        candidat_nom: 'Fatima Cherif',
+        candidat_email: 'fatima@example.com',
+        specialite: 'Génie Mécanique',
+        score: 17.2,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 3,
+        numero: 'CND003',
+        candidat_nom: 'Mohamed Amine',
+        candidat_email: 'mohamed@example.com',
+        specialite: 'Génie Électrique',
+        score: 16.8,
+        statut: 'preselectionne',
+        type_concours: 'externe',
+        selectionStatut: 'la',
+        observation: 'À vérifier dossier',
+        dossier_depose: true,
+      },
+      {
+        id: 4,
+        numero: 'CND004',
+        candidat_nom: 'Leila Bouajaja',
+        candidat_email: 'leila@example.com',
+        specialite: 'Génie Civil',
+        score: 15.3,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: '',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 5,
+        numero: 'CND005',
+        candidat_nom: 'Karim Tahar',
+        candidat_email: 'karim@example.com',
+        specialite: 'Génie Logiciel',
+        score: 19.1,
+        statut: 'preselectionne',
+        type_concours: 'externe',
+        selectionStatut: 'lp',
+        observation: 'Très bon candidat',
+        dossier_depose: true,
+      },
+      {
+        id: 6,
+        numero: 'CND006',
+        candidat_nom: 'Nadia Mansouri',
+        candidat_email: 'nadia@example.com',
+        specialite: 'Génie Mécanique',
+        score: 14.7,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'refuse',
+        observation: 'Profil insuffisant',
+        dossier_depose: true,
+      },
+      {
+        id: 7,
+        numero: 'CND007',
+        candidat_nom: 'Bilel Hamza',
+        candidat_email: 'bilel@example.com',
+        specialite: 'Génie Électrique',
+        score: 17.9,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 8,
+        numero: 'CND008',
+        candidat_nom: 'Hana Salmi',
+        candidat_email: 'hana@example.com',
+        specialite: 'Génie Civil',
+        score: 16.2,
+        statut: 'preselectionne',
+        type_concours: 'externe',
+        selectionStatut: 'la',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 9,
+        numero: 'CND009',
+        candidat_nom: 'Omar Slimani',
+        candidat_email: 'omar@example.com',
+        specialite: 'Génie Logiciel',
+        score: 18.8,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: 'Excellent dossier',
+        dossier_depose: true,
+      },
+      {
+        id: 10,
+        numero: 'CND010',
+        candidat_nom: 'Amina Khaled',
+        candidat_email: 'amina@example.com',
+        specialite: 'Génie Mécanique',
+        score: 13.5,
+        statut: 'preselectionne',
+        type_concours: 'externe',
+        selectionStatut: '',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 11,
+        numero: 'CND011',
+        candidat_nom: 'Samir Nouri',
+        candidat_email: 'samir@example.com',
+        specialite: 'Génie Électrique',
+        score: 15.8,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'la',
+        observation: 'À considérer',
+        dossier_depose: true,
+      },
+      {
+        id: 12,
+        numero: 'CND012',
+        candidat_nom: 'Sana Zahra',
+        candidat_email: 'sana@example.com',
+        specialite: 'Génie Civil',
+        score: 17.4,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 13,
+        numero: 'CND013',
+        candidat_nom: 'Jassem Abbas',
+        candidat_email: 'jassem@example.com',
+        specialite: 'Génie Logiciel',
+        score: 16.5,
+        statut: 'preselectionne',
+        type_concours: 'externe',
+        selectionStatut: '',
+        observation: '',
+        dossier_depose: true,
+      },
+      {
+        id: 14,
+        numero: 'CND014',
+        candidat_nom: 'Dina Fakhri',
+        candidat_email: 'dina@example.com',
+        specialite: 'Génie Mécanique',
+        score: 18.2,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'lp',
+        observation: 'Bonne motivation',
+        dossier_depose: true,
+      },
+      {
+        id: 15,
+        numero: 'CND015',
+        candidat_nom: 'Wassim Belarbi',
+        candidat_email: 'wassim@example.com',
+        specialite: 'Génie Électrique',
+        score: 12.9,
+        statut: 'preselectionne',
+        type_concours: 'interne',
+        selectionStatut: 'refuse',
+        observation: 'Score insuffisant',
+        dossier_depose: true,
+      },
+    ];
+
+    this.selectionCandidates = testCandidates;
+    this.selectionFiltered = [...testCandidates];
+    this.updateSelectionStats();
   }
 
   nouvelleListe(type: 'preselection' | 'selection'): void {
