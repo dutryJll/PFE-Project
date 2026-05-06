@@ -3376,7 +3376,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   consulterCandidature(candidature: Candidature): void {
     this.closeActionMenu();
-    this.router.navigate(['/candidat/candidature', candidature.id]);
+    this.router.navigate(['/consultation-dossier', candidature.id]);
   }
 
   ouvrirDepotDossier(candidature: Candidature): void {

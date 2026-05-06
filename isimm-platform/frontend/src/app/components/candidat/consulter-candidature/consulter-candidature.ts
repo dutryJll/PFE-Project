@@ -429,7 +429,7 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
   }
 
   voirDetails(candidature: Candidature): void {
-    this.router.navigate(['/candidat/candidature', candidature.id]);
+    this.router.navigate(['/consultation-dossier', candidature.id]);
   }
 
   retourDashboard(): void {
