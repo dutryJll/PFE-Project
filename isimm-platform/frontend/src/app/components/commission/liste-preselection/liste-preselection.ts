@@ -111,7 +111,7 @@ export class ListePreselection implements OnInit {
   }
 
   voirDossier(id: number): void {
-    this.router.navigate(['/commission/dossier', id]);
+    this.router.navigate(['/consultation-dossier', id]);
   }
 
   voirDetails(id: number): void {

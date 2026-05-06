@@ -437,7 +437,7 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
   }
 
   voirDossier(candidature: Candidature): void {
-    this.router.navigate(['/candidat/dossier'], {
+    this.router.navigate(['/consultation-dossier', candidature.id], {
       queryParams: { candidatureId: candidature.id },
     });
   }

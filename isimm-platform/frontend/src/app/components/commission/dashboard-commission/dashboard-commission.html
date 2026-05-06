@@ -335,6 +335,209 @@
       </div>
     </div>
 
+    <div
+      *ngIf="currentView === 'reclamations' && canAccessView('reclamations')"
+      class="view-content"
+    >
+      <div class="reclamations-page">
+        <h2 class="sr-only">
+          Page Réclamations responsable avec tableau enrichi, modal rectification score et modal
+          rejet
+        </h2>
+
+        <div class="root">
+          <div class="topbar">
+            <div class="page-title">Réclamations (Tableau)</div>
+            <div class="page-date">{{ currentDate | date: 'EEEE d MMMM y' }}</div>
+          </div>
+
+          <div class="stat-row">
+            <div class="scard">
+              <div class="snum">{{ reclamations.length }}</div>
+              <div class="slbl">Total</div>
+            </div>
+            <div class="scard">
+              <div class="snum" style="color: #ba7517">{{ reclamationsEnCoursCount }}</div>
+              <div class="slbl">En cours</div>
+            </div>
+            <div class="scard">
+              <div class="snum">{{ reclamationsEnAttenteCount }}</div>
+              <div class="slbl">En attente</div>
+            </div>
+            <div class="scard">
+              <div class="snum" style="color: #0f6e56">{{ reclamationsTraiteesCount }}</div>
+              <div class="slbl">Traitées</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="filters-row">
+              <div class="fgroup" style="max-width: 160px">
+                <div class="flbl">État</div>
+                <select class="finput" [(ngModel)]="reclamationStatusFilter">
+                  <option value="">Tous</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="en_attente">En attente</option>
+                  <option value="traite">Traitée</option>
+                  <option value="rejete">Rejetée</option>
+                </select>
+              </div>
+              <div class="fgroup" style="max-width: 160px">
+                <div class="flbl">Priorité</div>
+                <select class="finput" [(ngModel)]="reclamationPriorityFilter">
+                  <option value="">Toutes</option>
+                  <option value="haut">Haut</option>
+                  <option value="moyen">Moyen</option>
+                  <option value="bas">Bas</option>
+                </select>
+              </div>
+              <div class="fgroup">
+                <div class="flbl">Recherche</div>
+                <input
+                  type="text"
+                  class="finput"
+                  [(ngModel)]="reclamationSearch"
+                  placeholder="#ID, objet, candidat, master..."
+                />
+              </div>
+              <button
+                class="btn btn-sec btn-sm"
+                type="button"
+                (click)="resetReclamationFilters()"
+                style="margin-top: auto"
+              >
+                <i class="fas fa-undo"></i>
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-hdr">
+              <div style="font-size: 13px; font-weight: 500; color: var(--color-text-primary)">
+                Liste des réclamations
+                <span style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400">
+                  ({{ reclamationsFiltered.length }})
+                </span>
+              </div>
+              <button class="btn btn-sec btn-sm" type="button" (click)="exportReclamations()">
+                <i class="fas fa-download"></i>
+                Exporter
+              </button>
+            </div>
+
+            <div style="overflow-x: auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Identifiant</th>
+                    <th>Objet</th>
+                    <th>Priorité</th>
+                    <th>Master concerné</th>
+                    <th>Date soumission</th>
+                    <th>PJ</th>
+                    <th>État</th>
+                    <th>Détails</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let reclamation of reclamationsFiltered">
+                    <td class="id-cell">#{{ reclamation.id }}</td>
+                    <td>
+                      <div class="objet-name">{{ reclamation.objet }}</div>
+                      <div class="objet-cand">{{ reclamation.candidat }}</div>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="getReclamationPriorityClass(getReclamationPriority(reclamation))"
+                      >
+                        {{ getReclamationPriorityLabel(getReclamationPriority(reclamation)) }}
+                      </span>
+                    </td>
+                    <td style="font-size: 12px">{{ getReclamationMaster(reclamation) }}</td>
+                    <td class="date-cell">{{ reclamation.date | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                      <div
+                        class="attach-icon"
+                        [class.attach-yes]="reclamation.pj"
+                        [class.attach-no]="!reclamation.pj"
+                        [title]="reclamation.pj ? 'Pièce jointe disponible' : 'Pas de pièce jointe'"
+                      >
+                        <i class="fas" [ngClass]="reclamation.pj ? 'fa-paperclip' : 'fa-ban'"></i>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getReclamationStatusClass(reclamation.etat)">
+                        {{ formatReclamationStatus(reclamation.etat) }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="det-text">
+                        {{ reclamation.details }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="action-cell">
+                        <button
+                          class="btn btn-purple btn-sm"
+                          type="button"
+                          (click)="openReponse(reclamation.id)"
+                        >
+                          <i class="fas fa-reply"></i>
+                          Répondre
+                        </button>
+                        <button
+                          class="btn btn-sec btn-sm"
+                          type="button"
+                          (click)="voirDossierAssocieReclamation(reclamation)"
+                        >
+                          <i class="fas fa-folder-open"></i>
+                          Voir dossier
+                        </button>
+                        <button
+                          class="btn btn-amber btn-sm"
+                          type="button"
+                          (click)="openScore(reclamation.id)"
+                        >
+                          <i class="fas fa-pen"></i>
+                          Rectifier score
+                        </button>
+                        <button
+                          class="btn btn-danger btn-sm"
+                          type="button"
+                          (click)="openRejet(reclamation.id)"
+                        >
+                          <i class="fas fa-times"></i>
+                          Rejeter
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="reclamationsFiltered.length === 0">
+                    <td
+                      colspan="9"
+                      style="text-align: center; padding: 1rem; color: var(--color-text-secondary)"
+                    >
+                      Aucune réclamation ne correspond aux filtres.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pag-row">
+              <div class="pag-info">
+                Affichage 1–{{ reclamationsFiltered.length }} sur {{ reclamationsFiltered.length }}
+              </div>
+              <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
@@ -645,6 +848,224 @@
         <div class="section-subcard">
           <div class="subcard-head">
             <div>
+              <div class="modal-wrap" [class.open]="showModalRectifierScore">
+                <div class="modal">
+                  <div class="modal-hdr">
+                    <div>
+                      <div class="modal-title">Rectifier le score</div>
+                      <div style="font-size: 11px; color: var(--color-text-secondary)">
+                        Réclamation #{{ reclamationScoreSelectionnee?.id }} ·
+                        {{ reclamationScoreSelectionnee?.candidat }} ·
+                        {{ reclamationScoreSelectionnee?.master }}
+                      </div>
+                    </div>
+                    <button class="close-btn" type="button" (click)="closeModalReclamation()">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="info-row">
+                      <i class="fas fa-info-circle"></i>
+                      Modifiez les notes ci-dessous. Le score final est recalculé automatiquement
+                      selon les coefficients.
+                    </div>
+                    <div
+                      style="
+                        font-size: 11px;
+                        font-weight: 500;
+                        color: var(--color-text-secondary);
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                        margin-bottom: 0.25rem;
+                      "
+                    >
+                      Notes actuelles
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem">
+                      <div
+                        class="note-row"
+                        *ngFor="let noteItem of notesRectificationLabels; let i = index"
+                      >
+                        <div class="note-lbl">{{ noteItem.label }}</div>
+                        <div class="note-coef">Coef. {{ noteItem.coef }}</div>
+                        <input
+                          type="number"
+                          class="note-input"
+                          [value]="notesRectification[i]"
+                          min="0"
+                          max="20"
+                          step="0.25"
+                          (input)="onReclamationNoteChange(i, $any($event.target).value)"
+                        />
+                        <div style="font-size: 10px; color: var(--color-text-tertiary)">/20</div>
+                      </div>
+                    </div>
+                    <div class="score-result">
+                      <div>
+                        <div class="score-result-lbl">Score recalculé</div>
+                        <div style="font-size: 11px; color: #0f6e56; margin-top: 1px">
+                          Ancien score :
+                          <span
+                            style="
+                              text-decoration: line-through;
+                              color: var(--color-text-secondary);
+                            "
+                            >16.5</span
+                          >
+                        </div>
+                      </div>
+                      <div class="score-result-val">{{ scoreRectification || 0 }}</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                      <div class="flbl">Commentaire / justification</div>
+                      <textarea
+                        class="full-input"
+                        rows="2"
+                        [(ngModel)]="scoreRectificationCommentaire"
+                        placeholder="Expliquez la rectification apportée..."
+                      ></textarea>
+                    </div>
+                    <div class="warn-row">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      Une notification email sera envoyée automatiquement au candidat avec le
+                      récapitulatif de la décision.
+                    </div>
+                  </div>
+                  <div class="modal-ftr">
+                    <button
+                      class="btn btn-sec btn-sm"
+                      type="button"
+                      (click)="closeModalReclamation()"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      class="btn btn-teal btn-sm"
+                      type="button"
+                      (click)="validerRectification()"
+                    >
+                      Valider rectification &amp; notifier
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-wrap" [class.open]="showModalRejetReclamation">
+                <div class="modal" style="max-width: 420px">
+                  <div class="modal-hdr">
+                    <div>
+                      <div class="modal-title">Rejeter la réclamation</div>
+                      <div style="font-size: 11px; color: var(--color-text-secondary)">
+                        Réclamation #{{ reclamationRejetSelectionnee?.id }} ·
+                        {{ reclamationRejetSelectionnee?.candidat || '' }}
+                      </div>
+                    </div>
+                    <button class="close-btn" type="button" (click)="closeModalReclamation()">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="warn-row">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      Le motif de rejet est obligatoire. Il sera inclus dans la notification envoyée
+                      au candidat.
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                      <div class="flbl">Motif de refus *</div>
+                      <select
+                        class="full-input"
+                        [(ngModel)]="motifRejet"
+                        (ngModelChange)="updateMotif()"
+                      >
+                        <option value="">— Sélectionner un motif —</option>
+                        <option value="infondee">
+                          Réclamation infondée — les notes sont correctes
+                        </option>
+                        <option value="hors-delai">Dépôt hors délai réglementaire</option>
+                        <option value="manque-preuves">Manque de preuves justificatives</option>
+                        <option value="autre">Autre (préciser ci-dessous)</option>
+                      </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                      <div class="flbl">Détails supplémentaires</div>
+                      <textarea
+                        class="full-input"
+                        rows="3"
+                        [(ngModel)]="motifRejetDetail"
+                        placeholder="Détaillez le motif de rejet..."
+                      ></textarea>
+                    </div>
+                    <div class="info-row">
+                      <i class="fas fa-info-circle"></i>
+                      Un email de notification sera envoyé automatiquement au candidat avec le motif
+                      de rejet.
+                    </div>
+                  </div>
+                  <div class="modal-ftr">
+                    <button
+                      class="btn btn-sec btn-sm"
+                      type="button"
+                      (click)="closeModalReclamation()"
+                    >
+                      Annuler
+                    </button>
+                    <button class="btn btn-danger btn-sm" type="button" (click)="validerRejet()">
+                      Confirmer le rejet &amp; notifier
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-wrap" [class.open]="showModalReponseReclamation">
+                <div class="modal" style="max-width: 420px">
+                  <div class="modal-hdr">
+                    <div>
+                      <div class="modal-title">Répondre à la réclamation</div>
+                      <div style="font-size: 11px; color: var(--color-text-secondary)">
+                        Réclamation #{{ reclamationSelectionnee?.id }}
+                      </div>
+                    </div>
+                    <button class="close-btn" type="button" (click)="closeModalReclamation()">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                      <div class="flbl">Réponse au candidat *</div>
+                      <textarea
+                        class="full-input"
+                        rows="4"
+                        [(ngModel)]="reponseReclamationText"
+                        placeholder="Rédigez votre réponse officielle..."
+                      ></textarea>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                      <div class="flbl">Décision</div>
+                      <select class="full-input">
+                        <option>Réclamation acceptée — score rectifié</option>
+                        <option>Réclamation en cours d'examen</option>
+                        <option>Informations complémentaires demandées</option>
+                      </select>
+                    </div>
+                    <div class="info-row">
+                      <i class="fas fa-info-circle"></i>
+                      La réponse sera envoyée par email au candidat avec récapitulatif.
+                    </div>
+                  </div>
+                  <div class="modal-ftr">
+                    <button
+                      class="btn btn-sec btn-sm"
+                      type="button"
+                      (click)="closeModalReclamation()"
+                    >
+                      Annuler
+                    </button>
+                    <button class="btn btn-primary btn-sm" type="button" (click)="validerReponse()">
+                      Envoyer réponse
+                    </button>
+                  </div>
+                </div>
+              </div>
               <h3>Liste des offres de Préinscription</h3>
               <p class="offer-navigation-hint">
                 Clique sur le titre de l'offre ou sur le bouton Ouvrir page d'édition pour aller
@@ -7184,167 +7605,6 @@
       </div>
     </div>
 
-    <!-- RÉCLAMATIONS -->
-    <div
-      *ngIf="
-        currentView === 'reclamations' &&
-        (actionPermissions.traiterReclamations || actionPermissions.consultationCandidature)
-      "
-      class="view-content"
-    >
-      <div class="section-card">
-        <div class="section-header">
-          <h2>Réclamations (Tableau)</h2>
-          <span class="muted-line">Monday 13 April 2026</span>
-        </div>
-
-        <div class="stats-grid" style="margin: 0.9rem 0 1rem">
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ reclamations.length }}</h3>
-              <p>Total</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ reclamationsEnCoursCount }}</h3>
-              <p>En cours</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ reclamationsEnAttenteCount }}</h3>
-              <p>En attente</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ reclamationsTraiteesCount }}</h3>
-              <p>Traitées</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="filters-section" style="margin-bottom: 0.9rem">
-          <div class="filters-grid">
-            <div class="filter-item">
-              <label class="filter-label">État</label>
-              <select class="filter-select" [(ngModel)]="reclamationStatusFilter">
-                <option value="">Tous</option>
-                <option value="en_cours">En cours</option>
-                <option value="en_attente">En attente</option>
-                <option value="traitee">Traité</option>
-              </select>
-            </div>
-            <div class="filter-item">
-              <label class="filter-label">Recherche</label>
-              <input
-                class="filter-input"
-                type="text"
-                [(ngModel)]="reclamationSearch"
-                placeholder="#ID, objet, candidat, master..."
-              />
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="table-container"
-          *ngIf="reclamationsFiltered.length > 0; else noReclamationRows"
-        >
-          <table class="candidatures-table reclamations-table">
-            <thead>
-              <tr>
-                <th>Identifiant</th>
-                <th>Objet</th>
-                <th>Priorité</th>
-                <th>Master concerné</th>
-                <th>État</th>
-                <th>Détails</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let reclamation of reclamationsFiltered">
-                <td>
-                  <strong class="reclamation-id">#{{ reclamation.id }}</strong>
-                </td>
-                <td>
-                  <strong>{{ reclamation.objet }}</strong>
-                  <div class="muted-line">{{ reclamation.candidat_nom }}</div>
-                </td>
-                <td>
-                  <span
-                    class="priority-badge"
-                    [ngClass]="getReclamationPriorityClass(getReclamationPriority(reclamation))"
-                  >
-                    {{ getReclamationPriorityLabel(getReclamationPriority(reclamation)) }}
-                  </span>
-                </td>
-                <td>{{ getReclamationMaster(reclamation) }}</td>
-                <td>
-                  <span
-                    class="reclamation-statut"
-                    [ngClass]="getReclamationStatusClass(reclamation.statut)"
-                  >
-                    {{ formatReclamationStatus(reclamation.statut) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="reclamation-detail-cell">
-                    <p>{{ reclamation.motif }}</p>
-                    <small *ngIf="reclamation.reponse">Réponse: {{ reclamation.reponse }}</small>
-                  </div>
-                </td>
-                <td>
-                  <div class="reclamation-action-stack">
-                    <button
-                      class="btn-action voir"
-                      *ngIf="
-                        isResponsable &&
-                        actionPermissions.traiterReclamations &&
-                        reclamation.statut !== 'traitee'
-                      "
-                      (click)="ouvrirModalReponseReclamation(reclamation)"
-                    >
-                      <i class="fas fa-reply"></i> Répondre
-                    </button>
-
-                    <button
-                      class="btn-action dossier"
-                      *ngIf="isResponsable"
-                      (click)="voirDossierAssocieReclamation(reclamation)"
-                    >
-                      <i class="fas fa-folder-open"></i> Voir le dossier associé
-                    </button>
-
-                    <button
-                      class="btn-action rectifier"
-                      *ngIf="isResponsable"
-                      (click)="ouvrirModalRectifierScore(reclamation)"
-                    >
-                      <i class="fas fa-pen"></i> Rectifier Score
-                    </button>
-
-                    <span
-                      class="muted-line"
-                      *ngIf="!isResponsable || reclamation.statut === 'traitee'"
-                    >
-                      {{ reclamation.statut === 'traitee' ? 'Déjà traité' : 'Consultation' }}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <ng-template #noReclamationRows>
-          <div class="empty-state">Aucune réclamation ne correspond aux filtres.</div>
-        </ng-template>
-      </div>
-    </div>
-
     <!-- PROCÈS-VERBAUX (RESPONSABLE) -->
     <div
       *ngIf="
@@ -7436,249 +7696,310 @@
       "
       class="view-content"
     >
-      <div class="section-card">
-        <div class="section-header">
-          <h2>Inscriptions en ligne</h2>
-          <div class="download-box">
-            <select [(ngModel)]="inscriptionsExportFormat" class="export-select">
+      <div class="section-card inscription-page">
+        <div class="insc-header">
+          <div>
+            <h2>Inscriptions en ligne</h2>
+            <p class="section-subtitle">
+              Import Excel, vérification des paiements et finalisation des inscriptions.
+            </p>
+          </div>
+          <div class="insc-header-actions">
+            <select [(ngModel)]="inscriptionsExportFormat" class="insc-select">
               <option value="csv">CSV</option>
               <option value="json">JSON</option>
               <option value="pdf">PDF</option>
               <option value="xlsx">Excel</option>
             </select>
-            <button class="btn-download" (click)="exportInscriptions()">
-              <i class="fas fa-download"></i> Télécharger
+            <button class="btn btn-secondary" (click)="exportInscriptions()">
+              <i class="fas fa-download"></i>
+              Exporter
             </button>
           </div>
         </div>
-        <p class="subtitle" *ngIf="isResponsable">
-          Le responsable pilote l'import, la vérification et la validation finale des inscriptions.
-        </p>
-        <p class="subtitle" *ngIf="!isResponsable">
-          Vue membre: suivi des inscriptions confirmées et consultation des vérifications.
-        </p>
 
-        <div class="stats-grid" style="margin: 1rem 0">
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsConfirmedCount }}</h3>
-              <p>Inscriptions confirmées</p>
-            </div>
+        <div class="insc-stats-grid">
+          <div class="insc-stat-card">
+            <span class="insc-stat-label">Éligibles</span>
+            <strong>{{ inscriptionStats.eligible }}</strong>
+            <small>Candidats complets</small>
           </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsEligibleCount }}</h3>
-              <p>Candidats sélectionnés</p>
-            </div>
+          <div class="insc-stat-card success">
+            <span class="insc-stat-label">Paiements vérifiés</span>
+            <strong>{{ inscriptionStats.verifiedPayments }}</strong>
+            <small>Payés / confirmés</small>
           </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsVerificationTotal }}</h3>
-              <p>Lignes vérifiées</p>
-            </div>
+          <div class="insc-stat-card warning">
+            <span class="insc-stat-label">Incohérences</span>
+            <strong>{{ inscriptionStats.incoherencies }}</strong>
+            <small>À corriger</small>
           </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsVerificationValideCount }}</h3>
-              <p>Vérifications valides</p>
-            </div>
+          <div class="insc-stat-card danger">
+            <span class="insc-stat-label">Absents</span>
+            <strong>{{ inscriptionStats.absents }}</strong>
+            <small>Non trouvés au rapprochement</small>
           </div>
         </div>
 
-        <div class="stats-grid" style="margin: 0 0 1rem">
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsCandidateRows.length }}</h3>
-              <p>Candidatures en suivi inscription</p>
+        <div class="insc-panels-grid">
+          <div class="insc-panel insc-dropzone">
+            <div class="insc-panel-head">
+              <h3>Import Excel</h3>
+              <span class="insc-chip" [class.loaded]="inscriptionFileLoaded">
+                {{ inscriptionFileLoaded ? 'Fichier chargé' : 'En attente' }}
+              </span>
             </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsDepotCount }}</h3>
-              <p>Fichiers déposés</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsNonDepotCount }}</h3>
-              <p>Fichiers non déposés</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-details">
-              <h3>{{ inscriptionsConfirmedCount }}</h3>
-              <p>Inscriptions finalisées</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="inscriptions-workbench" *ngIf="isResponsable">
-          <div class="inscriptions-panel">
-            <h3>Import Excel</h3>
             <p class="muted-line">
-              Chargez le fichier d'inscriptions pour lancer le rapprochement.
+              Déposez le fichier d’inscriptions pour lancer le rapprochement.
             </p>
-            <div class="form-group" style="margin: 0">
-              <label>Fichier des inscriptions</label>
+            <label class="insc-drop-label">
               <input
                 type="file"
                 accept=".xlsx,.xls"
                 (change)="onInscriptionsExcelSelected($event)"
               />
-            </div>
-            <p class="muted-line" *ngIf="selectedInscriptionsFileName" style="margin-top: 0.5rem">
-              Fichier chargé: {{ selectedInscriptionsFileName }}
-            </p>
+              <div class="insc-drop-zone">
+                <i class="fas fa-file-excel"></i>
+                <strong>Importer le fichier Excel</strong>
+                <span>{{ selectedInscriptionsFileName || 'Aucun fichier sélectionné' }}</span>
+              </div>
+            </label>
           </div>
 
-          <div class="inscriptions-panel">
-            <h3>Actions rapides</h3>
-            <p class="muted-line">Exécutez les étapes de contrôle et générez le fichier final.</p>
-            <div class="form-actions" style="margin-top: 0.35rem">
-              <button class="btn-primary" (click)="verifierInscriptionsExcel()">
-                Vérifier les inscriptions
+          <div class="insc-panel">
+            <div class="insc-panel-head">
+              <h3>Actions rapides</h3>
+              <span class="insc-chip accent">Workflow</span>
+            </div>
+            <p class="muted-line">Vérifiez, exportez et finalisez sans quitter l’écran.</p>
+            <div class="insc-action-grid">
+              <button class="insc-action-card primary" (click)="verifierInscriptionsExcel()">
+                <i class="fas fa-search"></i>
+                <span>Vérifier</span>
               </button>
-              <button class="btn-success" (click)="exporterFichierFinalInscriptions()">
-                Générer fichier final
+              <button class="insc-action-card success" (click)="exporterFichierFinalInscriptions()">
+                <i class="fas fa-file-export"></i>
+                <span>Fichier final</span>
               </button>
               <button
-                class="btn-primary"
-                [disabled]="inscriptionsVerificationAbsentCount === 0"
+                class="insc-action-card"
+                [disabled]="inscriptionStats.absents === 0"
                 (click)="genererListeComplementaireDepuisAbsents()"
               >
-                Préparer liste complémentaire
+                <i class="fas fa-list"></i>
+                <span>Liste complémentaire</span>
               </button>
-              <button class="btn-primary" (click)="genererListesSelectionFinaleAutomatique()">
-                Générer listes finale
+              <button class="insc-action-card danger" (click)="finalizeInscriptions()">
+                <i class="fas fa-check-circle"></i>
+                <span>Finaliser</span>
               </button>
             </div>
           </div>
         </div>
 
-        <div class="inscriptions-status-strip" *ngIf="inscriptionsVerificationTotal > 0">
-          <span class="status-chip status-chip-valid"
-            >Valides: {{ inscriptionsVerificationValideCount }}</span
-          >
-          <span class="status-chip status-chip-warn"
-            >Incohérents: {{ inscriptionsVerificationIncoherentCount }}</span
-          >
-          <span class="status-chip status-chip-muted"
-            >Absents: {{ inscriptionsVerificationAbsentCount }}</span
-          >
+        <div class="insc-progress-card">
+          <div class="insc-progress-head">
+            <span>Rapprochement</span>
+            <strong>{{ getInscriptionProgressPct() }}%</strong>
+          </div>
+          <div class="insc-progress-track">
+            <div class="insc-progress-fill" [style.width.%]="getInscriptionProgressPct()"></div>
+          </div>
+          <div class="insc-progress-meta">
+            <span>{{ inscriptionStats.finalised }} finalisée(s)</span>
+            <span>{{ inscriptionsVerificationRows.length }} ligne(s) vérifiée(s)</span>
+          </div>
         </div>
 
-        <div class="section-subcard inscriptions-candidates-section">
-          <div class="subcard-head">
+        <div class="insc-filters-card">
+          <div class="insc-filters-grid">
             <div>
-              <h3>Suivi harmonisé commission / candidat</h3>
-              <p class="muted-line">
-                Même logique que l'espace candidat: statut inscription + dépôt du fichier de
-                justification.
-              </p>
+              <label>Recherche</label>
+              <input
+                class="insc-input"
+                type="text"
+                [(ngModel)]="inscriptionFilters.search"
+                (ngModelChange)="applyInscriptionFilters()"
+                placeholder="Nom, CIN, master, numéro"
+              />
+            </div>
+            <div>
+              <label>Paiement</label>
+              <select
+                class="insc-input"
+                [(ngModel)]="inscriptionFilters.paiement"
+                (ngModelChange)="applyInscriptionFilters()"
+              >
+                <option value="all">Tous</option>
+                <option value="paye">Payé</option>
+                <option value="en_attente">En attente</option>
+                <option value="incoherent">Incohérent</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div>
+            <div>
+              <label>Dossier</label>
+              <select
+                class="insc-input"
+                [(ngModel)]="inscriptionFilters.dossier"
+                (ngModelChange)="applyInscriptionFilters()"
+              >
+                <option value="all">Tous</option>
+                <option value="complet">Complet</option>
+                <option value="incomplet">Incomplet</option>
+              </select>
+            </div>
+            <div>
+              <label>Finalisation</label>
+              <select
+                class="insc-input"
+                [(ngModel)]="inscriptionFilters.finalise"
+                (ngModelChange)="applyInscriptionFilters()"
+              >
+                <option value="all">Tous</option>
+                <option value="yes">Oui</option>
+                <option value="no">Non</option>
+              </select>
             </div>
           </div>
-
-          <div
-            class="table-container"
-            *ngIf="inscriptionsCandidateRows.length > 0; else noInscriptionCandidates"
-          >
-            <table class="reclamations-table inscriptions-table inscriptions-candidates-table">
-              <thead>
-                <tr>
-                  <th>N° candidature</th>
-                  <th>Candidat</th>
-                  <th>Formation</th>
-                  <th>Fichier inscription</th>
-                  <th>Statut inscription</th>
-                  <th *ngIf="isResponsable">Action responsable</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let candidature of inscriptionsCandidateRows">
-                  <td>
-                    <strong>{{ candidature.numero }}</strong>
-                  </td>
-                  <td>
-                    <strong>{{ candidature.candidat_nom }}</strong>
-                    <div class="muted-line">{{ candidature.candidat_email }}</div>
-                  </td>
-                  <td>{{ candidature.master_nom || candidature.specialite }}</td>
-                  <td>
-                    <span
-                      class="status-chip"
-                      [ngClass]="
-                        candidature.dossier_depose ? 'status-chip-valid' : 'status-chip-muted'
-                      "
-                    >
-                      {{ getInscriptionFileStateLabel(candidature) }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="statut-badge" [ngClass]="'badge-' + candidature.statut">
-                      {{ getInscriptionProcessLabel(candidature) }}
-                    </span>
-                  </td>
-                  <td *ngIf="isResponsable">
-                    <button class="btn-action voir" (click)="voirDossier(candidature)">
-                      <i class="fas fa-folder-open"></i> Vérifier dossier
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="insc-filter-actions">
+            <label class="insc-toggle">
+              <span
+                class="insc-toggle-pill"
+                [class.on]="inscriptionSelectAll"
+                (click)="toggleInscriptionAll()"
+              ></span>
+              <span>Tout sélectionner</span>
+            </label>
+            <button class="btn btn-secondary" (click)="resetInscriptionFilters()">
+              Réinitialiser
+            </button>
           </div>
-
-          <ng-template #noInscriptionCandidates>
-            <div class="empty-state" style="margin-top: 0.75rem">
-              Aucune candidature en parcours d'inscription en ligne pour le moment.
-            </div>
-          </ng-template>
         </div>
 
-        <div
-          class="table-container"
-          *ngIf="inscriptionsVerificationRows.length > 0; else noInscriptionVerification"
-        >
-          <table class="reclamations-table inscriptions-table">
+        <div class="bulk-bar show" *ngIf="inscriptionSelectedIds.size > 0">
+          <div class="bulk-text">{{ inscriptionSelectedIds.size }} candidat(s) sélectionné(s)</div>
+          <div class="bulk-bar-actions">
+            <button class="bulk-bar-btn bulk-bar-btn-consult" (click)="verifierInscriptionsExcel()">
+              Vérifier la sélection
+            </button>
+            <button
+              class="bulk-bar-btn bulk-bar-btn-download"
+              (click)="exportVerifiedInscriptions()"
+            >
+              Exporter la sélection
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap insc-table-wrap">
+          <table class="insc-table">
             <thead>
               <tr>
-                <th>Numéro candidature</th>
+                <th class="center">
+                  <input
+                    type="checkbox"
+                    [checked]="inscriptionSelectAll"
+                    (change)="toggleInscriptionAll()"
+                  />
+                </th>
+                <th>N°</th>
+                <th>Candidat</th>
                 <th>CIN</th>
-                <th>Numéro inscription</th>
-                <th>Nom et prénom</th>
                 <th>Master</th>
-                <th>Spécialité</th>
-                <th>Vérification</th>
-                <th>Détails</th>
+                <th>Dossier</th>
+                <th>Paiement</th>
+                <th>Finalisation</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                *ngFor="let row of inscriptionsVerificationRows"
-                [ngClass]="'verification-row-' + row.verification"
+                *ngFor="let candidate of inscriptionFilteredCandidates"
+                [class.selected]="inscriptionSelectedIds.has(candidate.id)"
               >
-                <td>{{ row.numero_candidature }}</td>
-                <td>{{ row.cin }}</td>
-                <td>{{ row.numero_inscription }}</td>
-                <td>{{ row.nom_prenom }}</td>
-                <td>{{ row.master }}</td>
-                <td>{{ row.specialite }}</td>
-                <td>
-                  <span class="statut-badge" [ngClass]="'badge-' + row.verification">
-                    {{ row.verification }}
-                  </span>
+                <td class="center">
+                  <input
+                    type="checkbox"
+                    [checked]="inscriptionSelectedIds.has(candidate.id)"
+                    (change)="toggleInscriptionRow(candidate.id)"
+                  />
                 </td>
-                <td>{{ row.details }}</td>
+                <td>
+                  <strong>{{ candidate.num }}</strong>
+                </td>
+                <td>
+                  <strong>{{ candidate.nom }}</strong>
+                  <div class="muted-line">{{ candidate.email }}</div>
+                </td>
+                <td>{{ candidate.cin }}</td>
+                <td>{{ candidate.master }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getInscriptionDossierClass(candidate.dossier)">{{
+                    candidate.dossier
+                  }}</span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getInscriptionPaymentClass(candidate.paiement)">{{
+                    getInscriptionPaymentLabel(candidate.paiement)
+                  }}</span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getInscriptionFinaliseClass(candidate.finalise)">{{
+                    candidate.finalise ? 'Finalisée' : 'À finaliser'
+                  }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="inscriptionFilteredCandidates.length === 0">
+                <td colspan="8" class="empty-state">
+                  Aucune inscription ne correspond aux filtres actifs.
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <ng-template #noInscriptionVerification>
-          <div class="empty-state" style="margin-top: 0.75rem">
-            Aucune vérification d'inscription disponible. Importez un fichier Excel pour commencer.
+        <div class="insc-verify-card" *ngIf="inscriptionsVerificationRows.length > 0">
+          <div class="insc-panel-head">
+            <h3>Résultats de vérification</h3>
+            <span class="insc-chip accent">{{ inscriptionsVerificationTotal }} ligne(s)</span>
           </div>
-        </ng-template>
+          <div class="table-wrap">
+            <table class="insc-table insc-verify-table">
+              <thead>
+                <tr>
+                  <th>Numéro candidature</th>
+                  <th>CIN</th>
+                  <th>Numéro inscription</th>
+                  <th>Nom et prénom</th>
+                  <th>Master</th>
+                  <th>Vérification</th>
+                  <th>Détails</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let row of inscriptionsVerificationRows"
+                  [ngClass]="'insc-row-' + row.verification"
+                >
+                  <td>{{ row.numero_candidature }}</td>
+                  <td>{{ row.cin }}</td>
+                  <td>{{ row.numero_inscription }}</td>
+                  <td>{{ row.nom_prenom }}</td>
+                  <td>{{ row.master }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [ngClass]="getInscriptionVerificationBadgeClass(row.verification)"
+                    >
+                      {{ getInscriptionVerificationSummaryLabel(row.verification) }}
+                    </span>
+                  </td>
+                  <td>{{ row.details }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -8072,732 +8393,671 @@
         </ng-template>
       </div>
     </div>
-  </main>
 
-  <!-- MODAL CONSULTATION CANDIDATURE -->
-  <div *ngIf="showModalConsultation" class="modal-overlay" (click)="fermerModalConsultation()">
-    <div class="modal-content consultation-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header consultation-header">
-        <div>
-          <h2>Consultation candidature</h2>
-          <p>Vue détaillée de la candidature, des avis et de la décision responsable.</p>
-        </div>
-        <button class="btn-close" (click)="fermerModalConsultation()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <div class="modal-body" *ngIf="candidatureConsultationSelectionnee as consultation">
-        <div class="consultation-hero">
+    <!-- MODAL CONSULTATION CANDIDATURE -->
+    <div *ngIf="showModalConsultation" class="modal-overlay" (click)="fermerModalConsultation()">
+      <div class="modal-content consultation-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header consultation-header">
           <div>
-            <div class="consultation-kicker">Dossier N°{{ consultation.numero }}</div>
-            <h3>{{ consultation.candidat_nom }}</h3>
-            <p>{{ consultation.candidat_email }}</p>
+            <h2>Consultation candidature</h2>
+            <p>Vue détaillée de la candidature, des avis et de la décision responsable.</p>
           </div>
-          <div class="consultation-badges">
-            <span class="consultation-badge status">{{
-              getStatusDisplayLabel(consultation.statut)
-            }}</span>
-            <span class="consultation-badge type">
-              {{ consultation.type_concours === 'ingenieur' ? 'Cycle Ingénieur' : 'Master' }}
-            </span>
-          </div>
-        </div>
-
-        <div class="consultation-grid">
-          <div class="consultation-card">
-            <span class="consultation-label">Score</span>
-            <strong>{{ consultation.score }}</strong>
-            <small>sur 20</small>
-          </div>
-          <div class="consultation-card">
-            <span class="consultation-label">Année</span>
-            <strong>{{ consultation.annee_universitaire || getCurrentAcademicYear() }}</strong>
-            <small>Période de dépôt</small>
-          </div>
-          <div class="consultation-card">
-            <span class="consultation-label">Décision responsable</span>
-            <strong>
-              {{
-                consultation.decision_responsable === 'valide'
-                  ? 'Validée'
-                  : consultation.decision_responsable === 'non_valide'
-                    ? 'Non validée'
-                    : 'En attente'
-              }}
-            </strong>
-            <small>Commission de présélection</small>
-          </div>
-          <div class="consultation-card">
-            <span class="consultation-label">Dossier</span>
-            <strong>{{ consultation.dossier_depose ? 'Déposé' : 'Non déposé' }}</strong>
-            <small>{{ consultation.specialite }}</small>
-          </div>
-        </div>
-
-        <div class="consultation-panels">
-          <section class="consultation-panel">
-            <h4>Informations clés</h4>
-            <div class="consultation-facts">
-              <div>
-                <span>Spécialité</span>
-                <strong>{{ consultation.specialite }}</strong>
-              </div>
-              <div>
-                <span>Date de soumission</span>
-                <strong>{{
-                  consultation.date_inscription || consultation.date_soumission || 'Non renseignée'
-                }}</strong>
-              </div>
-              <div>
-                <span>Notes préinscription</span>
-                <strong>{{ consultation.notes_preinscription || 'Non renseignées' }}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section class="consultation-panel">
-            <h4>Avis des membres</h4>
-            <ng-container
-              *ngIf="getVotesForCandidature(consultation.id).length > 0; else noVotesConsultation"
-            >
-              <div class="consultation-votes">
-                <article
-                  class="consultation-vote"
-                  *ngFor="let vote of getVotesForCandidature(consultation.id)"
-                >
-                  <div class="vote-topline">
-                    <strong>{{ vote.membreNom }}</strong>
-                    <span>{{ vote.role === 'responsable' ? 'Responsable' : 'Membre' }}</span>
-                  </div>
-                  <p>{{ vote.commentaire }}</p>
-                  <small>
-                    {{
-                      vote.recommandation === 'favorable'
-                        ? 'Favorable'
-                        : vote.recommandation === 'defavorable'
-                          ? 'Défavorable'
-                          : 'Réservé'
-                    }}
-                    •
-                    {{
-                      vote.diplomeConforme === false ? 'Diplôme non conforme' : 'Diplôme conforme'
-                    }}
-                  </small>
-                </article>
-              </div>
-            </ng-container>
-            <ng-template #noVotesConsultation>
-              <p class="consultation-empty">Aucun avis enregistré pour cette candidature.</p>
-            </ng-template>
-          </section>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="fermerModalConsultation()">
-          Fermer
-        </button>
-        <button
-          type="button"
-          class="btn-primary"
-          (click)="voirDossier(candidatureConsultationSelectionnee!)"
-        >
-          <i class="fas fa-folder-open"></i> Consulter le dossier
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL REPONSE RECLAMATION -->
-  <div
-    *ngIf="showModalReponseReclamation"
-    class="modal-overlay"
-    (click)="fermerModalReponseReclamation()"
-  >
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Répondre Ã  la réclamation</h2>
-        <button class="btn-close" (click)="fermerModalReponseReclamation()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="reclamation-modal-info">
-          <p><strong>ID:</strong> #{{ reclamationSelectionnee?.id }}</p>
-          <p><strong>Candidat:</strong> {{ reclamationSelectionnee?.candidat_nom }}</p>
-          <p><strong>Objet:</strong> {{ reclamationSelectionnee?.objet }}</p>
-          <p><strong>Motif:</strong> {{ reclamationSelectionnee?.motif }}</p>
-        </div>
-
-        <div class="form-group">
-          <label>Réponse au candidat *</label>
-          <textarea
-            [(ngModel)]="reponseReclamationText"
-            name="reponseReclamationText"
-            rows="5"
-            placeholder="Saisissez votre réponse..."
-            required
-          ></textarea>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="fermerModalReponseReclamation()">
-            Annuler
-          </button>
-          <button type="button" class="btn-primary" (click)="soumettreReponseReclamation()">
-            <i class="fas fa-paper-plane"></i> Envoyer la réponse
-          </button>
-        </div>
-      </div>
-
-      <!-- MODAL RECTIFIER SCORE -->
-      <div
-        *ngIf="showModalRectifierScore"
-        class="modal-overlay"
-        (click)="fermerModalRectifierScore()"
-      >
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h2>Rectifier le score</h2>
-            <button class="btn-close" (click)="fermerModalRectifierScore()">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-
-          <div class="modal-body">
-            <div class="reclamation-modal-info">
-              <p><strong>ID:</strong> #{{ reclamationScoreSelectionnee?.id }}</p>
-              <p><strong>Candidat:</strong> {{ reclamationScoreSelectionnee?.candidat_nom }}</p>
-              <p><strong>Objet:</strong> {{ reclamationScoreSelectionnee?.objet }}</p>
-            </div>
-
-            <div class="form-group">
-              <label>Nouveau score (0-20) *</label>
-              <input type="number" min="0" max="20" [(ngModel)]="scoreRectification" />
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn-secondary" (click)="fermerModalRectifierScore()">
-                Annuler
-              </button>
-              <button type="button" class="btn-primary" (click)="soumettreRectificationScore()">
-                <i class="fas fa-paper-plane"></i> Envoyer
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL AVIS -->
-  <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
-    <div
-      class="modal-content"
-      (click)="$event.stopPropagation()"
-      style="width: min(520px, 96vw); max-height: 90vh; overflow: auto"
-    >
-      <div class="modal-hdr">
-        <div class="modal-title">
-          <div class="hdr-icon"><i class="fas fa-file-alt"></i></div>
-          Donner un avis
-        </div>
-        <button class="btn-close" (click)="fermerModalAvis()"><i class="fas fa-times"></i></button>
-      </div>
-
-      <form class="modal-body" (ngSubmit)="enregistrerAvis()" *ngIf="candidatureSelectionnee as c">
-        <div class="cand-hero">
-          <div class="avatar">
-            {{ (c.candidat_nom || 'XX').charAt(0)
-            }}{{ ((c.candidat_nom || 'XX').split(' ')[1] || '').charAt(0) }}
-          </div>
-          <div style="flex: 1; min-width: 0">
-            <div class="cand-name">{{ c.candidat_nom }}</div>
-            <div class="cand-meta">
-              {{ c.numero }} · ISIMM · {{ c.specialite }} ·
-              {{ c.annee_universitaire || getCurrentAcademicYear() }}
-            </div>
-          </div>
-          <div class="score-pill">Score : {{ c.score || '-' }} / 20</div>
-        </div>
-
-        <div>
-          <div class="avis-existants-title">
-            Avis déjà enregistrés ({{ getVotesForCandidature(c.id).length }} membres)
-          </div>
-          <div class="avis-list">
-            <div class="avis-item" *ngFor="let vote of getVotesForCandidature(c.id)">
-              <div class="avis-avatar" [ngClass]="vote.diplomeConforme ? 'av-green' : 'av-orange'">
-                {{ (vote.membreNom || 'XX').charAt(0)
-                }}{{ ((vote.membreNom || 'XX').split(' ')[1] || '').charAt(0) }}
-              </div>
-              <div class="avis-content">
-                <div class="avis-author">
-                  {{ vote.membreNom }}
-                  <span style="font-weight: 400; color: var(--color-text-secondary)"
-                    >· {{ vote.role === 'responsable' ? 'Évaluateur' : 'Évaluatrice' }}</span
-                  >
-                </div>
-                <div class="avis-comment">{{ vote.commentaire }}</div>
-              </div>
-              <div>
-                <div
-                  class="avis-badge"
-                  [ngClass]="
-                    vote.recommandation === 'favorable'
-                      ? 'ab-fav'
-                      : vote.recommandation === 'reserve'
-                        ? 'ab-res'
-                        : ''
-                  "
-                >
-                  {{
-                    vote.recommandation === 'favorable'
-                      ? 'Favorable'
-                      : vote.recommandation === 'reserve'
-                        ? 'Réservé'
-                        : 'Défavorable'
-                  }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div>
-          <div class="section-lbl">Votre recommandation <span style="color: #e24b4a">*</span></div>
-          <div class="recomm-grid">
-            <button
-              type="button"
-              class="rec-btn"
-              [ngClass]="{ 'active-fav': avisRecommandation === 'favorable' }"
-              (click)="avisRecommandation = 'favorable'"
-            >
-              <div class="rec-icon ri-fav"><i class="fas fa-check" style="color: #fff"></i></div>
-              <div class="rec-label">Favorable</div>
-            </button>
-            <button
-              type="button"
-              class="rec-btn"
-              [ngClass]="{ 'active-res': avisRecommandation === 'reserve' }"
-              (click)="avisRecommandation = 'reserve'"
-            >
-              <div class="rec-icon ri-res" style="background: #ba7517">
-                <i class="fas fa-minus" style="color: #fff"></i>
-              </div>
-              <div class="rec-label">Réservé</div>
-            </button>
-            <button
-              type="button"
-              class="rec-btn"
-              [ngClass]="{ 'active-def': avisRecommandation === 'defavorable' }"
-              (click)="avisRecommandation = 'defavorable'"
-            >
-              <div class="rec-icon ri-def"><i class="fas fa-times" style="color: #fff"></i></div>
-              <div class="rec-label">Défavorable</div>
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <div class="section-lbl">
-            Diplôme requis conforme ? <span style="color: #e24b4a">*</span>
-          </div>
-          <div class="diplome-row">
-            <button
-              type="button"
-              class="dip-btn"
-              [ngClass]="{ 'active-ok': avisDiplomeConforme === 'conforme' }"
-              (click)="avisDiplomeConforme = 'conforme'"
-            >
-              <span class="dip-dot dot-ok"></span>
-              Conforme
-            </button>
-            <button
-              type="button"
-              class="dip-btn"
-              [ngClass]="{ 'active-nok': avisDiplomeConforme === 'non_conforme' }"
-              (click)="avisDiplomeConforme = 'non_conforme'"
-            >
-              <span class="dip-dot dot-nok"></span>
-              Non conforme
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <div class="section-lbl">
-            Commentaire <span style="color: var(--color-text-secondary)">(optionnel)</span>
-          </div>
-          <textarea
-            class="note-area"
-            id="note-area"
-            rows="3"
-            [(ngModel)]="avisText"
-            name="avisText"
-            placeholder="Détaillez votre avis..."
-            maxlength="400"
-          ></textarea>
-          <div class="char-count">
-            {{ avisText && avisText.length ? avisText.length : 0 }} / 400 caractères
-          </div>
-        </div>
-
-        <div class="req-note">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="8" cy="8" r="6"></circle>
-            <line x1="8" y1="5" x2="8" y2="8"></line>
-            <circle cx="8" cy="11" r=".5" fill="currentColor" stroke="none"></circle>
-          </svg>
-          Votre avis est visible par le responsable commission. La décision finale lui appartient.
-        </div>
-
-        <div class="modal-ftr">
-          <div class="ftr-left" id="ftr-status">
-            Recommandation sélectionnée :
-            <strong>{{
-              avisRecommandation === 'favorable'
-                ? 'Favorable'
-                : avisRecommandation === 'reserve'
-                  ? 'Réservé'
-                  : 'Défavorable'
-            }}</strong>
-          </div>
-          <div class="ftr-btns">
-            <button type="button" class="btn btn-cancel" (click)="fermerModalAvis()">
-              Annuler
-            </button>
-            <button
-              type="submit"
-              class="btn btn-save"
-              id="btn-save"
-              [disabled]="!(avisText && avisText.trim())"
-            >
-              <i class="fas fa-check"></i> Enregistrer mon avis
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL AVIS LISTE -->
-  <div *ngIf="showModalAvisListe" class="modal-overlay" (click)="fermerModalAvisListe()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Avis sur la liste</h2>
-        <button class="btn-close" (click)="fermerModalAvisListe()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="candidat-info">
-          <h3>{{ listeSelectionneeAvis?.nom }}</h3>
-          <p><strong>Spécialité :</strong> {{ listeSelectionneeAvis?.specialite }}</p>
-          <p>
-            <strong>Type :</strong>
-            {{ listeSelectionneeAvis?.type === 'preselection' ? 'Présélection' : 'Sélection' }}
-          </p>
-        </div>
-
-        <form (ngSubmit)="enregistrerAvisListe()">
-          <div class="form-group">
-            <label>Votre avis *</label>
-            <textarea
-              [(ngModel)]="avisListeText"
-              name="avisListeText"
-              rows="4"
-              required
-              placeholder="Saisissez votre avis sur cette liste..."
-            ></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Recommandation *</label>
-            <select [(ngModel)]="avisListeRecommandation" name="avisListeRecommandation" required>
-              <option value="favorable">Favorable</option>
-              <option value="defavorable">Défavorable</option>
-              <option value="reserve">Réservé</option>
-            </select>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" (click)="fermerModalAvisListe()">
-              Annuler
-            </button>
-            <button type="submit" class="btn-primary">
-              <i class="fas fa-save"></i> Enregistrer
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL OCR -->
-  <div *ngIf="showModalOCR" class="modal-overlay" (click)="fermerModalOCR()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Analyser un document avec OCR</h2>
-        <button class="btn-close" (click)="fermerModalOCR()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Sélectionner un fichier (PDF ou Image)</label>
-          <input type="file" accept=".pdf,image/*" (change)="onFileOCRSelected($event)" />
-        </div>
-
-        <div class="file-info" *ngIf="fichierOCR">
-          <i class="fas fa-file-pdf file-icon"></i>
-          <div class="file-details">
-            <strong>{{ fichierOCR.name }}</strong>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="fermerModalOCR()">Annuler</button>
-          <button
-            type="button"
-            class="btn-primary"
-            (click)="lancerAnalyseOCR()"
-            [disabled]="!fichierOCR"
-          >
-            <i class="fas fa-robot"></i> Lancer l'analyse
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL STATUT -->
-  <div *ngIf="showModalStatut" class="modal-overlay" (click)="fermerModalStatut()">
-    <div class="modal-content status-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Changer le statut</h2>
-        <button class="btn-close" (click)="fermerModalStatut()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="status-candidat-summary">
-          <strong>{{ candidatureStatutSelectionnee?.candidat_nom }}</strong>
-          <span>{{ candidatureStatutSelectionnee?.specialite }}</span>
-        </div>
-
-        <div class="form-group">
-          <label>Nouveau statut</label>
-          <select [(ngModel)]="statusSelection" name="statusSelection" required>
-            <option *ngFor="let status of statusOptions" [value]="status">
-              {{ getStatusDisplayLabel(status) }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group" *ngIf="statusSelection === 'rejete'">
-          <label>Motif du rejet *</label>
-          <textarea
-            [(ngModel)]="statusRejectReason"
-            name="statusRejectReason"
-            rows="3"
-            placeholder="Précisez le motif du rejet"
-            required
-          ></textarea>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="fermerModalStatut()">Annuler</button>
-          <button type="button" class="btn-primary" (click)="confirmerChangementStatut()">
-            <i class="fas fa-check"></i> Confirmer
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- MODAL VALIDATION PRESELECTION -->
-  <div
-    *ngIf="showModalValidationPreselection"
-    class="modal-overlay preselection-overlay"
-    (click)="fermerModalValidationPreselection()"
-  >
-    <div class="modal-content preselection-modal" (click)="$event.stopPropagation()">
-      <!-- Etat normal -->
-      <ng-container *ngIf="!preselectionValidationSuccess">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <div class="modal-icon-circle success">
-              <i class="fas fa-check"></i>
-            </div>
-            <span>Validation sélection</span>
-          </div>
-          <button class="btn-close" (click)="fermerModalValidationPreselection()">
+          <button class="btn-close" (click)="fermerModalConsultation()">
             <i class="fas fa-times"></i>
           </button>
         </div>
 
-        <div class="modal-body" *ngIf="candidatureValidationPreselection as c">
-          <!-- Candidat hero -->
-          <div class="cand-hero">
-            <div class="cand-avatar">
-              {{ (c.candidat_nom || 'XX').charAt(0)
-              }}{{ (c.candidat_nom || 'XX').split(' ')[1]?.charAt(0) || '' }}
-            </div>
+        <div class="modal-body" *ngIf="candidatureConsultationSelectionnee as consultation">
+          <div class="consultation-hero">
             <div>
-              <div class="cand-name">{{ c.candidat_nom }}</div>
-              <div class="cand-meta">{{ c.numero }} · ISIMM · {{ c.specialite }}</div>
+              <div class="consultation-kicker">Dossier N°{{ consultation.numero }}</div>
+              <h3>{{ consultation.candidat_nom }}</h3>
+              <p>{{ consultation.candidat_email }}</p>
+            </div>
+            <div class="consultation-badges">
+              <span class="consultation-badge status">{{
+                getStatusDisplayLabel(consultation.statut)
+              }}</span>
+              <span class="consultation-badge type">
+                {{ consultation.type_concours === 'ingenieur' ? 'Cycle Ingénieur' : 'Master' }}
+              </span>
             </div>
           </div>
 
-          <!-- Metriques -->
-          <div class="presel-info-row">
-            <div class="presel-info-cell">
-              <div class="presel-lbl">Score</div>
-              <div class="presel-val green">{{ c.score }} / 20</div>
+          <div class="consultation-grid">
+            <div class="consultation-card">
+              <span class="consultation-label">Score</span>
+              <strong>{{ consultation.score }}</strong>
+              <small>sur 20</small>
             </div>
-            <div class="presel-info-cell">
-              <div class="presel-lbl">Classement</div>
-              <div class="presel-val blue">
-                {{ c.classement || '—' }} / {{ c.total_candidats || '—' }}
+            <div class="consultation-card">
+              <span class="consultation-label">Année</span>
+              <strong>{{ consultation.annee_universitaire || getCurrentAcademicYear() }}</strong>
+              <small>Période de dépôt</small>
+            </div>
+            <div class="consultation-card">
+              <span class="consultation-label">Décision responsable</span>
+              <strong>
+                {{
+                  consultation.decision_responsable === 'valide'
+                    ? 'Validée'
+                    : consultation.decision_responsable === 'non_valide'
+                      ? 'Non validée'
+                      : 'En attente'
+                }}
+              </strong>
+              <small>Commission de présélection</small>
+            </div>
+            <div class="consultation-card">
+              <span class="consultation-label">Dossier</span>
+              <strong>{{ consultation.dossier_depose ? 'Déposé' : 'Non déposé' }}</strong>
+              <small>{{ consultation.specialite }}</small>
+            </div>
+          </div>
+
+          <div class="consultation-panels">
+            <section class="consultation-panel">
+              <h4>Informations clés</h4>
+              <div class="consultation-facts">
+                <div>
+                  <span>Spécialité</span>
+                  <strong>{{ consultation.specialite }}</strong>
+                </div>
+                <div>
+                  <span>Date de soumission</span>
+                  <strong>{{
+                    consultation.date_inscription ||
+                      consultation.date_soumission ||
+                      'Non renseignée'
+                  }}</strong>
+                </div>
+                <div>
+                  <span>Notes préinscription</span>
+                  <strong>{{ consultation.notes_preinscription || 'Non renseignées' }}</strong>
+                </div>
               </div>
-            </div>
-            <div class="presel-info-cell">
-              <div class="presel-lbl">Dossier</div>
-              <div
-                class="presel-val"
-                [class.green]="c.dossier_depose"
-                [class.warn-text]="!c.dossier_depose"
-              >
-                {{ c.dossier_depose ? 'Complet' : 'Incomplet' }}
-              </div>
-            </div>
-          </div>
+            </section>
 
-          <!-- Avis membres -->
-          <div class="presel-avis-section">
-            <div class="presel-section-title">Avis des membres</div>
-            <div
-              class="presel-votes-list"
-              *ngIf="getVotesForCandidature(c.id).length > 0; else noVotesPresel"
-            >
-              <div
-                class="presel-vote-pill"
-                *ngFor="let vote of getVotesForCandidature(c.id)"
-                [class.pill-fav]="vote.recommandation === 'favorable'"
-                [class.pill-res]="vote.recommandation === 'reserve'"
-                [class.pill-def]="vote.recommandation === 'defavorable'"
+            <section class="consultation-panel">
+              <h4>Avis des membres</h4>
+              <ng-container
+                *ngIf="getVotesForCandidature(consultation.id).length > 0; else noVotesConsultation"
               >
-                <i
-                  class="fas"
-                  [ngClass]="
-                    vote.recommandation === 'favorable'
-                      ? 'fa-thumbs-up'
-                      : vote.recommandation === 'defavorable'
-                        ? 'fa-thumbs-down'
-                        : 'fa-minus-circle'
-                  "
-                >
-                </i>
-                <span>{{ vote.membreNom }}</span>
-              </div>
-            </div>
-            <ng-template #noVotesPresel>
-              <p class="muted-line">Aucun avis enregistré.</p>
-            </ng-template>
-          </div>
-
-          <!-- Recommandation responsable -->
-          <div class="presel-recommandation-section">
-            <div class="presel-section-title">Votre recommandation *</div>
-            <div class="presel-avis-row">
-              <button
-                class="presel-avis-btn fav"
-                [class.selected]="preselAvisSelectionne === 'favorable'"
-                (click)="preselAvisSelectionne = 'favorable'"
-              >
-                Favorable
-              </button>
-              <button
-                class="presel-avis-btn res"
-                [class.selected]="preselAvisSelectionne === 'reserve'"
-                (click)="preselAvisSelectionne = 'reserve'"
-              >
-                Réservé
-              </button>
-              <button
-                class="presel-avis-btn def"
-                [class.selected]="preselAvisSelectionne === 'defavorable'"
-                (click)="preselAvisSelectionne = 'defavorable'"
-              >
-                Défavorable
-              </button>
-            </div>
-          </div>
-
-          <!-- Commentaire -->
-          <div class="presel-comment-section">
-            <div class="presel-section-title">Commentaire (optionnel)</div>
-            <textarea
-              class="presel-note-area"
-              rows="2"
-              [(ngModel)]="preselCommentaire"
-              placeholder="Saisissez un commentaire pour justifier votre décision..."
-            >
-            </textarea>
-          </div>
-
-          <!-- Boite de confirmation -->
-          <div class="presel-confirm-box">
-            <i class="fas fa-info-circle"></i>
-            <p>
-              En validant, <strong>{{ c.candidat_nom }}</strong> passera au statut
-              <strong>Sélectionné</strong> et recevra une notification email automatique. Cette
-              action peut être modifiée avant la clôture de la commission.
-            </p>
+                <div class="consultation-votes">
+                  <article
+                    class="consultation-vote"
+                    *ngFor="let vote of getVotesForCandidature(consultation.id)"
+                  >
+                    <div class="vote-topline">
+                      <strong>{{ vote.membreNom }}</strong>
+                      <span>{{ vote.role === 'responsable' ? 'Responsable' : 'Membre' }}</span>
+                    </div>
+                    <p>{{ vote.commentaire }}</p>
+                    <small>
+                      {{
+                        vote.recommandation === 'favorable'
+                          ? 'Favorable'
+                          : vote.recommandation === 'defavorable'
+                            ? 'Défavorable'
+                            : 'Réservé'
+                      }}
+                      •
+                      {{
+                        vote.diplomeConforme === false ? 'Diplôme non conforme' : 'Diplôme conforme'
+                      }}
+                    </small>
+                  </article>
+                </div>
+              </ng-container>
+              <ng-template #noVotesConsultation>
+                <p class="consultation-empty">Aucun avis enregistré pour cette candidature.</p>
+              </ng-template>
+            </section>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" (click)="fermerModalValidationPreselection()">
-            Annuler
+          <button type="button" class="btn-secondary" (click)="fermerModalConsultation()">
+            Fermer
           </button>
           <button
             type="button"
             class="btn-primary"
-            [disabled]="!preselAvisSelectionne || preselConfirmLoading"
-            (click)="confirmerValidationPreselection()"
+            (click)="voirDossier(candidatureConsultationSelectionnee!)"
           >
-            <i class="fas" [ngClass]="preselConfirmLoading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-            {{ preselConfirmLoading ? 'Confirmation...' : 'Confirmer la sélection' }}
+            <i class="fas fa-folder-open"></i> Consulter le dossier
           </button>
         </div>
-      </ng-container>
-
-      <!-- Etat succes -->
-      <div class="presel-success-state" *ngIf="preselectionValidationSuccess">
-        <div class="presel-success-circle">
-          <i class="fas fa-check"></i>
-        </div>
-        <h3>Sélection validée</h3>
-        <p>
-          <strong>{{ candidatureValidationPreselection?.candidat_nom }}</strong>
-          est maintenant <strong>Sélectionné</strong>.<br />
-          Son statut a été mis Ã  jour et une notification a été envoyée.
-        </p>
-        <span class="presel-notif-chip">
-          <i class="fas fa-envelope"></i> Email de notification envoyé
-        </span>
-        <button type="button" class="btn-primary" (click)="fermerModalValidationPreselection()">
-          Retour Ã  la liste
-        </button>
       </div>
     </div>
-  </div>
+
+    <!-- MODAL AVIS -->
+    <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
+      <div
+        class="modal-content"
+        (click)="$event.stopPropagation()"
+        style="width: min(520px, 96vw); max-height: 90vh; overflow: auto"
+      >
+        <div class="modal-hdr">
+          <div class="modal-title">
+            <div class="hdr-icon"><i class="fas fa-file-alt"></i></div>
+            Donner un avis
+          </div>
+          <button class="btn-close" (click)="fermerModalAvis()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form
+          class="modal-body"
+          (ngSubmit)="enregistrerAvis()"
+          *ngIf="candidatureSelectionnee as c"
+        >
+          <div class="cand-hero">
+            <div class="avatar">
+              {{ (c.candidat_nom || 'XX').charAt(0)
+              }}{{ ((c.candidat_nom || 'XX').split(' ')[1] || '').charAt(0) }}
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div class="cand-name">{{ c.candidat_nom }}</div>
+              <div class="cand-meta">
+                {{ c.numero }} · ISIMM · {{ c.specialite }} ·
+                {{ c.annee_universitaire || getCurrentAcademicYear() }}
+              </div>
+            </div>
+            <div class="score-pill">Score : {{ c.score || '-' }} / 20</div>
+          </div>
+
+          <div>
+            <div class="avis-existants-title">
+              Avis déjà enregistrés ({{ getVotesForCandidature(c.id).length }} membres)
+            </div>
+            <div class="avis-list">
+              <div class="avis-item" *ngFor="let vote of getVotesForCandidature(c.id)">
+                <div
+                  class="avis-avatar"
+                  [ngClass]="vote.diplomeConforme ? 'av-green' : 'av-orange'"
+                >
+                  {{ (vote.membreNom || 'XX').charAt(0)
+                  }}{{ ((vote.membreNom || 'XX').split(' ')[1] || '').charAt(0) }}
+                </div>
+                <div class="avis-content">
+                  <div class="avis-author">
+                    {{ vote.membreNom }}
+                    <span style="font-weight: 400; color: var(--color-text-secondary)"
+                      >· {{ vote.role === 'responsable' ? 'Évaluateur' : 'Évaluatrice' }}</span
+                    >
+                  </div>
+                  <div class="avis-comment">{{ vote.commentaire }}</div>
+                </div>
+                <div>
+                  <div
+                    class="avis-badge"
+                    [ngClass]="
+                      vote.recommandation === 'favorable'
+                        ? 'ab-fav'
+                        : vote.recommandation === 'reserve'
+                          ? 'ab-res'
+                          : ''
+                    "
+                  >
+                    {{
+                      vote.recommandation === 'favorable'
+                        ? 'Favorable'
+                        : vote.recommandation === 'reserve'
+                          ? 'Réservé'
+                          : 'Défavorable'
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div>
+            <div class="section-lbl">
+              Votre recommandation <span style="color: #e24b4a">*</span>
+            </div>
+            <div class="recomm-grid">
+              <button
+                type="button"
+                class="rec-btn"
+                [ngClass]="{ 'active-fav': avisRecommandation === 'favorable' }"
+                (click)="avisRecommandation = 'favorable'"
+              >
+                <div class="rec-icon ri-fav"><i class="fas fa-check" style="color: #fff"></i></div>
+                <div class="rec-label">Favorable</div>
+              </button>
+              <button
+                type="button"
+                class="rec-btn"
+                [ngClass]="{ 'active-res': avisRecommandation === 'reserve' }"
+                (click)="avisRecommandation = 'reserve'"
+              >
+                <div class="rec-icon ri-res" style="background: #ba7517">
+                  <i class="fas fa-minus" style="color: #fff"></i>
+                </div>
+                <div class="rec-label">Réservé</div>
+              </button>
+              <button
+                type="button"
+                class="rec-btn"
+                [ngClass]="{ 'active-def': avisRecommandation === 'defavorable' }"
+                (click)="avisRecommandation = 'defavorable'"
+              >
+                <div class="rec-icon ri-def"><i class="fas fa-times" style="color: #fff"></i></div>
+                <div class="rec-label">Défavorable</div>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-lbl">
+              Diplôme requis conforme ? <span style="color: #e24b4a">*</span>
+            </div>
+            <div class="diplome-row">
+              <button
+                type="button"
+                class="dip-btn"
+                [ngClass]="{ 'active-ok': avisDiplomeConforme === 'conforme' }"
+                (click)="avisDiplomeConforme = 'conforme'"
+              >
+                <span class="dip-dot dot-ok"></span>
+                Conforme
+              </button>
+              <button
+                type="button"
+                class="dip-btn"
+                [ngClass]="{ 'active-nok': avisDiplomeConforme === 'non_conforme' }"
+                (click)="avisDiplomeConforme = 'non_conforme'"
+              >
+                <span class="dip-dot dot-nok"></span>
+                Non conforme
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-lbl">
+              Commentaire <span style="color: var(--color-text-secondary)">(optionnel)</span>
+            </div>
+            <textarea
+              class="note-area"
+              id="note-area"
+              rows="3"
+              [(ngModel)]="avisText"
+              name="avisText"
+              placeholder="Détaillez votre avis..."
+              maxlength="400"
+            ></textarea>
+            <div class="char-count">
+              {{ avisText && avisText.length ? avisText.length : 0 }} / 400 caractères
+            </div>
+          </div>
+
+          <div class="req-note">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="8" cy="8" r="6"></circle>
+              <line x1="8" y1="5" x2="8" y2="8"></line>
+              <circle cx="8" cy="11" r=".5" fill="currentColor" stroke="none"></circle>
+            </svg>
+            Votre avis est visible par le responsable commission. La décision finale lui appartient.
+          </div>
+
+          <div class="modal-ftr">
+            <div class="ftr-left" id="ftr-status">
+              Recommandation sélectionnée :
+              <strong>{{
+                avisRecommandation === 'favorable'
+                  ? 'Favorable'
+                  : avisRecommandation === 'reserve'
+                    ? 'Réservé'
+                    : 'Défavorable'
+              }}</strong>
+            </div>
+            <div class="ftr-btns">
+              <button type="button" class="btn btn-cancel" (click)="fermerModalAvis()">
+                Annuler
+              </button>
+              <button
+                type="submit"
+                class="btn btn-save"
+                id="btn-save"
+                [disabled]="!(avisText && avisText.trim())"
+              >
+                <i class="fas fa-check"></i> Enregistrer mon avis
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL AVIS LISTE -->
+    <div *ngIf="showModalAvisListe" class="modal-overlay" (click)="fermerModalAvisListe()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Avis sur la liste</h2>
+          <button class="btn-close" (click)="fermerModalAvisListe()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="candidat-info">
+            <h3>{{ listeSelectionneeAvis?.nom }}</h3>
+            <p><strong>Spécialité :</strong> {{ listeSelectionneeAvis?.specialite }}</p>
+            <p>
+              <strong>Type :</strong>
+              {{ listeSelectionneeAvis?.type === 'preselection' ? 'Présélection' : 'Sélection' }}
+            </p>
+          </div>
+
+          <form (ngSubmit)="enregistrerAvisListe()">
+            <div class="form-group">
+              <label>Votre avis *</label>
+              <textarea
+                [(ngModel)]="avisListeText"
+                name="avisListeText"
+                rows="4"
+                required
+                placeholder="Saisissez votre avis sur cette liste..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Recommandation *</label>
+              <select [(ngModel)]="avisListeRecommandation" name="avisListeRecommandation" required>
+                <option value="favorable">Favorable</option>
+                <option value="defavorable">Défavorable</option>
+                <option value="reserve">Réservé</option>
+              </select>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="fermerModalAvisListe()">
+                Annuler
+              </button>
+              <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL OCR -->
+    <div *ngIf="showModalOCR" class="modal-overlay" (click)="fermerModalOCR()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Analyser un document avec OCR</h2>
+          <button class="btn-close" (click)="fermerModalOCR()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Sélectionner un fichier (PDF ou Image)</label>
+            <input type="file" accept=".pdf,image/*" (change)="onFileOCRSelected($event)" />
+          </div>
+
+          <div class="file-info" *ngIf="fichierOCR">
+            <i class="fas fa-file-pdf file-icon"></i>
+            <div class="file-details">
+              <strong>{{ fichierOCR.name }}</strong>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="fermerModalOCR()">Annuler</button>
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="lancerAnalyseOCR()"
+              [disabled]="!fichierOCR"
+            >
+              <i class="fas fa-robot"></i> Lancer l'analyse
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL STATUT -->
+    <div *ngIf="showModalStatut" class="modal-overlay" (click)="fermerModalStatut()">
+      <div class="modal-content status-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Changer le statut</h2>
+          <button class="btn-close" (click)="fermerModalStatut()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="status-candidat-summary">
+            <strong>{{ candidatureStatutSelectionnee?.candidat_nom }}</strong>
+            <span>{{ candidatureStatutSelectionnee?.specialite }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau statut</label>
+            <select [(ngModel)]="statusSelection" name="statusSelection" required>
+              <option *ngFor="let status of statusOptions" [value]="status">
+                {{ getStatusDisplayLabel(status) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="statusSelection === 'rejete'">
+            <label>Motif du rejet *</label>
+            <textarea
+              [(ngModel)]="statusRejectReason"
+              name="statusRejectReason"
+              rows="3"
+              placeholder="Précisez le motif du rejet"
+              required
+            ></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="fermerModalStatut()">
+              Annuler
+            </button>
+            <button type="button" class="btn-primary" (click)="confirmerChangementStatut()">
+              <i class="fas fa-check"></i> Confirmer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- MODAL VALIDATION PRESELECTION -->
+    <div
+      *ngIf="showModalValidationPreselection"
+      class="modal-overlay preselection-overlay"
+      (click)="fermerModalValidationPreselection()"
+    >
+      <div class="modal-content preselection-modal" (click)="$event.stopPropagation()">
+        <!-- Etat normal -->
+        <ng-container *ngIf="!preselectionValidationSuccess">
+          <div class="modal-header">
+            <div class="modal-title-group">
+              <div class="modal-icon-circle success">
+                <i class="fas fa-check"></i>
+              </div>
+              <span>Validation sélection</span>
+            </div>
+            <button class="btn-close" (click)="fermerModalValidationPreselection()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" *ngIf="candidatureValidationPreselection as c">
+            <!-- Candidat hero -->
+            <div class="cand-hero">
+              <div class="cand-avatar">
+                {{ (c.candidat_nom || 'XX').charAt(0)
+                }}{{ (c.candidat_nom || 'XX').split(' ')[1]?.charAt(0) || '' }}
+              </div>
+              <div>
+                <div class="cand-name">{{ c.candidat_nom }}</div>
+                <div class="cand-meta">{{ c.numero }} · ISIMM · {{ c.specialite }}</div>
+              </div>
+            </div>
+
+            <!-- Metriques -->
+            <div class="presel-info-row">
+              <div class="presel-info-cell">
+                <div class="presel-lbl">Score</div>
+                <div class="presel-val green">{{ c.score }} / 20</div>
+              </div>
+              <div class="presel-info-cell">
+                <div class="presel-lbl">Classement</div>
+                <div class="presel-val blue">
+                  {{ c.classement || '—' }} / {{ c.total_candidats || '—' }}
+                </div>
+              </div>
+              <div class="presel-info-cell">
+                <div class="presel-lbl">Dossier</div>
+                <div
+                  class="presel-val"
+                  [class.green]="c.dossier_depose"
+                  [class.warn-text]="!c.dossier_depose"
+                >
+                  {{ c.dossier_depose ? 'Complet' : 'Incomplet' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Avis membres -->
+            <div class="presel-avis-section">
+              <div class="presel-section-title">Avis des membres</div>
+              <div
+                class="presel-votes-list"
+                *ngIf="getVotesForCandidature(c.id).length > 0; else noVotesPresel"
+              >
+                <div
+                  class="presel-vote-pill"
+                  *ngFor="let vote of getVotesForCandidature(c.id)"
+                  [class.pill-fav]="vote.recommandation === 'favorable'"
+                  [class.pill-res]="vote.recommandation === 'reserve'"
+                  [class.pill-def]="vote.recommandation === 'defavorable'"
+                >
+                  <i
+                    class="fas"
+                    [ngClass]="
+                      vote.recommandation === 'favorable'
+                        ? 'fa-thumbs-up'
+                        : vote.recommandation === 'defavorable'
+                          ? 'fa-thumbs-down'
+                          : 'fa-minus-circle'
+                    "
+                  >
+                  </i>
+                  <span>{{ vote.membreNom }}</span>
+                </div>
+              </div>
+              <ng-template #noVotesPresel>
+                <p class="muted-line">Aucun avis enregistré.</p>
+              </ng-template>
+            </div>
+
+            <!-- Recommandation responsable -->
+            <div class="presel-recommandation-section">
+              <div class="presel-section-title">Votre recommandation *</div>
+              <div class="presel-avis-row">
+                <button
+                  class="presel-avis-btn fav"
+                  [class.selected]="preselAvisSelectionne === 'favorable'"
+                  (click)="preselAvisSelectionne = 'favorable'"
+                >
+                  Favorable
+                </button>
+                <button
+                  class="presel-avis-btn res"
+                  [class.selected]="preselAvisSelectionne === 'reserve'"
+                  (click)="preselAvisSelectionne = 'reserve'"
+                >
+                  Réservé
+                </button>
+                <button
+                  class="presel-avis-btn def"
+                  [class.selected]="preselAvisSelectionne === 'defavorable'"
+                  (click)="preselAvisSelectionne = 'defavorable'"
+                >
+                  Défavorable
+                </button>
+              </div>
+            </div>
+
+            <!-- Commentaire -->
+            <div class="presel-comment-section">
+              <div class="presel-section-title">Commentaire (optionnel)</div>
+              <textarea
+                class="presel-note-area"
+                rows="2"
+                [(ngModel)]="preselCommentaire"
+                placeholder="Saisissez un commentaire pour justifier votre décision..."
+              >
+              </textarea>
+            </div>
+
+            <!-- Boite de confirmation -->
+            <div class="presel-confirm-box">
+              <i class="fas fa-info-circle"></i>
+              <p>
+                En validant, <strong>{{ c.candidat_nom }}</strong> passera au statut
+                <strong>Sélectionné</strong> et recevra une notification email automatique. Cette
+                action peut être modifiée avant la clôture de la commission.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="fermerModalValidationPreselection()"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              [disabled]="!preselAvisSelectionne || preselConfirmLoading"
+              (click)="confirmerValidationPreselection()"
+            >
+              <i
+                class="fas"
+                [ngClass]="preselConfirmLoading ? 'fa-spinner fa-spin' : 'fa-check'"
+              ></i>
+              {{ preselConfirmLoading ? 'Confirmation...' : 'Confirmer la sélection' }}
+            </button>
+          </div>
+        </ng-container>
+
+        <!-- Etat succes -->
+        <div class="presel-success-state" *ngIf="preselectionValidationSuccess">
+          <div class="presel-success-circle">
+            <i class="fas fa-check"></i>
+          </div>
+          <h3>Sélection validée</h3>
+          <p>
+            <strong>{{ candidatureValidationPreselection?.candidat_nom }}</strong>
+            est maintenant <strong>Sélectionné</strong>.<br />
+            Son statut a été mis Ã  jour et une notification a été envoyée.
+          </p>
+          <span class="presel-notif-chip">
+            <i class="fas fa-envelope"></i> Email de notification envoyé
+          </span>
+          <button type="button" class="btn-primary" (click)="fermerModalValidationPreselection()">
+            Retour Ã  la liste
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>

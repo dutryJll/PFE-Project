@@ -147,17 +147,15 @@ interface ListeGenerationApiPayload {
 
 interface Reclamation {
   id: number;
-  candidature_id?: number;
-  candidat_nom: string;
   objet: string;
-  master_nom?: string;
-  master?: string;
-  specialite?: string;
-  motif: string;
+  candidat: string;
+  master: string;
   date: string;
-  statut: string;
-  reponse?: string;
-  priorite?: 'haut' | 'moyen' | 'bas';
+  pj: boolean;
+  etat: 'en_cours' | 'en_attente' | 'traite' | 'rejete';
+  details: string;
+  priorite: 'haut' | 'moyen' | 'bas';
+  candidature_id?: number;
 }
 
 interface DossierOCR {
@@ -187,6 +185,32 @@ interface InscriptionVerificationRow {
   specialite: string;
   verification: 'valide' | 'incoherent' | 'absent';
   details: string;
+  matchPercent?: number;
+  email?: string;
+  dossierFile?: string;
+  observation?: string;
+}
+
+interface InscriptionCandidateRow {
+  id: number;
+  num: string;
+  nom: string;
+  cin: string;
+  master: string;
+  dossier: 'complet' | 'incomplet';
+  paiement: 'paye' | 'en_attente' | 'incoherent' | 'absent';
+  finalise: boolean;
+  matchPercent: number;
+  email: string;
+  dossierFile: string;
+  observation: string;
+}
+
+interface InscriptionFilters {
+  search: string;
+  paiement: 'all' | 'paye' | 'en_attente' | 'incoherent' | 'absent';
+  dossier: 'all' | 'complet' | 'incomplet';
+  finalise: 'all' | 'yes' | 'no';
 }
 
 interface ResponsableMasterStat {
@@ -255,10 +279,10 @@ type CommissionView =
   | 'listes'
   | 'membres'
   | 'ocr'
-  | 'reclamations'
   | 'inscriptions'
   | 'statistiques'
   | 'deliberations'
+  | 'reclamations'
   | 'notifications';
 
 type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
@@ -271,7 +295,6 @@ interface CommissionActionPermissions {
   preselection: boolean;
   selectionFinale: boolean;
   publierListes: boolean;
-  traiterReclamations: boolean;
   gererInscriptions: boolean;
   consulterStatistiques: boolean;
 }
@@ -419,13 +442,13 @@ export class DashboardCommissionComponent implements OnInit {
     preselection: true,
     selectionFinale: true,
     publierListes: true,
-    traiterReclamations: true,
     gererInscriptions: true,
     consulterStatistiques: true,
   };
   customRoleActions: string[] = [];
   private readonly customActionViewMap: Record<string, CommissionView> = {
     [normalizeActionLabel('Consultation de candidature')]: 'candidatures',
+    [normalizeActionLabel('Traiter réclamations')]: 'reclamations',
     [normalizeActionLabel('Vérifier dossiers')]: 'valider-dossier',
     [normalizeActionLabel('Étude de dossier de candidature')]: 'valider-dossier',
     [normalizeActionLabel('Consultation de dossier')]: 'dossiers',
@@ -437,7 +460,6 @@ export class DashboardCommissionComponent implements OnInit {
     [normalizeActionLabel('Listes et avis')]: 'avis-listes',
     [normalizeActionLabel('Publier liste principale')]: 'deliberations',
     [normalizeActionLabel('Publier liste attente')]: 'deliberations',
-    [normalizeActionLabel('Traiter réclamations')]: 'reclamations',
     [normalizeActionLabel('Gérer inscriptions')]: 'inscriptions',
     [normalizeActionLabel('Consulter statistiques')]: 'dashboard',
     [normalizeActionLabel('Membres de la commission')]: 'membres',
@@ -450,6 +472,7 @@ export class DashboardCommissionComponent implements OnInit {
   };
   private readonly knownActionNameSet = new Set<string>([
     normalizeActionLabel('Consultation de candidature'),
+    normalizeActionLabel('Traiter réclamations'),
     normalizeActionLabel('Consultation de dossier'),
     normalizeActionLabel('Vérifier dossiers'),
     normalizeActionLabel('Préselection'),
@@ -460,7 +483,6 @@ export class DashboardCommissionComponent implements OnInit {
     normalizeActionLabel('Listes et avis'),
     normalizeActionLabel('Publier liste principale'),
     normalizeActionLabel('Publier liste attente'),
-    normalizeActionLabel('Traiter réclamations'),
     normalizeActionLabel('Gérer inscriptions'),
     normalizeActionLabel('Consulter statistiques'),
   ]);
@@ -593,6 +615,67 @@ export class DashboardCommissionComponent implements OnInit {
   filtreNotificationDateDebut: string = '';
   filtreNotificationDateFin: string = '';
   filtreNotificationRecherche: string = '';
+
+  reclamations: Reclamation[] = [
+    {
+      id: 1,
+      objet: 'Score incorrect',
+      candidat: 'Ahmed Ben Ali',
+      master: 'Master Génie Logiciel',
+      date: '2026-04-10',
+      pj: true,
+      etat: 'en_cours',
+      details: 'Le score affiché ne correspond pas',
+      priorite: 'haut',
+      candidature_id: 1,
+    },
+    {
+      id: 2,
+      objet: 'Document non pris en compte',
+      candidat: 'Sana Trabelsi',
+      master: 'Master Data Science',
+      date: '2026-04-08',
+      pj: true,
+      etat: 'en_attente',
+      details: "Mon relevé de notes L3 n'a pas été comptabilisé",
+      priorite: 'moyen',
+      candidature_id: 2,
+    },
+    {
+      id: 3,
+      objet: 'Erreur de spécialité',
+      candidat: 'Youssef Mahjoub',
+      master: 'Master Réseaux',
+      date: '2026-04-05',
+      pj: false,
+      etat: 'en_cours',
+      details: "Ma spécialité d'origine est incorrecte",
+      priorite: 'bas',
+      candidature_id: 3,
+    },
+  ];
+  reclamationStatusFilter: '' | 'en_cours' | 'en_attente' | 'traite' | 'rejete' = '';
+  reclamationPriorityFilter: '' | 'haut' | 'moyen' | 'bas' = '';
+  reclamationSearch: string = '';
+  showModalReponseReclamation: boolean = false;
+  showModalRectifierScore: boolean = false;
+  showModalRejetReclamation: boolean = false;
+  reclamationSelectionnee: Reclamation | null = null;
+  reclamationScoreSelectionnee: Reclamation | null = null;
+  reclamationRejetSelectionnee: Reclamation | null = null;
+  currentRejetId: number | null = null;
+  reponseReclamationText: string = '';
+  scoreRectification: number | null = null;
+  scoreRectificationCommentaire: string = '';
+  motifRejet: string = '';
+  motifRejetDetail: string = '';
+  notesRectification: number[] = [15.5, 17.0, 14.0, 13.5];
+  notesRectificationLabels: Array<{ label: string; coef: number }> = [
+    { label: 'Mathématiques', coef: 3 },
+    { label: 'Algorithmique', coef: 4 },
+    { label: 'Bases de données', coef: 3 },
+    { label: 'Anglais', coef: 2 },
+  ];
 
   concoursIngenieur: Concours[] = [
     {
@@ -1451,20 +1534,6 @@ export class DashboardCommissionComponent implements OnInit {
     actif: true,
   };
 
-  reclamations: Reclamation[] = [
-    {
-      id: 1,
-      candidat_nom: 'Ahmed Ben Ali',
-      objet: 'Score incorrect',
-      master_nom: 'Master Génie Logiciel',
-      motif: 'Le score affiché ne correspond pas',
-      date: '2026-03-01',
-      statut: 'en_cours',
-    },
-  ];
-  reclamationStatusFilter: '' | 'en_attente' | 'en_cours' | 'traitee' = '';
-  reclamationSearch: string = '';
-
   dossiersOCR: DossierOCR[] = [
     {
       id: 1,
@@ -1568,22 +1637,33 @@ export class DashboardCommissionComponent implements OnInit {
   fichierOCR: File | null = null;
   selectedOCRCandidature: Candidature | null = null;
 
-  // Modal reponse reclamation
-  showModalReponseReclamation: boolean = false;
-  reclamationSelectionnee: Reclamation | null = null;
-  reponseReclamationText: string = '';
-
-  // Modal rectifier score
-  showModalRectifierScore: boolean = false;
-  reclamationScoreSelectionnee: Reclamation | null = null;
-  scoreRectification: number | null = null;
-
   candidatureVotes: Record<number, CandidatureVoteAvis[]> = {};
 
   inscriptionsExcelRows: any[] = [];
   inscriptionsVerificationRows: InscriptionVerificationRow[] = [];
   selectedInscriptionsFileName: string = '';
   lastRapprochementAuditId: number | null = null;
+  inscriptionCandidates: InscriptionCandidateRow[] = [];
+  inscriptionFilteredCandidates: InscriptionCandidateRow[] = [];
+  inscriptionSelectedIds: Set<number> = new Set();
+  inscriptionSelectAll: boolean = false;
+  inscriptionFileLoaded: boolean = false;
+  inscriptionVerified: boolean = false;
+  inscriptionExportOpen: boolean = false;
+  inscriptionFilters: InscriptionFilters = {
+    search: '',
+    paiement: 'all',
+    dossier: 'all',
+    finalise: 'all',
+  };
+  inscriptionStats = {
+    eligible: 0,
+    verifiedPayments: 0,
+    incoherencies: 0,
+    absents: 0,
+    finalised: 0,
+    matchPercent: 0,
+  };
 
   validationFilters = {
     recherche: '',
@@ -1650,6 +1730,9 @@ export class DashboardCommissionComponent implements OnInit {
 
     // Initialize test data for Selection table
     this.initSelectionTestData();
+
+    // Initialize test data for Inscription en ligne
+    this.initInscriptionTestData();
 
     // Start or attach to WebSocket connection and expose status for UI
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -2926,7 +3009,6 @@ export class DashboardCommissionComponent implements OnInit {
             'Publier liste principale',
             'Publier liste attente',
           ]),
-          traiterReclamations: this.authService.hasMyAction('Traiter réclamations'),
           gererInscriptions: this.authService.hasMyAction('Gérer inscriptions'),
           consulterStatistiques: this.authService.hasMyAction('Consulter statistiques'),
         };
@@ -2967,6 +3049,10 @@ export class DashboardCommissionComponent implements OnInit {
   canAccessView(view: CommissionView): boolean {
     if (view === 'dashboard' || view === 'profil' || view === 'masters') {
       return true;
+    }
+
+    if (view === 'reclamations') {
+      return this.isResponsable || this.actionPermissions.consultationCandidature;
     }
 
     if (view === 'configuration-appels') {
@@ -3013,12 +3099,6 @@ export class DashboardCommissionComponent implements OnInit {
 
     if (view === 'ocr') {
       return this.actionPermissions.verifierDossiers || this.actionPermissions.consultationDossier;
-    }
-
-    if (view === 'reclamations') {
-      return (
-        this.actionPermissions.traiterReclamations || this.actionPermissions.consultationCandidature
-      );
     }
 
     if (view === 'inscriptions') {
@@ -4349,7 +4429,6 @@ export class DashboardCommissionComponent implements OnInit {
       listes: "Listes d'admission",
       membres: 'Membres de la commission',
       ocr: 'Analyse automatique (OCR)',
-      reclamations: 'Gestion des réclamations',
       inscriptions: 'Validation des inscriptions',
       statistiques: 'Statistiques et rapports',
       deliberations: 'Procès-verbaux de délibération',
@@ -4929,7 +5008,7 @@ export class DashboardCommissionComponent implements OnInit {
       );
     }
 
-    this.router.navigate(['/commission/dossier', candidature.id], {
+    this.router.navigate(['/consultation-dossier', candidature.id], {
       queryParams: { source: 'liste-generation' },
     });
     this.closeActionMenu();
@@ -4937,7 +5016,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   voirDossierById(candidatureId: number): void {
     // Navigate to the commission dossier view for a specific candidature id
-    this.router.navigate(['/commission/dossier', candidatureId], {
+    this.router.navigate(['/consultation-dossier', candidatureId], {
       queryParams: { source: 'liste-generation' },
     });
     this.closeActionMenu();
@@ -6727,47 +6806,47 @@ export class DashboardCommissionComponent implements OnInit {
   // ========================================
   // RÉCLAMATIONS
   // ========================================
-  getReclamationMaster(reclamation: Reclamation): string {
-    return reclamation.master_nom || reclamation.master || reclamation.specialite || '-';
+  get reclamationsFiltered(): Reclamation[] {
+    const search = this.reclamationSearch.trim().toLowerCase();
+
+    return this.reclamations.filter((reclamation) => {
+      if (this.reclamationStatusFilter && reclamation.etat !== this.reclamationStatusFilter) {
+        return false;
+      }
+
+      if (
+        this.reclamationPriorityFilter &&
+        reclamation.priorite !== this.reclamationPriorityFilter
+      ) {
+        return false;
+      }
+
+      if (!search) {
+        return true;
+      }
+
+      const content =
+        `${reclamation.id} ${reclamation.objet} ${reclamation.candidat} ${reclamation.master} ${reclamation.details}`.toLowerCase();
+      return content.includes(search);
+    });
   }
 
-  formatReclamationStatus(statut: string): string {
-    if (statut === 'en_cours') {
-      return 'En cours';
-    }
-    if (statut === 'en_attente') {
-      return 'En attente';
-    }
-    if (statut === 'traitee') {
-      return 'Traité';
-    }
-    return statut;
+  get reclamationsEnCoursCount(): number {
+    return this.reclamations.filter((reclamation) => reclamation.etat === 'en_cours').length;
   }
 
-  getReclamationStatusClass(statut: string): string {
-    if (statut === 'en_cours') {
-      return 'statut-en_cours';
-    }
-    if (statut === 'en_attente') {
-      return 'statut-en_attente';
-    }
-    if (statut === 'traitee') {
-      return 'statut-traitee';
-    }
-    return '';
+  get reclamationsEnAttenteCount(): number {
+    return this.reclamations.filter((reclamation) => reclamation.etat === 'en_attente').length;
+  }
+
+  get reclamationsTraiteesCount(): number {
+    return this.reclamations.filter(
+      (reclamation) => reclamation.etat === 'traite' || reclamation.etat === 'rejete',
+    ).length;
   }
 
   getReclamationPriority(reclamation: Reclamation): 'haut' | 'moyen' | 'bas' {
-    if (reclamation.priorite) {
-      return reclamation.priorite;
-    }
-    if (reclamation.statut === 'en_cours') {
-      return 'haut';
-    }
-    if (reclamation.statut === 'en_attente') {
-      return 'moyen';
-    }
-    return 'bas';
+    return reclamation.priorite;
   }
 
   getReclamationPriorityLabel(prio: 'haut' | 'moyen' | 'bas'): string {
@@ -6777,178 +6856,170 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getReclamationPriorityClass(prio: 'haut' | 'moyen' | 'bas'): string {
-    return prio === 'haut' ? 'prio-haut' : prio === 'moyen' ? 'prio-moyen' : 'prio-bas';
+    if (prio === 'haut') return 'b-haut';
+    if (prio === 'moyen') return 'b-moyen';
+    return 'b-bas';
   }
 
-  get reclamationsFiltered(): Reclamation[] {
-    const search = this.reclamationSearch.trim().toLowerCase();
-
-    return this.reclamations.filter((reclamation) => {
-      if (this.reclamationStatusFilter && reclamation.statut !== this.reclamationStatusFilter) {
-        return false;
-      }
-
-      if (!search) {
-        return true;
-      }
-
-      const content =
-        `${reclamation.id} ${reclamation.objet} ${this.getReclamationMaster(reclamation)} ${reclamation.candidat_nom} ${reclamation.motif}`.toLowerCase();
-      return content.includes(search);
-    });
+  formatReclamationStatus(statut: Reclamation['etat']): string {
+    if (statut === 'en_cours') return 'En cours';
+    if (statut === 'en_attente') return 'En attente';
+    if (statut === 'traite') return 'Traitée';
+    return 'Rejetée';
   }
 
-  get reclamationsEnCoursCount(): number {
-    return this.reclamations.filter((reclamation) => reclamation.statut === 'en_cours').length;
+  getReclamationStatusClass(statut: Reclamation['etat']): string {
+    if (statut === 'en_cours') return 'b-encours';
+    if (statut === 'en_attente') return 'b-attente';
+    if (statut === 'traite') return 'b-traite';
+    return 'b-rejete';
   }
 
-  get reclamationsEnAttenteCount(): number {
-    return this.reclamations.filter((reclamation) => reclamation.statut === 'en_attente').length;
+  getReclamationMaster(reclamation: Reclamation): string {
+    return reclamation.master || '-';
   }
 
-  get reclamationsTraiteesCount(): number {
-    return this.reclamations.filter((reclamation) => reclamation.statut === 'traitee').length;
+  resetReclamationFilters(): void {
+    this.reclamationStatusFilter = '';
+    this.reclamationPriorityFilter = '';
+    this.reclamationSearch = '';
   }
 
-  traiterReclamation(reclamation: Reclamation): void {
-    this.ouvrirModalReponseReclamation(reclamation);
-  }
-
-  ouvrirModalReponseReclamation(reclamation: Reclamation): void {
-    if (!this.actionPermissions.traiterReclamations) {
-      this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
+  openReponse(id: number): void {
+    const reclamation = this.reclamations.find((item) => item.id === id) || null;
+    if (!reclamation) {
       return;
     }
-
     this.reclamationSelectionnee = reclamation;
-    this.reponseReclamationText = reclamation.reponse || '';
+    this.reponseReclamationText = reclamation.details;
     this.showModalReponseReclamation = true;
   }
 
-  fermerModalReponseReclamation(): void {
-    this.showModalReponseReclamation = false;
-    this.reclamationSelectionnee = null;
-    this.reponseReclamationText = '';
+  openScore(id: number): void {
+    const reclamation = this.reclamations.find((item) => item.id === id) || null;
+    if (!reclamation) {
+      return;
+    }
+    this.reclamationScoreSelectionnee = reclamation;
+    this.scoreRectification = 15;
+    this.scoreRectificationCommentaire = '';
+    this.showModalRectifierScore = true;
+    this.recalcScore();
   }
 
-  soumettreReponseReclamation(): void {
+  openRejet(id: number): void {
+    const reclamation = this.reclamations.find((item) => item.id === id) || null;
+    if (!reclamation) {
+      return;
+    }
+    this.currentRejetId = id;
+    this.reclamationRejetSelectionnee = reclamation;
+    this.motifRejet = '';
+    this.motifRejetDetail = '';
+    this.showModalRejetReclamation = true;
+  }
+
+  closeModalReclamation(): void {
+    this.showModalReponseReclamation = false;
+    this.showModalRectifierScore = false;
+    this.showModalRejetReclamation = false;
+    this.reclamationSelectionnee = null;
+    this.reclamationScoreSelectionnee = null;
+    this.reclamationRejetSelectionnee = null;
+    this.currentRejetId = null;
+    this.reponseReclamationText = '';
+    this.scoreRectificationCommentaire = '';
+    this.motifRejet = '';
+    this.motifRejetDetail = '';
+  }
+
+  onReclamationNoteChange(index: number, value: string): void {
+    const parsed = Number(value);
+    this.notesRectification[index] = Number.isFinite(parsed)
+      ? Math.min(20, Math.max(0, parsed))
+      : 0;
+    this.recalcScore();
+  }
+
+  recalcScore(): void {
+    const totalCoef = this.notesRectificationLabels.reduce((sum, item) => sum + item.coef, 0);
+    const weighted = this.notesRectification.reduce(
+      (sum, note, index) => sum + note * this.notesRectificationLabels[index].coef,
+      0,
+    );
+    this.scoreRectification = Number((weighted / totalCoef).toFixed(2));
+  }
+
+  updateMotif(): void {
+    const motifs: Record<string, string> = {
+      infondee: 'Réclamation infondée — les notes sont correctes',
+      'hors-delai': 'Dépôt hors délai réglementaire',
+      'manque-preuves': 'Manque de preuves justificatives',
+      autre: 'Autre motif à préciser',
+    };
+
+    this.motifRejetDetail = motifs[this.motifRejet] || '';
+  }
+
+  validerRectification(): void {
+    if (!this.reclamationScoreSelectionnee) {
+      return;
+    }
+
+    this.reclamationScoreSelectionnee.etat = 'traite';
+    this.showAlertMessage('✅ Score rectifié et candidat notifié.');
+    this.closeModalReclamation();
+  }
+
+  validerRejet(): void {
+    if (!this.currentRejetId) {
+      return;
+    }
+
+    const reclamation = this.reclamations.find((item) => item.id === this.currentRejetId);
+    if (reclamation) {
+      reclamation.etat = 'rejete';
+    }
+
+    this.showAlertMessage('✅ Réclamation rejetée et candidat notifié.');
+    this.closeModalReclamation();
+  }
+
+  validerReponse(): void {
     if (!this.reclamationSelectionnee) {
       return;
     }
 
-    const reponse = this.reponseReclamationText.trim();
-    if (!reponse) {
-      this.showAlertMessage('❌ Veuillez saisir une réponse');
-      return;
-    }
-
-    const token = this.authService.getAccessToken();
-    this.http
-      .post(
-        `http://localhost:8003/api/reclamations/${this.reclamationSelectionnee.id}/repondre/`,
-        { reponse },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .subscribe({
-        next: () => {
-          this.reclamationSelectionnee!.statut = 'traitee';
-          this.reclamationSelectionnee!.reponse = reponse;
-          this.showAlertMessage('✅ Réclamation traitée');
-          this.fermerModalReponseReclamation();
-        },
-        error: (error) => {
-          console.error('Erreur:', error);
-          this.showAlertMessage('❌ Erreur lors du traitement');
-        },
-      });
+    this.reclamationSelectionnee.etat = 'traite';
+    this.reclamationSelectionnee.details =
+      this.reponseReclamationText || this.reclamationSelectionnee.details;
+    this.showAlertMessage('✅ Réponse envoyée au candidat.');
+    this.closeModalReclamation();
   }
 
-  ouvrirModalRectifierScore(reclamation: Reclamation): void {
-    if (!this.actionPermissions.traiterReclamations) {
-      this.notifyActionBlocked("Traitement réclamations désactivé par l'administration.");
-      return;
-    }
+  exportReclamations(): void {
+    const rows: ExportRow[] = this.reclamationsFiltered.map((reclamation) => ({
+      Identifiant: reclamation.id,
+      Objet: reclamation.objet,
+      Candidat: reclamation.candidat,
+      Master: reclamation.master,
+      Date: reclamation.date,
+      Priorite: this.getReclamationPriorityLabel(reclamation.priorite),
+      Etat: this.formatReclamationStatus(reclamation.etat),
+      Details: reclamation.details,
+    }));
 
-    this.reclamationScoreSelectionnee = reclamation;
-    this.scoreRectification = null;
-    this.showModalRectifierScore = true;
-  }
-
-  fermerModalRectifierScore(): void {
-    this.showModalRectifierScore = false;
-    this.reclamationScoreSelectionnee = null;
-    this.scoreRectification = null;
-  }
-
-  soumettreRectificationScore(): void {
-    if (!this.reclamationScoreSelectionnee) return;
-    const score = Number(this.scoreRectification);
-    if (isNaN(score) || score < 0 || score > 20) {
-      this.showAlertMessage('❌ Valeur de score invalide (0-20)');
-      return;
-    }
-
-    const token = this.authService.getAccessToken();
-    this.http
-      .post(
-        `http://localhost:8003/api/reclamations/${this.reclamationScoreSelectionnee.id}/rectifier-score/`,
-        { score },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .subscribe({
-        next: () => {
-          // update local candidature score if we can find it
-          const candId = Number(this.reclamationScoreSelectionnee!.candidature_id);
-          if (Number.isFinite(candId) && candId > 0) {
-            const cand = this.candidatures.find((c) => c.id === candId);
-            if (cand) {
-              cand.score = score;
-            }
-          } else {
-            // try match by name
-            const cand = this.candidatures.find(
-              (c) =>
-                (c.candidat_nom || '').toLowerCase() ===
-                (this.reclamationScoreSelectionnee!.candidat_nom || '').toLowerCase(),
-            );
-            if (cand) cand.score = score;
-          }
-
-          this.showAlertMessage('✅ Score rectifié');
-          this.fermerModalRectifierScore();
-        },
-        error: (error) => {
-          console.error('Erreur rectification score:', error);
-          this.showAlertMessage('❌ Erreur lors de la rectification');
-        },
-      });
+    this.exportRows(rows, 'xlsx', 'reclamations', 'Réclamations');
   }
 
   voirDossierAssocieReclamation(reclamation: Reclamation): void {
-    if (
-      !this.actionPermissions.consultationDossier &&
-      !this.actionPermissions.consultationCandidature
-    ) {
-      this.notifyActionBlocked("Consultation dossier désactivée par l'administration.");
-      return;
-    }
-
-    let candidatureId = Number(reclamation.candidature_id);
-    if (!Number.isFinite(candidatureId) || candidatureId <= 0) {
-      const candidate = this.candidatures.find(
-        (cand) =>
-          (cand.candidat_nom || '').toLowerCase() ===
-          (reclamation.candidat_nom || '').toLowerCase(),
-      );
-      candidatureId = Number(candidate?.id);
-    }
-
-    if (!Number.isFinite(candidatureId) || candidatureId <= 0) {
+    const candidatureId = reclamation.candidature_id || this.candidatures[0]?.id;
+    if (!candidatureId) {
       this.showAlertMessage('❌ Dossier associé introuvable pour cette réclamation.');
       return;
     }
 
-    this.router.navigate(['/commission/dossier', candidatureId], {
+    this.router.navigate(['/consultation-dossier', candidatureId], {
       queryParams: { source: 'reclamations', reclamation: reclamation.id },
     });
   }
@@ -7251,6 +7322,8 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.selectedInscriptionsFileName = file.name;
+    this.inscriptionFileLoaded = true;
+    this.inscriptionVerified = false;
     const reader = new FileReader();
 
     reader.onload = (e: any) => {
@@ -7260,6 +7333,7 @@ export class DashboardCommissionComponent implements OnInit {
       const worksheet = workbook.Sheets[firstSheetName];
       this.inscriptionsExcelRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
       this.inscriptionsVerificationRows = [];
+      this.updateInscriptionStats();
       this.toastService.show('Fichier Excel chargé.', 'success');
     };
 
@@ -7271,16 +7345,28 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   verifierInscriptionsExcel(): void {
+    if (this.inscriptionCandidates.length === 0) {
+      this.toastService.show('Aucune inscription à vérifier.', 'warning');
+      return;
+    }
+
     if (this.inscriptionsExcelRows.length === 0) {
-      this.toastService.show('Importez un fichier Excel avant la vérification.', 'warning');
+      this.toastService.show("Veuillez d'abord charger un fichier Excel.", 'warning');
       return;
     }
 
     const token = this.authService.getAccessToken();
     if (!token) {
-      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      this.toastService.show(
+        "Token d'authentification manquant. Utilisation de la vérification locale.",
+        'warning',
+      );
+      this.verifyInscriptionsLocally();
       return;
     }
+
+    // Show loading toast
+    this.toastService.show('Contacting backend pour rapprochement...', 'info');
 
     const masterId = this.selectedConfigMasterId || null;
 
@@ -7296,18 +7382,32 @@ export class DashboardCommissionComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
-          this.inscriptionsVerificationRows = (response?.rows ||
-            []) as InscriptionVerificationRow[];
-          this.lastRapprochementAuditId = Number(response?.audit_id || 0) || null;
-          const summary = response?.summary || {};
+          // Validate response structure
+          if (!response || !response.rows || !Array.isArray(response.rows)) {
+            console.warn('Invalid response structure from backend:', response);
+            this.verifyInscriptionsLocally();
+            return;
+          }
+
+          this.inscriptionsVerificationRows = response.rows as InscriptionVerificationRow[];
+          this.lastRapprochementAuditId = response?.audit_id ? Number(response.audit_id) : null;
+          this.inscriptionVerified = true;
+          this.updateInscriptionStats();
+
+          const summary = response?.summary || { valide: 0, incoherent: 0, absent: 0 };
           this.toastService.show(
-            `Rapprochement terminé: ${summary.valide || 0} valide(s), ${summary.incoherent || 0} incohérent(s), ${summary.absent || 0} absent(s).`,
+            `✅ Rapprochement backend réussi: ${summary.valide || 0} valide(s), ${summary.incoherent || 0} incohérent(s), ${summary.absent || 0} absent(s).`,
             'success',
           );
         },
         error: (error) => {
-          console.error('Erreur rapprochement inscriptions:', error);
-          this.toastService.show('Erreur lors du rapprochement des inscriptions.', 'error');
+          const errorMsg = error?.error?.message || error?.message || 'Erreur inconnue';
+          console.error('Erreur rapprochement inscriptions (backend):', errorMsg);
+          this.toastService.show(
+            `⚠️ Backend indisponible (${errorMsg}). Utilisation de la vérification locale.`,
+            'warning',
+          );
+          this.verifyInscriptionsLocally();
         },
       });
   }
@@ -7381,28 +7481,23 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   exportInscriptions(): void {
-    const inscriptions = this.candidatures.filter((c) => c.statut === 'inscrit');
-    if (inscriptions.length === 0) {
-      this.showAlertMessage('❌ Aucune inscription à exporter');
+    if (this.inscriptionsVerificationRows.length > 0) {
+      this.exportVerifiedInscriptions();
       return;
     }
 
-    const rows: ExportRow[] = inscriptions.map((cand) => ({
-      ID: cand.id.toString(),
-      Dossier: cand.dossier_id || '-',
-      Candidat: cand.candidat_nom || cand.candidat_email,
-      Master: cand.master_nom,
-      Spécialité: cand.specialite,
-      Statut: 'Inscrit',
-      'Date Inscription': cand.date_inscription || new Date().toLocaleDateString('fr-FR'),
+    const rows: ExportRow[] = this.inscriptionCandidates.map((candidate) => ({
+      ID: candidate.id.toString(),
+      Numéro: candidate.num,
+      Candidat: candidate.nom,
+      CIN: candidate.cin,
+      Master: candidate.master,
+      Dossier: candidate.dossier,
+      Paiement: this.getInscriptionPaymentLabel(candidate.paiement),
+      Finalisé: candidate.finalise ? 'Oui' : 'Non',
     }));
 
-    this.exportRows(
-      rows,
-      this.inscriptionsExportFormat,
-      'inscriptions-payment',
-      'Fichier de Paiement',
-    );
+    this.exportRows(rows, this.inscriptionsExportFormat, 'inscriptions-payment', 'Inscriptions');
   }
 
   private getInscriptionsScopeRows(): Candidature[] {
@@ -7495,6 +7590,434 @@ export class DashboardCommissionComponent implements OnInit {
       return 'Fichier déposé - en vérification';
     }
     return 'En attente de dépôt';
+  }
+
+  initInscriptionTestData(): void {
+    this.inscriptionCandidates = [
+      {
+        id: 1,
+        num: 'INS-2025-001',
+        nom: 'Salma Ben Youssef',
+        cin: '09123456',
+        master: 'Master Data Science',
+        dossier: 'complet',
+        paiement: 'paye',
+        finalise: false,
+        matchPercent: 100,
+        email: 'salma@example.com',
+        dossierFile: 'dossier_salma.pdf',
+        observation: 'Dossier complet et paiement confirmé',
+      },
+      {
+        id: 2,
+        num: 'INS-2025-002',
+        nom: 'Yassine Trabelsi',
+        cin: '09223344',
+        master: 'Master Génie Logiciel',
+        dossier: 'complet',
+        paiement: 'en_attente',
+        finalise: false,
+        matchPercent: 82,
+        email: 'yassine@example.com',
+        dossierFile: 'dossier_yassine.pdf',
+        observation: 'Paiement à confirmer',
+      },
+      {
+        id: 3,
+        num: 'INS-2025-003',
+        nom: 'Nour Azaiez',
+        cin: '09334455',
+        master: 'Master Réseaux',
+        dossier: 'incomplet',
+        paiement: 'incoherent',
+        finalise: false,
+        matchPercent: 67,
+        email: 'nour@example.com',
+        dossierFile: 'dossier_nour.pdf',
+        observation: 'Nom du dépôt différent du dossier administratif',
+      },
+      {
+        id: 4,
+        num: 'INS-2025-004',
+        nom: 'Imen Khelifi',
+        cin: '09445566',
+        master: 'Master Intelligence Artificielle',
+        dossier: 'complet',
+        paiement: 'paye',
+        finalise: true,
+        matchPercent: 100,
+        email: 'imen@example.com',
+        dossierFile: 'dossier_imen.pdf',
+        observation: 'Déjà finalisée',
+      },
+      {
+        id: 5,
+        num: 'INS-2025-005',
+        nom: 'Omar Saidi',
+        cin: '09556677',
+        master: 'Master Génie Civil',
+        dossier: 'complet',
+        paiement: 'absent',
+        finalise: false,
+        matchPercent: 48,
+        email: 'omar@example.com',
+        dossierFile: 'dossier_omar.pdf',
+        observation: 'Aucune trace de paiement',
+      },
+      {
+        id: 6,
+        num: 'INS-2025-006',
+        nom: 'Meriem Jaziri',
+        cin: '09667788',
+        master: 'Master Big Data',
+        dossier: 'complet',
+        paiement: 'paye',
+        finalise: false,
+        matchPercent: 100,
+        email: 'meriem@example.com',
+        dossierFile: 'dossier_meriem.pdf',
+        observation: 'Compatible avec le fichier importé',
+      },
+      {
+        id: 7,
+        num: 'INS-2025-007',
+        nom: 'Anis Ferjani',
+        cin: '09778899',
+        master: 'Master Sécurité Informatique',
+        dossier: 'incomplet',
+        paiement: 'en_attente',
+        finalise: false,
+        matchPercent: 54,
+        email: 'anis@example.com',
+        dossierFile: 'dossier_anis.pdf',
+        observation: 'Pièce manquante dans le dossier',
+      },
+      {
+        id: 8,
+        num: 'INS-2025-008',
+        nom: 'Rim Hassen',
+        cin: '09889900',
+        master: 'Master Génie Logiciel',
+        dossier: 'complet',
+        paiement: 'paye',
+        finalise: false,
+        matchPercent: 97,
+        email: 'rim@example.com',
+        dossierFile: 'dossier_rim.pdf',
+        observation: 'Prête pour génération du fichier final',
+      },
+      {
+        id: 9,
+        num: 'INS-2025-009',
+        nom: 'Sofiene Brik',
+        cin: '09990011',
+        master: 'Master Réseaux',
+        dossier: 'complet',
+        paiement: 'incoherent',
+        finalise: false,
+        matchPercent: 72,
+        email: 'sofiene@example.com',
+        dossierFile: 'dossier_sofiene.pdf',
+        observation: 'Rapprochement à corriger',
+      },
+      {
+        id: 10,
+        num: 'INS-2025-010',
+        nom: 'Chaima Gharbi',
+        cin: '10001122',
+        master: 'Master Data Science',
+        dossier: 'complet',
+        paiement: 'paye',
+        finalise: false,
+        matchPercent: 100,
+        email: 'chaima@example.com',
+        dossierFile: 'dossier_chaima.pdf',
+        observation: 'Dossier validé',
+      },
+    ];
+
+    this.applyInscriptionFilters();
+    this.updateInscriptionStats();
+  }
+
+  applyInscriptionFilters(): void {
+    const search = normalizeActionLabel(this.inscriptionFilters.search);
+    this.inscriptionFilteredCandidates = this.inscriptionCandidates
+      .filter((candidate) => {
+        if (search) {
+          const haystack = [
+            candidate.num,
+            candidate.nom,
+            candidate.cin,
+            candidate.master,
+            candidate.email,
+          ]
+            .join(' ')
+            .toLowerCase();
+          if (!haystack.includes(search)) {
+            return false;
+          }
+        }
+
+        if (
+          this.inscriptionFilters.paiement !== 'all' &&
+          candidate.paiement !== this.inscriptionFilters.paiement
+        ) {
+          return false;
+        }
+
+        if (
+          this.inscriptionFilters.dossier !== 'all' &&
+          candidate.dossier !== this.inscriptionFilters.dossier
+        ) {
+          return false;
+        }
+
+        if (this.inscriptionFilters.finalise === 'yes' && !candidate.finalise) {
+          return false;
+        }
+
+        if (this.inscriptionFilters.finalise === 'no' && candidate.finalise) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.finalise !== b.finalise) {
+          return a.finalise ? 1 : -1;
+        }
+
+        const statusWeight = (value: InscriptionCandidateRow['paiement']): number => {
+          if (value === 'paye') return 0;
+          if (value === 'en_attente') return 1;
+          if (value === 'incoherent') return 2;
+          return 3;
+        };
+
+        const byStatus = statusWeight(a.paiement) - statusWeight(b.paiement);
+        if (byStatus !== 0) {
+          return byStatus;
+        }
+
+        return a.nom.localeCompare(b.nom);
+      });
+
+    this.updateInscriptionSelectAll();
+    this.updateInscriptionStats();
+  }
+
+  resetInscriptionFilters(): void {
+    this.inscriptionFilters = {
+      search: '',
+      paiement: 'all',
+      dossier: 'all',
+      finalise: 'all',
+    };
+    this.applyInscriptionFilters();
+  }
+
+  toggleInscriptionRow(id: number): void {
+    if (this.inscriptionSelectedIds.has(id)) {
+      this.inscriptionSelectedIds.delete(id);
+    } else {
+      this.inscriptionSelectedIds.add(id);
+    }
+    this.updateInscriptionSelectAll();
+  }
+
+  toggleInscriptionAll(): void {
+    const shouldSelectAll = !this.inscriptionSelectAll;
+    this.inscriptionSelectedIds.clear();
+
+    if (shouldSelectAll) {
+      this.inscriptionFilteredCandidates.forEach((candidate) =>
+        this.inscriptionSelectedIds.add(candidate.id),
+      );
+    }
+
+    this.inscriptionSelectAll = shouldSelectAll;
+  }
+
+  updateInscriptionSelectAll(): void {
+    this.inscriptionSelectAll =
+      this.inscriptionFilteredCandidates.length > 0 &&
+      this.inscriptionFilteredCandidates.every((candidate) =>
+        this.inscriptionSelectedIds.has(candidate.id),
+      );
+  }
+
+  updateInscriptionStats(): void {
+    const eligible = this.inscriptionCandidates.filter(
+      (candidate) => candidate.dossier === 'complet',
+    ).length;
+    const verifiedPayments = this.inscriptionCandidates.filter(
+      (candidate) => candidate.paiement === 'paye',
+    ).length;
+    const incoherencies = this.inscriptionCandidates.filter(
+      (candidate) => candidate.paiement === 'incoherent',
+    ).length;
+    const absents = this.inscriptionCandidates.filter(
+      (candidate) => candidate.paiement === 'absent',
+    ).length;
+    const finalised = this.inscriptionCandidates.filter((candidate) => candidate.finalise).length;
+    const validRows = this.inscriptionsVerificationRows.filter(
+      (row) => row.verification === 'valide',
+    ).length;
+
+    this.inscriptionStats = {
+      eligible,
+      verifiedPayments,
+      incoherencies,
+      absents,
+      finalised,
+      matchPercent: eligible > 0 ? Math.round((validRows / eligible) * 100) : 0,
+    };
+  }
+
+  getInscriptionPaymentLabel(value: InscriptionCandidateRow['paiement']): string {
+    if (value === 'paye') return 'Payé';
+    if (value === 'en_attente') return 'En attente';
+    if (value === 'incoherent') return 'Incohérent';
+    return 'Absent';
+  }
+
+  getInscriptionPaymentClass(value: InscriptionCandidateRow['paiement']): string {
+    if (value === 'paye') return 'badge-success';
+    if (value === 'en_attente') return 'badge-warning';
+    if (value === 'incoherent') return 'badge-danger';
+    return 'badge-muted';
+  }
+
+  getInscriptionDossierClass(value: InscriptionCandidateRow['dossier']): string {
+    return value === 'complet' ? 'badge-success' : 'badge-warning';
+  }
+
+  getInscriptionFinaliseClass(value: boolean): string {
+    return value ? 'badge-success' : 'badge-muted';
+  }
+
+  getInscriptionProgressPct(): number {
+    return Math.min(100, Math.max(0, this.inscriptionStats.matchPercent));
+  }
+
+  getInscriptionVerificationBadgeClass(value: InscriptionVerificationRow['verification']): string {
+    if (value === 'valide') return 'badge-success';
+    if (value === 'incoherent') return 'badge-warning';
+    return 'badge-danger';
+  }
+
+  getInscriptionVerificationSummaryLabel(
+    value: InscriptionVerificationRow['verification'],
+  ): string {
+    if (value === 'valide') return 'Valide';
+    if (value === 'incoherent') return 'Incohérent';
+    return 'Absent';
+  }
+
+  private getImportedCins(): Set<string> {
+    const cins = this.inscriptionsExcelRows
+      .map((row) => {
+        const raw = row?.CIN ?? row?.cin ?? row?.candidat_cin ?? row?.Cni ?? row?.cni ?? '';
+        return normalizeActionLabel(String(raw));
+      })
+      .filter((value) => !!value);
+
+    return new Set(cins);
+  }
+
+  private verifyInscriptionsLocally(): void {
+    const importedCins = this.getImportedCins();
+    const sourceRows = this.inscriptionCandidates.length > 0 ? this.inscriptionCandidates : [];
+
+    this.inscriptionsVerificationRows = sourceRows.map((candidate, index) => {
+      const cin = normalizeActionLabel(candidate.cin);
+      const matched =
+        importedCins.size > 0 ? importedCins.has(cin) : candidate.paiement !== 'absent';
+
+      let verification: InscriptionVerificationRow['verification'] = 'absent';
+      let details = 'Candidat non trouvé dans le fichier importé';
+
+      if (matched && candidate.paiement === 'paye') {
+        verification = 'valide';
+        details = 'Correspondance exacte et paiement confirmé';
+      } else if (matched && candidate.paiement === 'en_attente') {
+        verification = 'incoherent';
+        details = 'Fiche présente mais paiement en attente';
+      } else if (matched && candidate.paiement === 'incoherent') {
+        verification = 'incoherent';
+        details = 'Incohérence détectée dans les données';
+      } else if (matched) {
+        verification = 'absent';
+        details = 'Présent dans le dossier mais paiement manquant';
+      }
+
+      return {
+        numero_candidature: candidate.num,
+        cin: candidate.cin,
+        numero_inscription: `INS-${String(index + 1).padStart(4, '0')}`,
+        nom_prenom: candidate.nom,
+        master: candidate.master,
+        specialite: candidate.master,
+        verification,
+        details,
+      };
+    });
+
+    this.inscriptionVerified = true;
+    this.lastRapprochementAuditId = Date.now();
+    this.updateInscriptionStats();
+    this.toastService.show('Vérification locale terminée.', 'success');
+  }
+
+  finalizeInscriptions(): void {
+    const finalisable = this.inscriptionCandidates.filter(
+      (candidate) =>
+        candidate.dossier === 'complet' && candidate.paiement === 'paye' && !candidate.finalise,
+    );
+
+    if (finalisable.length === 0) {
+      this.toastService.show('Aucune inscription prête à finaliser.', 'warning');
+      return;
+    }
+
+    finalisable.forEach((candidate) => {
+      candidate.finalise = true;
+      candidate.observation = 'Inscription finalisée';
+    });
+
+    this.applyInscriptionFilters();
+    this.toastService.show(`${finalisable.length} inscription(s) finalisée(s).`, 'success');
+  }
+
+  exportVerifiedInscriptions(): void {
+    const rows: ExportRow[] = (
+      this.inscriptionsVerificationRows.length > 0
+        ? this.inscriptionsVerificationRows.filter((row) => row.verification === 'valide')
+        : this.inscriptionCandidates.filter(
+            (candidate) => candidate.paiement === 'paye' && candidate.dossier === 'complet',
+          )
+    ).map((item: any) => ({
+      'Numéro candidature': item.numero_candidature || item.num,
+      CIN: item.cin,
+      'Numéro inscription':
+        item.numero_inscription || `INS-${String(item.id || 0).padStart(4, '0')}`,
+      'Nom et prénom': item.nom_prenom || item.nom,
+      Master: item.master,
+      Spécialité: item.specialite || item.master,
+    }));
+
+    if (rows.length === 0) {
+      this.toastService.show('Aucune ligne valide à exporter.', 'warning');
+      return;
+    }
+
+    this.exportRows(
+      rows,
+      this.inscriptionsExportFormat,
+      'inscriptions-finales',
+      'Inscriptions finales',
+    );
   }
 
   exportRows(

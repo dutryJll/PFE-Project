@@ -255,7 +255,7 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
   }
 
   voirDossier(candidature: Candidature): void {
-    this.router.navigate(['/commission/dossier', candidature.id]);
+    this.router.navigate(['/consultation-dossier', candidature.id]);
   }
 
   deciderCandidature(candidature: Candidature, decision: CommissionDecision): void {

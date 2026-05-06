@@ -41,6 +41,7 @@ import { IngenieurCatalogComponent } from './components/ingenieur-catalog/ingeni
 import { ResearchMastersExplorationComponent } from './components/research-masters-exploration/research-masters-exploration.component';
 import { ProfessionalMastersExplorationComponent } from './components/professional-masters-exploration/professional-masters-exploration.component';
 import { EngineerExplorationComponent } from './components/engineer-exploration/engineer-exploration.component';
+import { ConsultationDossierComponent } from './components/consultation-dossier/consultation-dossier.component';
 
 // ========================================
 // ADMIN COMPONENTS
@@ -57,7 +58,6 @@ import { EditCommissionMemberComponent } from './components/admin/edit-commissio
 // ========================================
 import { DashboardCommissionComponent } from './components/commission/dashboard-commission/dashboard-commission';
 import { ConsulterCandidaturesComponent as ConsulterCandidaturesCommissionComponent } from './components/commission/consulter-candidatures/consulter-candidatures';
-import { ConsulterDossierComponent as CommissionDossierComponent } from './components/commission/consulter-dossier/consulter-dossier';
 import { PreparerPreselection } from './components/commission/preparer-preselection/preparer-preselection';
 import { ListePreselection } from './components/commission/liste-preselection/liste-preselection';
 import { ListeSelection } from './components/commission/liste-selection/liste-selection';
@@ -203,6 +203,12 @@ export const routes: Routes = [
     data: { roles: ['candidat'], actions: ['Consultation de dossier'] },
   },
   {
+    path: 'consultation-dossier/:id',
+    component: ConsultationDossierComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['candidat', 'commission', 'responsable_commission'] },
+  },
+  {
     path: 'candidat/dossier/deposer',
     component: DeposerDocumentsComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
@@ -268,7 +274,7 @@ export const routes: Routes = [
   },
   {
     path: 'commission/dossier/:id',
-    component: CommissionDossierComponent,
+    component: ConsultationDossierComponent,
     canActivate: [authGuard, roleGuard],
     data: {
       roles: ['commission', 'responsable_commission'],

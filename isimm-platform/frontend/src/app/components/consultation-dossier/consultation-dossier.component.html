@@ -1,0 +1,236 @@
+<div class="dossier-shell" *ngIf="showCustomSnippet">
+  <header class="dossier-hero">
+    <div class="hero-left">
+      <button class="hero-back" (click)="retour()" aria-label="Retour">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="hero-title-wrap">
+        <p class="hero-kicker">Commission d'admission</p>
+        <h1>Dossier candidature #{{ candidatureId }}</h1>
+        <p class="hero-subtitle">Contrôle documentaire, notation et décision finale</p>
+      </div>
+    </div>
+
+    <div
+      class="hero-score"
+      [class.good]="candidat?.score >= 14"
+      [class.top]="candidat?.score >= 16"
+    >
+      <span class="score-caption">Score actuel</span>
+      <strong>{{ candidatureScore }}</strong>
+      <small>{{ scoreMention }}</small>
+    </div>
+  </header>
+
+  <section class="source-banner" *ngIf="sourceContext">
+    <div class="source-label">
+      <i class="fas fa-sparkles"></i>
+      <span>{{ sourceLabel }}</span>
+    </div>
+  </section>
+
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loader-ring"></div>
+    <p>Chargement des informations du dossier...</p>
+  </div>
+
+  <main *ngIf="!isLoading" class="dossier-grid">
+    <section class="card profile-card">
+      <div class="profile-main">
+        <div class="identity-pill">
+          {{ candidat?.first_name?.charAt(0) }}{{ candidat?.last_name?.charAt(0) }}
+        </div>
+        <div class="identity-content">
+          <h2>{{ candidat?.first_name }} {{ candidat?.last_name }}</h2>
+          <p class="profile-sub">
+            Candidat {{ candidat?.type_candidature === 'master' ? 'Master' : 'Cycle Ingénieur' }}
+          </p>
+        </div>
+        <span class="status-pill" [class]="'status-pill ' + (candidat?.statusClass || 'success')">
+          {{ candidat?.statutLabel || 'En attente de validation' }}
+        </span>
+      </div>
+
+      <div class="profile-facts">
+        <article class="fact">
+          <i class="fas fa-id-card"></i><span>{{ candidat?.cin }}</span>
+        </article>
+        <article class="fact">
+          <i class="fas fa-envelope"></i><span>{{ candidat?.email }}</span>
+        </article>
+        <article class="fact">
+          <i class="fas fa-phone"></i><span>{{ candidat?.telephone }}</span>
+        </article>
+        <article class="fact">
+          <i class="fas fa-calendar"></i><span>{{ candidat?.date_naissance }}</span>
+        </article>
+        <article class="fact"><i class="fas fa-university"></i><span>ISIMM</span></article>
+        <article class="fact">
+          <i class="fas fa-file-alt"></i><span>Dossier #{{ candidatureId }}</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="card progress-card full-width">
+      <div class="progress-head">
+        <h3>Avancement</h3>
+        <span>{{ completionPercent }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="completionPercent"></div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi valid">
+          <strong>{{ validCount }}</strong
+          ><span>Validés</span>
+        </div>
+        <div class="kpi rejected">
+          <strong>{{ rejectedCount }}</strong
+          ><span>Rejetés</span>
+        </div>
+        <div class="kpi pending">
+          <strong>{{ pendingCount }}</strong
+          ><span>En attente</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card full-width">
+      <div class="section-head">
+        <h3>Documents PDF</h3>
+        <p>Viewer, validation et rejet de chaque document du dossier.</p>
+      </div>
+      <div class="docs-list">
+        <article
+          class="doc-item"
+          *ngFor="let doc of documents"
+          [class.state-valid]="doc.status === 'valid'"
+          [class.state-rejected]="doc.status === 'rejected'"
+          [class.state-pending]="doc.status === 'pending'"
+        >
+          <div class="doc-header" (click)="toggleDoc(doc.id)">
+            <div class="doc-meta">
+              <h4>{{ doc.nom }}</h4>
+              <p>{{ doc.dateDepot }} · {{ doc.taille }}</p>
+            </div>
+            <span
+              class="status-pill mini"
+              [class.valid]="doc.status === 'valid'"
+              [class.rejected]="doc.status === 'rejected'"
+              [class.pending]="doc.status === 'pending'"
+            >
+              {{
+                doc.status === 'valid'
+                  ? 'Validé'
+                  : doc.status === 'rejected'
+                    ? 'Rejeté'
+                    : 'En attente'
+              }}
+            </span>
+          </div>
+          <div class="doc-body" [class.open]="doc.open">
+            <div class="doc-preview" *ngIf="doc.urlSafe">
+              <iframe [src]="doc.urlSafe" title="Aperçu document"></iframe>
+            </div>
+            <p *ngIf="doc.commentaire" class="doc-note">{{ doc.commentaire }}</p>
+            <div class="doc-actions">
+              <button class="btn btn-sec" type="button" (click)="ouvrirFichier()">Voir</button>
+              <button
+                class="btn btn-sec"
+                type="button"
+                (click)="sendPrompt('Télécharger ' + doc.nom)"
+              >
+                Télécharger
+              </button>
+              <button class="btn btn-success" type="button" (click)="validerDoc(doc.id, true)">
+                Valider
+              </button>
+              <button class="btn btn-danger" type="button" (click)="validerDoc(doc.id, false)">
+                Rejeter
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card decision-card full-width">
+      <div class="section-head">
+        <h3>Décision commission</h3>
+        <p>{{ decisionNote }}</p>
+      </div>
+      <textarea
+        rows="3"
+        [(ngModel)]="globalComment"
+        placeholder="Observations générales, points forts, réserves..."
+      ></textarea>
+      <div class="decision-result" [class.show]="!!decisionResult" [ngClass]="decisionResultClass">
+        {{ decisionResult }}
+      </div>
+      <div class="decision-btns">
+        <button class="btn btn-success" type="button" (click)="priseDecision('approve')">
+          Valider dossier
+        </button>
+        <button class="btn btn-danger" type="button" (click)="priseDecision('reject')">
+          Rejeter
+        </button>
+        <button class="btn btn-warn" type="button" (click)="priseDecision('hold')">Attente</button>
+      </div>
+    </section>
+
+    <section class="card full-width">
+      <div class="tabs">
+        <button class="tab-btn" [class.active]="activeTab === 'docs'" (click)="switchTab('docs')">
+          Documents
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'history'"
+          (click)="switchTab('history')"
+        >
+          Historique
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'notes'" (click)="switchTab('notes')">
+          Avis membres
+        </button>
+      </div>
+
+      <div class="tab-panel" [class.active]="activeTab === 'docs'">
+        <div class="doc-grid">
+          <article class="doc-item" *ngFor="let doc of documents"></article>
+        </div>
+      </div>
+
+      <div class="tab-panel" [class.active]="activeTab === 'history'">
+        <div class="timeline-list">
+          <div class="tl-item" *ngFor="let item of timeline">
+            <div class="tl-dot" [ngClass]="'td-' + item.tone"></div>
+            <div class="tl-content">
+              <div class="tl-title">{{ item.title }}</div>
+              <div class="tl-sub">{{ item.subtitle }}</div>
+              <div class="tl-time">{{ item.time }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" [class.active]="activeTab === 'notes'">
+        <div class="comment-existing">Karim Tounsi — Favorable : Excellent profil académique.</div>
+        <div class="comment-existing">
+          Leila Mansour — Réservé : Bon candidat, manque d'expérience pratique.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" [class.show]="toastShow" [ngClass]="toastClass">
+    <span>{{ toastMsg }}</span>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="!showCustomSnippet">
+  <p>
+    Le composant de consultation du dossier est prêt mais l'aperçu ne s'affiche que depuis les
+    routes de consultation.
+  </p>
+</div>

@@ -255,7 +255,9 @@ export class TraiterReclamationsComponent implements OnInit {
 
   voirDossier(reclamation: Reclamation): void {
     console.log('📁 Voir dossier:', reclamation.candidat_nom);
-    this.router.navigate(['/commission/dossier', reclamation.candidat_id]);
+    this.router.navigate(['/consultation-dossier', reclamation.candidat_id], {
+      queryParams: { source: 'reclamations', reclamation: reclamation.id },
+    });
   }
 
   voirPiece(piece: any): void {

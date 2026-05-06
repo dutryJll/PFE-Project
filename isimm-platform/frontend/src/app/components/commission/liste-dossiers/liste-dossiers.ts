@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 interface Dossier {
   id: number;
@@ -17,6 +18,8 @@ interface Dossier {
 export class ListeDossiersComponent implements OnInit {
   dossiers: Dossier[] = [];
 
+  constructor(private router: Router) {}
+
   ngOnInit(): void {
     this.loadDossiers();
   }
@@ -30,6 +33,6 @@ export class ListeDossiersComponent implements OnInit {
   }
 
   voirDossier(id: number): void {
-    // navigate to detail
+    this.router.navigate(['/consultation-dossier', id]);
   }
 }

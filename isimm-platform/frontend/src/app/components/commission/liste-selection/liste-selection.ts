@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, Router } from '@angular/router';
+import { Router } from '@angular/router';
 
 interface Candidat {
   id: number;
@@ -48,7 +48,7 @@ interface FinalSelectionFilters {
 @Component({
   selector: 'app-liste-selection',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './liste-selection.html',
   styleUrl: './liste-selection.css',
 })
@@ -253,7 +253,7 @@ export class ListeSelection implements OnInit {
   }
 
   voirDossier(id: number): void {
-    this.router.navigate(['/commission/dossier', id]);
+    this.router.navigate(['/consultation-dossier', id]);
   }
 
   ajouterCommentaire(candidat: Candidat): void {
