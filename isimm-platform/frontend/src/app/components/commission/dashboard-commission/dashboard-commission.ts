@@ -297,6 +297,7 @@ interface CommissionActionPermissions {
   publierListes: boolean;
   gererInscriptions: boolean;
   consulterStatistiques: boolean;
+  traiterReclamations: boolean;
 }
 
 function normalizeActionLabel(value: string): string {
@@ -444,6 +445,7 @@ export class DashboardCommissionComponent implements OnInit {
     publierListes: true,
     gererInscriptions: true,
     consulterStatistiques: true,
+    traiterReclamations: true,
   };
   customRoleActions: string[] = [];
   private readonly customActionViewMap: Record<string, CommissionView> = {
@@ -3011,6 +3013,7 @@ export class DashboardCommissionComponent implements OnInit {
           ]),
           gererInscriptions: this.authService.hasMyAction('Gérer inscriptions'),
           consulterStatistiques: this.authService.hasMyAction('Consulter statistiques'),
+          traiterReclamations: this.authService.hasMyAction('Traiter réclamations'),
         };
 
         if (!this.canAccessView(this.currentView)) {
