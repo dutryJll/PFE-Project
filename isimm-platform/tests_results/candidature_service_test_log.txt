@@ -1,0 +1,260 @@
+Output of terminal 2924495e-941e-4d64-b70e-eaa76a06e0e6:
+
+
+[... PREVIOUS OUTPUT TRUNCATED ...]
+
+ templateUrl: './dashboard-candidat.html',
+    
+src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:1327:67:
+    
+src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:273:15:
+      273 Ôöé   templateUrl: './dashboard-candidat.html',
+    
+src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:1328:39:
+    
+src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:273:15:
+
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> ng build --configuration development 2>&1 | Select-String "bundle generation" 
+
+Application bundle generation failed. [50.415 seconds] - 
+2026-05-08T22:33:26.228Z
+
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> ng build --configuration development 2>&1 | Select-String "candidatureService|triggerWizardScore|calculateWizardScore"
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> ng build --configuration development
+Initial chunk files | Names         |  Raw size
+main.js             | main          |   8.80 MB | 
+chunk-RKVOU6ZE.js   | -             | 888.16 kB | 
+styles.css          | styles        |  21.79 kB | 
+chunk-46DXP6YY.js   | -             |   2.63 kB | 
+chunk-7YWLATDR.js   | -             | 459 bytes | 
+
+                    | Initial total |   9.71 MB
+
+Lazy chunk files    | Names         |  Raw size
+chunk-WROLUZ4V.js   | html2canvas   | 399.43 kB | 
+chunk-TLOSNOGT.js   | index-es      | 368.55 kB | 
+chunk-MMTZEVWY.js   | browser       | 153.78 kB | 
+chunk-27QUUIJC.js   | purify-es     |  46.49 kB | 
+
+Application bundle generation complete. [59.998 seconds] - 2026-05-08T22:43:47.265Z
+                                                                                ude 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:2072:58:
+      2072 │             <div class="carousel-wrap" *ngIf="candidates?.length">
+           ╵                                                           ~~~~~~
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:437:15:
+      437 │   templateUrl: './dashboard-commission.html',
+          ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8113: MaCommissionComponent is not used within the template of DashboardCommissionComponent [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:435:4:
+      435 │     MaCommissionComponent,
+          ╵     ~~~~~~~~~~~~~~~~~~~~~
+
+
+Output location: C:\Users\HP\Desktop\PFE\isimm-platform\frontend\dist\frontend
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> ng build --configuration development
+Initial chunk files | Names         |  Raw size
+main.js             | main          |   8.80 MB | 
+chunk-RKVOU6ZE.js   | -             | 888.16 kB | 
+styles.css          | styles        |  21.79 kB | 
+chunk-46DXP6YY.js   | -             |   2.63 kB | 
+chunk-7YWLATDR.js   | -             | 459 bytes | 
+
+                    | Initial total |   9.71 MB
+
+Lazy chunk files    | Names         |  Raw size
+chunk-WROLUZ4V.js   | html2canvas   | 399.43 kB | 
+chunk-TLOSNOGT.js   | index-es      | 368.55 kB | 
+chunk-MMTZEVWY.js   | browser       | 153.78 kB | 
+chunk-27QUUIJC.js   | purify-es     |  46.49 kB | 
+
+Application bundle generation complete. [62.156 seconds] - 2026-05-09T08:41:31.645Z
+                                                                                ude 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:2072:58:
+      2072 │             <div class="carousel-wrap" *ngIf="candidates?.length">
+           ╵                                                           ~~~~~~
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:437:15:
+      437 │   templateUrl: './dashboard-commission.html',
+          ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8113: MaCommissionComponent is not used within the template of DashboardCommissionComponent [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:435:4:
+      435 │     MaCommissionComponent,
+          ╵     ~~~~~~~~~~~~~~~~~~~~~
+
+
+Output location: C:\Users\HP\Desktop\PFE\isimm-platform\frontend\dist\frontend
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> ng build --configuration development
+Initial chunk files | Names         |  Raw size
+main.js             | main          |   8.80 MB | 
+chunk-RKVOU6ZE.js   | -             | 888.16 kB | 
+styles.css          | styles        |  21.79 kB | 
+chunk-46DXP6YY.js   | -             |   2.63 kB | 
+chunk-7YWLATDR.js   | -             | 459 bytes | 
+
+                    | Initial total |   9.71 MB
+
+Lazy chunk files    | Names         |  Raw size
+chunk-WROLUZ4V.js   | html2canvas   | 399.43 kB | 
+chunk-TLOSNOGT.js   | index-es      | 368.55 kB | 
+chunk-MMTZEVWY.js   | browser       | 153.78 kB | 
+chunk-27QUUIJC.js   | purify-es     |  46.49 kB | 
+
+Application bundle generation complete. [57.668 seconds] - 2026-05-09T08:46:08.039Z
+▲ [WARNING] NG8107: The left side of this optional chain operation does not incled with the '.' operator. [plugin angular-compiler]
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:2072:58:
+      2072 │             <div class="carousel-wrap" *ngIf="candidates?.length">
+           ╵                                                           ~~~~~~
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:437:15:
+      437 │   templateUrl: './dashboard-commission.html',
+          ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8113: MaCommissionComponent is not used within the template of DashboardCommissionComponent [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:435:4:
+      435 │     MaCommissionComponent,
+          ╵     ~~~~~~~~~~~~~~~~~~~~~
+
+Output location: C:\Users\HP\Desktop\PFE\isimm-platform\frontend\dist\frontend
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& c:\Users\HP\Desktop\PFE\.venv\Scripts\Activate.ps1)
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> npm run build -- --configuration development
+
+> frontend@0.0.0 build
+> ng build --configuration development
+
+Initial chunk files | Names         |  Raw size
+main.js             | main          |   8.80 MB | 
+chunk-RKVOU6ZE.js   | -             | 888.16 kB | 
+styles.css          | styles        |  21.79 kB | 
+chunk-46DXP6YY.js   | -             |   2.63 kB | 
+chunk-7YWLATDR.js   | -             | 459 bytes | 
+
+                    | Initial total |   9.71 MB
+
+Lazy chunk files    | Names         |  Raw size
+chunk-WROLUZ4V.js   | html2canvas   | 399.43 kB | 
+chunk-TLOSNOGT.js   | index-es      | 368.55 kB | 
+chunk-MMTZEVWY.js   | browser       | 153.78 kB | 
+chunk-27QUUIJC.js   | purify-es     |  46.49 kB | 
+
+Application bundle generation complete. [66.324 seconds] - 2026-05-09T15:33:33.361Z
+                                                                                ed with the '.' operator. [plugin angular-compiler]
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:2072:58:
+      2072 │             <div class="carousel-wrap" *ngIf="candidates?.length">
+           ╵                                                           ~~~~~~
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:437:15:
+      437 │   templateUrl: './dashboard-commission.html',
+          ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] NG8113: MaCommissionComponent is not used within the template of DashboardCommissionComponent [plugin angular-compiler]
+                                                                                35:4:
+      435 │     MaCommissionComponent,
+          ╵     ~~~~~~~~~~~~~~~~~~~~~
+
+Output location: C:\Users\HP\Desktop\PFE\isimm-platform\frontend\dist\frontend
+
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\frontend> cd c:\Users\HP\Desktop\PFE\isimm-platform\services\auth-service ; python manage.py test --verbosity=2
+🧪 TEST 1: Connexion Admin
+==================================================
+Status: 200
+✅ Connexion réussie !
+   Nom: Admin ISIMM
+   Rôle: admin
+   Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90e...
+Found 0 test(s).
+Skipping setup of unused database(s): default.
+System check identified no issues (0 silenced).
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.000s
+
+NO TESTS RAN
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\services\auth-service> cd c:\Users\HP\Desktop\PFE\isimm-platform\services\user-service ; python manage.py test --verbosity=2
+Found 0 test(s).
+Skipping setup of unused database(s): default.
+System check identified no issues (0 silenced).
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.000s
+
+NO TESTS RAN
+(.venv) PS C:\Users\HP\Desktop\PFE\isimm-platform\services\user-service> cd c:\Users\HP\Desktop\PFE\isimm-platform\services\candidature_service ; python manage.py test candidature_app --verbosity=2
+C:\Users\HP\Desktop\PFE\.venv\Lib\site-packages\django\db\models\base.py:388: RuntimeWarning: Model 'candidature_app.historiquecandidature' was already registered. Reloading models is not advised as it can lead to inconsistencies, most notably with related models.
+  new_class._meta.apps.register_model(new_class._meta.app_label, new_class)
+Found 37 test(s).
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+Operations to perform:
+  Synchronize unmigrated apps: channels, corsheaders, drf_spectacular, messages, rest_framework, staticfiles
+  Apply all migrations: admin, auth, candidature_app, contenttypes, sessions
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying candidature_app.0001_initial... OK
+  Applying candidature_app.0002_add_concours_fk_to_candidature... OK
+  Applying candidature_app.0003_add_performance_indexes... OK
+  Applying candidature_app.0004_configurationappel_formulaire_commission_schema... OK
+  Applying candidature_app.0005_notification... OK
+  Applying candidature_app.0006_configurationappel_add_capacity_pdf_visibility... OK
+  Applying candidature_app.0007_concours_add_document_officiel_pdf... OK
+  Applying candidature_app.0008_inscriptionrapprochementaudit... OK
+  Applying candidature_app.0009_document_documenttype_dossier_validationdocument_and_more... OK
+  Applying candidature_app.0010_offremaster... OK
+  Applying candidature_app.0011_offremaster_extended_fields... OK
+  Applying candidature_app.0012_historiqueactioncommission... OK
+  Applying sessions.0001_initial... OK
+System check identified no issues (0 silenced).
+test_ajuster_dossier_refused_when_deadline_expired (candidature_app.tests.CandidatureWorkflowTests.test_ajuster_dossier_refused_when_deadline_expired) ... ok
+test_candidatures_responsable_filtre_type_ingenieur (candidature_app.tests.CandidatureWorkflowTests.test_candidatures_responsable_filtre_type_ingenieur) ... ok
+test_candidatures_responsable_sont_triees_par_score_desc (candidature_app.tests.CandidatureWorkflowTests.test_candidatures_responsable_sont_triees_par_score_desc) ... ok
+test_changer_statut_refuses_invalid_transition (candidature_app.tests.CandidatureWorkflowTests.test_changer_statut_refuses_invalid_transition) ... ok
+test_changer_statut_valid_transition_updates_and_sends_email (candidature_app.tests.CandidatureWorkflowTests.test_changer_statut_valid_transition_updates_and_sends_email) ... Erreur lors de l'envoi de l'email de changement de statut: Template: C:\Users\HP\Desktop\PFE\isimm-platform\services\candidature_service\candidature_app\templates\emails\changement_statut.html, Could not parse the remainder: '('/')' from 'request.build_absolute_uri('/')'
+ok
+... (output truncated)
+
+FAILED (failures=13)
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+(.venv) 

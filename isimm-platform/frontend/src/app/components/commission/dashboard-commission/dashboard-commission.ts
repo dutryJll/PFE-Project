@@ -1,5 +1,5 @@
 import { Component, OnInit, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -8,6 +8,7 @@ import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { CandidatureService } from '../../../services/candidature.service';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
+import { MaCommissionComponent } from '../ma-commission/ma-commission.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { MatCardModule } from '@angular/material/card';
@@ -283,7 +284,8 @@ type CommissionView =
   | 'statistiques'
   | 'deliberations'
   | 'reclamations'
-  | 'notifications';
+  | 'notifications'
+  | 'ma-commission';
 
 type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
 type ExportRow = Record<string, string | number | boolean | null | undefined>;
@@ -424,7 +426,14 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
-  imports: [CommonModule, FormsModule, SkeletonLoaderComponent, MatDialogModule, MatCardModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SkeletonLoaderComponent,
+    MatDialogModule,
+    MatCardModule,
+    MaCommissionComponent,
+  ],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
 })
@@ -519,6 +528,10 @@ export class DashboardCommissionComponent implements OnInit {
   preselectionRowsForGeneration: Candidature[] = [];
   generatedSelectionRows: Candidature[] = [];
   selectedPreselectionCandidateIds: number[] = [];
+
+  // Selection bar properties
+  filtreeCandidatureCount: number = 0;
+  seuilScore: number = 0;
   candidaturesFiltrees: Candidature[] = [];
   // UI filters
   hideValidated: boolean = false;
@@ -545,6 +558,112 @@ export class DashboardCommissionComponent implements OnInit {
   bulkConsultationCandidatures: Candidature[] = [];
   bulkConsultationCandidaturesCurrentIndex: number = 0;
   selectedCandidaturesIds: number[] = [];
+  // --- Candidatures Master (carousel & actions) ---
+  candidates: any[] = [
+    {
+      id: 1,
+      num: '2603-00001-GL',
+      nom: 'Fatma Gharbi',
+      master: 'Master Data Science',
+      score: 17.2,
+      interne: true,
+      lu: false,
+      documents: [
+        { nom: 'Relevé L3', statut: 'ok' },
+        { nom: 'Lettre de motivation', statut: 'ok' },
+        { nom: 'Certificat de scolarité', statut: 'missing' },
+      ],
+    },
+    {
+      id: 2,
+      num: '2603-00002-DS',
+      nom: 'Ahmed Ben Ali',
+      master: 'Master Génie Logiciel',
+      score: 16.5,
+      interne: true,
+      lu: false,
+      documents: [
+        { nom: 'Relevé L3', statut: 'ok' },
+        { nom: 'Lettre de motivation', statut: 'ok' },
+      ],
+    },
+    {
+      id: 3,
+      num: '2603-00003-ING',
+      nom: 'Mohamed Trabelsi',
+      master: 'Cycle Ingénieur',
+      score: 15.8,
+      interne: false,
+      lu: false,
+      documents: [{ nom: 'Relevé L3', statut: 'ok' }],
+    },
+  ];
+
+  currentIndex: number = 0;
+  get currentCandidate() {
+    return this.candidates[this.currentIndex] ?? null;
+  }
+
+  consulterDossier(id: number) {
+    this.toastService.show('Ouverture du dossier ID ' + id, 'info');
+    // Integrate navigation to dossier viewer if available
+    // this.router.navigate(['/commission/dossier', id]);
+  }
+
+  telechargerPieces(id: number) {
+    this.toastService.show('Téléchargement pièces pour ID ' + id, 'info');
+    // Implement ZIP creation / invocation here
+  }
+
+  prevCandidate() {
+    if (this.currentIndex > 0) this.currentIndex -= 1;
+  }
+
+  nextCandidate() {
+    if (this.currentIndex < this.candidates.length - 1) this.currentIndex += 1;
+  }
+
+  carPrev() {
+    this.prevCandidate();
+  }
+
+  carNext() {
+    this.nextCandidate();
+  }
+
+  validerDossier(id: number) {
+    const c = this.candidates.find((x) => x.id === id);
+    if (!c) return;
+
+    this.candidatureService.updateStatus(id, 'preselectionne').subscribe({
+      next: (resp: any) => {
+        c.statut = 'preselectionne';
+        this.toastService.show(`Dossier validé: ${c.nom}`, 'success');
+        this.nextCandidate();
+      },
+      error: (err: any) => {
+        const msg = err?.error?.error || 'Erreur lors de la validation du dossier';
+        this.toastService.show(msg, 'error');
+      },
+    });
+  }
+
+  rejeterDossier(id: number) {
+    const c = this.candidates.find((x) => x.id === id);
+    if (!c) return;
+
+    this.candidatureService.updateStatus(id, 'rejete').subscribe({
+      next: (resp: any) => {
+        c.statut = 'rejete';
+        this.toastService.show(`Dossier rejeté: ${c.nom}`, 'warning');
+        this.nextCandidate();
+      },
+      error: (err: any) => {
+        const msg = err?.error?.error || 'Erreur lors du rejet du dossier';
+        this.toastService.show(msg, 'error');
+      },
+    });
+  }
   candidaturesMarkedAsRead: Set<number> = new Set();
   validationScoreThreshold: number | null = null;
 
@@ -1688,6 +1807,7 @@ export class DashboardCommissionComponent implements OnInit {
     private candidatureService: CandidatureService,
     private dialog: MatDialog,
     private webSocketService: WebSocketService,
+    public location: Location,
   ) {}
 
   ngOnInit(): void {

@@ -1291,7 +1291,8 @@ class Document(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.candidature.numero} - {self.type_document.get_type_document_display()}"
+        type_code = (self.type_document.type_document or '').upper()
+        return f"{self.candidature.numero} - {self.type_document.get_type_document_display()} ({type_code})"
 
 
 class ValidationDocument(models.Model):

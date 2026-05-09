@@ -17,6 +17,7 @@ import { ReclamationDetailDialogComponent } from './reclamation-detail-dialog.co
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { CandidatureService } from '../../../services/candidature.service';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { isPublicOffer } from '../../../shared/public-offer';
 import * as XLSX from 'xlsx';
@@ -32,6 +33,7 @@ interface Candidature {
   statut: string;
   motif_rejet?: string;
   date_soumission: string;
+  date_mise_a_jour?: string;
   etat_candidature?: string;
   dossier_valide: boolean;
   date_depot_dossier?: string;
@@ -83,10 +85,12 @@ interface Master {
 
 interface Offre {
   id: number;
+  master_id?: number;
   titre: string;
   type: 'master' | 'cycle_ingenieur';
   sous_type?: string;
   specialite?: string;
+  code?: string;
   description: string;
   date_limite: string;
   places?: number;
@@ -125,6 +129,7 @@ interface Document {
   nom: string;
   icon: string;
   depose: boolean;
+  date_mise_a_jour?: string;
   date_depot?: string;
   obligatoire?: boolean;
   fichier_url?: string;
@@ -372,6 +377,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   ];
   wizardOffre: Offre | null = null;
   selectedOffreDetail: Offre | null = null;
+
+  // Real-time score calculation from backend
+  wizardComputedScoreBackend: number | null = null;
+  wizardComputedScoreLoading: boolean = false;
+  wizardComputedScoreError: string | null = null;
+  private wizardScoreCalculationTimer: ReturnType<typeof setTimeout> | null = null;
+
   wizardTouched: {
     nom: boolean;
     prenom: boolean;
@@ -957,6 +969,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private authService: AuthService,
     private toastService: ToastService,
+    private candidatureService: CandidatureService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
     private webSocketService: WebSocketService,
@@ -1066,6 +1079,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     if (this.socketStatusSub) {
       this.socketStatusSub.unsubscribe();
       this.socketStatusSub = null;
+    }
+    // Cleanup wizard score calculation timer
+    if (this.wizardScoreCalculationTimer) {
+      clearTimeout(this.wizardScoreCalculationTimer);
+      this.wizardScoreCalculationTimer = null;
     }
   }
 
@@ -1716,12 +1734,46 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           }));
           this.isDashboardLoading = false;
           this.loadNotifications();
+          // Point 4: Load live metrics after loading candidatures
+          this.loadCandidateLiveMetrics();
         },
         error: (error) => {
           console.error('Erreur chargement candidatures:', error);
           this.isDashboardLoading = false;
         },
       });
+  }
+
+  loadCandidateLiveMetrics(): void {
+    /**
+     * Point 4: Fetch real-time score, classement, and total candidats for each candidature.
+     * Called periodically and on WebSocket updates.
+     */
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    this.candidatureService.getCandidateLiveMetrics().subscribe({
+      next: (response: any) => {
+        if (response?.data && Array.isArray(response.data)) {
+          // Update each candidature with live metrics
+          response.data.forEach((metric: any) => {
+            const candidature = this.mesCandidatures.find((c) => c.id === metric.id);
+            if (candidature) {
+              candidature.score = metric.score;
+              candidature.classement = metric.classement;
+              candidature.total_candidats = metric.total_candidats;
+              candidature.date_mise_a_jour = metric.date_mise_a_jour;
+            }
+          });
+        }
+      },
+      error: (error: any) => {
+        console.warn('Erreur chargement métriques en direct:', error);
+        // Silent fail; metrics are optional
+      },
+    });
   }
 
   loadOffresInscription(): void {
@@ -2289,6 +2341,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.wizardOffre = offre;
     this.wizardCurrentStep = 1;
     this.wizardMaxAllowedStep = 1;
+    this.wizardComputedScoreBackend = null;
+    this.wizardComputedScoreLoading = false;
+    this.wizardComputedScoreError = null;
     this.wizardTouched = {
       nom: false,
       prenom: false,
@@ -2404,6 +2459,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     if (this.wizardCurrentStep < this.wizardTotalSteps) {
       this.wizardCurrentStep += 1;
       this.wizardMaxAllowedStep = Math.max(this.wizardMaxAllowedStep, this.wizardCurrentStep);
+
+      // Force an official backend score refresh when entering the recap step.
+      if (this.wizardCurrentStep === 3) {
+        this.triggerWizardScoreCalculation();
+      }
     }
   }
 
@@ -2494,31 +2554,100 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return values.every((value) => this.isScoreRangeValid(value));
   }
 
+  hasWizardScoreInputs(): boolean {
+    return [
+      this.wizardData.moyenneBacPrincipale,
+      this.wizardData.noteMathBac,
+      this.wizardData.noteFrancaisBac,
+      this.wizardData.noteAnglaisBac,
+      this.wizardData.moyenne1Annee,
+      this.wizardData.moyenne2Annee,
+      this.wizardData.moyenne3Annee,
+      this.wizardData.moyenne4Annee,
+      this.wizardData.moyenneIng1,
+    ].some((value) => this.parseWizardNumeric(String(value || '')) !== null);
+  }
+
+  // Trigger backend score calculation with debounce to avoid excessive API calls
+  triggerWizardScoreCalculation(): void {
+    if (this.wizardScoreCalculationTimer) {
+      clearTimeout(this.wizardScoreCalculationTimer);
+    }
+    this.wizardComputedScoreLoading = true;
+    this.wizardComputedScoreError = null;
+
+    this.wizardScoreCalculationTimer = setTimeout(() => {
+      this.calculateWizardScoreFromBackend();
+    }, 800); // 800ms debounce
+  }
+
+  // Call backend to compute score using proper formula (e.g., MRGL)
+  private calculateWizardScoreFromBackend(): void {
+    // Only calculate if step 2 is valid (has all required academic data)
+    if (!this.isWizardStepValid(2)) {
+      // If the step is not valid, stop loading and keep previous value (avoid perpetual "Calcul...").
+      this.wizardComputedScoreLoading = false;
+      return;
+    }
+
+    this.wizardComputedScoreLoading = true;
+    this.wizardComputedScoreError = null;
+
+    const payload = {
+      master_id: this.wizardOffre?.master_id ?? this.wizardOffre?.id,
+      moyenneBac: this.parseWizardNumeric(this.wizardData.moyenneBacPrincipale),
+      noteMathBac: this.parseWizardNumeric(this.wizardData.noteMathBac),
+      noteFrancaisBac: this.parseWizardNumeric(this.wizardData.noteFrancaisBac),
+      noteAnglaisBac: this.parseWizardNumeric(this.wizardData.noteAnglaisBac),
+      certificationB2: this.wizardData.certificationB2 === 'oui',
+      moyenne1: this.parseWizardNumeric(this.wizardData.moyenne1Annee),
+      moyenne2: this.parseWizardNumeric(this.wizardData.moyenne2Annee),
+      moyenne3: this.parseWizardNumeric(this.wizardData.moyenne3Annee),
+      moyenne4: this.parseWizardNumeric(this.wizardData.moyenne4Annee),
+      moyenneIng1: this.parseWizardNumeric(this.wizardData.moyenneIng1),
+      nombreRedoublement: this.parseWizardNumeric(this.wizardData.nombreRedoublement) || 0,
+      nombreRedoublementIng1: this.parseWizardNumeric(this.wizardData.nombreRedoublementIng1) || 0,
+      session1: this.wizardData.session1Annee,
+      session2: this.wizardData.session2Annee,
+      session3: this.wizardData.session3Annee,
+      session4: this.wizardData.session4Annee,
+      sessionReussiteIng1: this.wizardData.sessionReussiteIng1,
+      formation_code: this.wizardOffre?.code || '',
+    };
+
+    this.candidatureService.calculateWizardScore(payload).subscribe({
+      next: (response: any) => {
+        this.wizardComputedScoreBackend = response?.score ?? null;
+        this.wizardComputedScoreLoading = false;
+      },
+      error: (error: any) => {
+        console.error('Erreur calcul score:', error);
+        this.wizardComputedScoreError = 'Erreur lors du calcul du score';
+        this.wizardComputedScoreLoading = false;
+        // Keep previous value or null on error
+      },
+    });
+  }
+
   getWizardComputedScore(): number {
-    const moyennes: number[] = [
-      this.parseWizardNumeric(this.wizardData.moyenneBacPrincipale) ?? 0,
-      this.parseWizardNumeric(this.wizardData.moyenne1Annee) ?? 0,
-      this.parseWizardNumeric(this.wizardData.moyenne2Annee) ?? 0,
-      this.parseWizardNumeric(this.wizardData.moyenne3Annee) ?? 0,
-    ];
-
-    const hasFourthYear = this.parseWizardNumeric(this.wizardData.moyenne4Annee);
-    if (hasFourthYear !== null) {
-      moyennes.push(hasFourthYear);
+    // Official score: always returned from backend formula.
+    if (this.wizardComputedScoreBackend !== null) {
+      return this.wizardComputedScoreBackend;
     }
-
-    const hasIng1 = this.parseWizardNumeric(this.wizardData.moyenneIng1);
-    if (hasIng1 !== null) {
-      moyennes.push(hasIng1);
-    }
-
-    const sum = moyennes.reduce((acc, value) => acc + value, 0);
-    const count = Math.max(moyennes.length, 1);
-    return Number((sum / count).toFixed(2));
+    return 0;
   }
 
   getWizardComputedScoreDisplay(): string {
-    return `${this.getWizardComputedScore().toFixed(2)}`;
+    if (this.wizardComputedScoreBackend !== null) {
+      return `${this.wizardComputedScoreBackend.toFixed(2)}`;
+    }
+    if (this.wizardComputedScoreLoading) {
+      return '—';
+    }
+    if (this.wizardComputedScoreError) {
+      return '—';
+    }
+    return this.hasWizardScoreInputs() ? 'Calcul...' : '—';
   }
 
   isWizardCINValid(value: string): boolean {
@@ -2631,7 +2760,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       }
 
       if (this.isWizardMrglOffer() || this.isWizardMrmiOffer()) {
-        if (!this.wizardData.natureCandidature || !this.wizardData.nombreRedoublement) {
+        // Allow 0 as a valid value for `nombreRedoublement` (0 is falsy in JS).
+        const nbRedouble = this.wizardData.nombreRedoublement;
+        if (
+          !this.wizardData.natureCandidature ||
+          nbRedouble === null ||
+          nbRedouble === undefined ||
+          nbRedouble === ''
+        ) {
           return false;
         }
       }
@@ -2783,6 +2919,20 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const formationCode = this.getWizardFormationCode(offre);
     const academicData = this.buildWizardAcademicDataPayload();
 
+    if (this.wizardComputedScoreLoading) {
+      this.toastService.show('Le score est en cours de calcul. Veuillez patienter.', 'warning');
+      return;
+    }
+
+    if (this.wizardComputedScoreBackend === null) {
+      this.triggerWizardScoreCalculation();
+      this.toastService.show(
+        'Score non disponible. Le calcul backend est lancé, réessayez dans un instant.',
+        'warning',
+      );
+      return;
+    }
+
     if (!formationCode) {
       this.toastService.show(
         "Impossible d'identifier la formation pour calculer le score.",
@@ -2799,7 +2949,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       selected_diplome: this.wizardData.specialiteDiplome,
       diplome_reference: this.wizardData.natureDiplome,
       formation_code: formationCode,
-      score_previsualisation: this.getWizardComputedScore(),
+      score_previsualisation: this.wizardComputedScoreBackend,
       academic_data: academicData,
     };
 
@@ -2811,7 +2961,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   private getWizardFormationCode(offre: Offre): string {
-    const code = this.getPreinscriptionDetailCode(offre);
+    const rawCode = String(offre?.code || '')
+      .trim()
+      .toLowerCase();
+    const code = rawCode || this.getPreinscriptionDetailCode(offre) || '';
     const map: Record<string, string> = {
       mpgl: 'MPGL',
       mpds: 'MPDS',
@@ -2820,6 +2973,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       mrmi: 'MRMI',
       ing_info_gl: 'ING_INFO_GL',
       ing_em: 'ING_EM',
+      'ing-info-gl': 'ING_INFO_GL',
+      inginfo: 'ING_INFO_GL',
+      inginfo_gl: 'ING_INFO_GL',
+      ingem: 'ING_EM',
     };
 
     return code ? map[code] || '' : '';
@@ -3620,9 +3777,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   private getPreinscriptionDetailCode(offre: Offre): string | null {
-    const title = (offre?.titre || '').toLowerCase();
-    const desc = (offre?.description || '').toLowerCase();
-    const specialite = (offre?.specialite || '').toLowerCase();
+    const normalize = (value: string): string =>
+      (value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const title = normalize(offre?.titre || '');
+    const desc = normalize(offre?.description || '');
+    const specialite = normalize(offre?.specialite || '');
     const haystack = `${title} ${desc} ${specialite}`;
 
     if (haystack.includes('science') && haystack.includes('donnee')) return 'mpds';

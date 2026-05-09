@@ -6,10 +6,12 @@ from . import views_export
 urlpatterns = [
     path('create/', views.create_candidature, name='create_candidature'),
     path('soumettre/', views.soumettre_candidature, name='soumettre_candidature'),
+    path('preview-score/', views.preview_score_candidature, name='preview_score_candidature'),
     path('masters/', views.lister_masters, name='lister_masters'),
     path('masters/admin/', views.creer_master_admin, name='creer_master_admin'),
     path('masters/<int:master_id>/', views.modifier_supprimer_master_admin, name='modifier_supprimer_master_admin'),
     path('mes-candidatures/', views.mes_candidatures, name='mes_candidatures'),
+    path('candidate-live-metrics/', views.candidate_live_metrics, name='candidate_live_metrics'),
     path('mes-notifications/', views.mes_notifications, name='mes_notifications'),
     path('notifications/mark-all-read/', views.marquer_toutes_notifications_lues, name='marquer_toutes_notifications_lues'),
     path('notifications/<int:notification_id>/mark-read/', views.marquer_notification_lue, name='marquer_notification_lue'),

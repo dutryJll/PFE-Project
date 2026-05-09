@@ -69,14 +69,19 @@ class DocumentUploadSerializer(serializers.Serializer):
         fichier = validated_data['fichier']
         description = validated_data.get('description', '')
         
-        # Calculer le checksum pour éviter les doublons
+        # Calculer un checksum stable par candidature + type documentaire.
         file_hash = hashlib.sha256()
         for chunk in fichier.chunks():
             file_hash.update(chunk)
-        checksum = file_hash.hexdigest()
+        checksum_source = f"{file_hash.hexdigest()}:{candidature.id}:{type_document.id}"
+        checksum = hashlib.sha256(checksum_source.encode('utf-8')).hexdigest()
         
         # Vérifier si le fichier existe déjà
-        existing = Document.objects.filter(checksum_sha256=checksum).first()
+        existing = Document.objects.filter(
+            candidature=candidature,
+            type_document=type_document,
+            checksum_sha256=checksum,
+        ).first()
         if existing:
             raise serializers.ValidationError(
                 f"Ce fichier a déjà été soumis: {existing.candidature.numero}"
@@ -194,6 +199,7 @@ class DetailedDossierSerializer(serializers.ModelSerializer):
     
     def get_evaluation(self, obj):
         """Évaluation détaillée de complétude"""
+        obj.calculer_completude()
         docs_valides = obj.candidature.documents.filter(statut='valide').count()
         docs_rejected = obj.candidature.documents.filter(statut='rejete').count()
         docs_pending = obj.candidature.documents.filter(

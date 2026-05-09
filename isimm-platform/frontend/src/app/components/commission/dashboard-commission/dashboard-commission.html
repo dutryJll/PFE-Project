@@ -1,4 +1,4 @@
-﻿<div class="dashboard-commission">
+<div class="dashboard-commission">
   <!-- MENU LATÉRAL -->
   <aside class="sidebar">
     <div class="logo-section">
@@ -2065,6 +2065,83 @@
                   <div class="snum">{{ getFinalSelectionAverageScore() | number: '1.2-2' }}</div>
                   <div class="slbl">Moyenne des scores</div>
                 </div>
+              </div>
+            </div>
+
+            <!-- ── CANDIDATES CAROUSEL (Angular) ── -->
+            <div class="carousel-wrap" *ngIf="candidates?.length">
+              <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                <button class="btn btn-sec" type="button" (click)="prevCandidate()">◀</button>
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 10px;
+                    border-radius: 8px;
+                    border: 0.5px solid var(--color-border-tertiary);
+                    background: var(--color-background-primary);
+                  "
+                >
+                  <div style="flex: 1">
+                    <div style="font-weight: 600">{{ currentCandidate?.nom }}</div>
+                    <div style="font-size: 12px; color: var(--color-text-secondary)">
+                      {{ currentCandidate?.master }} — {{ currentCandidate?.num }}
+                    </div>
+                    <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap">
+                      <span
+                        *ngFor="let d of currentCandidate?.documents"
+                        class="badge"
+                        [ngClass]="{
+                          'b-presel-oui': d.statut === 'ok',
+                          'b-presel-non': d.statut !== 'ok',
+                        }"
+                      >
+                        {{ d.nom }}
+                      </span>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 6px; align-items: center">
+                    <button
+                      class="btn btn-sec"
+                      type="button"
+                      (click)="consulterDossier(currentCandidate?.id)"
+                    >
+                      Consulter
+                    </button>
+                    <button
+                      class="btn btn-primary"
+                      type="button"
+                      (click)="telechargerPieces(currentCandidate?.id)"
+                    >
+                      Télécharger
+                    </button>
+                    <button
+                      class="btn btn-success"
+                      type="button"
+                      (click)="validerDossier(currentCandidate?.id)"
+                    >
+                      Valider
+                    </button>
+                    <button
+                      class="btn btn-danger"
+                      type="button"
+                      (click)="rejeterDossier(currentCandidate?.id)"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
+                </div>
+                <button class="btn btn-sec" type="button" (click)="nextCandidate()">▶</button>
+                <button
+                  class="btn btn-amber"
+                  type="button"
+                  (click)="location.back()"
+                  style="margin-left: 8px"
+                >
+                  Retour
+                </button>
               </div>
             </div>
 

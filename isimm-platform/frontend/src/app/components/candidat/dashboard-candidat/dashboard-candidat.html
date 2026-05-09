@@ -2343,13 +2343,10 @@
       </div>
 
       <!-- ── SCORE PREVIEW (affiché dès étape 2) ── -->
-      <div
-        class="wizard-score-ribbon"
-        *ngIf="wizardCurrentStep >= 2 && getWizardComputedScore() > 0"
-      >
+      <div class="wizard-score-ribbon" *ngIf="wizardCurrentStep >= 2 && hasWizardScoreInputs()">
         <i class="fas fa-chart-line"></i>
         <span>Score estimé en temps réel :</span>
-        <strong class="score-live">{{ getWizardComputedScore().toFixed(2) }}</strong>
+        <strong class="score-live">{{ getWizardComputedScoreDisplay() }}</strong>
         <small>calculé automatiquement selon vos moyennes</small>
       </div>
 
@@ -2665,7 +2662,8 @@
                   (input)="
                     wizardData.moyenneBacPrincipale = sanitizeWizardDecimalInput(
                       wizardData.moyenneBacPrincipale
-                    )
+                    );
+                    triggerWizardScoreCalculation()
                   "
                   (blur)="wizardTouched.moyenneBacPrincipale = true"
                   placeholder="Ex: 14,50"
@@ -2697,7 +2695,8 @@
                   inputmode="decimal"
                   maxlength="5"
                   (input)="
-                    wizardData.noteMathBac = sanitizeWizardDecimalInput(wizardData.noteMathBac)
+                    wizardData.noteMathBac = sanitizeWizardDecimalInput(wizardData.noteMathBac);
+                    triggerWizardScoreCalculation()
                   "
                   (blur)="wizardTouched.noteMathBac = true"
                   placeholder="Ex: 18,25"
@@ -2918,7 +2917,8 @@
                         (input)="
                           wizardData.moyenne1Annee = sanitizeWizardDecimalInput(
                             wizardData.moyenne1Annee
-                          )
+                          );
+                          triggerWizardScoreCalculation()
                         "
                         (blur)="wizardTouched.moyenne1Annee = true"
                         placeholder="Ex: 13,50"
@@ -2962,7 +2962,8 @@
                         (input)="
                           wizardData.moyenne2Annee = sanitizeWizardDecimalInput(
                             wizardData.moyenne2Annee
-                          )
+                          );
+                          triggerWizardScoreCalculation()
                         "
                         (blur)="wizardTouched.moyenne2Annee = true"
                         placeholder="Ex: 14,00"
@@ -3006,7 +3007,8 @@
                         (input)="
                           wizardData.moyenne3Annee = sanitizeWizardDecimalInput(
                             wizardData.moyenne3Annee
-                          )
+                          );
+                          triggerWizardScoreCalculation()
                         "
                         (blur)="wizardTouched.moyenne3Annee = true"
                         placeholder="Ex: 12,75"
@@ -3050,7 +3052,8 @@
                         (input)="
                           wizardData.moyenne4Annee = sanitizeWizardDecimalInput(
                             wizardData.moyenne4Annee
-                          )
+                          );
+                          triggerWizardScoreCalculation()
                         "
                         (blur)="wizardTouched.moyenne4Annee = true"
                         placeholder="Ex: 11,25"
@@ -3094,7 +3097,8 @@
                         (input)="
                           wizardData.moyenneIng1 = sanitizeWizardDecimalInput(
                             wizardData.moyenneIng1
-                          )
+                          );
+                          triggerWizardScoreCalculation()
                         "
                         (blur)="wizardTouched.moyenneIng1 = true"
                         placeholder="Ex: 15,00"

@@ -9,6 +9,91 @@ try:
 except ImportError:
     pd = None
 
+
+class StatutService:
+    """Centralise la normalisation et les transitions de statuts candidature."""
+
+    STATUS_ALIASES = {
+        'soumis': 'soumis',
+        'sous_examen': 'sous_examen',
+        'preselectionne': 'preselectionne',
+        'présélectionné': 'preselectionne',
+        'presélectionné': 'preselectionne',
+        'preselectionné': 'preselectionne',
+        'admissible': 'preselectionne',
+        'en_attente_dossier': 'en_attente_dossier',
+        'dossier_non_depose': 'dossier_non_depose',
+        'dossier_depose': 'dossier_depose',
+        'en_attente': 'en_attente',
+        'selectionne': 'selectionne',
+        'inscrit': 'inscrit',
+        'rejete': 'rejete',
+        'annule': 'annule',
+    }
+
+    ALLOWED_TRANSITIONS = {
+        'soumis': {'sous_examen', 'preselectionne', 'rejete', 'annule'},
+        'sous_examen': {'preselectionne', 'en_attente_dossier', 'rejete'},
+        'preselectionne': {'en_attente_dossier', 'selectionne', 'inscrit', 'rejete'},
+        'en_attente_dossier': {'dossier_depose', 'dossier_non_depose', 'rejete'},
+        'dossier_depose': {'en_attente', 'selectionne', 'inscrit', 'rejete'},
+        'en_attente': {'selectionne', 'inscrit', 'rejete', 'annule'},
+        'selectionne': {'inscrit', 'rejete'},
+        'dossier_non_depose': {'en_attente_dossier', 'rejete'},
+        'annule': set(),
+        'rejete': set(),
+        'inscrit': set(),
+    }
+
+    @classmethod
+    def normalize_status(cls, value):
+        key = str(value or '').strip().lower()
+        return cls.STATUS_ALIASES.get(key)
+
+    @classmethod
+    def allowed_transitions_for(cls, old_status):
+        return cls.ALLOWED_TRANSITIONS.get(str(old_status or '').strip().lower(), set())
+
+    @classmethod
+    @transaction.atomic
+    def change_candidature_status(
+        cls,
+        candidature,
+        requested_status,
+        actor=None,
+        commentaire='Changement de statut via StatutService',
+        motif_rejet='',
+    ):
+        old_status = str(candidature.statut or '').strip().lower()
+        new_status = cls.normalize_status(requested_status)
+
+        if not new_status:
+            valid_targets = sorted(set(cls.STATUS_ALIASES.values()))
+            raise ValueError(f"Statut invalide: {requested_status}. Valeurs: {', '.join(valid_targets)}")
+
+        if old_status == new_status:
+            return False, candidature, old_status, new_status
+
+        allowed = cls.allowed_transitions_for(old_status)
+        if new_status not in allowed:
+            raise ValueError(f'Transition interdite: {old_status} -> {new_status}')
+
+        candidature.statut = new_status
+        candidature.date_changement_statut = timezone.now()
+        candidature.peut_modifier = new_status not in ['sous_examen', 'preselectionne', 'selectionne', 'inscrit']
+
+        if new_status == 'rejete':
+            candidature.motif_rejet = str(motif_rejet or '').strip() or 'Refus commission.'
+        elif candidature.motif_rejet:
+            candidature.motif_rejet = ''
+
+        candidature.save(update_fields=['statut', 'date_changement_statut', 'peut_modifier', 'motif_rejet', 'updated_at'])
+
+        if actor is not None:
+            candidature.ajouter_historique(old_status, new_status, actor, commentaire)
+
+        return True, candidature, old_status, new_status
+
 class GestionListesService:
     
     @staticmethod

@@ -39,6 +39,7 @@ from .services import (
     GestionListesService,
     ImportPaiementService,
     SelectionCandidatsService,
+    StatutService,
     VerificationPaiementService,
 )
 from .ocr_service import verifier_concordance_dossier
@@ -77,19 +78,7 @@ def _log_commission_action(user, action, specialite, session, nb_candidats, mast
         logger.exception('Impossible de créer une entrée HistoriqueActionCommission')
 
 
-ALLOWED_STATUS_TRANSITIONS = {
-    'soumis': {'sous_examen', 'rejete', 'annule'},
-    'sous_examen': {'preselectionne', 'en_attente_dossier', 'rejete'},
-    'preselectionne': {'en_attente_dossier', 'rejete'},
-    'en_attente_dossier': {'dossier_depose', 'dossier_non_depose', 'rejete'},
-    'dossier_depose': {'en_attente', 'selectionne', 'rejete'},
-    'en_attente': {'selectionne', 'rejete', 'annule'},
-    'selectionne': {'inscrit', 'rejete'},
-    'dossier_non_depose': {'en_attente_dossier', 'rejete'},
-    'annule': set(),
-    'rejete': set(),
-    'inscrit': set(),
-}
+ALLOWED_STATUS_TRANSITIONS = StatutService.ALLOWED_TRANSITIONS
 
 
 # Reglement de reference (article fourni) transforme en structure exploitable.
@@ -932,6 +921,43 @@ def soumettre_candidature(request):
     return create_candidature(request)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def preview_score_candidature(request):
+    """Calcule un score d'aperçu sans créer de candidature ni persister de données."""
+    master_id = request.data.get('master_id')
+    if not master_id:
+        return Response({'error': 'master_id est requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        master = Master.objects.select_related('formule_score').get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    formule = getattr(master, 'formule_score', None)
+    if formule is None:
+        return Response(
+            {'error': 'Aucune formule de score est definie pour ce master'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    payload = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+    if hasattr(payload, 'pop'):
+        payload.pop('master_id', None)
+        payload.pop('candidature_id', None)
+
+    score = formule.calculer_score({'payload': payload})
+    return Response(
+        {
+            'success': True,
+            'score': score,
+            'master_id': master.id,
+            'master_nom': master.nom,
+            'formula': getattr(formule, 'nom', ''),
+        }
+    )
+
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def modifier_candidature(request, candidature_id):
@@ -1639,42 +1665,22 @@ def changer_statut_candidature(request, candidature_id):
     nouveau_statut = request.data.get('statut')
     motif_rejet = request.data.get('motif_rejet', '')
 
-    if nouveau_statut not in dict(Candidature.STATUT_CHOICES):
-        return Response({'error': 'Statut invalide'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        changed, candidature, ancien_statut, nouveau_statut = StatutService.change_candidature_status(
+            candidature,
+            nouveau_statut,
+            actor=request.user,
+            commentaire='Changement de statut via commission',
+            motif_rejet=motif_rejet,
+        )
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-    ancien_statut = candidature.statut
-    if ancien_statut == nouveau_statut:
+    if not changed:
         return Response(
             {'error': 'Aucun changement detecte sur le statut'},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
-    statuts_suivants = ALLOWED_STATUS_TRANSITIONS.get(ancien_statut, set())
-    if nouveau_statut not in statuts_suivants:
-        return Response(
-            {
-                'error': f'Transition interdite: {ancien_statut} -> {nouveau_statut}',
-                'allowed_transitions': sorted(list(statuts_suivants)),
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    candidature.statut = nouveau_statut
-    candidature.date_changement_statut = timezone.now()
-
-    if nouveau_statut == 'rejete':
-        candidature.motif_rejet = motif_rejet
-
-    if nouveau_statut in ['sous_examen', 'preselectionne', 'selectionne']:
-        candidature.peut_modifier = False
-
-    candidature.save()
-    candidature.ajouter_historique(
-        ancien_statut,
-        nouveau_statut,
-        request.user,
-        'Changement de statut via commission',
-    )
     _log_commission_action(
         request.user,
         'Validation individuelle',
@@ -1736,7 +1742,7 @@ def changer_statut_candidature(request, candidature_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_status(request, candidature_id):
-    """Action rapide Sprint 3: bouton Valider -> statut preselectionne."""
+    """Action rapide Sprint 3: bouton Valider -> statut preselectionne (admissible)."""
     if getattr(request.user, 'role', None) not in ['commission', 'responsable_commission', 'admin']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -1745,32 +1751,23 @@ def update_status(request, candidature_id):
     except Candidature.DoesNotExist:
         return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
 
-    ancien_statut = candidature.statut
-    nouveau_statut = 'preselectionne'
+    requested_status = request.data.get('statut', 'preselectionne')
+    if str(requested_status or '').strip().lower() == 'admissible':
+        requested_status = 'preselectionne'
 
-    if ancien_statut == nouveau_statut:
-        return Response({'success': True, 'message': 'Statut deja preselectionne.'}, status=status.HTTP_200_OK)
-
-    statuts_suivants = ALLOWED_STATUS_TRANSITIONS.get(ancien_statut, set())
-    if nouveau_statut not in statuts_suivants:
-        return Response(
-            {
-                'error': f'Transition interdite: {ancien_statut} -> {nouveau_statut}',
-                'allowed_transitions': sorted(list(statuts_suivants)),
-            },
-            status=status.HTTP_400_BAD_REQUEST,
+    try:
+        changed, candidature, ancien_statut, nouveau_statut = StatutService.change_candidature_status(
+            candidature,
+            requested_status,
+            actor=request.user,
+            commentaire='Validation commission (update_status)',
+            motif_rejet=request.data.get('motif_rejet', ''),
         )
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-    candidature.statut = nouveau_statut
-    candidature.date_changement_statut = timezone.now()
-    candidature.peut_modifier = False
-    candidature.save(update_fields=['statut', 'date_changement_statut', 'peut_modifier', 'updated_at'])
-    candidature.ajouter_historique(
-        ancien_statut,
-        nouveau_statut,
-        request.user,
-        'Validation commission (update_status)',
-    )
+    if not changed:
+        return Response({'success': True, 'message': 'Statut deja preselectionne.'}, status=status.HTTP_200_OK)
     _log_commission_action(
         request.user,
         'Validation individuelle',
@@ -1834,29 +1831,22 @@ def commission_decision_candidature(request, candidature_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    ancien_statut = candidature.statut
-    if ancien_statut == nouveau_statut:
+    try:
+        changed, candidature, ancien_statut, nouveau_statut = StatutService.change_candidature_status(
+            candidature,
+            nouveau_statut,
+            actor=request.user,
+            commentaire=f"Decision commission: {decision}",
+            motif_rejet=motif_rejet,
+        )
+    except ValueError as exc:
+        return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not changed:
         return Response(
             {'success': True, 'message': 'Statut deja a jour.', 'candidature': CandidatureSerializer(candidature).data},
             status=status.HTTP_200_OK,
         )
-
-    candidature.statut = nouveau_statut
-    candidature.date_changement_statut = timezone.now()
-    candidature.peut_modifier = False
-
-    if nouveau_statut == 'rejete':
-        candidature.motif_rejet = motif_rejet or 'Refus commission.'
-    else:
-        candidature.motif_rejet = ''
-
-    candidature.save(update_fields=['statut', 'motif_rejet', 'date_changement_statut', 'peut_modifier', 'updated_at'])
-    candidature.ajouter_historique(
-        ancien_statut,
-        nouveau_statut,
-        request.user,
-        f"Decision commission: {decision}",
-    )
     _log_commission_action(
         request.user,
         f'Decision commission: {decision}',
@@ -3150,7 +3140,8 @@ def cloturer_ou_relancer_admission(request, master_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def publier_liste(request, liste_id):
-    if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
+    # Permettre aussi au responsable de commission de publier la liste
+    if getattr(request.user, 'role', None) not in ['directeur', 'admin', 'responsable_commission']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -3182,6 +3173,58 @@ def publier_liste(request, liste_id):
             'notifications': resultats_notifications,
         }
     )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def candidate_live_metrics(request):
+    """
+    Point 4: Expose real-time candidature metrics for candidate dashboard.
+    Returns score, classement, total candidats for each candidature.
+    """
+    from django.db.models import Count, Q
+    
+    try:
+        candidatures = Candidature.objects.filter(
+            candidat=request.user
+        ).select_related('master').order_by('-date_soumission')
+        
+        metrics = []
+        for cand in candidatures:
+            # Classement: rank of this candidature by score within same master
+            rank = Candidature.objects.filter(
+                master=cand.master,
+                score__gt=cand.score if cand.score else -float('inf'),
+                statut__in=['preselectionne', 'selectionne', 'inscrit']
+            ).count() + 1
+            
+            # Total candidats in this master (all statuts)
+            total = Candidature.objects.filter(master=cand.master).count()
+            
+            metrics.append({
+                'id': cand.id,
+                'numero': cand.numero_candidature,
+                'master_id': cand.master.id if cand.master else None,
+                'master_nom': cand.master.nom if cand.master else 'N/A',
+                'score': cand.score,
+                'classement': rank,
+                'total_candidats': total,
+                'statut': cand.statut,
+                'date_mise_a_jour': cand.date_changement_statut or cand.date_soumission,
+            })
+        
+        return Response({
+            'success': True,
+            'data': metrics,
+            'timestamp': timezone.now()
+        })
+    
+    except Exception as exc:
+        logger.exception("Erreur candidate_live_metrics: %s", exc)
+        return Response(
+            {'error': 'Erreur lors de la recuperation des metriques'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['POST'])

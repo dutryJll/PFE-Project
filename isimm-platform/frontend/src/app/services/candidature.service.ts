@@ -48,6 +48,22 @@ export class CandidatureService {
     return this.http.put(`${this.apiUrl}/${id}/modifier/`, data, { headers: this.getHeaders() });
   }
 
+  // Mettre à jour le statut d'une candidature
+  updateStatus(candidatureId: number, newStatus: string, motifRejet?: string): Observable<any> {
+    const payload = {
+      statut: newStatus,
+      motif_rejet: motifRejet || '',
+    };
+    return this.http.patch(`${this.apiUrl}/${candidatureId}/update-status/`, payload, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Récupérer les métriques en temps réel pour le candidat (score, classement, total)
+  getCandidateLiveMetrics(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/candidate-live-metrics/`, { headers: this.getHeaders() });
+  }
+
   // Récupérer tous les masters ouverts
   getMastersOuverts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/masters/`, { headers: this.getHeaders() });
@@ -104,6 +120,13 @@ export class CandidatureService {
       headers: this.getHeaders(),
       observe: 'events',
       reportProgress: true,
+    });
+  }
+
+  // Calculer le score réel du wizard via le backend (pour preview en temps réel)
+  calculateWizardScore(payload: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/preview-score/`, payload, {
+      headers: this.getHeaders(),
     });
   }
 
