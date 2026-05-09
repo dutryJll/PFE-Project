@@ -41,13 +41,16 @@ def envoyer_email_changement_statut(candidature, ancien_statut, nouveau_statut):
         'en_attente_dossier': 'Vous êtes invité(e) à déposer votre dossier numérique.',
     }
     
+    site_url = getattr(settings, 'SITE_URL', 'https://isimm.example.com')
+
     html_message = render_to_string('emails/changement_statut.html', {
         'candidat': candidature.candidat,
         'candidature': candidature,
         'master': candidature.master,
         'ancien_statut': ancien_statut,
         'nouveau_statut': nouveau_statut,
-        'message': messages_statut.get(nouveau_statut, 'Votre candidature a été mise à jour.')
+        'message': messages_statut.get(nouveau_statut, 'Votre candidature a été mise à jour.'),
+        'site_url': site_url,
     })
     
     plain_message = strip_tags(html_message)
