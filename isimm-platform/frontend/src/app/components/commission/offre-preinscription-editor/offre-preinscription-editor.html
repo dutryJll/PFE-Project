@@ -729,18 +729,18 @@
         </svg>
         Actualiser
       </button>
-      <button class="btn btn-primary btn-sm" (click)="publierOffre()">
+      <button class="btn btn-primary btn-sm" (click)="publierOffre()" [disabled]="isSavingOffre">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
           <path d="M1 6l4-4 4 4M5 2v8"></path>
         </svg>
-        Publier maintenant
+        {{ isSavingOffre ? 'Publication en cours...' : 'Publier maintenant' }}
       </button>
-      <button class="btn btn-teal btn-sm" (click)="enregistrer()">
+      <button class="btn btn-teal btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
           <path d="M2 2h7l2 2v7H2V2z"></path>
           <rect x="4" y="7" width="4" height="3"></rect>
         </svg>
-        Enregistrer
+        {{ isSavingOffre ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
     </div>
   </div>
@@ -750,6 +750,21 @@
     <span
       [innerHTML]="getStatusText() + ' · <span class=&quot;sync-dot&quot;></span>Synchronisé'"
     ></span>
+  </div>
+
+  <div
+    *ngIf="errorMessage"
+    class="status-bar"
+    style="
+      border-color: var(--color-border-danger);
+      background: var(--color-background-danger);
+      color: var(--color-text-danger);
+    "
+  >
+    <svg viewBox="0 0 12 12" fill="none" stroke-width="1.5" style="stroke: #a32d2d">
+      <path d="M6 1v10M1 6h10"></path>
+    </svg>
+    <span>{{ errorMessage }}</span>
   </div>
 
   <div class="kpi-grid">
@@ -1017,11 +1032,11 @@
               </svg>
               Aperçu candidat
             </button>
-            <button class="btn btn-teal btn-sm" (click)="enregistrer()">
+            <button class="btn btn-teal btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
                 <path d="M2 6l3 3 5-5"></path>
               </svg>
-              Enregistrer
+              {{ isSavingOffre ? 'Enregistrement...' : 'Enregistrer' }}
             </button>
           </div>
         </div>

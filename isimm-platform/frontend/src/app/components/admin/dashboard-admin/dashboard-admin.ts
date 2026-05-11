@@ -2083,8 +2083,11 @@ export class DashboardAdminComponent implements OnInit {
       })
       .subscribe({
         next: () => {
+          // Mise à jour locale puis resynchronisation côté serveur
           master.statut = nextStatut;
           this.showAlertMessage(nextStatut === 'ouvert' ? '✅ Master ouvert' : '✅ Master fermé');
+          // Recharger depuis l'API pour s'assurer que l'état est bien persistant
+          this.loadMasters();
         },
         error: (error) => {
           console.error('Erreur changement statut master:', error);

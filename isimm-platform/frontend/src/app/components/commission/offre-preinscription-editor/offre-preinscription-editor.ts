@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 interface Quota {
   cat: string;
@@ -31,6 +34,11 @@ interface Offre {
   styleUrl: './offre-preinscription-editor.css',
 })
 export class OffrePreinscriptionEditorComponent implements OnInit {
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) {}
+
   // Form fields
   titre: string = 'Master Professionnel Data Science';
   typeFormation: string = 'master';
@@ -43,6 +51,8 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   dateLimitePre: string = '2026-07-22';
   dateLimiteDep: string = '2026-08-15';
   selectedPdfFile: File | null = null;
+  isSavingOffre: boolean = false;
+  errorMessage: string = '';
 
   // Toggles
   appel: boolean = true;
@@ -189,14 +199,113 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
 
   // Actions
   enregistrer(): void {
-    this.showToast('Offre enregistrée et synchronisée', 't-success');
+    this.isSavingOffre = true;
+    this.errorMessage = '';
+
+    const formData = new FormData();
+    formData.append('titre', this.titre);
+    formData.append('typeFormation', this.typeFormation);
+    formData.append('soustype', this.soustype);
+    formData.append('spec', this.spec);
+    formData.append('description', this.description);
+    formData.append('dateDebut', this.dateDebut);
+    formData.append('dateFin', this.dateFin);
+    formData.append('dateLimitePre', this.dateLimitePre);
+    formData.append('dateLimiteDep', this.dateLimiteDep);
+    formData.append('appel', this.appel ? '1' : '0');
+    formData.append('visibilite', this.visibilite ? '1' : '0');
+    formData.append('actif', this.row1Open ? '1' : '0');
+
+    // Add quotas as JSON
+    formData.append('quotas', JSON.stringify(this.quotas));
+
+    // Add PDF if selected
+    if (this.selectedPdfFile) {
+      formData.append('document_officiel_pdf', this.selectedPdfFile, this.selectedPdfFile.name);
+    }
+
+    const token = this.authService.getAccessToken();
+    const headers: any = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    // POST to API
+    this.http
+      .post(`${environment.commissionServiceUrl}/offres-inscription-responsable`, formData, {
+        headers,
+      })
+      .subscribe(
+        (response: any) => {
+          this.isSavingOffre = false;
+          this.selectedPdfFile = null;
+          this.showToast('Offre enregistrée et synchronisée', 't-success');
+        },
+        (error: any) => {
+          this.isSavingOffre = false;
+          const errorMsg =
+            error?.error?.message || error?.message || "Erreur lors de l'enregistrement";
+          this.errorMessage = errorMsg;
+          this.showToast(errorMsg, 't-warn');
+        },
+      );
   }
 
   publierOffre(): void {
+    this.isSavingOffre = true;
+    this.errorMessage = '';
     this.row1Open = true;
-    this.offres[0].statut = true;
-    this.updateStatusBar();
-    this.showToast('Offre publiée — visible pour les candidats', 't-success');
+
+    const formData = new FormData();
+    formData.append('titre', this.titre);
+    formData.append('typeFormation', this.typeFormation);
+    formData.append('soustype', this.soustype);
+    formData.append('spec', this.spec);
+    formData.append('description', this.description);
+    formData.append('dateDebut', this.dateDebut);
+    formData.append('dateFin', this.dateFin);
+    formData.append('dateLimitePre', this.dateLimitePre);
+    formData.append('dateLimiteDep', this.dateLimiteDep);
+    formData.append('appel', this.appel ? '1' : '0');
+    formData.append('visibilite', '1'); // Force visible when publishing
+    formData.append('actif', '1'); // Force active when publishing
+
+    // Add quotas as JSON
+    formData.append('quotas', JSON.stringify(this.quotas));
+
+    // Add PDF if selected
+    if (this.selectedPdfFile) {
+      formData.append('document_officiel_pdf', this.selectedPdfFile, this.selectedPdfFile.name);
+    }
+
+    const token = this.authService.getAccessToken();
+    const headers: any = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    // POST to API for publication
+    this.http
+      .post(
+        `${environment.commissionServiceUrl}/offres-inscription-responsable/publish`,
+        formData,
+        { headers },
+      )
+      .subscribe(
+        (response: any) => {
+          this.isSavingOffre = false;
+          this.offres[0].statut = true;
+          this.updateStatusBar();
+          this.selectedPdfFile = null;
+          this.showToast('Offre publiée — visible pour les candidats', 't-success');
+        },
+        (error: any) => {
+          this.isSavingOffre = false;
+          this.row1Open = false; // Revert on error
+          const errorMsg =
+            error?.error?.message || error?.message || 'Erreur lors de la publication';
+          this.errorMessage = errorMsg;
+          this.showToast(errorMsg, 't-warn');
+        },
+      );
   }
 
   showToast(msg: string, cls: string): void {
