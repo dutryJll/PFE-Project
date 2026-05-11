@@ -204,6 +204,146 @@
       </div>
     </div>
 
+    <div *ngIf="currentView === 'utilisateurs'" class="view-content">
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2>👥 Gestion des utilisateurs</h2>
+            <p class="admin-site-subtitle">
+              Consultez les comptes, filtrez les statuts et gérez l'activation depuis cette page.
+            </p>
+          </div>
+          <button type="button" class="btn-primary" (click)="downloadUsersFile()">
+            <i class="fas fa-download"></i> Exporter les utilisateurs
+          </button>
+        </div>
+
+        <div class="users-toolbar">
+          <div class="download-box">
+            <label for="userStatusFilter">Filtrer par statut</label>
+            <select id="userStatusFilter" [(ngModel)]="utilisateurStatusFilter">
+              <option value="all">Tous les utilisateurs</option>
+              <option value="active">Comptes actifs</option>
+              <option value="suspended">Comptes suspendus</option>
+            </select>
+          </div>
+          <div class="download-box">
+            <label for="userSearch">Recherche rapide</label>
+            <input
+              id="userSearch"
+              type="text"
+              [(ngModel)]="utilisateurRecherche"
+              placeholder="Nom ou email"
+            />
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 42px">
+                  <input
+                    type="checkbox"
+                    [checked]="allUsersSelected"
+                    (change)="toggleAllUsers($event)"
+                  />
+                </th>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of utilisateursFiltres">
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="isUserSelected(user.id)"
+                    (change)="toggleUserSelection(user.id, $event)"
+                  />
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 0.75rem">
+                    <div class="user-avatar" style="width: 34px; height: 34px">
+                      {{ getUserInitials(user) }}
+                    </div>
+                    <div>
+                      <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                      <div class="offer-subtext" *ngIf="user.suspension_reason && !user.is_active">
+                        {{ user.suspension_reason }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>{{ getRoleLabel(user.role) }}</td>
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.ouvert]="user.is_active"
+                    [class.ferme]="!user.is_active"
+                  >
+                    {{ getUserStatusLabel(user) }}
+                  </span>
+                </td>
+                <td>{{ user.date_inscription | date: 'dd/MM/yyyy' }}</td>
+                <td>
+                  <div class="kebab-container">
+                    <button
+                      type="button"
+                      class="kebab-btn"
+                      (click)="toggleUserMenu(user.id)"
+                      title="Actions"
+                    >
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="kebab-menu" *ngIf="openUserMenuId === user.id">
+                      <li *ngIf="user.is_active">
+                        <button
+                          type="button"
+                          class="menu-item"
+                          (click)="suspendreUtilisateur(user)"
+                        >
+                          <i class="fas fa-user-slash"></i>
+                          <span>Suspendre</span>
+                        </button>
+                      </li>
+                      <li *ngIf="!user.is_active">
+                        <button
+                          type="button"
+                          class="menu-item"
+                          (click)="activerCompteUtilisateur(user)"
+                        >
+                          <i class="fas fa-user-check"></i>
+                          <span>Réactiver</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="menu-item" (click)="closeUserMenu()">
+                          <i class="fas fa-times"></i>
+                          <span>Fermer</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="utilisateursFiltres.length === 0">
+                <td colspan="7" class="empty-candidatures-row">
+                  Aucun utilisateur ne correspond à ce filtre.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="section-header">
@@ -436,7 +576,7 @@
       <div class="section-card">
         <div class="section-header">
           <h2>🛤️ Parcours master</h2>
-          <button class="btn-primary" (click)="ajouterMaster()">
+          <button type="button" class="btn-primary" (click)="ajouterMaster()">
             <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
         </div>
@@ -455,7 +595,7 @@
               <option value="ods">OpenDocument Spreadsheet (.ods)</option>
               <option value="pdf">Portable Document Format (PDF)</option>
             </select>
-            <button class="btn-primary btn-download" (click)="downloadMastersFile()">
+            <button type="button" class="btn-primary btn-download" (click)="downloadMastersFile()">
               Download
             </button>
           </div>
@@ -488,12 +628,18 @@
                 </td>
                 <td>
                   <div class="kebab-container">
-                    <button class="kebab-btn" (click)="toggleActionMenu(master.id)" title="Actions">
+                    <button
+                      type="button"
+                      class="kebab-btn"
+                      (click)="toggleActionMenu(master.id)"
+                      title="Actions"
+                    >
                       <i class="fas fa-ellipsis-v"></i>
                     </button>
                     <ul class="kebab-menu" *ngIf="isActionMenuOpen(master.id)">
                       <li>
                         <button
+                          type="button"
                           class="menu-item"
                           (click)="toggleStatutMaster(master); toggleActionMenu(master.id)"
                         >
@@ -505,6 +651,7 @@
                       </li>
                       <li>
                         <button
+                          type="button"
                           class="menu-item"
                           (click)="modifierMaster(master); toggleActionMenu(master.id)"
                         >
@@ -514,6 +661,7 @@
                       </li>
                       <li>
                         <button
+                          type="button"
                           class="menu-item"
                           (click)="supprimerMaster(master); toggleActionMenu(master.id)"
                         >

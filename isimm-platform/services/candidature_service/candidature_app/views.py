@@ -1407,14 +1407,23 @@ def notifications_responsable(request):
 def lister_masters(request):
     try:
         today = timezone.now().date()
-        masters = list(Master.objects.filter(actif=True).order_by('nom'))
+        user_role = getattr(request.user, 'role', None)
+        is_admin_like = user_role in ['admin', 'responsable_commission', 'commission']
+
+        # Admin/responsable: voir tous les parcours et statut manuel base sur actif.
+        # Candidat/public: conserver le comportement public (actifs seulement, statut base sur la date).
+        masters_qs = Master.objects.all() if is_admin_like else Master.objects.filter(actif=True)
+        masters = list(masters_qs.order_by('nom'))
 
         payload = []
         for m in masters:
             date_limite = getattr(m, 'date_limite_candidature', None)
-            statut = 'ferme'
-            if date_limite:
-                statut = 'ouvert' if date_limite >= today else 'ferme'
+            if is_admin_like:
+                statut = 'ouvert' if bool(getattr(m, 'actif', False)) else 'ferme'
+            else:
+                statut = 'ferme'
+                if date_limite:
+                    statut = 'ouvert' if date_limite >= today else 'ferme'
 
             payload.append(
                 {

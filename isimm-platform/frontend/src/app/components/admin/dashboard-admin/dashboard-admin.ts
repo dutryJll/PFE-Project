@@ -818,7 +818,10 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   loadMasters(): void {
-    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/').subscribe({
+    const token = this.authService.getAccessToken();
+    const options = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+
+    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/', options).subscribe({
       next: (masters) => {
         this.mastersList = (masters || []).map((m) => ({
           id: Number(m.id),
@@ -827,7 +830,14 @@ export class DashboardAdminComponent implements OnInit {
           description: m.description || '',
           places: Number(m.places_disponibles ?? m.places ?? 0),
           date_limite: m.date_limite_candidature || m.date_limite || '',
-          statut: m.statut === 'ferme' ? 'ferme' : 'ouvert',
+          statut:
+            m.statut != null
+              ? m.statut === 'ferme'
+                ? 'ferme'
+                : 'ouvert'
+              : m.actif === false
+                ? 'ferme'
+                : 'ouvert',
           specialite: m.specialite || '',
         }));
 
