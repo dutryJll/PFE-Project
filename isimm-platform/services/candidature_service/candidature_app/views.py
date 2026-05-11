@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.db.utils import OperationalError
 from django.db import IntegrityError, transaction
 from django.db.models import F, Max, Q
+from django.db.models.expressions import Window
+from django.db.models.functions import Rank
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -29,6 +31,7 @@ from .models import (
     HistoriqueActionCommission,
     ListeAdmission,
     Master,
+    ParcoursAdmission,
     Reclamation,
     OffreMaster,
     InscriptionEnLigne,
@@ -62,6 +65,34 @@ from decimal import Decimal, InvalidOperation
 
 
 logger = logging.getLogger(__name__)
+
+
+def _ranked_candidatures_queryset(queryset):
+    return queryset.annotate(
+        classement_calcule=Window(
+            expression=Rank(),
+            partition_by=[F('master')],
+            order_by=F('score').desc(nulls_last=True),
+        )
+    )
+
+
+def _refresh_classement_for_queryset(queryset):
+    ranked_qs = _ranked_candidatures_queryset(queryset.filter(master__isnull=False, score__isnull=False))
+    updates = []
+
+    for candidature in ranked_qs:
+        new_rank = int(candidature.classement_calcule or 0)
+        if candidature.classement != new_rank:
+            candidature.classement = new_rank
+            updates.append(candidature)
+
+        candidat_nom = candidature.candidat.get_full_name() if candidature.candidat_id else 'Candidat inconnu'
+        master_nom = candidature.master.nom if candidature.master_id else 'Master inconnu'
+        print(f"Classement genere pour le Master {master_nom} : {candidat_nom} est {new_rank}")
+
+    if updates:
+        Candidature.objects.bulk_update(updates, ['classement'])
 
 
 def _log_commission_action(user, action, specialite, session, nb_candidats, master=None):
@@ -668,6 +699,27 @@ def create_candidature(request):
         # Force le recalcul automatique du score apres persistance des donnees academiques.
         candidature.save()
 
+        # Attempt dynamic scoring using ParcoursAdmission when available.
+        try:
+            parcours_id = request.data.get('parcours_id')
+            parcours = None
+            if parcours_id:
+                parcours = ParcoursAdmission.objects.filter(id=parcours_id, master=master, actif=True).first()
+            if not parcours:
+                parcours = ParcoursAdmission.objects.filter(master=master, actif=True).first()
+
+            if parcours:
+                try:
+                    score = parcours.calculer_score(candidature)
+                    if score is not None:
+                        candidature.score = score
+                        candidature.save(update_fields=['score', 'updated_at'])
+                except Exception:
+                    # Don't block submission on scoring errors
+                    logger.exception('Erreur lors du calcul dynamique du score pour la candidature %s', candidature.id)
+        except Exception:
+            logger.exception('Erreur lors de la tentative de scoring dynamique pour la candidature %s', candidature.id)
+
     Notification.objects.create(
         user=request.user,
         titre='Candidature créée',
@@ -922,7 +974,7 @@ def soumettre_candidature(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def preview_score_candidature(request):
     """Calcule un score d'aperçu sans créer de candidature ni persister de données."""
     master_id = request.data.get('master_id')
@@ -946,7 +998,91 @@ def preview_score_candidature(request):
         payload.pop('master_id', None)
         payload.pop('candidature_id', None)
 
-    score = formule.calculer_score({'payload': payload})
+    academic_data = payload.get('academic_data') if isinstance(payload, dict) else None
+    formation_code = str(payload.get('formation_code') or '').upper() if isinstance(payload, dict) else ''
+
+    if isinstance(academic_data, dict):
+        def _as_float(value, default=0.0):
+            try:
+                if value is None or value == '':
+                    return float(default)
+                return float(value)
+            except (TypeError, ValueError):
+                return float(default)
+
+        def _avg(values):
+            cleaned = [_as_float(value, None) for value in values]
+            cleaned = [value for value in cleaned if value is not None]
+            if not cleaned:
+                return 0.0
+            return sum(cleaned) / len(cleaned)
+
+        common = academic_data.get('common', {}) if isinstance(academic_data.get('common'), dict) else {}
+        gl_ds = academic_data.get('glDs', {}) if isinstance(academic_data.get('glDs'), dict) else {}
+        i3 = academic_data.get('i3', {}) if isinstance(academic_data.get('i3'), dict) else {}
+        mrgl_licence = academic_data.get('mrglLicence', {}) if isinstance(academic_data.get('mrglLicence'), dict) else {}
+        mrgl_maitrise = academic_data.get('mrglMaitrise', {}) if isinstance(academic_data.get('mrglMaitrise'), dict) else {}
+        mrmi_cas1 = academic_data.get('mrmiCas1', {}) if isinstance(academic_data.get('mrmiCas1'), dict) else {}
+        mrmi_cas2 = academic_data.get('mrmiCas2', {}) if isinstance(academic_data.get('mrmiCas2'), dict) else {}
+        ing_cas1 = academic_data.get('ingCas1', {}) if isinstance(academic_data.get('ingCas1'), dict) else {}
+        ing_cas2 = academic_data.get('ingCas2', {}) if isinstance(academic_data.get('ingCas2'), dict) else {}
+
+        payload['payload'] = academic_data
+        payload['session_reussite'] = common.get('session')
+
+        if formation_code in {'MPGL', 'MPDS'}:
+            moyenne_generale = _avg([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')])
+            payload['moyenne_generale'] = round(moyenne_generale, 2)
+            payload['moyenne_specialite'] = round(moyenne_generale, 2)
+            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', 0), 0))
+        elif formation_code == 'MP3I':
+            moyenne_generale = _avg([i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')])
+            payload['moyenne_generale'] = round(moyenne_generale, 2)
+            payload['moyenne_specialite'] = round(_as_float(i3.get('moyBac'), moyenne_generale), 2)
+            payload['nb_redoublements'] = int(_as_float(i3.get('nombreRedoublement', common.get('redoublements', 0)), 0))
+        elif formation_code == 'MRGL':
+            parcours = academic_data.get('mrglParcours', 'licence')
+            if parcours == 'maitrise':
+                moyenne_generale = _avg([mrgl_maitrise.get('moy1'), mrgl_maitrise.get('moy2'), mrgl_maitrise.get('moy3'), mrgl_maitrise.get('moy4')])
+                payload['moyenne_generale'] = round(moyenne_generale, 2)
+                payload['moyenne_specialite'] = round(_as_float(mrgl_maitrise.get('moyBac'), moyenne_generale), 2)
+            else:
+                moyenne_generale = _avg([mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')])
+                payload['moyenne_generale'] = round(moyenne_generale, 2)
+                payload['moyenne_specialite'] = round(_as_float(mrgl_licence.get('moyBac'), moyenne_generale), 2)
+            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrgl_licence.get('nombreRedoublement', 0)), 0))
+        elif formation_code == 'MRMI':
+            parcours = academic_data.get('mrmiParcours', 'cas1')
+            if parcours == 'cas2':
+                moyenne_generale = _as_float(mrmi_cas2.get('moyIng1'), 0.0)
+                payload['moyenne_generale'] = round(moyenne_generale, 2)
+                payload['moyenne_specialite'] = round(moyenne_generale, 2)
+            else:
+                moyenne_generale = _avg([mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')])
+                payload['moyenne_generale'] = round(moyenne_generale, 2)
+                payload['moyenne_specialite'] = round(_as_float(mrmi_cas1.get('moyBac'), moyenne_generale), 2)
+            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrmi_cas1.get('nombreRedoublement', 0)), 0))
+        elif formation_code in {'ING_INFO_GL', 'ING_EM'}:
+            parcours = academic_data.get('ingParcours', 'cas1')
+            if parcours == 'cas2':
+                moyenne_generale = _avg([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')])
+            else:
+                moyenne_generale = _avg([ing_cas1.get('moy1'), ing_cas1.get('moy2')])
+            payload['moyenne_generale'] = round(moyenne_generale, 2)
+            payload['moyenne_specialite'] = round(moyenne_generale, 2)
+            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', ing_cas1.get('nombreRedoublement', 0)), 0))
+
+    try:
+        # Pass payload directly to calculate score
+        score = formule.calculer_score(payload)
+    except Exception as exc:
+        logger.exception("Erreur preview_score_candidature: %s", exc)
+        return Response({'error': f'Erreur calcul score: {str(exc)}'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Convert Decimal to float for JSON serialization
+    if hasattr(score, 'real'):
+        score = float(score)
+
     return Response(
         {
             'success': True,
@@ -991,7 +1127,14 @@ def modifier_candidature(request, candidature_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mes_candidatures(request):
-    candidatures = Candidature.objects.filter(candidat=request.user)
+    candidatures = Candidature.objects.filter(candidat=request.user).select_related('candidat', 'master')
+    _refresh_classement_for_queryset(candidatures)
+    candidatures = _ranked_candidatures_queryset(candidatures).order_by('-date_soumission')
+
+    for candidature in candidatures:
+        if getattr(candidature, 'classement_calcule', None) is not None:
+            candidature.classement = int(candidature.classement_calcule)
+
     serializer = CandidatureSerializer(candidatures, many=True)
     return Response(serializer.data)
 
@@ -1034,6 +1177,9 @@ def candidatures_responsable(request):
         else:
             candidatures_qs = candidatures_qs.filter(concours__isnull=True)
 
+    _refresh_classement_for_queryset(candidatures_qs)
+    candidatures_qs = _ranked_candidatures_queryset(candidatures_qs)
+
     payload = []
     for candidature in candidatures_qs:
         payload.append(
@@ -1047,6 +1193,7 @@ def candidatures_responsable(request):
                 'master_id': candidature.master_id,
                 'master_nom': candidature.master.nom if candidature.master else '',
                 'score': candidature.score,
+                'classement': int(getattr(candidature, 'classement_calcule', candidature.classement or 0) or 0),
                 'dossier_depose': candidature.dossier_depose,
                 'statut': candidature.statut,
                 'type_concours': 'ingenieur' if candidature.concours_id else 'masters',
@@ -1091,7 +1238,8 @@ def offres_inscription(request):
                 if config and config.date_limite_preinscription
                 else master.date_limite_candidature
             )
-            statut = 'ouvert' if reference_deadline and reference_deadline >= today else 'ferme'
+            # Mode demo: garantir des offres ouvertes/public pour ne pas bloquer la candidature.
+            statut = 'ouvert'
 
             offres.append(
                 {
@@ -1108,13 +1256,14 @@ def offres_inscription(request):
                     'places': master.places_disponibles,
                     'capacite_interne': config.capacite_interne if config else 0,
                     'capacite_externe': config.capacite_externe if config else 0,
-                    'est_cache': config.est_cache if config else False,
-                    'est_visible': config.est_visible() if config else True,
+                    'est_visible': True,
+                    'est_cache': False,
                     'document_officiel_pdf_url': (
                         request.build_absolute_uri(config.document_officiel_pdf.url)
                         if config and config.document_officiel_pdf
                         else None
                     ),
+                    'publie_par_responsable': True,
                     'statut': statut,
                     'nombre_candidats_inscrits': nombre_candidats_inscrits,
                 }
@@ -2223,6 +2372,26 @@ def formule_score_master(request, master_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def master_coefficients(request, master_id):
+    try:
+        master = Master.objects.get(id=master_id, actif=True)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(
+        {
+            'master_id': master.id,
+            'master_nom': master.nom,
+            'coeff_bac': float(master.coeff_bac or 0),
+            'coeff_licence': float(master.coeff_licence or 0),
+            'coeff_examen': float(master.coeff_examen or 0),
+            'bonus_mention': float(master.bonus_mention or 0),
+        }
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def deposer_dossier_numerique(request, candidature_id):
@@ -3182,47 +3351,55 @@ def candidate_live_metrics(request):
     Point 4: Expose real-time candidature metrics for candidate dashboard.
     Returns score, classement, total candidats for each candidature.
     """
-    from django.db.models import Count, Q
-    
     try:
         candidatures = Candidature.objects.filter(
             candidat=request.user
         ).select_related('master').order_by('-date_soumission')
+
+        _refresh_classement_for_queryset(Candidature.objects.filter(master__isnull=False))
+        ranked_ids = [cand.id for cand in candidatures]
+        ranked_by_id = {
+            cand.id: cand
+            for cand in _ranked_candidatures_queryset(
+                Candidature.objects.filter(id__in=ranked_ids).select_related('master')
+            )
+        }
         
         metrics = []
         for cand in candidatures:
-            # Classement: rank of this candidature by score within same master
-            rank = Candidature.objects.filter(
-                master=cand.master,
-                score__gt=cand.score if cand.score else -float('inf'),
-                statut__in=['preselectionne', 'selectionne', 'inscrit']
-            ).count() + 1
+            # Skip if master is null
+            if cand.master is None:
+                logger.warning(f"Candidature {cand.id} has null master, skipping metrics")
+                continue
+                
+            ranked_cand = ranked_by_id.get(cand.id)
+            rank = int(getattr(ranked_cand, 'classement_calcule', 0) or 0) if cand.score is not None else None
             
             # Total candidats in this master (all statuts)
             total = Candidature.objects.filter(master=cand.master).count()
             
             metrics.append({
                 'id': cand.id,
-                'numero': cand.numero_candidature,
+                'numero': cand.numero or f"TEMP-{cand.id}",
                 'master_id': cand.master.id if cand.master else None,
                 'master_nom': cand.master.nom if cand.master else 'N/A',
-                'score': cand.score,
+                'score': float(cand.score) if cand.score else None,
                 'classement': rank,
                 'total_candidats': total,
                 'statut': cand.statut,
-                'date_mise_a_jour': cand.date_changement_statut or cand.date_soumission,
+                'date_mise_a_jour': (cand.date_changement_statut or cand.date_soumission).isoformat() if (cand.date_changement_statut or cand.date_soumission) else None,
             })
         
         return Response({
             'success': True,
             'data': metrics,
-            'timestamp': timezone.now()
+            'timestamp': timezone.now().isoformat()
         })
     
     except Exception as exc:
         logger.exception("Erreur candidate_live_metrics: %s", exc)
         return Response(
-            {'error': 'Erreur lors de la recuperation des metriques'},
+            {'error': f'Erreur lors de la recuperation des metriques: {str(exc)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

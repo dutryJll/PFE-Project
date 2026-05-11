@@ -85,25 +85,25 @@ export class MastersComponent implements OnInit {
     },
   ];
 
-  // ✅ NOUVEAU : Cycle Ingénieur
+  // âœ… NOUVEAU : Cycle IngÃ©nieur
   cycleIngenieur = [
     {
       id: 1,
-      titre: 'Cycle Ingénieur - Génie Informatique',
+      titre: 'Cycle IngÃ©nieur - GÃ©nie Informatique',
       description:
-        "Formation d'ingénieur en informatique axée sur le développement logiciel, l'intelligence artificielle et les systèmes distribués.",
+        "Formation d'ingÃ©nieur en informatique axÃ©e sur le dÃ©veloppement logiciel, l'intelligence artificielle et les systÃ¨mes distribuÃ©s.",
       duree: '3 ans',
       prerequis: 'Bac + Concours',
-      specialites: '2 (Info, Électrique)',
+      specialites: '2 (Info, Ã‰lectrique)',
     },
     {
       id: 2,
-      titre: 'Cycle Ingénieur - Génie Électrique',
+      titre: 'Cycle IngÃ©nieur - GÃ©nie Ã‰lectrique',
       description:
-        "Formation d'ingénieur en électronique et systèmes embarqués avec spécialisation en automatisation et énergie.",
+        "Formation d'ingÃ©nieur en Ã©lectronique et systÃ¨mes embarquÃ©s avec spÃ©cialisation en automatisation et Ã©nergie.",
       duree: '3 ans',
       prerequis: 'Bac + Concours',
-      specialites: '2 (Info, Électrique)',
+      specialites: '2 (Info, Ã‰lectrique)',
     },
   ];
 
@@ -115,10 +115,6 @@ export class MastersComponent implements OnInit {
   ngOnInit(): void {
     this.loadReferentielMasters();
     this.loadMasterOffersWithPdfs();
-    console.log('✅ Masters page loaded');
-    console.log('🎓 Masters Recherche:', this.mastersRecherche);
-    console.log('💼 Masters Professionnels:', this.mastersProfessionnels);
-    console.log('🔧 Cycle Ingénieur:', this.cycleIngenieur);
   }
 
   loadReferentielMasters(): void {
@@ -133,9 +129,9 @@ export class MastersComponent implements OnInit {
           this.isLoadingReferentiel = false;
         },
         error: (err) => {
-          console.error('Erreur chargement référentiel masters:', err);
+          console.error('Erreur chargement rÃ©fÃ©rentiel masters:', err);
           this.referentielMessage =
-            'Impossible de charger les détails officiels des appels d inscription. Vérifiez que le service candidature est actif sur le port 8003.';
+            'Impossible de charger les dÃ©tails officiels des appels d inscription. VÃ©rifiez que le service candidature est actif sur le port 8003.';
           this.isLoadingReferentiel = false;
         },
       });
@@ -160,7 +156,6 @@ export class MastersComponent implements OnInit {
             }
           });
         this.isLoadingOffers = false;
-        console.log('✅ PDF URLs loaded for offers');
       },
       error: (err) => {
         console.error('Erreur chargement offres:', err);
@@ -194,7 +189,6 @@ export class MastersComponent implements OnInit {
   downloadOfficialDocument(code: string): void {
     const pdfUrl = this.masterPdfUrls.get(code);
     if (!pdfUrl) {
-      console.warn('Pas de document PDF disponible pour ce master');
       return;
     }
 
@@ -217,18 +211,14 @@ export class MastersComponent implements OnInit {
   }
 
   goToResearchExploration(event?: Event): void {
-    console.log('🔴 goToResearchExploration called - preparing redirect...');
     event?.preventDefault();
     event?.stopPropagation();
-    console.log('✅ Event prevented, now navigating...');
 
     // Double fallback: try router.navigate first, then window.location as backup
     setTimeout(() => {
       const navigationSuccess = this.router.navigate(['/exploration-masters-recherche']);
-      console.log('🔵 Router.navigate result:', navigationSuccess);
 
       if (!navigationSuccess) {
-        console.log('⚠️ Router.navigate failed, using window.location as fallback');
         window.location.href = '/exploration-masters-recherche';
       }
     }, 50);

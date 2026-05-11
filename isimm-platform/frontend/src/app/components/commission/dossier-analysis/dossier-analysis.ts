@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
+import { environment } from '../../../../environments/environment';
 
 interface OCRAnomaly {
   type: string;
@@ -52,7 +53,7 @@ interface AuditStep {
   styleUrls: ['./dossier-analysis.css'],
 })
 export class DossierAnalysisComponent implements OnInit {
-  private readonly apiBaseUrl = 'http://localhost:8003/api/candidatures';
+  private readonly apiBaseUrl = environment.candidatureServiceUrl;
   private preselectedCandidatureId: number | null = null;
   readonly requiredDocuments = [
     { key: 'releve_notes', label: 'Relevés de notes' },

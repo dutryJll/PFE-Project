@@ -1857,8 +1857,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.initInscriptionTestData();
 
     // Start or attach to WebSocket connection and expose status for UI
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${protocol}://localhost:8003/ws/candidatures/`;
+    const wsUrl = new URL('/ws/candidatures/', window.location.origin).toString();
     this.webSocketService.connect(wsUrl).subscribe({
       next: () => {},
       error: (err: any) => console.warn('WebSocket service connection error (commission):', err),

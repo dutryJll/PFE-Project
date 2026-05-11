@@ -42,6 +42,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   dateFin: string = '2026-07-22';
   dateLimitePre: string = '2026-07-22';
   dateLimiteDep: string = '2026-08-15';
+  selectedPdfFile: File | null = null;
 
   // Toggles
   appel: boolean = true;
@@ -139,6 +140,25 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
       this.offres[0].limite = d.toLocaleDateString('fr-FR');
     }
     this.offres[0].cap = this.capaciteTotal;
+  }
+
+  onPdfSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files.length > 0 ? input.files[0] : null;
+
+    if (!file) {
+      this.selectedPdfFile = null;
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      this.selectedPdfFile = null;
+      this.showToast('Veuillez sélectionner un fichier PDF valide', 't-warn');
+      return;
+    }
+
+    this.selectedPdfFile = file;
+    this.showToast('PDF officiel signé sélectionné', 't-info');
   }
 
   // Toggle functions

@@ -30,12 +30,9 @@ export class RegisterComponent {
     private authService: AuthService,
     private router: Router,
   ) {
-    console.log('🔵 RegisterComponent initialized');
   }
 
   onRegister() {
-    console.log('🔵 onRegister appelé');
-    console.log('📝 UserData:', this.userData);
 
     // Validation
     if (
@@ -56,7 +53,7 @@ export class RegisterComponent {
     }
 
     if (this.userData.password.length < 8) {
-      this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractères';
+      this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractÃ¨res';
       return;
     }
 
@@ -66,24 +63,23 @@ export class RegisterComponent {
 
     this.authService.register(this.userData).subscribe({
       next: (response) => {
-        console.log('✅ Inscription réussie:', response);
         this.isLoading = false;
         this.successMessage =
-          '✅ Compte créé avec succès ! Vérifiez votre email pour activer votre compte.';
+          'âœ… Compte crÃ©Ã© avec succÃ¨s ! VÃ©rifiez votre email pour activer votre compte.';
 
-        // Rediriger vers login après 3 secondes
+        // Rediriger vers login aprÃ¨s 3 secondes
         setTimeout(() => {
           this.router.navigate(['/login']);
         }, 3000);
       },
       error: (error) => {
-        console.error('❌ Erreur inscription:', error);
+        console.error('âŒ Erreur inscription:', error);
         this.isLoading = false;
 
         if (error.error?.email) {
-          this.errorMessage = 'Cet email est déjà utilisé';
+          this.errorMessage = 'Cet email est dÃ©jÃ  utilisÃ©';
         } else if (error.error?.username) {
-          this.errorMessage = "Ce nom d'utilisateur est déjà pris";
+          this.errorMessage = "Ce nom d'utilisateur est dÃ©jÃ  pris";
         } else if (error.error?.password) {
           this.errorMessage = error.error.password[0];
         } else {

@@ -258,6 +258,15 @@ textarea.finput {
   resize: vertical;
   min-height: 70px;
 }
+
+.file-input {
+  padding: 0.42rem 0.5rem;
+}
+
+.file-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
 .toggle-row {
   display: flex;
   align-items: center;

@@ -835,6 +835,18 @@
               (ngModelChange)="syncLive()"
             ></textarea>
           </div>
+          <div class="form-group full">
+            <div class="flbl">PDF officiel signe (appel d offre)</div>
+            <input
+              type="file"
+              class="finput file-input"
+              accept=".pdf"
+              (change)="onPdfSelected($event)"
+            />
+            <div class="file-hint" *ngIf="selectedPdfFile">
+              PDF sélectionné : {{ selectedPdfFile.name }}
+            </div>
+          </div>
           <div class="form-group full" style="gap: 0.55rem">
             <div class="toggle-row">
               <div class="toggle" [ngClass]="{ on: appel }" (click)="toggleAppel()"></div>

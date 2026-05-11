@@ -17,9 +17,10 @@ import { ReclamationDetailDialogComponent } from './reclamation-detail-dialog.co
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
-import { CandidatureService } from '../../../services/candidature.service';
+import { CandidatureService, MasterScoreCoefficients } from '../../../services/candidature.service';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { isPublicOffer } from '../../../shared/public-offer';
+import { environment } from '../../../../environments/environment';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -275,6 +276,8 @@ function normalizeActionLabel(value: string): string {
   styleUrls: ['./dashboard-candidat.css', './dashboard-candidat-wizard.css'],
 })
 export class DashboardCandidatComponent implements OnInit, OnDestroy {
+  private readonly candidatureApiBase = environment.candidatureServiceUrl;
+  private readonly serviceApiBase = this.candidatureApiBase.replace(/\/candidatures$/, '');
   currentUser: any = null;
   currentView: CandidatView = 'dashboard';
   currentDate: Date = new Date();
@@ -380,8 +383,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   // Real-time score calculation from backend
   wizardComputedScoreBackend: number | null = null;
+  wizardComputedScoreInstantane: number | null = null;
   wizardComputedScoreLoading: boolean = false;
   wizardComputedScoreError: string | null = null;
+  wizardMasterCoefficients: MasterScoreCoefficients | null = null;
   private wizardScoreCalculationTimer: ReturnType<typeof setTimeout> | null = null;
 
   wizardTouched: {
@@ -1129,8 +1134,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   private buildWebSocketUrl(): string {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${protocol}://localhost:8003/ws/candidatures/`;
+    const socketUrl = new URL('/ws/candidatures/', window.location.origin);
+    socketUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return socketUrl.toString();
   }
 
   private connectStatusWebSocket(): void {
@@ -1711,7 +1717,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.http
-      .get<Candidature[]>('http://localhost:8003/api/candidatures/mes-candidatures/', {
+      .get<Candidature[]>(`${this.candidatureApiBase}/mes-candidatures/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -1783,7 +1789,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const httpOptions = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 
     this.http
-      .get<Offre[]>('http://localhost:8003/api/candidatures/offres-inscription/', httpOptions)
+      .get<Offre[]>(`${this.candidatureApiBase}/offres-inscription/`, httpOptions)
       .subscribe({
         next: (data) => {
           const mappedOffres = (data || [])
@@ -1876,7 +1882,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.http
-      .get<DossierCandidature[]>('http://localhost:8003/api/candidatures/mes-dossiers/', {
+      .get<DossierCandidature[]>(`${this.candidatureApiBase}/mes-dossiers/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -1897,7 +1903,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.http
-      .get<NotificationItem[]>('http://localhost:8003/api/candidatures/mes-notifications/', {
+      .get<NotificationItem[]>(`${this.candidatureApiBase}/mes-notifications/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -1926,7 +1932,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/notifications/${notificationId}/mark-read/`,
+        `${this.candidatureApiBase}/notifications/${notificationId}/mark-read/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -1951,9 +1957,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     this.http
       .post(
-        'http://localhost:8003/api/candidatures/notifications/mark-all-read/',
+        `${this.candidatureApiBase}/notifications/mark-all-read/`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       )
       .subscribe({
         next: (response: any) => {
@@ -2091,7 +2099,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.isHistoriqueLoading = true;
 
     this.http
-      .get('http://localhost:8003/api/candidatures/historique/', {
+      .get(`${this.candidatureApiBase}/historique/`, {
         headers: { Authorization: `Bearer ${token}` },
         params: params,
       })
@@ -2280,42 +2288,38 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const token = this.authService.getAccessToken();
+    const requestPayload: Record<string, unknown> = {
+      master_id: offre.id,
+      ...payload,
+    };
 
-    this.http
-      .post(
-        'http://localhost:8003/api/candidatures/create/',
-        {
+    console.log('📦 Payload create candidature:', JSON.stringify(requestPayload, null, 2));
+
+    this.candidatureService.createCandidature(requestPayload).subscribe({
+      next: (response: any) => {
+        this.toastService.show('Candidature soumise avec succès.', 'success');
+        this.mesCandidatures.push({
+          id: response.id,
+          numero: response.numero,
+          master_nom: offre.titre,
+          master: response.master,
           master_id: offre.id,
-          ...payload,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .subscribe({
-        next: (response: any) => {
-          this.toastService.show('Candidature soumise avec succès.', 'success');
-          this.mesCandidatures.push({
-            id: response.id,
-            numero: response.numero,
-            master_nom: offre.titre,
-            master: response.master,
-            master_id: offre.id,
-            statut: 'soumis',
-            date_soumission: new Date().toISOString(),
-            etat_candidature: 'En cours',
-            dossier_valide: false,
-            date_depot_dossier: '',
-            dossier_depose: false,
-          });
-          this.loadMesCandidatures();
-          this.loadMesDossiers();
-          this.switchView('candidatures');
-        },
-        error: (error) => {
-          console.error('Erreur:', error);
-          this.toastService.show('Erreur lors de la soumission de la candidature.', 'error');
-        },
-      });
+          statut: 'soumis',
+          date_soumission: new Date().toISOString(),
+          etat_candidature: 'En cours',
+          dossier_valide: false,
+          date_depot_dossier: '',
+          dossier_depose: false,
+        });
+        this.loadMesCandidatures();
+        this.loadMesDossiers();
+        this.switchView('candidatures');
+      },
+      error: (error) => {
+        console.error('Erreur:', error);
+        this.toastService.show('Erreur lors de la soumission de la candidature.', 'error');
+      },
+    });
   }
 
   postulerOffre(offre: Offre): void {
@@ -2342,8 +2346,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.wizardCurrentStep = 1;
     this.wizardMaxAllowedStep = 1;
     this.wizardComputedScoreBackend = null;
+    this.wizardComputedScoreInstantane = null;
     this.wizardComputedScoreLoading = false;
     this.wizardComputedScoreError = null;
+    this.wizardMasterCoefficients = null;
     this.wizardTouched = {
       nom: false,
       prenom: false,
@@ -2408,7 +2414,39 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       confirmationDeclaration: false,
       confirmationText: '',
     };
+
+    this.loadWizardMasterCoefficients(offre);
     this.showSubmissionWizardModal = true;
+  }
+
+  private getDefaultWizardMasterCoefficients(masterId: number): MasterScoreCoefficients {
+    return {
+      master_id: masterId,
+      master_nom: this.wizardOffre?.titre || 'Master',
+      coeff_bac: 0.5,
+      coeff_licence: 0.5,
+      coeff_examen: 0,
+      bonus_mention: 0,
+    };
+  }
+
+  private loadWizardMasterCoefficients(offre: Offre): void {
+    const masterId = Number(offre.master_id ?? offre.id);
+    if (!Number.isFinite(masterId) || masterId <= 0) {
+      this.wizardMasterCoefficients = this.getDefaultWizardMasterCoefficients(0);
+      return;
+    }
+
+    this.candidatureService.getMasterCoefficients(masterId).subscribe({
+      next: (coeffs) => {
+        this.wizardMasterCoefficients = coeffs;
+        this.calculerScoreInstantane();
+      },
+      error: () => {
+        this.wizardMasterCoefficients = this.getDefaultWizardMasterCoefficients(masterId);
+        this.calculerScoreInstantane();
+      },
+    });
   }
 
   closeSubmissionWizard(): void {
@@ -2570,6 +2608,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   // Trigger backend score calculation with debounce to avoid excessive API calls
   triggerWizardScoreCalculation(): void {
+    this.calculerScoreInstantane();
+
+    if (!this.wizardOffre || !this.isWizardStepValid(2)) {
+      this.wizardComputedScoreLoading = false;
+      return;
+    }
+
     if (this.wizardScoreCalculationTimer) {
       clearTimeout(this.wizardScoreCalculationTimer);
     }
@@ -2581,11 +2626,120 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }, 800); // 800ms debounce
   }
 
+  calculerScoreInstantane(): number | null {
+    const n = (value: string): number | null => this.parseWizardNumeric(value);
+    const formationCode = this.getWizardFormationCode(this.wizardOffre);
+
+    const m1 = n(this.wizardData.moyenne1Annee);
+    const m2 = n(this.wizardData.moyenne2Annee);
+    const m3 = n(this.wizardData.moyenne3Annee);
+    const moyenneBac = n(this.wizardData.moyenneBacPrincipale) ?? 0;
+    const noteMathBac = n(this.wizardData.noteMathBac) ?? 0;
+    const noteFrancaisBac = n(this.wizardData.noteFrancaisBac) ?? 0;
+    const noteAnglaisBac = n(this.wizardData.noteAnglaisBac) ?? 0;
+    const nbRedoublements = Number(this.wizardData.nombreRedoublement || '0');
+
+    const sessionValues = [
+      String(this.wizardData.session1Annee || ''),
+      String(this.wizardData.session2Annee || ''),
+      String(this.wizardData.session3Annee || ''),
+    ].map((value) => value.trim().toLowerCase());
+
+    const nbRattrapages = sessionValues.filter((value) =>
+      [
+        'rattrapage',
+        'controle',
+        'contrôle',
+        'control',
+        'session controle',
+        'session rattrapage',
+      ].includes(value),
+    ).length;
+
+    const bonusNr = nbRedoublements <= 0 ? 5 : nbRedoublements === 1 ? 3 : 0;
+    const bonusSp = nbRattrapages <= 0 ? 3 : nbRattrapages === 1 ? 2 : 0;
+
+    let score: number | null = null;
+
+    if (formationCode === 'MPGL' || formationCode === 'MPDS') {
+      if (m1 === null && m2 === null && m3 === null) {
+        score = null;
+      } else {
+        const avg = ((m1 ?? 0) + (m2 ?? 0) + (m3 ?? 0)) / 3;
+        score = avg + bonusNr + bonusSp;
+      }
+    } else if (formationCode === 'MRGL') {
+      if (m1 === null && m2 === null && m3 === null) {
+        score = null;
+      } else {
+        const bonusLangue = noteFrancaisBac >= 12 || noteAnglaisBac >= 12 ? 1 : 0;
+        const anneeDiplome = Number(this.wizardData.anneeObtentionDiplome || '0');
+        const bonusDiplome = [2025, 2023].includes(anneeDiplome)
+          ? 4
+          : [2022, 2021, 2020].includes(anneeDiplome)
+            ? 2
+            : 0;
+
+        score =
+          1.5 * (m1 ?? 0) +
+          2 * (m2 ?? 0) +
+          (m3 ?? 0) +
+          bonusNr +
+          bonusSp +
+          (moyenneBac + noteMathBac - 20) / 2 +
+          bonusLangue +
+          bonusDiplome;
+      }
+    } else if (formationCode === 'ING_INFO_GL' || formationCode === 'ING_EM') {
+      const isInterne =
+        String(this.wizardData.natureCandidature || '').toLowerCase() !== 'étudiant externe';
+
+      if (isInterne) {
+        if (m2 === null) {
+          score = null;
+        } else {
+          const aRedouble = nbRedoublements > 0;
+          const b1 = this.get_bonus(this.wizardData.session1Annee, aRedouble);
+          const b2 = this.get_bonus(this.wizardData.session2Annee, aRedouble);
+          score = m2 + b1 + b2;
+        }
+      } else {
+        const r1 = n((this.wizardData as any).rang1) ?? 0;
+        const r2 = n((this.wizardData as any).rang2) ?? 0;
+        score = 0.5 * (2 * (m1 ?? 0) + 2 * (m2 ?? 0) + (m3 ?? 0)) + 50 * (1 - r1) + 50 * (1 - r2);
+      }
+    }
+
+    if (score === null) {
+      this.wizardComputedScoreInstantane = null;
+      return null;
+    }
+
+    const normalizedScore = Number(score.toFixed(2));
+    this.wizardComputedScoreInstantane = normalizedScore;
+    return normalizedScore;
+  }
+
+  private get_bonus(session: string, aRedouble: boolean): number {
+    const normalized = String(session || '')
+      .trim()
+      .toLowerCase();
+    const isPrincipale = ['principale', 'principal', 'main'].includes(normalized);
+    if (!aRedouble) {
+      return isPrincipale ? 2 : 1.5;
+    }
+    return isPrincipale ? 1 : 0;
+  }
+
   // Call backend to compute score using proper formula (e.g., MRGL)
   private calculateWizardScoreFromBackend(): void {
+    console.log('🧮 calculateWizardScoreFromBackend() called');
+    console.log('  Step 2 valid:', this.isWizardStepValid(2));
+
     // Only calculate if step 2 is valid (has all required academic data)
     if (!this.isWizardStepValid(2)) {
       // If the step is not valid, stop loading and keep previous value (avoid perpetual "Calcul...").
+      console.warn('  ⚠️  Step 2 not valid, skipping score calculation');
       this.wizardComputedScoreLoading = false;
       return;
     }
@@ -2593,8 +2747,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.wizardComputedScoreLoading = true;
     this.wizardComputedScoreError = null;
 
+    const academicData = this.buildWizardAcademicDataPayload();
+    const formationCode = this.getWizardFormationCode(this.wizardOffre);
     const payload = {
       master_id: this.wizardOffre?.master_id ?? this.wizardOffre?.id,
+      formation_code: formationCode,
+      academic_data: academicData,
+      payload: academicData,
       moyenneBac: this.parseWizardNumeric(this.wizardData.moyenneBacPrincipale),
       noteMathBac: this.parseWizardNumeric(this.wizardData.noteMathBac),
       noteFrancaisBac: this.parseWizardNumeric(this.wizardData.noteFrancaisBac),
@@ -2612,16 +2771,23 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       session3: this.wizardData.session3Annee,
       session4: this.wizardData.session4Annee,
       sessionReussiteIng1: this.wizardData.sessionReussiteIng1,
-      formation_code: this.wizardOffre?.code || '',
     };
+
+    console.log('📤 Sending score calculation request:', {
+      formation_code: formationCode,
+      master_id: payload.master_id,
+      academic_data_keys: Object.keys(academicData),
+    });
 
     this.candidatureService.calculateWizardScore(payload).subscribe({
       next: (response: any) => {
+        console.log('✅ Score calculation succeeded:', response);
         this.wizardComputedScoreBackend = response?.score ?? null;
         this.wizardComputedScoreLoading = false;
+        console.log('  Score set to:', this.wizardComputedScoreBackend);
       },
       error: (error: any) => {
-        console.error('Erreur calcul score:', error);
+        console.error('❌ Erreur calcul score:', error);
         this.wizardComputedScoreError = 'Erreur lors du calcul du score';
         this.wizardComputedScoreLoading = false;
         // Keep previous value or null on error
@@ -2630,9 +2796,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   getWizardComputedScore(): number {
-    // Official score: always returned from backend formula.
+    // Official score from backend when available; otherwise local estimate.
     if (this.wizardComputedScoreBackend !== null) {
       return this.wizardComputedScoreBackend;
+    }
+    if (this.wizardComputedScoreInstantane !== null) {
+      return this.wizardComputedScoreInstantane;
     }
     return 0;
   }
@@ -2640,6 +2809,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   getWizardComputedScoreDisplay(): string {
     if (this.wizardComputedScoreBackend !== null) {
       return `${this.wizardComputedScoreBackend.toFixed(2)}`;
+    }
+    if (this.wizardComputedScoreInstantane !== null) {
+      return `${this.wizardComputedScoreInstantane.toFixed(2)}`;
     }
     if (this.wizardComputedScoreLoading) {
       return '—';
@@ -2919,27 +3091,34 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const formationCode = this.getWizardFormationCode(offre);
     const academicData = this.buildWizardAcademicDataPayload();
 
-    if (this.wizardComputedScoreLoading) {
-      this.toastService.show('Le score est en cours de calcul. Veuillez patienter.', 'warning');
-      return;
-    }
+    // Submit immediately with backend score if available, otherwise local instant score.
+    const instantScore = this.calculerScoreInstantane();
 
-    if (this.wizardComputedScoreBackend === null) {
+    // Refresh backend score in background without blocking submission.
+    if (
+      this.wizardComputedScoreBackend === null &&
+      this.isWizardStepValid(2) &&
+      !this.wizardComputedScoreLoading
+    ) {
       this.triggerWizardScoreCalculation();
-      this.toastService.show(
-        'Score non disponible. Le calcul backend est lancé, réessayez dans un instant.',
-        'warning',
-      );
-      return;
     }
 
-    if (!formationCode) {
-      this.toastService.show(
-        "Impossible d'identifier la formation pour calculer le score.",
-        'error',
-      );
-      return;
-    }
+    const scoreToSubmit = this.wizardComputedScoreBackend ?? instantScore;
+    this.proceedWithSubmission(offre, formationCode, academicData, scoreToSubmit);
+  }
+
+  private proceedWithSubmission(
+    offre: Offre,
+    formationCode: string,
+    academicData: Record<string, unknown>,
+    scorePrevisualisation: number | null,
+  ): void {
+    console.log('📤 proceedWithSubmission() called', {
+      score_backend: this.wizardComputedScoreBackend,
+      score_instantane: this.wizardComputedScoreInstantane,
+      score_submit: scorePrevisualisation,
+      formation_code: formationCode,
+    });
 
     const wizardPayload: Record<string, unknown> = {
       nature_candidature: this.wizardData.natureCandidature,
@@ -2949,10 +3128,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       selected_diplome: this.wizardData.specialiteDiplome,
       diplome_reference: this.wizardData.natureDiplome,
       formation_code: formationCode,
-      score_previsualisation: this.wizardComputedScoreBackend,
+      score_previsualisation: scorePrevisualisation,
       academic_data: academicData,
     };
 
+    console.log('  Payload keys:', Object.keys(wizardPayload));
     this.wizardSubmitting = true;
     this.postuler(offre, wizardPayload);
     setTimeout(() => {
@@ -2960,11 +3140,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }, 450);
   }
 
-  private getWizardFormationCode(offre: Offre): string {
+  private getWizardFormationCode(offre: Offre | null): string {
     const rawCode = String(offre?.code || '')
       .trim()
       .toLowerCase();
-    const code = rawCode || this.getPreinscriptionDetailCode(offre) || '';
+    const detailCode = offre ? this.getPreinscriptionDetailCode(offre) : null;
+    const code = rawCode || detailCode || '';
     const map: Record<string, string> = {
       mpgl: 'MPGL',
       mpds: 'MPDS',
@@ -2979,7 +3160,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       ingem: 'ING_EM',
     };
 
-    return code ? map[code] || '' : '';
+    return code ? map[code] || code.toUpperCase() : 'MASTER_GENERIC';
   }
 
   private buildWizardAcademicDataPayload(): Record<string, unknown> {
@@ -3649,7 +3830,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     this.http
       .put<Candidature>(
-        `http://localhost:8003/api/candidatures/${candidature.id}/modifier/`,
+        `${this.candidatureApiBase}/${candidature.id}/modifier/`,
         { choix_priorite: priorite },
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -3776,7 +3957,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.selectedOffreDetail = null;
   }
 
-  private getPreinscriptionDetailCode(offre: Offre): string | null {
+  private getPreinscriptionDetailCode(offre: Offre | null): string | null {
     const normalize = (value: string): string =>
       (value || '')
         .toLowerCase()
@@ -3923,13 +4104,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     };
 
     this.http
-      .post(
-        `http://localhost:8003/api/candidatures/${dossier.candidature_id}/deposer-dossier/`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .post(`${this.candidatureApiBase}/${dossier.candidature_id}/deposer-dossier/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: () => {
           this.toastService.show('✅ Formulaire de choix enregistré et dossier déposé.', 'success');
@@ -4021,7 +4198,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         formData.append('type', doc.nom);
 
         this.http
-          .post('http://localhost:8003/api/documents/upload/', formData, {
+          .post(`${this.serviceApiBase}/documents/upload/`, formData, {
             headers: { Authorization: `Bearer ${token}` },
           })
           .subscribe({
@@ -4071,7 +4248,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     formData.append('fichier_paiement', fichierPaiement);
 
     this.http
-      .post('http://localhost:8003/api/inscriptions/soumettre-paiement/', formData, {
+      .post(`${this.serviceApiBase}/inscriptions/soumettre-paiement/`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -4142,7 +4319,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const token = this.authService.getAccessToken();
 
     this.http
-      .post('http://localhost:8003/api/reclamations/creer/', this.nouvelleReclamation, {
+      .post(`${this.serviceApiBase}/reclamations/creer/`, this.nouvelleReclamation, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -4521,7 +4698,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.http
-      .post('http://localhost:8003/api/candidatures/upload-fichier/', formData, {
+      .post(`${this.candidatureApiBase}/upload-fichier/`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -4582,7 +4759,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     formData.append('fichier', this.fichierInscription);
 
     this.http
-      .post('http://localhost:8003/api/candidatures/upload-fichier/', formData, {
+      .post(`${this.candidatureApiBase}/upload-fichier/`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({

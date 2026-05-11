@@ -1,9 +1,14 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from . import views
 from . import views_export
+from .views_parcours import ParcoursAdmissionViewSet
 
-urlpatterns = [
+router = DefaultRouter()
+router.register(r'parcours', ParcoursAdmissionViewSet, basename='parcours-admission')
+
+urlpatterns = router.urls + [
     path('create/', views.create_candidature, name='create_candidature'),
     path('soumettre/', views.soumettre_candidature, name='soumettre_candidature'),
     path('preview-score/', views.preview_score_candidature, name='preview_score_candidature'),
@@ -40,6 +45,7 @@ urlpatterns = [
     path('configuration/<int:master_id>/document-pdf/', views.upload_document_configuration_appel, name='upload_document_configuration_appel'),
     path('configuration/<int:master_id>/publier/', views.publier_offre_preinscription, name='publier_offre_preinscription'),
     path('masters/<int:master_id>/formule-score/', views.formule_score_master, name='formule_score_master'),
+    path('masters/<int:master_id>/coefficients/', views.master_coefficients, name='master_coefficients'),
     path('masters/<int:master_id>/formulaire-commission/', views.formulaire_commission_master, name='formulaire_commission_master'),
     path('<int:candidature_id>/deposer-dossier/', views.deposer_dossier_numerique, name='deposer_dossier_numerique'),
     path('<int:candidature_id>/ajuster-dossier/', views.ajuster_dossier_numerique, name='ajuster_dossier_numerique'),
@@ -72,3 +78,4 @@ urlpatterns = [
     path('send-member-credentials/', views.send_member_credentials, name='send_member_credentials'),
     path('export/', views_export.export_candidatures, name='export_candidatures'),
 ]
+

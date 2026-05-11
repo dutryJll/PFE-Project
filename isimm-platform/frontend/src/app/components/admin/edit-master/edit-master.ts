@@ -143,13 +143,28 @@ export class EditMasterComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
+    const normalizedNom = (this.masterForm.nom || '').trim();
+    const normalizedType = (this.masterForm.type || '').trim() as 'recherche' | 'professionnel';
+    const normalizedDate = (this.masterForm.date_limite || '').trim();
+
+    if (!normalizedNom || !normalizedType || !normalizedDate) {
+      this.errorMessage =
+        'Champs obligatoires manquants: nom, type, date limite. Vérifiez le formulaire.';
+      this.isSaving = false;
+      return;
+    }
+
+    // Le backend exige specialite/description même si ces champs sont masqués dans l'UI.
+    const autoSpecialite = normalizedNom;
+    const autoDescription = normalizedNom;
+
     const payload = {
-      nom: this.masterForm.nom,
-      type_master: this.masterForm.type,
-      specialite: this.masterForm.specialite,
-      description: this.masterForm.description,
+      nom: normalizedNom,
+      type_master: normalizedType,
+      specialite: autoSpecialite,
+      description: autoDescription,
       places_disponibles: this.masterForm.places,
-      date_limite_candidature: this.masterForm.date_limite,
+      date_limite_candidature: normalizedDate,
       actif: this.masterForm.statut === 'ouvert',
     };
 

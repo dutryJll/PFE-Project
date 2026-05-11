@@ -8,12 +8,8 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
   const currentUser = authService.getCurrentUser();
 
-  console.log('🔐 roleGuard - Utilisateur:', currentUser);
-  console.log('🔐 roleGuard - Route:', route.routeConfig?.path);
-  console.log('🔐 roleGuard - Rôles autorisés:', route.data['roles']);
 
   if (!currentUser) {
-    console.log("❌ Pas d'utilisateur connecté → /login");
     router.navigate(['/login']);
     return false;
   }
@@ -21,7 +17,6 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const allowedRoles = route.data['roles'] as string[];
 
   if (!allowedRoles || allowedRoles.length === 0) {
-    console.log('✅ Pas de restriction de rôle');
     return true;
   }
 
@@ -31,20 +26,13 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   );
   const isAllowed = normalizedAllowedRoles.includes(userRole);
 
-  console.log('🔍 Vérification rôle:', {
-    userRole,
-    allowedRoles: normalizedAllowedRoles,
-    isAllowed,
-  });
 
   if (isAllowed) {
-    console.log('✅ Rôle autorisé → Accès accordé');
     return true;
   }
 
-  console.log('❌ Rôle non autorisé → Redirection');
 
-  // ✅ CORRECTION : Redirection selon le rôle
+  // âœ… CORRECTION : Redirection selon le rÃ´le
   switch (userRole) {
     case 'candidat':
       router.navigate(['/candidat/dashboard']);
@@ -54,7 +42,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
       router.navigate(['/commission/dashboard']);
       break;
     case 'admin':
-      router.navigate(['/admin/dashboard']); // ✅ CORRIGÉ
+      router.navigate(['/admin/dashboard']); // âœ… CORRIGÃ‰
       break;
     default:
       router.navigate(['/']);

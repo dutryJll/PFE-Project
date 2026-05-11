@@ -52,14 +52,10 @@ export class WebSocketService implements OnDestroy {
       retryWhen((errors) =>
         errors.pipe(
           tap((err) => {
-            console.warn('WebSocket connection failed:', err);
             this.connectionStatusSubject.next(ConnectionStatus.ERROR);
           }),
           switchMap(() => {
             const delay = this.calculateBackoffDelay();
-            console.log(
-              `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`,
-            );
             return timer(delay).pipe(
               tap(() => this.connectionStatusSubject.next(ConnectionStatus.CONNECTING)),
             );
@@ -83,7 +79,6 @@ export class WebSocketService implements OnDestroy {
         const ws = this.ws as WebSocket;
 
         ws.onopen = () => {
-          console.log('WebSocket connected');
           this.connectionStatusSubject.next(ConnectionStatus.CONNECTED);
           this.reconnectAttempts = 0;
           this.startHeartbeat();
@@ -95,7 +90,6 @@ export class WebSocketService implements OnDestroy {
         };
 
         ws.onclose = () => {
-          console.log('WebSocket closed');
           this.connectionStatusSubject.next(ConnectionStatus.DISCONNECTED);
           this.stopHeartbeat();
           reject(new Error('WebSocket closed'));
@@ -127,7 +121,6 @@ export class WebSocketService implements OnDestroy {
 
       if (message.type === 'pong') {
         // heartbeat response
-        console.debug('Heartbeat pong received');
         return;
       }
 
@@ -139,7 +132,6 @@ export class WebSocketService implements OnDestroy {
 
   public send(message: WebSocketMessage): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket is not connected. Message not sent:', message);
       return;
     }
 
@@ -155,7 +147,6 @@ export class WebSocketService implements OnDestroy {
     this.heartbeatIntervalId = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.send({ type: 'ping' });
-        console.debug('Heartbeat sent (ping)');
       }
     }, this.HEARTBEAT_INTERVAL_MS);
   }

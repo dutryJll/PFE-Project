@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CommissionService {
-  private apiUrl = 'http://localhost:8003/api/commission';
+  private apiUrl = environment.commissionServiceUrl;
 
   constructor(private http: HttpClient) {}
 

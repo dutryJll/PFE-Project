@@ -4,12 +4,15 @@ from rest_framework import serializers
 from .models import (
     Candidature,
     ConfigurationAppel,
+    CritereEvaluation,
     DonneesAcademiques,
     FormuleScore,
     ListeAdmission,
     Master,
     Notification,
     OffreMaster,
+    ParcoursAdmission,
+    ValeurCritere,
 )
 
 User = get_user_model()
@@ -68,6 +71,7 @@ class CandidatureSerializer(serializers.ModelSerializer):
     master_nom = serializers.CharField(source='master.nom', read_only=True)
     peut_modifier = serializers.SerializerMethodField()
     jours_restants = serializers.SerializerMethodField()
+    formulaire = serializers.JSONField(write_only=True, required=False)
 
     class Meta:
         model = Candidature
@@ -101,6 +105,35 @@ class CandidatureSerializer(serializers.ModelSerializer):
 
         delta = obj.date_limite_modification - timezone.now()
         return max(0, delta.days)
+
+    def create(self, validated_data):
+        formulaire = validated_data.pop('formulaire', None)
+
+        request = self.context.get('request')
+        candidat = getattr(request, 'user', None)
+
+        candidature = Candidature.objects.create(candidat=candidat, **validated_data)
+
+        if isinstance(formulaire, dict):
+            DonneesAcademiques.objects.create(
+                candidature=candidature,
+                moyenne_generale=0.0,
+                moyenne_specialite=0.0,
+                note_pfe=0.0,
+                notes_detaillees={'source': 'formulaire_dynamic', 'payload': formulaire},
+            )
+
+            try:
+                parcours = ParcoursAdmission.objects.filter(master=candidature.master, actif=True).first()
+                if parcours:
+                    score = parcours.calculer_score(candidature)
+                    if score is not None:
+                        candidature.score = score
+                        candidature.save(update_fields=['score', 'updated_at'])
+            except Exception:
+                pass
+
+        return candidature
 
 
 class ConfigurationAppelSerializer(serializers.ModelSerializer):
@@ -156,3 +189,52 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'titre', 'message', 'type', 'lue', 'date']
+
+
+class ParcoursAdmissionSerializer(serializers.ModelSerializer):
+    master_nom = serializers.CharField(source='master.nom', read_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    type_display = serializers.CharField(source='get_type_display', read_only=True)
+
+    class Meta:
+        model = ParcoursAdmission
+        fields = [
+            'id',
+            'master',
+            'master_nom',
+            'nom',
+            'type',
+            'type_display',
+            'specialite',
+            'capacite',
+            'date_limite',
+            'statut',
+            'statut_display',
+            'actif',
+            'created_at',
+            'updated_at',
+        ]
+
+
+class ValeurCritereSerializer(serializers.ModelSerializer):
+    critere_code = serializers.CharField(source='critere.code', read_only=True)
+    critere_nom = serializers.CharField(source='critere.nom', read_only=True)
+    critere_label = serializers.CharField(source='critere.label', read_only=True)
+
+    class Meta:
+        model = ValeurCritere
+        fields = [
+            'id',
+            'parcours',
+            'critere',
+            'critere_code',
+            'critere_nom',
+            'critere_label',
+            'coefficient',
+        ]
+
+
+class CritereEvaluationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CritereEvaluation
+        fields = ['id', 'code', 'nom', 'label', 'description']

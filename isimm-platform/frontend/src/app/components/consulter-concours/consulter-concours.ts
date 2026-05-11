@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-consulter-concours',
@@ -20,7 +21,7 @@ export class ConsulterConcoursComponent implements OnInit {
   }
 
   chargerConcours(): void {
-    this.http.get('http://localhost:8003/api/concours/').subscribe({
+    this.http.get(`${environment.concoursServiceUrl}/`).subscribe({
       next: (data: any) => {
         this.concoursIngenieurs = data.filter((c: any) => c.type_concours === 'ingenieur');
         this.loading = false;

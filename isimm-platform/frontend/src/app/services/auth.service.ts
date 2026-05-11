@@ -54,7 +54,6 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('🔐 Réponse login:', response);
 
           if (response.access && response.user) {
             localStorage.setItem('access_token', response.access);
@@ -63,14 +62,13 @@ export class AuthService {
 
             this.currentUserSubject.next(response.user);
 
-            console.log('✅ Connexion OK - Rôle:', response.user.role);
           }
         }),
         catchError((error: any) => {
           if (error?.status === 0) {
-            console.error(`❌ Service Auth indisponible: ${this.apiUrl}`);
+            console.error(`âŒ Service Auth indisponible: ${this.apiUrl}`);
           }
-          console.error('❌ Erreur login:', error);
+          console.error('âŒ Erreur login:', error);
           return throwError(() => error);
         }),
       );
@@ -90,7 +88,6 @@ export class AuthService {
     this.actionsLoaded = false;
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
-    console.log('🚪 Déconnexion');
   }
 
   getCurrentUser(): any {
@@ -99,7 +96,7 @@ export class AuthService {
       try {
         return JSON.parse(userStr);
       } catch (e) {
-        console.error('❌ Erreur parsing user:', e);
+        console.error('âŒ Erreur parsing user:', e);
         return null;
       }
     }
@@ -163,7 +160,6 @@ export class AuthService {
     const normalizedEmail = (email || '').trim().toLowerCase();
     const normalizedPassword = (password || '').trim();
 
-    console.log('🔐 Vérification mot de passe pour:', normalizedEmail);
     return this.http
       .post(`${this.apiUrl}/login/`, {
         email: normalizedEmail,
@@ -171,10 +167,9 @@ export class AuthService {
       })
       .pipe(
         tap((response: any) => {
-          console.log('✅ Mot de passe vérifié');
         }),
         catchError((error: any) => {
-          console.error('❌ Mot de passe incorrect');
+          console.error('âŒ Mot de passe incorrect');
           return throwError(() => error);
         }),
       );
@@ -187,7 +182,6 @@ export class AuthService {
 
     const token = this.getAccessToken();
     if (!token) {
-      console.warn('⚠️ Pas de token - actions indisponibles');
       this.actionsLoaded = false;
       return throwError(() => new Error('No access token'));
     }
@@ -203,10 +197,8 @@ export class AuthService {
             actionNames.filter((name) => !!name).map((name) => this.normalizeActionName(name)),
           );
           this.actionsLoaded = true;
-          console.log('✅ Actions chargées:', this.enabledActions);
         }),
         catchError((error: any) => {
-          console.warn('Actions indisponibles (fallback local permissif):', error?.status || error);
           this.actionsLoaded = false;
           // Important: ne pas vider enabledActions ici.
           // On relaie l'erreur pour que les guards/components appliquent le fallback permissif.

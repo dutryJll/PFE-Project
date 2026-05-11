@@ -1,18 +1,27 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+
+export interface MasterScoreCoefficients {
+  master_id: number;
+  master_nom: string;
+  coeff_bac: number;
+  coeff_licence: number;
+  coeff_examen: number;
+  bonus_mention: number;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class CandidatureService {
-  private apiUrl = 'http://localhost:8003/api/candidatures';
+  private apiUrl = environment.candidatureServiceUrl;
 
   constructor(private http: HttpClient) {}
 
   private getHeaders(includeJsonContentType: boolean = true): HttpHeaders {
     const token = localStorage.getItem('access_token');
-    console.log('🔐 CandidatureService.getHeaders() - token exists:', !!token);
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
     };
@@ -21,34 +30,31 @@ export class CandidatureService {
       headers['Content-Type'] = 'application/json';
     }
 
-    console.log('📤 Headers being sent:', {
-      Authorization: token ? `Bearer ${token.substring(0, 20)}...` : 'NO TOKEN',
-    });
     return new HttpHeaders(headers);
   }
 
-  // Créer une candidature
+  // CrÃ©er une candidature
   createCandidature(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/create/`, data, { headers: this.getHeaders() });
+    const endpoint = `${this.apiUrl}/create/`;
+    return this.http.post(endpoint, data, { headers: this.getHeaders() });
   }
 
-  // Récupérer mes candidatures
+  // RÃ©cupÃ©rer mes candidatures
   getMesCandidatures(): Observable<any> {
-    console.log('📤 GET /mes-candidatures/ appelé');
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // Récupérer une candidature spécifique
+  // RÃ©cupÃ©rer une candidature spÃ©cifique
   getCandidature(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // Mettre à jour une candidature
+  // Mettre Ã  jour une candidature
   updateCandidature(id: number, data: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/modifier/`, data, { headers: this.getHeaders() });
   }
 
-  // Mettre à jour le statut d'une candidature
+  // Mettre Ã  jour le statut d'une candidature
   updateStatus(candidatureId: number, newStatus: string, motifRejet?: string): Observable<any> {
     const payload = {
       statut: newStatus,
@@ -59,22 +65,32 @@ export class CandidatureService {
     });
   }
 
-  // Récupérer les métriques en temps réel pour le candidat (score, classement, total)
+  // RÃ©cupÃ©rer les mÃ©triques en temps rÃ©el pour le candidat (score, classement, total)
   getCandidateLiveMetrics(): Observable<any> {
     return this.http.get(`${this.apiUrl}/candidate-live-metrics/`, { headers: this.getHeaders() });
   }
 
-  // Récupérer tous les masters ouverts
+  // RÃ©cupÃ©rer les coefficients de calcul d'un master.
+  getMasterCoefficients(masterId: number): Observable<MasterScoreCoefficients> {
+    return this.http.get<MasterScoreCoefficients>(
+      `${this.apiUrl}/masters/${masterId}/coefficients/`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
+  }
+
+  // RÃ©cupÃ©rer tous les masters ouverts
   getMastersOuverts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/masters/`, { headers: this.getHeaders() });
   }
 
-  // POUR ADMIN/COMMISSION : Récupérer toutes les candidatures
+  // POUR ADMIN/COMMISSION : RÃ©cupÃ©rer toutes les candidatures
   getAllCandidatures(): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // POUR COMMISSION : récupérer la liste classée des candidatures masters
+  // POUR COMMISSION : rÃ©cupÃ©rer la liste classÃ©e des candidatures masters
   getCandidaturesCommissionClassees(masterId?: number | string): Observable<any> {
     let params = new HttpParams().set('type', 'masters');
     if (
@@ -105,7 +121,7 @@ export class CandidatureService {
     );
   }
 
-  // Déposer ou ajuster le dossier numérique pour une candidature présélectionnée
+  // DÃ©poser ou ajuster le dossier numÃ©rique pour une candidature prÃ©sÃ©lectionnÃ©e
   deposerDossierNumerique(candidatureId: number, payload: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/${candidatureId}/deposer-dossier/`, payload, {
       headers: this.getHeaders(),
@@ -123,31 +139,31 @@ export class CandidatureService {
     });
   }
 
-  // Calculer le score réel du wizard via le backend (pour preview en temps réel)
+  // Calculer le score rÃ©el du wizard via le backend (pour preview en temps rÃ©el)
   calculateWizardScore(payload: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/preview-score/`, payload, {
       headers: this.getHeaders(),
     });
   }
 
-  // Créer une réclamation
+  // CrÃ©er une rÃ©clamation
   createReclamation(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/reclamations/`, data, { headers: this.getHeaders() });
   }
 
-  // Récupérer mes réclamations
+  // RÃ©cupÃ©rer mes rÃ©clamations
   getMesReclamations(): Observable<any> {
     return this.http.get(`${this.apiUrl}/reclamations/mes-reclamations/`, {
       headers: this.getHeaders(),
     });
   }
 
-  // POUR COMMISSION : Récupérer toutes les réclamations
+  // POUR COMMISSION : RÃ©cupÃ©rer toutes les rÃ©clamations
   getAllReclamations(): Observable<any> {
     return this.http.get(`${this.apiUrl}/reclamations/`, { headers: this.getHeaders() });
   }
 
-  // Traiter une réclamation (accepter/rejeter)
+  // Traiter une rÃ©clamation (accepter/rejeter)
   traiterReclamation(id: number, decision: string, motif?: string): Observable<any> {
     return this.http.post(
       `${this.apiUrl}/reclamations/${id}/traiter/`,

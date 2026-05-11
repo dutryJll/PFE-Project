@@ -719,6 +719,13 @@
   border: 1px solid #e2e8f0;
 }
 
+.masters-table-container {
+  overflow: visible;
+  overflow-x: visible;
+  overflow-y: visible;
+  padding-bottom: 4rem;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -2196,6 +2203,113 @@
 .activity-icon.check-icon {
   background: linear-gradient(135deg, #d1fae5, #a7f3d0);
   color: #065f46;
+}
+
+/* ========================================
+   KEBAB MENU ACTIONS
+======================================== */
+.kebab-container {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.kebab-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kebab-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.kebab-menu {
+  position: relative;
+  right: auto;
+  top: auto;
+  margin-top: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  min-width: 220px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 2000;
+  animation: slideDownMenu 0.2s ease;
+}
+
+@keyframes slideDownMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kebab-menu li {
+  margin: 0;
+}
+
+.kebab-menu li:first-child .menu-item {
+  border-radius: 7px 7px 0 0;
+}
+
+.kebab-menu li:last-child .menu-item {
+  border-radius: 0 0 7px 7px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.menu-item:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.menu-item i {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.menu-item:hover i {
+  color: #1e293b;
+}
+
+.menu-item span {
+  flex: 1;
+  white-space: nowrap;
 }
 
 .activity-icon.list-icon {

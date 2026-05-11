@@ -36,7 +36,7 @@ export class ChoixCandidatureComponent {
           this.referentielMasters = data;
         },
         error: (err) => {
-          console.error('Erreur chargement référentiel dans choix candidature:', err);
+          console.error('Erreur chargement rÃ©fÃ©rentiel dans choix candidature:', err);
         },
       });
   }
@@ -47,7 +47,6 @@ export class ChoixCandidatureComponent {
   }
 
   choisirType(type: string): void {
-    console.log(`✅ Type choisi: ${type}`);
 
     // Redirection vers les pages d'exploration des offres disponibles.
     if (type === 'master') {

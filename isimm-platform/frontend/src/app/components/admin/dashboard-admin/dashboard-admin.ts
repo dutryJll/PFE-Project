@@ -58,7 +58,7 @@ interface OffreResponsableSync {
   id: number;
   titre: string;
   type: 'master' | 'cycle_ingenieur';
-  specialite: string;
+  specialite?: string;
   places: number;
   date_limite: string;
   statut: 'ouvert' | 'ferme';
@@ -325,6 +325,8 @@ export class DashboardAdminComponent implements OnInit {
   showSuspendModal: boolean = false;
   suspendTargetUser: Utilisateur | null = null;
   suspensionReason: string = '';
+  // kebab action menus state per master id
+  private actionMenuOpen: { [id: number]: boolean } = {};
 
   constructor(
     private router: Router,
@@ -360,6 +362,14 @@ export class DashboardAdminComponent implements OnInit {
     this.loadActionRoleMatrix();
     this.loadActionPermissions();
     this.loadNotifications();
+  }
+
+  toggleActionMenu(id: number): void {
+    this.actionMenuOpen[id] = !this.actionMenuOpen[id];
+  }
+
+  isActionMenuOpen(id: number): boolean {
+    return !!this.actionMenuOpen[id];
   }
 
   private loadNotifications(): void {
@@ -867,7 +877,6 @@ export class DashboardAdminComponent implements OnInit {
             id: Number(offre.id),
             titre: offre.titre || '',
             type: offre.type === 'cycle_ingenieur' ? 'cycle_ingenieur' : 'master',
-            specialite: offre.specialite || '',
             places: Number(offre.places ?? 0),
             date_limite: offre.date_limite || '',
             statut: offre.statut === 'ferme' ? 'ferme' : 'ouvert',
@@ -891,7 +900,6 @@ export class DashboardAdminComponent implements OnInit {
       id: Number(master.id),
       titre: master.nom,
       type: 'master',
-      specialite: master.specialite,
       places: Number(master.places ?? 0),
       date_limite: master.date_limite || '',
       statut: master.statut === 'ferme' ? 'ferme' : 'ouvert',
@@ -902,7 +910,6 @@ export class DashboardAdminComponent implements OnInit {
       id: Number(offre.id),
       titre: offre.titre,
       type: 'cycle_ingenieur',
-      specialite: offre.specialite,
       places: Number(offre.places ?? 0),
       date_limite: offre.date_limite || '',
       statut: offre.statut === 'ferme' ? 'ferme' : 'ouvert',
@@ -918,7 +925,7 @@ export class DashboardAdminComponent implements OnInit {
 
   voirMaster(master: Master): void {
     this.point13Message =
-      `ℹ️ Master: ${master.nom} | Type: ${master.type} | Spécialité: ${master.specialite} | ` +
+      `ℹ️ Master: ${master.nom} | Type: ${master.type} | ` +
       `Places: ${master.places} | Date limite: ${master.date_limite}`;
   }
 
@@ -2078,7 +2085,6 @@ export class DashboardAdminComponent implements OnInit {
         next: () => {
           master.statut = nextStatut;
           this.showAlertMessage(nextStatut === 'ouvert' ? '✅ Master ouvert' : '✅ Master fermé');
-          this.loadMasters();
         },
         error: (error) => {
           console.error('Erreur changement statut master:', error);

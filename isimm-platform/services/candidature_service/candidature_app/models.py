@@ -8,101 +8,106 @@ User = get_user_model()
 
 
 def _safe_float(value, default=0.0):
+    """Safely coerce values to float with a default fallback.
+
+    This helper avoids raising on missing or malformed inputs used in scoring.
+    """
     try:
-        if value in [None, '']:
-            return default
+        if value is None or value == "":
+            return float(default)
         return float(value)
     except (TypeError, ValueError):
-        return default
+        try:
+            return float(default)
+        except Exception:
+            return 0.0
 
 
 def _normalize_text(value):
-    return ''.join(ch for ch in str(value or '').lower() if ch.isalnum())
+    """Normalize text for comparison: lowercase, strip whitespace."""
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
+def get_bonus(session, a_redouble):
+    """Bonus utilitaire pour le concours ingenieur interne.
+
+    - Non redoublant + session principale: 2
+    - Non redoublant + session rattrapage/controle: 1.5
+    - Redoublant + session principale: 1
+    - Redoublant + session rattrapage/controle: 0
+    """
+    session_norm = _normalize_text(session)
+    is_principale = session_norm in {'principale', 'principal', 'main'}
+    if not a_redouble:
+        return 2.0 if is_principale else 1.5
+    return 1.0 if is_principale else 0.0
+
 
 class Master(models.Model):
-    TYPE_CHOICES = [
+    TYPE_MASTER_CHOICES = [
         ('professionnel', 'Professionnel'),
         ('recherche', 'Recherche'),
     ]
-    
+
     nom = models.CharField(max_length=200)
-    type_master = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    type_master = models.CharField(max_length=20, choices=TYPE_MASTER_CHOICES)
     description = models.TextField(blank=True)
     specialite = models.CharField(max_length=200)
-    
     places_disponibles = models.IntegerField(default=30)
     date_limite_candidature = models.DateField()
     annee_universitaire = models.CharField(max_length=20)
-    
     actif = models.BooleanField(default=True)
-    
+    coeff_bac = models.DecimalField(max_digits=5, decimal_places=2, default=0.4)
+    coeff_licence = models.DecimalField(max_digits=5, decimal_places=2, default=0.6)
+    coeff_examen = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    bonus_mention = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['nom']
-        indexes = [
-            models.Index(fields=['actif', 'date_limite_candidature']),
-        ]
-    
+
     def __str__(self):
         return self.nom
 
 
 class OffreMaster(models.Model):
-    """Offre de preinscription edition commission, synchronisee avec Master."""
-
-    master = models.OneToOneField(Master, on_delete=models.CASCADE, related_name='offre_master')
     titre = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    type_formation = models.CharField(max_length=30, default='master')
     capacite = models.IntegerField(default=30)
     date_limite = models.DateField()
+    actif = models.BooleanField(default=True)
+    appel_actif = models.BooleanField(default=True)
+    capacites_detaillees = models.JSONField(default=list, blank=True)
     date_debut_visibilite = models.DateField(null=True, blank=True)
     date_fin_visibilite = models.DateField(null=True, blank=True)
-    date_limite_preinscription = models.DateField(null=True, blank=True)
     date_limite_depot_dossier = models.DateField(null=True, blank=True)
-    capacites_detaillees = models.JSONField(default=list, blank=True)
-    appel_actif = models.BooleanField(default=True)
+    date_limite_preinscription = models.DateField(null=True, blank=True)
     est_publiee = models.BooleanField(default=False)
-    actif = models.BooleanField(default=True)
+    type_formation = models.CharField(max_length=30, default='master')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    master = models.OneToOneField(Master, on_delete=models.CASCADE, related_name='offre_master')
 
     class Meta:
         ordering = ['date_limite', 'titre']
-        indexes = [
-            models.Index(fields=['actif', 'date_limite']),
-        ]
 
     def __str__(self):
         return self.titre
 
-    def save(self, *args, **kwargs):
-        if self.master:
-            self.master.nom = self.titre
-            self.master.description = self.description
-            self.master.places_disponibles = self.capacite
-            self.master.date_limite_candidature = self.date_limite_preinscription or self.date_limite
-            self.master.actif = self.actif
-            self.master.save()
-        super().save(*args, **kwargs)
-
 
 class Commission(models.Model):
-    master = models.OneToOneField(Master, on_delete=models.CASCADE, related_name='commission')
+    """Représente une commission (groupe d'examen/validation)."""
     nom = models.CharField(max_length=200)
-    date_creation = models.DateField(auto_now_add=True)
+    description = models.TextField(blank=True)
     actif = models.BooleanField(default=True)
-    
-    delai_preselection = models.IntegerField(default=7, help_text="Jours")
-    delai_depot_dossier = models.IntegerField(default=14, help_text="Jours")
-    delai_paiement = models.IntegerField(default=7, help_text="Jours")
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        return f"Commission {self.master.nom}"
-
-
+        return self.nom
 class MembreCommission(models.Model):
     ROLE_CHOICES = [
         ('responsable', 'Responsable'),
@@ -376,8 +381,168 @@ class Candidature(models.Model):
         if licence is None:
             licence = bac
 
-        # Coefficients retenus: 40% bac + 60% licence.
-        return round((0.4 * float(bac)) + (0.6 * float(licence)), 2)
+        coeff_bac = float(self.master.coeff_bac or 0)
+        coeff_licence = float(self.master.coeff_licence or 0)
+        coeff_examen = float(self.master.coeff_examen or 0)
+        bonus_mention = float(self.master.bonus_mention or 0)
+
+        examen = _safe_float(notes.get('moyenne_examen', payload.get('moyenne_examen')), default=None)
+        if examen is None:
+            examen = _safe_float(getattr(donnees, 'note_pfe', None), default=0.0)
+
+        mention_bonus = 0.0
+        if str(common.get('session') or '').lower() in {'principale', 'main'}:
+            mention_bonus = bonus_mention
+
+        return round(
+            (float(bac) * coeff_bac)
+            + (float(licence) * coeff_licence)
+            + (float(examen) * coeff_examen)
+            + mention_bonus,
+            2,
+        )
+
+    def calculer_score_final(self, payload=None):
+        """Calcule le score final en utilisant le moteur ParcoursAdmission (strategy).
+
+        Retourne un dict: {'score': float, 'details': {...}}. Les champs manquants sont traités comme 0.
+        """
+        # Build payload if not provided
+        if payload is None:
+            donnees = getattr(self, 'donnees_academiques', None)
+            if donnees and isinstance(donnees.notes_detaillees, dict):
+                payload = donnees.notes_detaillees.get('payload') if isinstance(donnees.notes_detaillees.get('payload'), dict) else donnees.notes_detaillees
+            else:
+                payload = {}
+
+        # Find a parcours for this master
+        parcours = None
+        try:
+            parcours = self.master.parcours_admissions.filter(actif=True).first()
+        except Exception:
+            parcours = None
+
+        details = {}
+        score = None
+
+        try:
+            if parcours:
+                # Use ParcoursAdmission strategy to compute numeric score
+                score = parcours.calculer_score(self)
+                # Build basic details by reusing parcours type logic (best-effort)
+                if parcours.type == 'MASTER_PRO':
+                    gl = payload.get('glDs') if isinstance(payload.get('glDs'), dict) else payload
+                    m1 = _safe_float(gl.get('moy1') or gl.get('m1') or payload.get('moyenne1'), default=0.0)
+                    m2 = _safe_float(gl.get('moy2') or gl.get('m2') or payload.get('moyenne2'), default=0.0)
+                    m3 = _safe_float(gl.get('moy3') or gl.get('m3') or payload.get('moyenne3'), default=0.0)
+                    moyenne = round((m1 + m2 + m3) / 3.0, 3)
+                    nb_redoublements = int(_safe_float((payload.get('common') or {}).get('redoublements') or payload.get('nb_redoublements') or 0, default=0))
+                    if nb_redoublements == 0:
+                        bnr = 5.0
+                    elif nb_redoublements == 1:
+                        bnr = 3.0
+                    else:
+                        bnr = 0.0
+                    session = (payload.get('common') or {}).get('session') or payload.get('session') or payload.get('session_reussite')
+                    nb_rattrapages = int(_safe_float((payload.get('common') or {}).get('rattrapages') or payload.get('nb_rattrapages') or 0, default=0))
+                    if (str(session or '').lower() in {'principale', 'main'}) and nb_rattrapages == 0:
+                        bsp = 3.0
+                    elif nb_rattrapages == 1:
+                        bsp = 2.0
+                    else:
+                        bsp = 0.0
+                    details = {'m1': m1, 'm2': m2, 'm3': m3, 'moyenne': moyenne, 'bnr': bnr, 'bsp': bsp}
+
+                elif parcours.type == 'MASTER_RECHERCHE':
+                    mrgl = payload.get('mrglLicence') if isinstance(payload.get('mrglLicence'), dict) else payload
+                    m1 = _safe_float(mrgl.get('moy1') or payload.get('moy1'), default=0.0)
+                    m2 = _safe_float(mrgl.get('moy2') or payload.get('moy2'), default=0.0)
+                    m3 = _safe_float(mrgl.get('moy3') or payload.get('moy3'), default=0.0)
+                    nb_redoublements = int(_safe_float((payload.get('common') or {}).get('redoublements') or payload.get('nb_redoublements') or 0, default=0))
+                    bnr = 5.0 if nb_redoublements == 0 else (3.0 if nb_redoublements == 1 else 0.0)
+                    session = (payload.get('common') or {}).get('session') or payload.get('session') or payload.get('session_reussite')
+                    nb_rattrapages = int(_safe_float((payload.get('common') or {}).get('rattrapages') or payload.get('nb_rattrapages') or 0, default=0))
+                    bsp = 3.0 if (str(session or '').lower() in {'principale', 'main'} and nb_rattrapages == 0) else (2.0 if nb_rattrapages == 1 else 0.0)
+                    moyenne_bac = _safe_float(payload.get('moyenne_bac') or payload.get('moyenne_specialite') or payload.get('moyenne'), default=0.0)
+                    note_math_bac = _safe_float(payload.get('noteMathBac') or payload.get('note_math_bac') or payload.get('math_bac'), default=0.0)
+                    term = round((float(moyenne_bac) + float(note_math_bac) - 20.0) / 2.0, 3)
+                    note_fr = _safe_float(payload.get('note_fr') or payload.get('note_francais') or payload.get('francais_bac'), default=0.0)
+                    note_ang = _safe_float(payload.get('note_ang') or payload.get('note_anglais') or payload.get('anglais_bac'), default=0.0)
+                    cert_b2 = payload.get('certif_b2') or payload.get('certif_b2_fr') or payload.get('certif_b2', False)
+                    bonus_langue = 1.0 if (note_fr >= 12.0 or note_ang >= 12.0 or cert_b2) else 0.0
+                    annee_diplome = None
+                    try:
+                        annee_diplome = int(payload.get('annee_diplome') or payload.get('year_diplome') or payload.get('annee'))
+                    except Exception:
+                        annee_diplome = None
+                    bonus_diplome = 4.0 if annee_diplome in {2025, 2023} else (2.0 if annee_diplome in {2022, 2021, 2020} else 0.0)
+                    details = {
+                        'm1': m1,
+                        'm2': m2,
+                        'm3': m3,
+                        'bnr': bnr,
+                        'bsp': bsp,
+                        'term_moyenne_math': term,
+                        'bonus_langue': bonus_langue,
+                        'bonus_diplome': bonus_diplome,
+                    }
+
+                elif parcours.type == 'CYCLE_ING':
+                    mode = (payload.get('ing_type') or payload.get('type') or '').lower()
+                    if mode == 'interne' or payload.get('interne'):
+                        ing = payload.get('ingCas1') if isinstance(payload.get('ingCas1'), dict) else payload
+                        m2 = _safe_float(ing.get('moy2') or ing.get('m2') or payload.get('moyenne2'), default=0.0)
+                        nb_redoublements = int(_safe_float((payload.get('common') or {}).get('redoublements') or payload.get('nb_redoublements') or 0, default=0))
+                        if nb_redoublements == 0:
+                            b1 = 2.0
+                            b2 = 2.0
+                        elif nb_redoublements == 1:
+                            b1 = 1.0
+                            b2 = 1.0
+                        else:
+                            b1 = 0.0
+                            b2 = 0.0
+                        session = (payload.get('common') or {}).get('session') or payload.get('session') or payload.get('session_reussite')
+                        if str(session or '').lower() not in {'principale', 'main'}:
+                            b1 = max(0.0, b1 - 0.5)
+                            b2 = max(0.0, b2 - 0.5)
+                        details = {'m2': m2, 'b1': b1, 'b2': b2}
+                    else:
+                        m1 = _safe_float(payload.get('moy1') or payload.get('m1') or 0.0, default=0.0)
+                        m2 = _safe_float(payload.get('moy2') or payload.get('m2') or 0.0, default=0.0)
+                        m3 = _safe_float(payload.get('moy3') or payload.get('m3') or 0.0, default=0.0)
+                        rang1 = _safe_float(payload.get('rang1') or payload.get('r1') or 0.0, default=0.0)
+                        rang2 = _safe_float(payload.get('rang2') or payload.get('r2') or 0.0, default=0.0)
+                        nb_etudiants = int(_safe_float(payload.get('nombre_etudiants') or payload.get('effectif') or 1, default=1))
+                        denom = max(1, nb_etudiants - 1)
+                        R1 = float(rang1) / denom if denom else 0.0
+                        R2 = float(rang2) / denom if denom else 0.0
+                        details = {'m1': m1, 'm2': m2, 'm3': m3, 'R1': R1, 'R2': R2, 'nb_etudiants': nb_etudiants}
+
+            else:
+                # No parcours: attempt to compute using master coefficients
+                score = self._compute_bac_licence_weighted_score()
+                details = {'method': 'coeff_master_fallback'}
+        except Exception:
+            score = None
+            details = {'error': 'calculation_failed'}
+
+        # Ensure numeric score
+        try:
+            score = float(score) if score is not None else 0.0
+        except Exception:
+            score = 0.0
+
+        result = {'score': round(score, 3), 'details': details}
+
+        # persist
+        try:
+            self.score = result['score']
+            self.save(update_fields=['score', 'updated_at'])
+        except Exception:
+            pass
+
+        return result
     
     def generer_numero_candidature(self):
         now = timezone.now()
@@ -543,13 +708,11 @@ class FormuleScore(models.Model):
         if nb_redoublements <= 0:
             return 5.0
         if nb_redoublements == 1:
-            return 1.5
+            return 3.0
         return 0.0
 
     def _bonus_langue(self, note_francais, note_anglais, certification_b2):
         if _safe_float(note_francais) >= 12 or _safe_float(note_anglais) >= 12:
-            return 1.0
-        if bool(certification_b2):
             return 1.0
         return 0.0
 
@@ -743,12 +906,9 @@ class FormuleScore(models.Model):
 
             score = _safe_float(payload.get('moyenne2Annee') or payload.get('moy2'))
 
-            bonus1 = 2.0 if _normalize_text(session1) in {'principale', 'principal'} else 1.5 if _normalize_text(session1) in {'control', 'controle'} else 0.0
-            bonus2 = 2.0 if _normalize_text(session2) in {'principale', 'principal'} else 1.5 if _normalize_text(session2) in {'control', 'controle'} else 0.0
-
-            if int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements'))):
-                bonus1 = 1.0 if bonus1 > 0 else 0.0
-                bonus2 = 1.0 if bonus2 > 0 else 0.0
+            a_redouble = int(_safe_float(payload.get('nombreRedoublement') or donnees_candidat.get('nb_redoublements'))) > 0
+            bonus1 = get_bonus(session1, a_redouble)
+            bonus2 = get_bonus(session2, a_redouble)
 
             return round(score + bonus1 + bonus2, 2)
 
@@ -806,35 +966,44 @@ class DonneesAcademiques(models.Model):
         self.calculer_et_sauvegarder_score()
     
     def calculer_et_sauvegarder_score(self):
-        formule = getattr(self.candidature.master, 'formule_score', None)
-
+        # Build payload from notes_detaillees
         payload = {}
         if isinstance(self.notes_detaillees, dict):
-            payload = self.notes_detaillees.get('payload', {})
-            if not isinstance(payload, dict):
-                payload = {}
+            payload = self.notes_detaillees.get('payload', {}) if isinstance(self.notes_detaillees.get('payload'), dict) else self.notes_detaillees
 
-        session_reussite = None
-        if isinstance(self.notes_detaillees, dict):
-            session_reussite = self.notes_detaillees.get('session_reussite')
-        if session_reussite is None:
-            session_reussite = payload.get('session')
-        
-        donnees = {
-            'moyenne_generale': float(self.moyenne_generale),
-            'moyenne_specialite': float(self.moyenne_specialite or 0),
-            'note_pfe': float(self.note_pfe or 0),
-            'mention': self.mention,
-            'nb_redoublements': self.nb_redoublements,
-            'nb_dettes': self.nb_dettes,
-            'notes_detaillees': self.notes_detaillees if isinstance(self.notes_detaillees, dict) else {},
-            'payload': payload,
-            'session_reussite': session_reussite,
-        }
-        
-        if formule:
-            score = formule.calculer_score(donnees)
-        else:
+        # Prefer using the new dynamic scoring engine on Candidature if available
+        try:
+            if hasattr(self.candidature, 'calculer_score_final'):
+                result = self.candidature.calculer_score_final(payload=payload)
+                # result expected to be a dict {'score': float, 'details': {...}}
+                score = result.get('score') if isinstance(result, dict) else None
+            else:
+                score = None
+        except Exception:
+            score = None
+
+        # Fallbacks when engine didn't produce a score
+        if score is None:
+            # Old behaviour: try FormuleScore (legacy)
+            formule = getattr(self.candidature.master, 'formule_score', None)
+            if formule:
+                donnees = {
+                    'moyenne_generale': float(self.moyenne_generale),
+                    'moyenne_specialite': float(self.moyenne_specialite or 0),
+                    'note_pfe': float(self.note_pfe or 0),
+                    'mention': self.mention,
+                    'nb_redoublements': self.nb_redoublements,
+                    'nb_dettes': self.nb_dettes,
+                    'notes_detaillees': self.notes_detaillees if isinstance(self.notes_detaillees, dict) else {},
+                    'payload': payload,
+                }
+                try:
+                    score = formule.calculer_score(donnees)
+                except Exception:
+                    score = None
+
+        if score is None:
+            # Last resort: use master coefficients
             notes = self.notes_detaillees if isinstance(self.notes_detaillees, dict) else {}
             payload = notes.get('payload', {}) if isinstance(notes.get('payload'), dict) else {}
             moyenne_bac = _safe_float(notes.get('moyenne_bac', payload.get('moyenne_bac')), default=None)
@@ -845,16 +1014,323 @@ class DonneesAcademiques(models.Model):
                     moyenne_bac = moyenne_licence
                 if moyenne_licence is None:
                     moyenne_licence = moyenne_bac
-                score = round((0.4 * moyenne_bac) + (0.6 * moyenne_licence), 2)
+                score = round(
+                    (float(moyenne_bac) * float(self.candidature.master.coeff_bac or 0))
+                    + (float(moyenne_licence) * float(self.candidature.master.coeff_licence or 0))
+                    + (float(self.note_pfe or 0) * float(self.candidature.master.coeff_examen or 0))
+                    + float(self.candidature.master.bonus_mention or 0),
+                    2,
+                )
             else:
-                # Fallback when no custom formula is configured yet.
-                score = round((0.4 * donnees['moyenne_specialite']) + (0.6 * donnees['moyenne_generale']), 2)
-        
+                score = round(
+                    (float(self.moyenne_specialite) * float(self.candidature.master.coeff_bac or 0))
+                    + (float(self.moyenne_generale) * float(self.candidature.master.coeff_licence or 0))
+                    + (float(self.note_pfe) * float(self.candidature.master.coeff_examen or 0))
+                    + float(self.candidature.master.bonus_mention or 0),
+                    2,
+                )
+
         if self.candidature.score != score:
-            self.candidature.score = score
-            self.candidature.save(update_fields=['score', 'updated_at'])
-        
+            try:
+                self.candidature.score = score
+                self.candidature.save(update_fields=['score', 'updated_at'])
+            except Exception:
+                pass
+
         return score
+
+
+class CritereEvaluation(models.Model):
+    """Définit un critère réutilisable qui mappe à un champ attendu dans le payload du formulaire."""
+    code = models.CharField(max_length=100, unique=True)
+    nom = models.CharField(max_length=200, help_text="Nom du champ tel qu'il apparaît dans le payload (ex: 'moyenne_bac')")
+    label = models.CharField(max_length=200, blank=True)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.code} ({self.nom})"
+
+
+class ParcoursAdmission(models.Model):
+    """Un parcours d'admission pour un master. Contient la logique dynamique de calcul de score.
+
+    La méthode `calculer_score` accepte soit une instance `Candidature` soit un dict (payload) et renvoie
+    un score numérique. Les coefficients sont fournis par les objets `ValeurCritere` associés.
+    Si aucun critère n'est défini, la méthode applique des comportements de secours raisonnables
+    (utiliser les coefficients du Master ou sommer les champs numériques avec coef=1.0).
+    """
+    STATUS_CHOICES = [
+        ('brouillon', 'Brouillon'),
+        ('ouvert', 'Ouvert'),
+        ('ferme', 'Fermé'),
+    ]
+
+    TYPE_CHOICES = [
+        ('pro', 'Professionnel'),
+        ('recherche', 'Recherche'),
+        ('ingenieur', 'Ingénieur'),
+    ]
+
+    master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='parcours_admissions')
+    nom = models.CharField(max_length=200)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='pro')
+    specialite = models.CharField(max_length=200, blank=True)
+    capacite = models.IntegerField(default=30)
+    date_limite = models.DateField(null=True, blank=True)
+    
+    statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='brouillon')
+    actif = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.master.nom} - {self.nom} ({self.get_statut_display()})"
+
+    def calculer_score(self, candidature_or_payload):
+        """Calcule le score avec les formules reelles selon le type de parcours.
+
+        Type `pro`:
+            Score = (M1 + M2 + M3)/3 + Bonus_NR + Bonus_SP
+            Bonus_NR: 5 si 0 redoublement, 3 si 1 redoublement, sinon 0
+            Bonus_SP: 3 si 0 rattrapage, 2 si 1 rattrapage, sinon 0
+
+        Type `recherche`:
+            Score = 1.5*M1 + 2*M2 + M3 + BNR + BSP
+                    + ((M_Bac + Note_Math_Bac - 20)/2)
+                    + Bonus_Langue + Bonus_Diplome
+
+        Type `ingenieur`:
+            - Interne: Score = M2 + B1 + B2
+              B1/B2 via get_bonus(session, a_redouble)
+            - Externe: Score = 0.5*(2*M1 + 2*M2 + M3) + 50*(1-R1) + 50*(1-R2)
+        """
+        payload = {}
+        if isinstance(candidature_or_payload, dict):
+            payload = candidature_or_payload
+        else:
+            try:
+                if hasattr(candidature_or_payload, 'donnees_academiques') and candidature_or_payload.donnees_academiques:
+                    notes = candidature_or_payload.donnees_academiques.notes_detaillees or {}
+                    payload = notes.get('payload') if isinstance(notes.get('payload'), dict) else notes
+                else:
+                    payload = {}
+            except Exception:
+                payload = {}
+
+        academic = payload.get('academic_data') if isinstance(payload.get('academic_data'), dict) else payload
+        common = academic.get('common', {}) if isinstance(academic, dict) and isinstance(academic.get('common'), dict) else {}
+
+        def pick_float(*values, default=0.0):
+            for value in values:
+                parsed = _safe_float(value, default=None)
+                if parsed is not None:
+                    return float(parsed)
+            if default is None:
+                return None
+            return float(default)
+
+        def pick_int(*values, default=0):
+            for value in values:
+                parsed = _safe_float(value, default=None)
+                if parsed is not None:
+                    return int(parsed)
+            return int(default)
+
+        def pick_session(*values):
+            for value in values:
+                if value not in [None, '']:
+                    return str(value)
+            return ''
+
+        def bonus_redoublement(nb_redoublements):
+            if nb_redoublements <= 0:
+                return 5.0
+            if nb_redoublements == 1:
+                return 3.0
+            return 0.0
+
+        def bonus_session(nb_rattrapages):
+            if nb_rattrapages <= 0:
+                return 3.0
+            if nb_rattrapages == 1:
+                return 2.0
+            return 0.0
+
+        def count_rattrapages(*sessions):
+            total = 0
+            for session in sessions:
+                normalized = _normalize_text(session)
+                if normalized in {'rattrapage', 'controle', 'control', 'sessioncontrole', 'sessionrattrapage'}:
+                    total += 1
+            return total
+
+        try:
+            if self.type == 'pro':
+                gl_ds = academic.get('glDs', {}) if isinstance(academic, dict) and isinstance(academic.get('glDs'), dict) else {}
+                m1 = pick_float(gl_ds.get('moy1'), payload.get('moy1'), payload.get('m1'), payload.get('moyenne1'))
+                m2 = pick_float(gl_ds.get('moy2'), payload.get('moy2'), payload.get('m2'), payload.get('moyenne2'))
+                m3 = pick_float(gl_ds.get('moy3'), payload.get('moy3'), payload.get('m3'), payload.get('moyenne3'))
+
+                nb_redoublements = pick_int(
+                    common.get('redoublements'),
+                    payload.get('nb_redoublements'),
+                    payload.get('nombreRedoublement'),
+                    default=0,
+                )
+
+                nb_rattrapages = pick_int(
+                    common.get('rattrapages'),
+                    payload.get('nb_rattrapages'),
+                    payload.get('nombreRattrapage'),
+                    default=count_rattrapages(
+                        payload.get('session1Annee'),
+                        payload.get('session2Annee'),
+                        payload.get('session3Annee'),
+                        common.get('session'),
+                    ),
+                )
+
+                score = ((m1 + m2 + m3) / 3.0) + bonus_redoublement(nb_redoublements) + bonus_session(nb_rattrapages)
+                return round(score, 2)
+
+            if self.type == 'recherche':
+                mrgl_parcours = _normalize_text(academic.get('mrglParcours') if isinstance(academic, dict) else payload.get('mrglParcours'))
+                mrgl_licence = academic.get('mrglLicence', {}) if isinstance(academic, dict) and isinstance(academic.get('mrglLicence'), dict) else {}
+                mrgl_maitrise = academic.get('mrglMaitrise', {}) if isinstance(academic, dict) and isinstance(academic.get('mrglMaitrise'), dict) else {}
+                base = mrgl_maitrise if mrgl_parcours == 'maitrise' and mrgl_maitrise else mrgl_licence
+
+                m1 = pick_float(base.get('moy1'), payload.get('moy1'), payload.get('m1'), payload.get('moyenne1'))
+                m2 = pick_float(base.get('moy2'), payload.get('moy2'), payload.get('m2'), payload.get('moyenne2'))
+                m3 = pick_float(base.get('moy3'), payload.get('moy3'), payload.get('m3'), payload.get('moyenne3'))
+                moyenne_bac = pick_float(base.get('moyBac'), payload.get('moyenneBacPrincipale'), payload.get('moyenne_bac'))
+                note_math_bac = pick_float(base.get('note_math_bac'), payload.get('noteMathBac'), payload.get('note_math_bac'))
+
+                nb_redoublements = pick_int(
+                    common.get('redoublements'),
+                    base.get('nombreRedoublement'),
+                    payload.get('nb_redoublements'),
+                    default=0,
+                )
+                nb_rattrapages = pick_int(
+                    common.get('rattrapages'),
+                    payload.get('nb_rattrapages'),
+                    default=count_rattrapages(
+                        base.get('session1Annee'),
+                        base.get('session2Annee'),
+                        base.get('session3Annee'),
+                        common.get('session'),
+                    ),
+                )
+
+                note_fr = pick_float(base.get('note_francais_bac'), payload.get('noteFrancaisBac'), payload.get('note_francais_bac'))
+                note_ang = pick_float(base.get('note_anglais_bac'), payload.get('noteAnglaisBac'), payload.get('note_anglais_bac'))
+                bonus_langue = 1.0 if (note_fr >= 12.0 or note_ang >= 12.0) else 0.0
+
+                annee_diplome = pick_int(
+                    base.get('annee_obtention_diplome'),
+                    payload.get('anneeObtentionDiplome'),
+                    payload.get('annee_diplome'),
+                    default=0,
+                )
+                bonus_diplome = 4.0 if annee_diplome in {2025, 2023} else (2.0 if annee_diplome in {2022, 2021, 2020} else 0.0)
+
+                score = (
+                    (1.5 * m1)
+                    + (2.0 * m2)
+                    + m3
+                    + bonus_redoublement(nb_redoublements)
+                    + bonus_session(nb_rattrapages)
+                    + ((moyenne_bac + note_math_bac - 20.0) / 2.0)
+                    + bonus_langue
+                    + bonus_diplome
+                )
+                return round(score, 2)
+
+            if self.type == 'ingenieur':
+                ing_type = _normalize_text(payload.get('ing_type') or payload.get('type') or payload.get('candidate_type'))
+                is_interne = bool(payload.get('interne')) or ing_type == 'interne'
+
+                ing_cas1 = academic.get('ingCas1', {}) if isinstance(academic, dict) and isinstance(academic.get('ingCas1'), dict) else {}
+                ing_cas2 = academic.get('ingCas2', {}) if isinstance(academic, dict) and isinstance(academic.get('ingCas2'), dict) else {}
+
+                if is_interne:
+                    m2 = pick_float(ing_cas1.get('moy2'), payload.get('moy2'), payload.get('m2'), payload.get('moyenne2Annee'))
+                    a_redouble = pick_int(
+                        ing_cas1.get('nombreRedoublement'),
+                        common.get('redoublements'),
+                        payload.get('nb_redoublements'),
+                        default=0,
+                    ) > 0
+                    session1 = pick_session(ing_cas1.get('session1Annee'), payload.get('session1Annee'), payload.get('session1'))
+                    session2 = pick_session(ing_cas1.get('session2Annee'), payload.get('session2Annee'), payload.get('session2'))
+                    b1 = get_bonus(session1, a_redouble)
+                    b2 = get_bonus(session2, a_redouble)
+                    return round(m2 + b1 + b2, 2)
+
+                m1 = pick_float(ing_cas2.get('m1'), payload.get('m1'), payload.get('moyenne1Annee'))
+                m2 = pick_float(ing_cas2.get('m2'), payload.get('m2'), payload.get('moyenne2Annee'))
+                m3 = pick_float(ing_cas2.get('m3'), payload.get('m3'), payload.get('moyenne3Annee'))
+
+                rang1 = pick_float(payload.get('rang1'), payload.get('r1'), payload.get('rank1'), default=None)
+                rang2 = pick_float(payload.get('rang2'), payload.get('r2'), payload.get('rank2'), default=None)
+                effectif1 = pick_float(payload.get('effectif1'), payload.get('total1'), payload.get('nombre_etudiants'), default=None)
+                effectif2 = pick_float(payload.get('effectif2'), payload.get('total2'), payload.get('nombre_etudiants'), default=None)
+
+                r1 = pick_float(payload.get('R1'), default=None)
+                r2 = pick_float(payload.get('R2'), default=None)
+
+                if r1 is None and rang1 is not None and effectif1 not in [None, 0, 1]:
+                    r1 = float(rang1) / max(float(effectif1) - 1.0, 1.0)
+                if r2 is None and rang2 is not None and effectif2 not in [None, 0, 1]:
+                    r2 = float(rang2) / max(float(effectif2) - 1.0, 1.0)
+
+                if r1 is None:
+                    r1 = 0.0
+                if r2 is None:
+                    r2 = 0.0
+
+                score = (0.5 * ((2.0 * m1) + (2.0 * m2) + m3)) + (50.0 * (1.0 - r1)) + (50.0 * (1.0 - r2))
+                return round(score, 2)
+        except Exception:
+            pass
+
+        # Fallback historique: somme des ValeurCritere configurees
+        total = 0.0
+        valeurs = list(self.valeurs.select_related('critere').all())
+        if valeurs:
+            for v in valeurs:
+                field_name = (v.critere.nom or '').strip()
+                raw = None
+                if field_name:
+                    raw = payload.get(field_name)
+                if raw is None:
+                    for key in payload.keys():
+                        if key and key.lower() == field_name.lower():
+                            raw = payload.get(key)
+                            break
+
+                val = _safe_float(raw, default=0.0)
+                coef = float(v.coefficient or 1.0)
+                total += float(val) * coef
+            return round(total, 2)
+
+        return 0.0
+
+
+class ValeurCritere(models.Model):
+    parcours = models.ForeignKey(ParcoursAdmission, on_delete=models.CASCADE, related_name='valeurs')
+    critere = models.ForeignKey(CritereEvaluation, on_delete=models.CASCADE)
+    coefficient = models.DecimalField(max_digits=6, decimal_places=3, default=1.0)
+
+    class Meta:
+        unique_together = ['parcours', 'critere']
+
+    def __str__(self):
+        return f"{self.parcours} - {self.critere.code}: {self.coefficient}"
 
 
 class ListeAdmission(models.Model):

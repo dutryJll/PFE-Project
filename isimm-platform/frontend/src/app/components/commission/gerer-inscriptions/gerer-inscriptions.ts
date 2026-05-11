@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 // Backend API response structure
 interface InscriptionsResponse {
@@ -111,11 +112,7 @@ export class GererInscriptionsComponent implements OnInit {
   }
 
   private getApiUrl(): string {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:8000/api/candidatures';
-    }
-    return '/api/candidatures';
+    return environment.candidatureServiceUrl;
   }
 
   /**

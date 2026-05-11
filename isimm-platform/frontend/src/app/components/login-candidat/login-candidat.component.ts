@@ -36,14 +36,13 @@ export class LoginCandidatComponent {
 
     this.authService.login(normalizedEmail, this.password).subscribe({
       next: (response) => {
-        console.log('✅ Connexion candidat:', response);
         this.isLoading = false;
 
         const userRole = response.user.role.toLowerCase();
 
         if (userRole === 'candidat') {
-          // Vérifier si le candidat a une candidature
-          // TODO: Appeler l'API pour vérifier
+          // VÃ©rifier si le candidat a une candidature
+          // TODO: Appeler l'API pour vÃ©rifier
           this.router.navigate(['/candidat/dashboard']);
         } else {
           this.errorMessage = 'login.candidat.error.role';
@@ -63,14 +62,14 @@ export class LoginCandidatComponent {
           return;
         }
         if (error?.status === 0) {
-          this.errorMessage = "Service d'authentification indisponible. Réessayez.";
+          this.errorMessage = "Service d'authentification indisponible. RÃ©essayez.";
           return;
         }
         if (error?.status === 401) {
           this.errorMessage = 'Email ou mot de passe incorrect';
           return;
         }
-        this.errorMessage = 'Erreur de connexion. Réessayez.';
+        this.errorMessage = 'Erreur de connexion. RÃ©essayez.';
       },
     });
   }

@@ -34,7 +34,6 @@ export class LoginAdminComponent {
 
     this.authService.login(this.email, this.password).subscribe({
       next: (response) => {
-        console.log('✅ Connexion admin:', response);
         this.isLoading = false;
 
         const userRole = response.user.role.toLowerCase();

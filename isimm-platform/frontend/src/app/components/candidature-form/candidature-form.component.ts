@@ -107,8 +107,8 @@ export class CandidatureFormComponent implements OnInit {
   readonly totalFormSteps = 4;
   readonly formSteps = [
     { no: 1, label: 'Profil' },
-    { no: 2, label: 'Bac et diplôme' },
-    { no: 3, label: 'Parcours académique' },
+    { no: 2, label: 'Bac et diplÃ´me' },
+    { no: 3, label: 'Parcours acadÃ©mique' },
     { no: 4, label: 'Validation' },
   ];
 
@@ -130,7 +130,7 @@ export class CandidatureFormComponent implements OnInit {
   specialiteDiplomeOptionsMpds: string[] = [
     'Licence en Informatique : GL & SI',
     'Licence en Informatique de Gestion : BI',
-    'Licence en Mathématiques Appliquées (ou équivalent)',
+    'Licence en MathÃ©matiques AppliquÃ©es (ou Ã©quivalent)',
   ];
 
   specialiteDiplomeOptionsMrmi: string[] = [
@@ -140,35 +140,35 @@ export class CandidatureFormComponent implements OnInit {
   ];
 
   specialiteDiplomeOptionsMp3i: string[] = [
-    'Licence en Électronique, Électrotechnique et Automatique (MIM)',
-    'Licence en Électronique, Électrotechnique et Automatique (SE)',
+    'Licence en Ã‰lectronique, Ã‰lectrotechnique et Automatique (MIM)',
+    'Licence en Ã‰lectronique, Ã‰lectrotechnique et Automatique (SE)',
     "Licence en Technologies de l'Information et de la Communication (TIC)",
     'Licence en Mesures et Instrumentation',
-    'Licence en EEA (Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie)',
-    'Licence en Génie Électrique (Spécialité Automatique et Informatique Industrielle)',
+    'Licence en EEA (SpÃ©cialitÃ© Automatique et Informatique Industrielle ou Mesures et MÃ©trologie)',
+    'Licence en GÃ©nie Ã‰lectrique (SpÃ©cialitÃ© Automatique et Informatique Industrielle)',
   ];
 
   specialiteDiplomeOptionsIngenieur: string[] = [
-    "Licence en Sciences de l'Informatique (Génie Logiciel et Systèmes d'Information)",
-    'Licence en Mathématiques et Informatique (ou diplôme équivalent)',
-    'Cycle préparatoire intégré',
+    "Licence en Sciences de l'Informatique (GÃ©nie Logiciel et SystÃ¨mes d'Information)",
+    'Licence en MathÃ©matiques et Informatique (ou diplÃ´me Ã©quivalent)',
+    'Cycle prÃ©paratoire intÃ©grÃ©',
   ];
 
   natureDiplomeOptions: string[] = ['Licence', 'Maitrise'];
-  natureDiplomeOptionsIngenieur: string[] = ['Licence', 'Cycle ingénieur'];
-  typeLicenceOptions: string[] = ['Licence Nationale', 'Licence Ancien Régime'];
+  natureDiplomeOptionsIngenieur: string[] = ['Licence', 'Cycle ingÃ©nieur'];
+  typeLicenceOptions: string[] = ['Licence Nationale', 'Licence Ancien RÃ©gime'];
   ouiNonOptions: string[] = ['Oui', 'Non'];
   sessionOptions: string[] = ['Principale', 'Controle'];
-  natureCandidatureOptions: string[] = ['Étudiant ISIMM', 'Étudiant Externe'];
+  natureCandidatureOptions: string[] = ['Ã‰tudiant ISIMM', 'Ã‰tudiant Externe'];
   categoriesIngenieurOptions: string[] = [
-    "Catégorie 1 : Les étudiants ayant réussi la deuxième année du cycle préparatoire intégré en informatique à l'ISIMM lors de l'année 2024-2025.",
-    "Catégorie 2 : Les étudiants brillants inscrits en troisième année de Licence (système LMD) dans des spécialités scientifiques et techniques en 2024-2025, et n'ayant jamais redoublé durant leur cursus universitaire.",
+    "CatÃ©gorie 1 : Les Ã©tudiants ayant rÃ©ussi la deuxiÃ¨me annÃ©e du cycle prÃ©paratoire intÃ©grÃ© en informatique Ã  l'ISIMM lors de l'annÃ©e 2024-2025.",
+    "CatÃ©gorie 2 : Les Ã©tudiants brillants inscrits en troisiÃ¨me annÃ©e de Licence (systÃ¨me LMD) dans des spÃ©cialitÃ©s scientifiques et techniques en 2024-2025, et n'ayant jamais redoublÃ© durant leur cursus universitaire.",
   ];
 
   specialitesIngenieur: Specialite[] = [
-    { id: '1', nom: 'Génie Informatique' },
-    { id: '2', nom: 'Génie Électrique' },
-    { id: '3', nom: 'Génie Mécanique' },
+    { id: '1', nom: 'GÃ©nie Informatique' },
+    { id: '2', nom: 'GÃ©nie Ã‰lectrique' },
+    { id: '3', nom: 'GÃ©nie MÃ©canique' },
   ];
 
   constructor(
@@ -179,11 +179,10 @@ export class CandidatureFormComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Récupérer le type depuis l'URL
+    // RÃ©cupÃ©rer le type depuis l'URL
     this.route.queryParams.subscribe((params) => {
       if (params['type']) {
         this.typeCandidature = this.normalizeTypeParam(params['type']);
-        console.log('🎯 Type reçu:', this.typeCandidature);
       }
 
       this.masterParcours = this.normalizeMasterParcoursParam(params['parcours']);
@@ -286,26 +285,26 @@ export class CandidatureFormComponent implements OnInit {
 
   getMasterFormTitle(): string {
     if (this.masterParcours === 'mrmi') {
-      return '📚 Candidature Master - Mastère Recherche en Micro-électronique et Instrumentation (MRMI)';
+      return 'ðŸ“š Candidature Master - MastÃ¨re Recherche en Micro-Ã©lectronique et Instrumentation (MRMI)';
     }
 
     if (this.masterParcours === 'mrgl') {
-      return '📚 Candidature Master - Mastère Recherche en Génie Logiciel (MRGL)';
+      return 'ðŸ“š Candidature Master - MastÃ¨re Recherche en GÃ©nie Logiciel (MRGL)';
     }
 
     if (this.masterParcours === 'mpgl') {
-      return '📚 Candidature Master - Mastère Professionnel en Génie Logiciel (MPGL)';
+      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en GÃ©nie Logiciel (MPGL)';
     }
 
     if (this.masterParcours === 'mpds') {
-      return '📚 Candidature Master - Mastère Professionnel en Science de Données (MPDS)';
+      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en Science de DonnÃ©es (MPDS)';
     }
 
     if (this.masterParcours === 'mp3i') {
-      return '📚 Candidature Master - Mastère Professionnel en Génie des Instruments Industriels (MP3I)';
+      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en GÃ©nie des Instruments Industriels (MP3I)';
     }
 
-    return '📚 Candidature à un Master';
+    return 'ðŸ“š Candidature Ã  un Master';
   }
 
   getSpecialiteDiplomeOptions(): string[] {
@@ -335,15 +334,15 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   isIngenieurCategorie2Selected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('Catégorie 2');
+    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 2');
   }
 
   isIngenieurCategoriePrepaSelected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('Catégorie 1');
+    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 1');
   }
 
   isIngenieurCategorieLicenceSelected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('Catégorie 2');
+    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 2');
   }
 
   shouldShowTroisiemeAnneeFields(): boolean {
@@ -362,7 +361,7 @@ export class CandidatureFormComponent implements OnInit {
       return false;
     }
 
-    const isCycleIngenieur = this.formData.natureDiplome === 'Cycle ingénieur';
+    const isCycleIngenieur = this.formData.natureDiplome === 'Cycle ingÃ©nieur';
 
     return isCycleIngenieur;
   }
@@ -380,7 +379,7 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   isEtudiantExterneSelected(): boolean {
-    return this.formData.natureCandidature === 'Étudiant Externe';
+    return this.formData.natureCandidature === 'Ã‰tudiant Externe';
   }
 
   shouldShowMrglFourthYearFields(): boolean {
@@ -516,18 +515,18 @@ export class CandidatureFormComponent implements OnInit {
 
   private getFormStepValidationMessage(step: number): string {
     if (step === 1) {
-      return 'Complétez les informations personnelles obligatoires avant de continuer.';
+      return 'ComplÃ©tez les informations personnelles obligatoires avant de continuer.';
     }
 
     if (step === 2) {
-      return 'Complétez les champs obligatoires du bac et du diplôme avant de continuer.';
+      return 'ComplÃ©tez les champs obligatoires du bac et du diplÃ´me avant de continuer.';
     }
 
     if (step === 3) {
-      return 'Complétez les informations académiques obligatoires avant de continuer.';
+      return 'ComplÃ©tez les informations acadÃ©miques obligatoires avant de continuer.';
     }
 
-    return 'Veuillez compléter les champs requis avant de continuer.';
+    return 'Veuillez complÃ©ter les champs requis avant de continuer.';
   }
 
   private getScoreValues(): number[] {
@@ -621,7 +620,7 @@ export class CandidatureFormComponent implements OnInit {
     return scoreFields.every((value) => this.isValidNote(value));
   }
 
-  // Mettre à jour les validations selon le type de candidature
+  // Mettre Ã  jour les validations selon le type de candidature
   updateValidations(): void {
     if (!this.candidatureForm) return;
   }
@@ -653,7 +652,7 @@ export class CandidatureFormComponent implements OnInit {
       !this.formData.natureCandidature ||
       this.formData.nombreAnneesRedoublement === ''
     ) {
-      this.errorMessage = 'Veuillez renseigner tous les champs obligatoires du Bac et du diplôme.';
+      this.errorMessage = 'Veuillez renseigner tous les champs obligatoires du Bac et du diplÃ´me.';
       return;
     }
 
@@ -665,7 +664,7 @@ export class CandidatureFormComponent implements OnInit {
     if (this.isEtudiantExterneSelected()) {
       if (!this.formData.etablissementExterne.trim() || !this.formData.specialiteExterne.trim()) {
         this.errorMessage =
-          "Veuillez renseigner l'établissement et la spécialité pour un étudiant externe.";
+          "Veuillez renseigner l'Ã©tablissement et la spÃ©cialitÃ© pour un Ã©tudiant externe.";
         return;
       }
     }
@@ -679,8 +678,8 @@ export class CandidatureFormComponent implements OnInit {
 
       if (missingTroisiemeAnneeFields || missingIngenieurSemestre1) {
         this.errorMessage = isIngenieur
-          ? 'Veuillez renseigner tous les champs obligatoires de la 3ème année.'
-          : 'Veuillez renseigner la moyenne et la session de réussite de la 3ème année.';
+          ? 'Veuillez renseigner tous les champs obligatoires de la 3Ã¨me annÃ©e.'
+          : 'Veuillez renseigner la moyenne et la session de rÃ©ussite de la 3Ã¨me annÃ©e.';
         return;
       }
     }
@@ -695,7 +694,7 @@ export class CandidatureFormComponent implements OnInit {
           (this.formData.moyenne4emeAnnee === null || !this.formData.sessionReussite4emeAnnee))
       ) {
         this.errorMessage =
-          'Veuillez renseigner les notes du bac, la certification B2, et les champs de 4ème année si vous avez choisi la Maîtrise pour MRGL.';
+          'Veuillez renseigner les notes du bac, la certification B2, et les champs de 4Ã¨me annÃ©e si vous avez choisi la MaÃ®trise pour MRGL.';
         return;
       }
     }
@@ -703,13 +702,13 @@ export class CandidatureFormComponent implements OnInit {
     if (this.typeCandidature === 'ingenieur' && this.isIngenieurCategorieLicenceSelected()) {
       if (this.formData.classement1ereAnnee === '' || this.formData.classement2emeAnnee === '') {
         this.errorMessage =
-          'Veuillez renseigner le classement de la 1ère année et de la 2ème année.';
+          'Veuillez renseigner le classement de la 1Ã¨re annÃ©e et de la 2Ã¨me annÃ©e.';
         return;
       }
     }
 
     if (this.typeCandidature === 'ingenieur' && !this.formData.categorieIngenieur) {
-      this.errorMessage = 'Veuillez sélectionner une catégorie pour la candidature ingénieur.';
+      this.errorMessage = 'Veuillez sÃ©lectionner une catÃ©gorie pour la candidature ingÃ©nieur.';
       return;
     }
 
@@ -721,7 +720,7 @@ export class CandidatureFormComponent implements OnInit {
         this.formData.moyenneSessionControle2emeAnnee === null
       ) {
         this.errorMessage =
-          'Veuillez renseigner les moyennes de réussite (session principale et contrôle) pour la 1ère et la 2ème année.';
+          'Veuillez renseigner les moyennes de rÃ©ussite (session principale et contrÃ´le) pour la 1Ã¨re et la 2Ã¨me annÃ©e.';
         return;
       }
 
@@ -733,14 +732,14 @@ export class CandidatureFormComponent implements OnInit {
           this.formData.moyenneSessionControle2emeAnneeRedoublement === null
         ) {
           this.errorMessage =
-            'Veuillez renseigner les moyennes de réussite (session principale et contrôle) pour le cas de redoublement.';
+            'Veuillez renseigner les moyennes de rÃ©ussite (session principale et contrÃ´le) pour le cas de redoublement.';
           return;
         }
       }
     }
 
     if (this.isProfessionalMasterSelected() && !this.formData.typeLicence) {
-      this.errorMessage = 'Veuillez sélectionner le type de licence pour MPGL/MPDS/MP3I.';
+      this.errorMessage = 'Veuillez sÃ©lectionner le type de licence pour MPGL/MPDS/MP3I.';
       return;
     }
 
@@ -763,7 +762,7 @@ export class CandidatureFormComponent implements OnInit {
         return;
       }
       if (this.formData.password.length < 8) {
-        this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractères';
+        this.errorMessage = 'Le mot de passe doit contenir au moins 8 caractÃ¨res';
         return;
       }
       if (this.formData.password !== this.formData.confirmPassword) {
@@ -782,7 +781,7 @@ export class CandidatureFormComponent implements OnInit {
     const generatedPassword =
       this.formData.passwordMode === 'manual' ? this.formData.password : this.generatePassword();
 
-    // Préparer les données
+    // PrÃ©parer les donnÃ©es
     const candidatureData = {
       first_name: this.formData.prenom,
       last_name: this.formData.nom,
@@ -839,7 +838,7 @@ export class CandidatureFormComponent implements OnInit {
       },
       documents_declares: {},
 
-      // Plus de vœux dans le formulaire master
+      // Plus de vÅ“ux dans le formulaire master
       voeux: [],
 
       specialite: null,
@@ -858,19 +857,16 @@ export class CandidatureFormComponent implements OnInit {
       password2: generatedPassword,
     };
 
-    console.log('📤 Données candidature (local):', candidatureData);
-    console.log('📤 Données envoyées register:', registerPayload);
 
     this.authService.register(registerPayload).subscribe({
       next: (response: any) => {
-        console.log('✅ Candidature créée:', response);
         this.successMessage =
-          'Compte créé avec succès. Conservez ce mot de passe puis connectez-vous.';
+          'Compte crÃ©Ã© avec succÃ¨s. Conservez ce mot de passe puis connectez-vous.';
         this.generatedPasswordMessage = generatedPassword;
         this.isLoading = false;
       },
       error: (error: any) => {
-        console.error('❌ Erreur inscription:', error);
+        console.error('âŒ Erreur inscription:', error);
         this.isLoading = false;
 
         let errorMessage = 'Erreur lors de la candidature.';
@@ -917,7 +913,7 @@ export class CandidatureFormComponent implements OnInit {
     this.router.navigate(['/masters/recherche/exploration']);
   }
 
-  // Générer un mot de passe aléatoire
+  // GÃ©nÃ©rer un mot de passe alÃ©atoire
   generatePassword(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let password = '';

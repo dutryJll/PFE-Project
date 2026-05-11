@@ -55,18 +55,17 @@ export class DashboardComponent implements OnInit {
   loadUserProfile() {
     const email = this.currentUser?.email;
     if (!email) {
-      console.error('❌ Email non trouvé');
+      console.error('âŒ Email non trouvÃ©');
       return;
     }
 
     this.userService.getProfile(email).subscribe({
       next: (profile) => {
-        console.log('✅ Profil chargé:', profile);
         this.userProfile = profile;
         this.isDashboardLoading = false;
       },
       error: (error) => {
-        console.error('❌ Erreur chargement profil:', error);
+        console.error('âŒ Erreur chargement profil:', error);
         this.isDashboardLoading = false;
       },
     });
@@ -101,7 +100,7 @@ export class DashboardComponent implements OnInit {
           this.isNotificationsLoading = false;
         },
         error: (error) => {
-          console.error('❌ Erreur chargement notifications:', error);
+          console.error('âŒ Erreur chargement notifications:', error);
           this.notificationsCandidat = [];
           this.notificationsNonLues = 0;
           this.isNotificationsLoading = false;
@@ -129,7 +128,7 @@ export class DashboardComponent implements OnInit {
           this.notificationsNonLues = this.notificationsCandidat.filter((item) => !item.lue).length;
         },
         error: (error) => {
-          console.error('❌ Erreur marquage notification lue:', error);
+          console.error('âŒ Erreur marquage notification lue:', error);
         },
       });
   }
@@ -155,7 +154,7 @@ export class DashboardComponent implements OnInit {
           this.notificationsNonLues = 0;
         },
         error: (error) => {
-          console.error('❌ Erreur marquage notifications lues:', error);
+          console.error('âŒ Erreur marquage notifications lues:', error);
         },
       });
   }

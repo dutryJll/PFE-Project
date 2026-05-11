@@ -32,10 +32,9 @@ export class LoginCommissionComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Le username peut être l'email
+    // Le username peut Ãªtre l'email
     this.authService.login(this.username, this.password).subscribe({
       next: (response) => {
-        console.log('✅ Connexion commission:', response);
         this.isLoading = false;
 
         const userRole = response.user.role.toLowerCase();

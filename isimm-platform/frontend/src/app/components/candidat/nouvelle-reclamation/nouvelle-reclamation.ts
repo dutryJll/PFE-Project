@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
 import { AuthService } from '../../../services/auth.service';
 import { isPublicOffer } from '../../../shared/public-offer';
+import { environment } from '../../../../environments/environment';
 
 interface CandidatureLight {
   id: number;
@@ -162,7 +163,7 @@ export class NouvelleReclamationComponent implements OnInit {
 
     console.log("🔄 Chargement des offres d'inscription depuis l'API...");
     this.http
-      .get<any>('http://localhost:8003/api/candidatures/offres-inscription/', {
+      .get<any>(`${environment.candidatureServiceUrl}/offres-inscription/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -224,7 +225,7 @@ export class NouvelleReclamationComponent implements OnInit {
     }
 
     this.http
-      .post('http://localhost:8003/api/reclamations/creer/', payload, {
+      .post(`${environment.reclamationsServiceUrl}/creer/`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
