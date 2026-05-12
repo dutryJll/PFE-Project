@@ -36,7 +36,7 @@ export class GestionCommissionComponent implements OnInit {
     email: '',
     specialite: '',
     grade: 'Maître de conférences',
-    role: 'commission',
+    role: 'responsable_commission',
   };
 
   membreEnEdition: MembreCommission | null = null;
@@ -47,6 +47,12 @@ export class GestionCommissionComponent implements OnInit {
     'Master Génie Logiciel',
     'Master Microélectronique',
     'Master Réseaux et Télécommunications',
+    'Master Génie Logiciel - Ingénieur',
+    'Master Data Science - Licence Maths / Info / IG',
+    'Master Ingénierie Instrumentation Industrielle (3I)',
+    'Master Recherche Génie Logiciel (MRGL)',
+    'Master Recherche Micro-électronique et Instrumentation',
+    'Cycle Ingénieur Informatique / Génie Logiciel',
     'Tous les masters',
   ];
 
@@ -152,7 +158,7 @@ export class GestionCommissionComponent implements OnInit {
       email: '',
       specialite: '',
       grade: 'Maître de conférences',
-      role: 'commission',
+      role: 'responsable_commission',
     };
   }
 

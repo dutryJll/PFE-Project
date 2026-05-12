@@ -17,6 +17,13 @@ export class ModifierCandidatureComponent implements OnInit {
   candidature: any = null;
   voeux: string[] = [];
   selectedCandidatureId: number | null = null;
+  candidatureAccessInfo: {
+    can_reapply?: boolean;
+    can_edit?: boolean;
+    reason?: string;
+    edit_deadline?: string | null;
+    previous_status?: string | null;
+  } | null = null;
   mastersList: string[] = [
     'Master en Génie Logiciel',
     'Master en Microélectronique',
@@ -56,6 +63,18 @@ export class ModifierCandidatureComponent implements OnInit {
         if (!this.candidature) {
           this.toastService.show('Aucune candidature trouvée.', 'warning');
           return;
+        }
+
+        const masterId = Number(this.candidature?.master_id ?? this.candidature?.master);
+        if (Number.isFinite(masterId) && masterId > 0) {
+          this.candidatureService.getCanReapply(masterId).subscribe({
+            next: (info: any) => {
+              this.candidatureAccessInfo = info;
+            },
+            error: () => {
+              this.candidatureAccessInfo = null;
+            },
+          });
         }
 
         if (!this.candidature?.peut_modifier) {

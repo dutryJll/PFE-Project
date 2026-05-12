@@ -828,6 +828,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   // Historique UI helpers
   historiqueFilterYear: string = '';
   historiqueFilterResult: '' | 'success' | 'waiting' | 'rejected' | '' = '';
+  selectedAcademicYear: string = '';
 
   get filteredHistorique(): HistoriqueItem[] {
     return (this.historique || []).filter((item) => {
@@ -857,6 +858,22 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+  }
+
+  get candidaturesYears(): string[] {
+    const years = (this.mesCandidatures || [])
+      .map((c) => String(c.annee_universitaire || '').trim())
+      .filter((year) => year.length > 0);
+
+    return Array.from(new Set(years)).sort((left, right) => right.localeCompare(left));
+  }
+
+  private matchesSelectedAcademicYear(candidature: Candidature): boolean {
+    if (!this.selectedAcademicYear) {
+      return true;
+    }
+
+    return String(candidature.annee_universitaire || '').trim() === this.selectedAcademicYear;
   }
 
   get historiqueTotalCount(): number {
@@ -3362,15 +3379,19 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   candidaturesMaster(): Candidature[] {
-    return this.mesCandidatures.filter((c) => !this.isCycleIngenieur(c));
+    return this.mesCandidatures.filter(
+      (c) => !this.isCycleIngenieur(c) && this.matchesSelectedAcademicYear(c),
+    );
   }
 
   candidaturesIngenieur(): Candidature[] {
-    return this.mesCandidatures.filter((c) => this.isCycleIngenieur(c));
+    return this.mesCandidatures.filter(
+      (c) => this.isCycleIngenieur(c) && this.matchesSelectedAcademicYear(c),
+    );
   }
 
   get candidatureTotalCount(): number {
-    return this.mesCandidatures.length;
+    return this.mesCandidatures.filter((c) => this.matchesSelectedAcademicYear(c)).length;
   }
 
   get candidaturePendingCount(): number {

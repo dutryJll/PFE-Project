@@ -783,6 +783,23 @@
           </button>
         </div>
 
+        <div class="candidature-year-filter" style="margin: 0.75rem 0 1rem">
+          <label style="display: block; font-size: 12px; margin-bottom: 0.35rem; opacity: 0.8">
+            Année universitaire
+          </label>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center">
+            <select [(ngModel)]="selectedAcademicYear">
+              <option value="">Toutes les années</option>
+              <option *ngFor="let year of candidaturesYears" [value]="year">
+                {{ year }}
+              </option>
+            </select>
+            <button type="button" class="btn-secondary" (click)="selectedAcademicYear = ''">
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+
         <!-- ══ TAB MASTER ══ -->
         <div *ngIf="candidatureTabIndex === 0" class="candidature-cards-list">
           <mat-card

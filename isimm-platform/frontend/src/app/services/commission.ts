@@ -99,6 +99,25 @@ export class CommissionService {
   }
 
   // ========================================
+  // AVIS MEMBRES
+  // ========================================
+
+  soumettreAvisMembre(
+    candidatureId: number,
+    payload: { avis: boolean | string; argument?: string; commission_id?: number },
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/candidatures/${candidatureId}/avis/`, payload, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  getStatistiquesAvis(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/candidatures/${candidatureId}/avis/statistiques/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // ========================================
   // INSCRIPTIONS
   // ========================================
 

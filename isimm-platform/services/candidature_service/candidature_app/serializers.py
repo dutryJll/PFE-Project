@@ -12,6 +12,7 @@ from .models import (
     Notification,
     OffreMaster,
     ParcoursAdmission,
+    AvisMembre,
     ValeurCritere,
 )
 
@@ -82,6 +83,7 @@ class CandidatureSerializer(serializers.ModelSerializer):
             'master_nom',
             'statut',
             'motif_rejet',
+            'decision_finale_responsable',
             'score',
             'classement',
             'date_soumission',
@@ -238,3 +240,64 @@ class CritereEvaluationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CritereEvaluation
         fields = ['id', 'code', 'nom', 'label', 'description']
+
+
+class AvisMembreSerializer(serializers.ModelSerializer):
+    membre_id = serializers.IntegerField(source='membre.id', read_only=True)
+    membre_user = serializers.CharField(source='membre.user.username', read_only=True)
+    membre_name = serializers.SerializerMethodField()
+    candidature_id = serializers.IntegerField(source='candidature.id', read_only=True)
+    candidature_numero = serializers.SerializerMethodField()
+    commission_id = serializers.IntegerField(source='commission.id', read_only=True)
+    commission_name = serializers.SerializerMethodField()
+    avis_type = serializers.SerializerMethodField()
+    date = serializers.DateTimeField(source='date_avis', read_only=True)
+
+    class Meta:
+        model = AvisMembre
+        fields = [
+            'id',
+            'membre',
+            'membre_id',
+            'membre_user',
+            'membre_name',
+            'candidature',
+            'candidature_id',
+            'candidature_numero',
+            'commission',
+            'commission_id',
+            'commission_name',
+            'avis',
+            'avis_type',
+            'argument',
+            'date_avis',
+            'date',
+        ]
+        read_only_fields = [
+            'date_avis',
+            'date',
+            'membre_id',
+            'membre_user',
+            'membre_name',
+            'candidature_id',
+            'candidature_numero',
+            'commission_id',
+            'commission_name',
+            'avis_type',
+        ]
+
+    def get_membre_name(self, obj):
+        user = getattr(obj.membre, 'user', None)
+        if not user:
+            return ''
+        return f"{user.first_name} {user.last_name}".strip() or user.username
+
+    def get_candidature_numero(self, obj):
+        return getattr(obj.candidature, 'numero', '')
+
+    def get_commission_name(self, obj):
+        commission = getattr(obj, 'commission', None)
+        return commission.nom if commission else ''
+
+    def get_avis_type(self, obj):
+        return 'favorable' if obj.avis else 'defavorable'

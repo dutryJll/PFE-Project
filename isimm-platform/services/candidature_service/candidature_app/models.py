@@ -113,19 +113,25 @@ class MembreCommission(models.Model):
         ('responsable', 'Responsable'),
         ('membre', 'Membre'),
     ]
-    
+    # Keep the legacy primary commission link for compatibility.
     commission = models.ForeignKey(Commission, on_delete=models.CASCADE, related_name='membres')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='commissions')
+    commissions = models.ManyToManyField(Commission, related_name='membre_commission_links')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    
+
     date_nomination = models.DateField(auto_now_add=True)
     actif = models.BooleanField(default=True)
-    
+
     class Meta:
         unique_together = ['commission', 'user']
-    
+
     def __str__(self):
-        return f"{self.user.get_full_name()} - {self.commission.nom}"
+        # Show user and number of linked commissions for clarity
+        try:
+            count = self.commissions.count()
+        except Exception:
+            count = 0
+        return f"{self.user.get_full_name()} - {count} commission(s)"
 
 
 class ConfigurationAppel(models.Model):
@@ -251,6 +257,13 @@ class Candidature(models.Model):
     prolongation_delai = models.BooleanField(default=False)
     
     historique = models.JSONField(default=list, blank=True)
+    # Decision finale par le responsable apres consultation des avis
+    DECISION_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('rejete', 'Rejeté'),
+    ]
+    decision_finale_responsable = models.CharField(max_length=20, choices=DECISION_CHOICES, default='en_attente')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -631,6 +644,40 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user_id} - {self.titre}"
+
+
+class AvisMembre(models.Model):
+    """Avis laissé par un membre de commission pour une candidature.
+
+    - `membre`: lien vers l'enregistrement MembreCommission (garde contexte rôle + user)
+    - `candidature`: candidature concernée
+    - `commission`: commission concernée (optionnel, on peut l'inférer depuis `membre`)
+    - `avis`: True = positif / False = négatif
+    - `argument`: texte explicatif (obligatoire si avis négatif but allow blank)
+    - `date_avis`: timestamp de l'avis
+    """
+    membre = models.ForeignKey(MembreCommission, on_delete=models.CASCADE, related_name='avis')
+    candidature = models.ForeignKey(Candidature, on_delete=models.CASCADE, related_name='avis_membres')
+    commission = models.ForeignKey(Commission, on_delete=models.CASCADE, null=True, blank=True, related_name='avis')
+    avis = models.BooleanField()
+    argument = models.TextField(blank=True)
+    date_avis = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['membre', 'candidature']
+        ordering = ['-date_avis']
+        indexes = [
+            models.Index(fields=['commission', 'date_avis']),
+            models.Index(fields=['candidature', 'membre']),
+        ]
+
+    def __str__(self):
+        try:
+            user_name = self.membre.user.get_full_name()
+        except Exception:
+            user_name = str(self.membre_id)
+        cand = getattr(self.candidature, 'numero', str(self.candidature_id))
+        return f"Avis {user_name} on {cand}: {'OK' if self.avis else 'NOK'}"
 
 
 class FormuleScore(models.Model):
@@ -1619,39 +1666,6 @@ class HistoriqueCandidature(models.Model):
     
     def __str__(self):
         return f"{self.numero} - {self.candidat_nom} ({self.annee_universitaire})"
-class HistoriqueCandidature(models.Model):
-    """Archive des candidatures des années précédentes"""
-    
-    # Données candidat (anonymisées si nécessaire)
-    candidat_nom = models.CharField(max_length=200)
-    candidat_email = models.EmailField()
-    
-    # Données candidature
-    numero = models.CharField(max_length=50)
-    master_nom = models.CharField(max_length=200)
-    annee_universitaire = models.CharField(max_length=20)
-    
-    statut_final = models.CharField(max_length=30)
-    score = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    classement = models.IntegerField(null=True)
-    
-    date_soumission = models.DateTimeField()
-    date_decision = models.DateTimeField(null=True)
-    
-    # Résultat
-    a_ete_admis = models.BooleanField(default=False)
-    a_confirme_inscription = models.BooleanField(default=False)
-    
-    # Métadonnées
-    archive_le = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-annee_universitaire', '-date_soumission']
-        verbose_name = 'Historique Candidature'
-        verbose_name_plural = 'Historique des Candidatures'
-    
-    def __str__(self):
-        return f"{self.numero} - {self.candidat_nom} ({self.annee_universitaire})"
 
 
 def archiver_candidatures_annee_precedente():
@@ -1694,6 +1708,22 @@ def archiver_candidatures_annee_precedente():
         count_archive += 1
     
     return count_archive
+
+
+# Model: AvisMembre — avis d'un membre de commission sur une candidature
+class AvisMembre(models.Model):
+    membre = models.ForeignKey(MembreCommission, on_delete=models.CASCADE, related_name='avis')
+    candidature = models.ForeignKey(Candidature, on_delete=models.CASCADE, related_name='avis_membres')
+    commission = models.ForeignKey(Commission, on_delete=models.CASCADE, related_name='avis_membres')
+    avis = models.BooleanField(help_text='True = favorable, False = défavorable')
+    argument = models.TextField(blank=True)
+    date_avis = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['membre', 'candidature', 'commission']
+
+    def __str__(self):
+        return f"Avis {self.pk}: {self.candidature.numero} - {self.membre.user.get_full_name()} - {'Favorable' if self.avis else 'Défavorable'}"
 class DocumentType(models.Model):
     """Types de documents accept�s par master"""
     TYPE_CHOICES = [

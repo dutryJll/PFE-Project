@@ -1,6 +1,7 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CandidatureService } from '../../../services/candidature.service';
 
 @Component({
   selector: 'app-ma-commission',
@@ -9,7 +10,20 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './ma-commission.html',
   styleUrls: ['./ma-commission.css'],
 })
-export class MaCommissionComponent implements AfterViewInit {
+export class MaCommissionComponent implements OnInit, AfterViewInit {
+  commissionOptions: Array<{ id: number; nom: string; description?: string; actif?: boolean }> = [];
+  selectedCommissionId: number | null = null;
+  private readonly activeCommissionStorageKey = 'active_commission_id';
+
+  constructor(private candidatureService: CandidatureService) {}
+
+  ngOnInit(): void {
+    const storedId = localStorage.getItem(this.activeCommissionStorageKey);
+    this.selectedCommissionId =
+      storedId && !Number.isNaN(Number(storedId)) ? Number(storedId) : null;
+    this.loadMyCommissions();
+  }
+
   ngAfterViewInit(): void {
     // Expose data and functions on window so the legacy inline handlers in the
     // provided HTML keep working without deep template refactor.
@@ -22,6 +36,7 @@ export class MaCommissionComponent implements AfterViewInit {
         nom: 'Tounsi',
         email: 'k.tounsi@isimm.tn',
         spec: 'Génie Logiciel',
+        commissionId: 1,
         assigns: 3,
         traites: 3,
         avis: 3,
@@ -36,6 +51,7 @@ export class MaCommissionComponent implements AfterViewInit {
         nom: 'Mansour',
         email: 'l.mansour@isimm.tn',
         spec: 'Data Science',
+        commissionId: 2,
         assigns: 2,
         traites: 1,
         avis: 2,
@@ -50,6 +66,7 @@ export class MaCommissionComponent implements AfterViewInit {
         nom: 'Hajri',
         email: 's.hajri@isimm.tn',
         spec: 'Réseaux & IoT',
+        commissionId: 1,
         assigns: 1,
         traites: 1,
         avis: 1,
@@ -64,6 +81,7 @@ export class MaCommissionComponent implements AfterViewInit {
         nom: 'Riahi',
         email: 'o.riahi@isimm.tn',
         spec: 'IA & Big Data',
+        commissionId: 2,
         assigns: 0,
         traites: 0,
         avis: 0,
@@ -89,6 +107,8 @@ export class MaCommissionComponent implements AfterViewInit {
     w.selected = new Set();
     w.filtered = [...w.membres];
     w.assignMap = {};
+    w.selectedCommissionId = this.selectedCommissionId;
+    w.commissionOptions = this.commissionOptions;
 
     w.getInitials = function (m: any) {
       return (m.prenom[0] + m.nom[0]).toUpperCase();
@@ -108,6 +128,7 @@ export class MaCommissionComponent implements AfterViewInit {
         const statutEl = document.getElementById('f-statut') as HTMLSelectElement;
         const search = searchEl ? searchEl.value.toLowerCase() : '';
         const fs = statutEl ? statutEl.value : '';
+        const activeCommissionId = w.selectedCommissionId || null;
         w.filtered = w.membres.filter(function (m: any) {
           return (
             (!search ||
@@ -115,7 +136,8 @@ export class MaCommissionComponent implements AfterViewInit {
               m.nom.toLowerCase().includes(search) ||
               m.email.toLowerCase().includes(search) ||
               m.spec.toLowerCase().includes(search)) &&
-            (!fs || m.statut === fs)
+            (!fs || m.statut === fs) &&
+            (!activeCommissionId || m.commissionId === activeCommissionId)
           );
         });
         const tb = document.getElementById('table-body');
@@ -235,6 +257,19 @@ export class MaCommissionComponent implements AfterViewInit {
       if (st) st.value = '';
       w.renderTable();
     };
+
+    w.changeCommission = function (value: string | number) {
+      const parsed = value === '' || value === null || value === undefined ? null : Number(value);
+      w.selectedCommissionId = Number.isFinite(parsed as number) ? parsed : null;
+      if (w.selectedCommissionId) {
+        localStorage.setItem('active_commission_id', String(w.selectedCommissionId));
+      } else {
+        localStorage.removeItem('active_commission_id');
+      }
+      (this as any).selectedCommissionId = w.selectedCommissionId;
+      w.renderTable();
+      w.showToast('Commission active mise à jour', 't-info');
+    }.bind(this);
 
     w.retirerMembre = function (id: number) {
       const m = w.membres.find(function (x: any) {
@@ -441,6 +476,8 @@ export class MaCommissionComponent implements AfterViewInit {
         'novembre',
         'décembre',
       ];
+
+      w.loadMyCommissions = () => this.loadMyCommissions();
       const el = document.getElementById('today-date');
       if (el)
         el.textContent =
@@ -454,6 +491,67 @@ export class MaCommissionComponent implements AfterViewInit {
       w.renderTable();
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  private loadMyCommissions(): void {
+    this.candidatureService.getMyCommissions(this.selectedCommissionId).subscribe({
+      next: (res: any) => {
+        this.commissionOptions = res.commissions || [];
+        if (!this.selectedCommissionId && this.commissionOptions.length > 0) {
+          this.selectedCommissionId = res.active_commission_id || this.commissionOptions[0].id;
+        }
+        this.persistCommissionSelection();
+        this.applyCommissionContextToMembers();
+      },
+      error: () => {
+        if (!this.selectedCommissionId) {
+          this.selectedCommissionId = 1;
+        }
+        this.commissionOptions = [
+          { id: 1, nom: 'Commission GL' },
+          { id: 2, nom: 'Commission DS' },
+        ];
+        this.persistCommissionSelection();
+        this.applyCommissionContextToMembers();
+      },
+    });
+  }
+
+  private persistCommissionSelection(): void {
+    if (this.selectedCommissionId) {
+      localStorage.setItem(this.activeCommissionStorageKey, String(this.selectedCommissionId));
+    } else {
+      localStorage.removeItem(this.activeCommissionStorageKey);
+    }
+  }
+
+  private applyCommissionContextToMembers(): void {
+    const w = window as any;
+    if (!w.membres || !this.commissionOptions.length) return;
+
+    w.membres = w.membres.map((member: any, index: number) => ({
+      ...member,
+      commissionId:
+        member.commissionId || this.commissionOptions[index % this.commissionOptions.length].id,
+    }));
+
+    w.selectedCommissionId = this.selectedCommissionId;
+    w.renderTable();
+  }
+
+  changeCommission(value: string | number): void {
+    const parsed = value === '' || value === null || value === undefined ? null : Number(value);
+    this.selectedCommissionId = Number.isFinite(parsed as number) ? parsed : null;
+    this.persistCommissionSelection();
+
+    const w = window as any;
+    w.selectedCommissionId = this.selectedCommissionId;
+    if (typeof w.renderTable === 'function') {
+      w.renderTable();
+    }
+    if (typeof w.showToast === 'function') {
+      w.showToast('Commission active mise à jour', 't-info');
     }
   }
 }

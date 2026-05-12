@@ -358,7 +358,6 @@ export class DashboardAdminComponent implements OnInit {
     this.loadCandidatures();
     this.loadOffresIngenieur();
     this.loadOffresResponsableSync();
-    this.loadLogs();
     this.loadActionRoleMatrix();
     this.loadActionPermissions();
     this.loadNotifications();

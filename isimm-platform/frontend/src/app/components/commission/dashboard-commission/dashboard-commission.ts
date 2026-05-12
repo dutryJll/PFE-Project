@@ -8,7 +8,6 @@ import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { CandidatureService } from '../../../services/candidature.service';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
-import { MaCommissionComponent } from '../ma-commission/ma-commission.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { MatCardModule } from '@angular/material/card';
@@ -426,18 +425,12 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    SkeletonLoaderComponent,
-    MatDialogModule,
-    MatCardModule,
-    MaCommissionComponent,
-  ],
+  imports: [CommonModule, FormsModule, SkeletonLoaderComponent, MatDialogModule, MatCardModule],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
 })
 export class DashboardCommissionComponent implements OnInit {
+  readonly maCommissionComponentTag = 'app-ma-commission';
   private readonly fallbackEditOfferId = 3;
   currentView: CommissionView = 'dashboard';
   currentUser: any = null;
@@ -778,6 +771,7 @@ export class DashboardCommissionComponent implements OnInit {
   reclamationStatusFilter: '' | 'en_cours' | 'en_attente' | 'traite' | 'rejete' = '';
   reclamationPriorityFilter: '' | 'haut' | 'moyen' | 'bas' = '';
   reclamationSearch: string = '';
+  private reclamationActionMenuOpen: Record<number, boolean> = {};
   showModalReponseReclamation: boolean = false;
   showModalRectifierScore: boolean = false;
   showModalRejetReclamation: boolean = false;
@@ -4561,6 +4555,17 @@ export class DashboardCommissionComponent implements OnInit {
     return titles[this.currentView] || 'Tableau de bord';
   }
 
+  getCommissionUserRoleLabel(): string {
+    if (!this.isResponsable) {
+      return 'Membre Commission';
+    }
+    const specialite = this.getDisplayedResponsableSpecialite();
+    if (specialite && specialite !== 'Non renseignée') {
+      return `Commission ${specialite}`;
+    }
+    return 'Responsable Commission';
+  }
+
   getDisplayedResponsableSpecialite(): string {
     const candidates = [
       this.currentUser?.responsable_master_name,
@@ -7007,6 +7012,23 @@ export class DashboardCommissionComponent implements OnInit {
     this.reclamationSearch = '';
   }
 
+  toggleReclamationActionMenu(id: number): void {
+    this.reclamationActionMenuOpen[id] = !this.reclamationActionMenuOpen[id];
+  }
+
+  isReclamationActionMenuOpen(id: number): boolean {
+    return !!this.reclamationActionMenuOpen[id];
+  }
+
+  closeReclamationActionMenu(id?: number): void {
+    if (typeof id === 'number') {
+      delete this.reclamationActionMenuOpen[id];
+      return;
+    }
+
+    this.reclamationActionMenuOpen = {};
+  }
+
   openReponse(id: number): void {
     const reclamation = this.reclamations.find((item) => item.id === id) || null;
     if (!reclamation) {
@@ -7014,6 +7036,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
     this.reclamationSelectionnee = reclamation;
     this.reponseReclamationText = reclamation.details;
+    this.closeReclamationActionMenu(id);
     this.showModalReponseReclamation = true;
   }
 
@@ -7025,6 +7048,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.reclamationScoreSelectionnee = reclamation;
     this.scoreRectification = 15;
     this.scoreRectificationCommentaire = '';
+    this.closeReclamationActionMenu(id);
     this.showModalRectifierScore = true;
     this.recalcScore();
   }
@@ -7038,6 +7062,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.reclamationRejetSelectionnee = reclamation;
     this.motifRejet = '';
     this.motifRejetDetail = '';
+    this.closeReclamationActionMenu(id);
     this.showModalRejetReclamation = true;
   }
 
@@ -7141,6 +7166,7 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
+    this.closeReclamationActionMenu();
     this.router.navigate(['/consultation-dossier', candidatureId], {
       queryParams: { source: 'reclamations', reclamation: reclamation.id },
     });

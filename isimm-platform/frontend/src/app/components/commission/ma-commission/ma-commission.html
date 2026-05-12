@@ -8,6 +8,29 @@
       </div>
     </div>
     <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
+      <div style="display: flex; flex-direction: column; min-width: 220px">
+        <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 0.2rem">
+          Commission active
+        </div>
+        <select
+          [(ngModel)]="selectedCommissionId"
+          (ngModelChange)="changeCommission($event)"
+          style="
+            height: 34px;
+            padding: 0 0.6rem;
+            border: 0.5px solid var(--color-border-secondary);
+            border-radius: var(--border-radius-md);
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+            font-size: 12px;
+          "
+        >
+          <option [ngValue]="null">Toutes les commissions</option>
+          <option *ngFor="let commission of commissionOptions" [ngValue]="commission.id">
+            {{ commission.nom }}
+          </option>
+        </select>
+      </div>
       <div class="page-date" id="today-date">—</div>
       <button class="btn btn-primary" onclick="openAssign()">
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">

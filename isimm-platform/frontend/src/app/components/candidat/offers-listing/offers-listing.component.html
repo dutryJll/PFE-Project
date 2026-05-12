@@ -1,0 +1,123 @@
+<div class="offers-container">
+  <div class="offers-header">
+    <h1>Offres disponibles</h1>
+    <button mat-icon-button (click)="loadAvailableOffers()" matTooltip="Actualiser les offres">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Chargement des offres...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !isLoading" class="error-message">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <!-- Filters -->
+  <div *ngIf="!isLoading && offers.length > 0" class="filters-section">
+    <div class="filter-group">
+      <label>Type de Master:</label>
+      <div class="filter-buttons">
+        <button
+          mat-stroked-button
+          [class.active]="filterType === 'all'"
+          (click)="onFilterTypeChange('all')"
+        >
+          Tous
+        </button>
+        <button
+          *ngFor="let type of getUniqueTypes()"
+          mat-stroked-button
+          [class.active]="filterType === type"
+          (click)="onFilterTypeChange(type)"
+        >
+          {{ type }}
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>Spécialité:</label>
+      <div class="filter-buttons">
+        <button
+          mat-stroked-button
+          [class.active]="filterSpecialite === 'all'"
+          (click)="onFilterSpecialiteChange('all')"
+        >
+          Toutes
+        </button>
+        <button
+          *ngFor="let spec of getUniqueSpecialites()"
+          mat-stroked-button
+          [class.active]="filterSpecialite === spec"
+          (click)="onFilterSpecialiteChange(spec)"
+        >
+          {{ spec }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offers Grid -->
+  <div *ngIf="!isLoading && filteredOffers.length > 0" class="offers-grid">
+    <mat-card *ngFor="let offer of filteredOffers" class="offer-card">
+      <mat-card-header>
+        <h2>{{ offer.master_nom }}</h2>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="offer-details">
+          <div class="detail-item">
+            <strong>Spécialité:</strong>
+            <span>{{ offer.specialite }}</span>
+          </div>
+
+          <div class="detail-item">
+            <strong>Type:</strong>
+            <mat-chip>{{ offer.type }}</mat-chip>
+          </div>
+
+          <div class="detail-item" *ngIf="offer.date_limite">
+            <strong>Délai:</strong>
+            <div [ngClass]="{ 'approaching-deadline': isDeadlineApproaching(offer.date_limite) }">
+              {{ daysRemainingText(offer.date_limite) }}
+            </div>
+          </div>
+
+          <div class="detail-item" *ngIf="offer.already_applied">
+            <mat-chip color="accent">Déjà postulé</mat-chip>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="offer.already_applied"
+          (click)="applyNow(offer.master_id)"
+        >
+          <mat-icon>send</mat-icon>
+          {{ offer.already_applied ? 'Déjà postulé' : 'Postuler maintenant' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && filteredOffers.length === 0" class="empty-state">
+    <mat-icon>folder_open</mat-icon>
+    <p>
+      {{
+        offers.length === 0
+          ? 'Aucune offre disponible pour le moment'
+          : 'Aucune offre ne correspond à vos filtres'
+      }}
+    </p>
+  </div>
+</div>

@@ -13,7 +13,7 @@
         [title]="socketConnectionStatus"
       ></span>
       <h2>ISIMM</h2>
-      <p class="user-role">{{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}</p>
+      <p class="user-role">{{ getCommissionUserRoleLabel() }}</p>
       <small class="user-role-master" *ngIf="isResponsable">
         Spécialité : {{ getDisplayedResponsableSpecialite() }}
       </small>
@@ -41,6 +41,16 @@
       >
         <i class="fas fa-user"></i>
         <span>Mon Profil</span>
+      </a>
+
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'membres'"
+        [class.disabled]="isMenuDisabled('membres')"
+        (click)="openMenuView('membres')"
+      >
+        <i class="fas fa-users"></i>
+        <span>Membres</span>
       </a>
 
       <a
@@ -479,39 +489,57 @@
                       </div>
                     </td>
                     <td>
-                      <div class="action-cell">
+                      <div class="kebab-container reclamation-kebab">
                         <button
-                          class="btn btn-purple btn-sm"
                           type="button"
-                          (click)="openReponse(reclamation.id)"
+                          class="kebab-btn"
+                          (click)="toggleReclamationActionMenu(reclamation.id)"
+                          title="Actions"
                         >
-                          <i class="fas fa-reply"></i>
-                          Répondre
+                          <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <button
-                          class="btn btn-sec btn-sm"
-                          type="button"
-                          (click)="voirDossierAssocieReclamation(reclamation)"
-                        >
-                          <i class="fas fa-folder-open"></i>
-                          Voir dossier
-                        </button>
-                        <button
-                          class="btn btn-amber btn-sm"
-                          type="button"
-                          (click)="openScore(reclamation.id)"
-                        >
-                          <i class="fas fa-pen"></i>
-                          Rectifier score
-                        </button>
-                        <button
-                          class="btn btn-danger btn-sm"
-                          type="button"
-                          (click)="openRejet(reclamation.id)"
-                        >
-                          <i class="fas fa-times"></i>
-                          Rejeter
-                        </button>
+                        <ul class="kebab-menu" *ngIf="isReclamationActionMenuOpen(reclamation.id)">
+                          <li>
+                            <button
+                              type="button"
+                              class="menu-item"
+                              (click)="openReponse(reclamation.id)"
+                            >
+                              <i class="fas fa-reply"></i>
+                              <span>Répondre</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              class="menu-item"
+                              (click)="voirDossierAssocieReclamation(reclamation)"
+                            >
+                              <i class="fas fa-folder-open"></i>
+                              <span>Voir dossier</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              class="menu-item"
+                              (click)="openScore(reclamation.id)"
+                            >
+                              <i class="fas fa-pen"></i>
+                              <span>Rectifier score</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              class="menu-item danger"
+                              (click)="openRejet(reclamation.id)"
+                            >
+                              <i class="fas fa-times"></i>
+                              <span>Rejeter</span>
+                            </button>
+                          </li>
+                        </ul>
                       </div>
                     </td>
                   </tr>
@@ -2069,7 +2097,7 @@
             </div>
 
             <!-- ── CANDIDATES CAROUSEL (Angular) ── -->
-            <div class="carousel-wrap" *ngIf="candidates?.length">
+            <div class="carousel-wrap" *ngIf="candidates.length">
               <div style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
                 <button class="btn btn-sec" type="button" (click)="prevCandidate()">◀</button>
                 <div

@@ -1,0 +1,75 @@
+TESTS SPRINT 3 - TABLEAUX COPIABLES
+
+Bibliotheques recommandees pour le rapport:
+- Backend unitaires: pytest, pytest-django, unittest.mock
+- Backend integration: pytest-django, Django TestCase, rest_framework.test APIClient
+- Frontend unitaires Angular: Jasmine, Karma, TestBed, HttpClientTestingModule
+- End-to-end: Playwright ou Cypress
+
+============================================================
+MODULE: PREINSCRIPTION
+============================================================
+
+Tableau tests unitaires
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Preinscription | Creation du dossier, validation des champs, calcul des dates limites, modification avant deadline | 0 | 0 | 0 |
+
+Tableau tests integration
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Preinscription | API de creation, recuperation du dossier deja soumis, modification avant deadline, notification email, notification in app | 0 | 0 | 0 |
+
+============================================================
+MODULE: DEPOT DE CANDIDATURE
+============================================================
+
+Tableau tests unitaires
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Depot de candidature | Calcul du score, classement, controle des documents obligatoires, statuts soumis/preselectionne/dossier_depose | 0 | 0 | 0 |
+
+Tableau tests integration
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Depot de candidature | Soumission dossier complet, generation du numero, enregistrement DB, email confirmation, notification changement de statut | 0 | 0 | 0 |
+
+============================================================
+MODULE: PRESELECTION
+============================================================
+
+Tableau tests unitaires
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Préselection | Generation listes principale/attente, tri par score, modification de position, export CSV/XLSX/PDF | 0 | 0 | 0 |
+
+Tableau tests integration
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Préselection | API generation liste, bulk insert candidats, recalcul rangs, export fichier, audit log, notification masse | 0 | 0 | 0 |
+
+============================================================
+MODULE: SELECTION & INSCRIPTION
+============================================================
+
+Tableau tests unitaires
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Sélection & Inscription | Verification eligibilite, validation manuelle, import Excel, liste complementaire, changement de statut | 0 | 0 | 0 |
+
+Tableau tests integration
+| Module | Operations | Nombre de tests reussis | Nombre de tests echoues | Nombre de tests totaux |
+|---|---|---:|---:|---:|
+| Sélection & Inscription | Creation inscription, decision dossier, classification finale, import Excel, notification email et in app | 0 | 0 | 0 |
+
+============================================================
+NOTE RAPPORT
+============================================================
+
+Pour le rapport, vous pouvez citer ces bibliotheques:
+- pytest / pytest-django pour le backend
+- Django TestCase pour les tests d'integration Django
+- Jasmine / Karma pour Angular
+- Playwright ou Cypress pour les tests E2E
+
+Si vous voulez des valeurs reelles pour "reussis / echoues / totaux", je peux aussi vous generer un modele de tableau a remplir apres execution des tests.

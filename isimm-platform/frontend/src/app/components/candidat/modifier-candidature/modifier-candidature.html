@@ -38,6 +38,21 @@
           </span>
         </div>
       </div>
+      <div *ngIf="candidatureAccessInfo" class="edit-state" style="margin-top: 1rem">
+        <strong>
+          {{
+            candidatureAccessInfo.can_edit
+              ? 'Candidature encore modifiable'
+              : 'Repostulation uniquement'
+          }}
+        </strong>
+        <p style="margin: 0.35rem 0 0">
+          {{ candidatureAccessInfo.reason }}
+          <span *ngIf="candidatureAccessInfo.edit_deadline">
+            - Date limite: {{ candidatureAccessInfo.edit_deadline | date: 'dd/MM/yyyy HH:mm' }}
+          </span>
+        </p>
+      </div>
     </div>
 
     <!-- Formulaire de modification -->

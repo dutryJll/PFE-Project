@@ -10,9 +10,10 @@ from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.db.utils import OperationalError
 from django.db import IntegrityError, transaction
-from django.db.models import F, Max, Q
+from django.db.models import F, Max, Q, Count
 from django.db.models.expressions import Window
 from django.db.models.functions import Rank
 from rest_framework import status, viewsets
@@ -23,6 +24,8 @@ from rest_framework.response import Response
 from .models import (
     Candidature,
     CandidatListe,
+    AvisMembre,
+    Commission,
     MembreCommission,
     Concours,
     ConfigurationAppel,
@@ -53,6 +56,7 @@ from .serializers import (
     NotificationSerializer,
     OffreMasterSerializer,
     UserUpdateSerializer,
+    AvisMembreSerializer,
 )
 from .emails import (
     envoyer_email_changement_statut,
@@ -402,6 +406,11 @@ def _sync_master_from_concours(concours):
     marker = _concours_sync_marker(concours.id)
     specialite = (concours.conditions_admission or {}).get('specialite') or 'Cycle Ingenieur'
     ouverture = concours.date_ouverture
+    if isinstance(ouverture, str):
+        ouverture = parse_date(ouverture)
+    cloture = concours.date_cloture
+    if isinstance(cloture, str):
+        cloture = parse_date(cloture)
     annee_universitaire = (
         f"{ouverture.year}/{ouverture.year + 1}"
         if ouverture
@@ -418,7 +427,7 @@ def _sync_master_from_concours(concours):
         existing.description = description
         existing.specialite = specialite
         existing.places_disponibles = concours.places_disponibles
-        existing.date_limite_candidature = concours.date_cloture
+        existing.date_limite_candidature = cloture or concours.date_cloture
         existing.annee_universitaire = annee_universitaire
         existing.actif = concours.actif
         existing.save()
@@ -430,7 +439,7 @@ def _sync_master_from_concours(concours):
         description=description,
         specialite=specialite,
         places_disponibles=concours.places_disponibles,
-        date_limite_candidature=concours.date_cloture,
+        date_limite_candidature=cloture or concours.date_cloture,
         annee_universitaire=annee_universitaire,
         actif=concours.actif,
     )
@@ -496,6 +505,51 @@ def create_candidature(request):
         master = Master.objects.get(id=master_id)
     except Master.DoesNotExist:
         return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check: Duplicate candidature prevention (cannot apply twice to same offer)
+    existing_candidature = Candidature.objects.filter(
+        candidat=request.user,
+        master=master,
+        statut__in=['soumis', 'sous_examen', 'preselectionne', 'en_attente_dossier', 'dossier_depose']
+    ).first()
+    
+    if existing_candidature:
+        # Trigger notification on duplicate attempt
+        _trigger_notification_on_duplicate_attempt(request.user, master, existing_candidature)
+        
+        # Allow editing before deadline if not yet fully processed.
+        edit_deadline = existing_candidature.date_limite_modification
+        edit_deadline_passed = bool(edit_deadline and timezone.now() > edit_deadline)
+        if existing_candidature.statut in ['soumis', 'en_attente_dossier'] and not edit_deadline_passed:
+            # Return existing candidature ID to allow editing
+            return Response(
+                {
+                    'error': 'Vous avez deja une candidature pour ce Master',
+                    'candidature_id': existing_candidature.id,
+                    'allow_edit': True,
+                    'statut': existing_candidature.statut,
+                    'edit_deadline': edit_deadline.isoformat() if edit_deadline else None,
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+        else:
+            return Response(
+                {
+                    'error': 'Vous avez deja une candidature pour ce Master qui est en cours de traitement',
+                    'candidature_id': existing_candidature.id,
+                    'allow_edit': False,
+                    'statut': existing_candidature.statut,
+                    'edit_deadline': edit_deadline.isoformat() if edit_deadline else None,
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+    # Check: Deadline validation
+    if master.date_limite_candidature and timezone.now().date() > master.date_limite_candidature:
+        return Response(
+            {'error': f'La date limite de candidature pour {master.nom} est depassee'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
 
@@ -732,8 +786,88 @@ def create_candidature(request):
     except Exception as exc:
         logger.exception("Erreur envoi email confirmation candidature %s: %s", candidature.id, exc)
 
+    # Trigger deadline approaching notification if applicable
+    _trigger_notification_on_deadline_approaching(candidature, days_remaining=7)
+
     serializer = CandidatureSerializer(candidature)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specialites_for_master(request, master_id):
+    """Retourne la liste des specialites disponibles pour un Master."""
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get available specialities from related ParcoursAdmission
+    parcours_list = ParcoursAdmission.objects.filter(
+        master=master,
+        actif=True,
+        statut='ouvert'
+    ).values_list('specialite', flat=True).distinct()
+
+    specialites = list(parcours_list) if parcours_list else [master.specialite] if master.specialite else []
+
+    return Response({
+        'master_id': master.id,
+        'master_nom': master.nom,
+        'specialites': specialites,
+        'deadline': master.date_limite_candidature.isoformat() if master.date_limite_candidature else None,
+        'places_disponibles': master.places_disponibles,
+        'est_ouvert': master.date_limite_candidature is None or timezone.now().date() <= master.date_limite_candidature
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_available_offers_with_specialites(request):
+    """Retourne la liste des offres ouvertes avec leurs specialites dynamiques."""
+    from django.utils import timezone
+    from datetime import datetime
+
+    today = timezone.now().date()
+    
+    # Fetch all open masters
+    masters = Master.objects.filter(
+        actif=True,
+        date_limite_candidature__gte=today
+    ).select_related().order_by('-date_limite_candidature')
+
+    offers_data = []
+    for master in masters:
+        # Get parcours for this master
+        parcours_list = ParcoursAdmission.objects.filter(
+            master=master,
+            actif=True,
+            statut='ouvert'
+        ).values('id', 'nom', 'specialite', 'type')
+
+        specialites = list(set([p['specialite'] for p in parcours_list if p['specialite']]))
+        
+        # Check if user already has a candidature for this master
+        existing = Candidature.objects.filter(
+            candidat=request.user,
+            master=master,
+            statut__in=['soumis', 'sous_examen', 'preselectionne', 'en_attente_dossier', 'dossier_depose']
+        ).exists()
+
+        offers_data.append({
+            'id': master.id,
+            'nom': master.nom,
+            'specialite': master.specialite,
+            'specialites_parcours': specialites,
+            'places_disponibles': master.places_disponibles,
+            'deadline': master.date_limite_candidature.isoformat(),
+            'type_master': master.type_master,
+            'annee_universitaire': master.annee_universitaire,
+            'candidat_deja_applique': existing,
+            'jours_restants': (master.date_limite_candidature - today).days
+        })
+
+    return Response(offers_data)
 
 
 def _safe_create_notification(user, titre, message, notif_type='info', dedup_key=None):
@@ -2055,6 +2189,653 @@ def commission_decision_candidature(request, candidature_id):
     )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def can_reapply_to_master(request, master_id):
+    """Check if candidate can reapply to a master (re-application rules)."""
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    previous = Candidature.objects.filter(
+        candidat=request.user,
+        master=master
+    ).order_by('-date_soumission').first()
+
+    if not previous:
+        return Response({
+            'can_reapply': True,
+            'can_edit': False,
+            'reason': 'Aucune candidature precedente',
+            'previous_status': None,
+            'edit_deadline': None,
+            'cooldown_days': 0
+        })
+
+    TERMINAL_STATUSES = ['rejete', 'annule']
+    edit_deadline = previous.date_limite_modification
+    can_edit = previous.statut in ['soumis', 'en_attente_dossier'] and bool(edit_deadline and timezone.now() <= edit_deadline)
+
+    if previous.statut in TERMINAL_STATUSES:
+        return Response({
+            'can_reapply': True,
+            'can_edit': False,
+            'reason': 'Vous avez ete rejete precedemment, vous pouvez repostuler',
+            'previous_status': previous.statut,
+            'previous_date': previous.date_changement_statut.isoformat() if previous.date_changement_statut else None,
+            'edit_deadline': edit_deadline.isoformat() if edit_deadline else None,
+            'cooldown_days': 0
+        })
+    else:
+        return Response({
+            'can_reapply': False,
+            'can_edit': can_edit,
+            'reason': (
+                'Votre candidature est encore modifiable avant la date limite.'
+                if can_edit
+                else f'Vous avez deja une candidature en cours avec le statut: {previous.statut}'
+            ),
+            'previous_status': previous.statut,
+            'edit_deadline': edit_deadline.isoformat() if edit_deadline else None,
+            'cooldown_days': 0
+        })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specialites_for_preselection(request, master_id):
+    """Get specialites for preselection section with filtering context."""
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    parcours_list = ParcoursAdmission.objects.filter(
+        master=master,
+        actif=True,
+        statut='ouvert'
+    ).values('id', 'specialite', 'type', 'nom').distinct('specialite')
+
+    specialites = list(set([p['specialite'] for p in parcours_list if p['specialite']]))
+
+    return Response({
+        'master_id': master.id,
+        'master_nom': master.nom,
+        'context': 'preselection',
+        'specialites': specialites,
+        'parcours': list(parcours_list)
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specialites_for_dossier(request, candidature_id):
+    """Get specialites available for dossier deposit (context-aware filtering)."""
+    try:
+        candidature = Candidature.objects.select_related('master').get(
+            id=candidature_id,
+            candidat=request.user
+        )
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if candidature.statut not in ['preselectionne', 'en_attente_dossier']:
+        return Response(
+            {'error': f'Dossier non disponible pour statut: {candidature.statut}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    parcours_list = ParcoursAdmission.objects.filter(
+        master=candidature.master,
+        actif=True,
+        statut='ouvert'
+    ).values('id', 'specialite', 'type', 'nom').distinct('specialite')
+
+    specialites = list(set([p['specialite'] for p in parcours_list if p['specialite']]))
+
+    return Response({
+        'candidature_id': candidature.id,
+        'master_id': candidature.master.id,
+        'context': 'dossier_deposit',
+        'specialites': specialites,
+        'current_specialite': candidature.specialite,
+        'allow_change': candidature.statut == 'en_attente_dossier'
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specialites_for_inscription(request, master_id):
+    """Get specialites for online inscription section."""
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    parcours_list = ParcoursAdmission.objects.filter(
+        master=master,
+        actif=True
+    ).values('id', 'specialite', 'type', 'nom').distinct('specialite')
+
+    specialites = list(set([p['specialite'] for p in parcours_list if p['specialite']]))
+
+    candidate_selection = Candidature.objects.filter(
+        candidat=request.user,
+        master=master,
+        statut__in=['preselectionne', 'accepte', 'admis_principal', 'admis_attente', 'admis_complementaire']
+    ).first()
+
+    return Response({
+        'master_id': master.id,
+        'master_nom': master.nom,
+        'context': 'inscription',
+        'specialites': specialites,
+        'candidate_current_specialite': candidate_selection.specialite if candidate_selection else None,
+        'candidate_status': candidate_selection.statut if candidate_selection else None
+    })
+
+
+def _trigger_notification_on_duplicate_attempt(user, master, existing_candidature):
+    """Trigger in-app and email notification when duplicate candidature is attempted."""
+    try:
+        _safe_create_notification(
+            user=user,
+            titre='Candidature dupliquée détectée',
+            message=f'Vous avez déjà une candidature pour {master.nom}. Statut: {existing_candidature.statut}.',
+            notif_type='warning',
+            dedup_key=f'duplicate-attempt-{existing_candidature.id}-{timezone.now().date().isoformat()}'
+        )
+    except Exception as e:
+        logger.warning('Erreur creation notification duplicate: %s', e)
+
+
+def _trigger_notification_on_deadline_approaching(candidature, days_remaining=7):
+    """Trigger notification when application deadline is approaching."""
+    try:
+        if candidature.master.date_limite_candidature:
+            days_left = (candidature.master.date_limite_candidature - timezone.now().date()).days
+            if 0 <= days_left <= days_remaining:
+                _safe_create_notification(
+                    user=candidature.candidat,
+                    titre='Délai de candidature proche',
+                    message=f'Plus que {days_left} jour(s) pour postuler au {candidature.master.nom}',
+                    notif_type='warning',
+                    dedup_key=f'deadline-warning-{candidature.master.id}-{timezone.now().date().isoformat()}'
+                )
+    except Exception as e:
+        logger.warning('Erreur notification deadline: %s', e)
+
+
+def _trigger_notification_on_reapplication_allowed(user, master):
+    """Trigger notification when reapplication is allowed after rejection."""
+    try:
+        _safe_create_notification(
+            user=user,
+            titre='Possibilité de repostuler',
+            message=f'Vous pouvez maintenant repostuler pour {master.nom}.',
+            notif_type='info',
+            dedup_key=f'reapply-allowed-{master.id}-{timezone.now().date().isoformat()}'
+        )
+    except Exception as e:
+        logger.warning('Erreur notification reapplication: %s', e)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def soumettre_avis_membre(request, candidature_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    avis_bool = request.data.get('avis')
+    argument = str(request.data.get('argument', '')).strip()
+    commission_id = request.data.get('commission_id')
+
+    try:
+        candidature = Candidature.objects.select_related('master').get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if commission_id:
+        commission_qs = MembreCommission.objects.filter(
+            user=request.user,
+            actif=True,
+            commission_id=commission_id,
+        ).select_related('commission')
+    else:
+        commission_qs = MembreCommission.objects.filter(user=request.user, actif=True).select_related('commission')
+
+    membre_commission = commission_qs.first()
+    if not membre_commission:
+        return Response({'error': 'Aucune commission active pour cet utilisateur'}, status=status.HTTP_403_FORBIDDEN)
+
+    commission = membre_commission.commission
+    avis_normalized = str(avis_bool).strip().lower()
+    avis_value = avis_normalized in ['true', '1', 'oui', 'favorable', 'yes']
+
+    if not avis_value and not argument:
+        return Response(
+            {'error': 'L argumentation est obligatoire pour un avis defavorable'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    avis_obj, created = AvisMembre.objects.update_or_create(
+        membre=membre_commission,
+        candidature=candidature,
+        commission=commission,
+        defaults={
+            'avis': avis_value,
+            'argument': argument,
+        },
+    )
+
+    _safe_create_notification(
+        user=candidature.candidat,
+        titre='Avis de commission',
+        message=(
+            f"Un membre de la commission a depose un avis {'favorable' if avis_value else 'defavorable'} sur votre candidature."
+        ),
+        notif_type='info',
+        dedup_key=f'avis-membre-{candidature.id}-{commission.id}-{request.user.id}',
+    )
+
+    try:
+        envoyer_email_changement_statut(candidature, candidature.statut, candidature.statut)
+    except Exception:
+        logger.exception('Erreur lors de l envoi email avis membre pour candidature %s', candidature.id)
+
+    return Response(
+        {
+            'success': True,
+            'avis_id': avis_obj.id,
+            'created': created,
+            'avis': avis_obj.avis,
+            'argument': avis_obj.argument,
+            'commission': commission.nom,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def statistiques_avis_candidature(request, candidature_id):
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    avis_qs = AvisMembre.objects.filter(candidature=candidature).select_related('membre__user', 'commission')
+    total = avis_qs.count()
+    favorables = avis_qs.filter(avis=True).count()
+    defavorables = avis_qs.filter(avis=False).count()
+
+    details = [
+        {
+            'membre': f"{avis.membre.user.first_name} {avis.membre.user.last_name}".strip(),
+            'commission': avis.commission.nom,
+            'avis': avis.avis,
+            'argument': avis.argument,
+            'date': avis.date_avis,
+        }
+        for avis in avis_qs.order_by('-date_avis')
+    ]
+
+    return Response(
+        {
+            'candidature_id': candidature.id,
+            'total': total,
+            'favorables': favorables,
+            'defavorables': defavorables,
+            'pourcentage_favorable': round((favorables / total) * 100, 2) if total else 0,
+            'avis': details,
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_avis_candidature(request, candidature_id):
+    """List all avis for a candidature with member details"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    avis_qs = AvisMembre.objects.filter(candidature=candidature).select_related(
+        'membre__user', 'commission'
+    ).order_by('-date_avis')
+
+    serializer = AvisMembreSerializer(avis_qs, many=True, context={'request': request})
+    return Response(
+        {
+            'candidature_id': candidature.id,
+            'count': len(serializer.data),
+            'avis': serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_avis_detail(request, candidature_id, avis_id):
+    """Retrieve a specific avis"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        avis = AvisMembre.objects.get(id=avis_id, candidature=candidature)
+    except AvisMembre.DoesNotExist:
+        return Response({'error': 'Avis non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = AvisMembreSerializer(avis, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_avis(request, candidature_id, avis_id):
+    """Update an avis (only by the member who submitted it or admin)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        avis = AvisMembre.objects.get(id=avis_id, candidature=candidature)
+    except AvisMembre.DoesNotExist:
+        return Response({'error': 'Avis non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Only the member who submitted the avis or admin can update it
+    if role != 'admin' and avis.membre.user.id != request.user.id:
+        return Response(
+            {'error': 'Vous ne pouvez modifier que vos propres avis'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    avis_bool = request.data.get('avis')
+    argument = request.data.get('argument', '')
+
+    if avis_bool is None:
+        return Response({'error': 'Champ avis requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if avis_bool is False and not argument.strip():
+        return Response(
+            {'error': 'Un argument est requis pour un avis defavorable'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    avis.avis = avis_bool
+    avis.argument = argument
+    avis.save()
+
+    # Create notification for update
+    titre = f"Avis modifié - Candidature #{candidature.id}"
+    message = f"L'avis pour la candidature #{candidature.id} a été modifié."
+    dedup_key = f'avis-update-{candidature.id}-{avis.id}-{timezone.now().date().isoformat()}'
+    _safe_create_notification(candidature.candidat.user, titre, message, 'info', dedup_key)
+
+    return Response(
+        {
+            'success': True,
+            'avis_id': avis.id,
+            'avis': avis.avis,
+            'argument': avis.argument,
+            'date_avis': avis.date_avis,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_avis(request, candidature_id, avis_id):
+    """Delete an avis (only by the member who submitted it or admin)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        avis = AvisMembre.objects.get(id=avis_id, candidature=candidature)
+    except AvisMembre.DoesNotExist:
+        return Response({'error': 'Avis non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Only the member who submitted the avis or admin can delete it
+    if role != 'admin' and avis.membre.user.id != request.user.id:
+        return Response(
+            {'error': 'Vous ne pouvez supprimer que vos propres avis'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    avis_id_deleted = avis.id
+    avis.delete()
+
+    # Create notification for deletion
+    titre = f"Avis supprimé - Candidature #{candidature.id}"
+    message = f"L'avis pour la candidature #{candidature.id} a été supprimé."
+    dedup_key = f'avis-delete-{candidature.id}-{avis_id_deleted}-{timezone.now().date().isoformat()}'
+    _safe_create_notification(candidature.candidat.user, titre, message, 'warning', dedup_key)
+
+    return Response(
+        {'success': True, 'message': 'Avis supprime avec succes'},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def filter_avis_by_commission(request, master_id):
+    """Filter avis by commission with optional criteria (commission_id, member_id, avis_type, date_from, date_to)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Check if user is member of a commission for this master
+    if role in ['commission', 'responsable_commission']:
+        user_commissions = MembreCommission.objects.filter(
+            user=request.user, commission__master_id=master_id, actif=True
+        ).values_list('commission_id', flat=True)
+        if not user_commissions:
+            return Response({'error': 'Not a member of any commission for this master'}, status=status.HTTP_403_FORBIDDEN)
+    else:
+        user_commissions = None
+
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get all candidatures for this master
+    candidatures_qs = Candidature.objects.filter(master=master).values_list('id', flat=True)
+
+    # Start building avis queryset
+    avis_qs = AvisMembre.objects.filter(candidature_id__in=candidatures_qs).select_related(
+        'membre__user', 'commission', 'candidature'
+    )
+
+    # Filter by commission if not admin
+    if user_commissions is not None:
+        avis_qs = avis_qs.filter(commission_id__in=user_commissions)
+
+    # Optional: Filter by specific commission_id from query params
+    commission_id = request.query_params.get('commission_id')
+    if commission_id:
+        if not user_commissions or int(commission_id) not in user_commissions:
+            # If not admin and commission_id is provided, check if user is member
+            if role != 'admin':
+                return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+        avis_qs = avis_qs.filter(commission_id=commission_id)
+
+    # Optional: Filter by member_id
+    member_id = request.query_params.get('member_id')
+    if member_id:
+        avis_qs = avis_qs.filter(membre__user_id=member_id)
+
+    # Optional: Filter by avis type (favorable=true, defavorable=false)
+    avis_type = request.query_params.get('avis_type')
+    if avis_type:
+        avis_bool = avis_type.lower() == 'favorable'
+        avis_qs = avis_qs.filter(avis=avis_bool)
+
+    # Optional: Filter by date range
+    date_from = request.query_params.get('date_from')
+    date_to = request.query_params.get('date_to')
+    if date_from:
+        avis_qs = avis_qs.filter(date_avis__gte=date_from)
+    if date_to:
+        avis_qs = avis_qs.filter(date_avis__lte=date_to)
+
+    avis_qs = avis_qs.order_by('-date_avis')
+
+    # Build response with grouped statistics
+    avis_list = []
+    for avis in avis_qs:
+        avis_list.append(
+            {
+                'id': avis.id,
+                'candidature_id': avis.candidature.id,
+                'candidat_name': f"{avis.candidature.candidat.first_name} {avis.candidature.candidat.last_name}".strip(),
+                'member_id': avis.membre.user.id,
+                'member_name': f"{avis.membre.user.first_name} {avis.membre.user.last_name}".strip(),
+                'commission_id': avis.commission.id,
+                'commission_name': avis.commission.nom,
+                'avis': avis.avis,
+                'avis_type': 'favorable' if avis.avis else 'defavorable',
+                'argument': avis.argument,
+                'date_avis': avis.date_avis,
+            }
+        )
+
+    # Calculate statistics
+    total = len(avis_list)
+    favorables = sum(1 for a in avis_list if a['avis'])
+    defavorables = total - favorables
+
+    return Response(
+        {
+            'master_id': master_id,
+            'master_nom': master.nom,
+            'count': total,
+            'statistics': {
+                'total': total,
+                'favorables': favorables,
+                'defavorables': defavorables,
+                'pourcentage_favorable': round((favorables / total) * 100, 2) if total else 0,
+            },
+            'avis': avis_list,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_commission_members_for_master(request, master_id):
+    """Get all members of commissions for a specific master"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        master = Master.objects.get(id=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    commissions = Commission.objects.filter(master=master, actif=True).prefetch_related('membres')
+
+    commission_members = []
+    for commission in commissions:
+        for membre in commission.membres.filter(actif=True):
+            commission_members.append(
+                {
+                    'commission_id': commission.id,
+                    'commission_name': commission.nom,
+                    'member_id': membre.user.id,
+                    'member_name': f"{membre.user.first_name} {membre.user.last_name}".strip(),
+                    'member_email': membre.user.email,
+                    'role': membre.role,
+                    'date_nomination': membre.date_nomination,
+                }
+            )
+
+    return Response(
+        {
+            'master_id': master_id,
+            'master_nom': master.nom,
+            'count': len(commission_members),
+            'members': commission_members,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_commissions(request):
+    """Retourne les commissions liées à l'utilisateur courant.
+
+    Le frontend utilise cette liste pour choisir une commission active
+    et filtrer les vues multi-commissions.
+    """
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    commissions = Commission.objects.filter(
+        Q(membres__user=request.user, membres__actif=True) |
+        Q(membre_commission_links__user=request.user, membre_commission_links__actif=True)
+    ).distinct().order_by('nom')
+
+    data = []
+    active_commission_id = request.headers.get('X-Active-Commission-Id') or request.query_params.get('active_commission_id')
+    active_commission_id = int(active_commission_id) if str(active_commission_id).isdigit() else None
+
+    for commission in commissions:
+        data.append(
+            {
+                'id': commission.id,
+                'nom': commission.nom,
+                'description': commission.description,
+                'actif': commission.actif,
+                'is_active': commission.id == active_commission_id,
+            }
+        )
+
+    return Response(
+        {
+            'count': len(data),
+            'active_commission_id': active_commission_id,
+            'commissions': data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_member_credentials(request):
@@ -2083,6 +2864,196 @@ def send_member_credentials(request):
             fail_silently=False,
         )
         return Response({'message': 'Email envoye'})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_delete_avis(request):
+    """Bulk delete avis (admin and responsable_commission only)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    avis_ids = request.data.get('avis_ids', [])
+    if not avis_ids or not isinstance(avis_ids, list):
+        return Response({'error': 'avis_ids doit etre une liste'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        avis_qs = AvisMembre.objects.filter(id__in=avis_ids)
+        
+        # If responsable_commission, only allow deleting avis from their commissions
+        if role == 'responsable_commission':
+            user_commissions = MembreCommission.objects.filter(
+                user=request.user, actif=True
+            ).values_list('commission_id', flat=True)
+            avis_qs = avis_qs.filter(commission_id__in=user_commissions)
+
+        count = avis_qs.count()
+        avis_qs.delete()
+
+        titre = f'Suppression en masse d\'avis'
+        message = f'{count} avis ont été supprimés'
+        _safe_create_notification(request.user, titre, message, 'warning', f'bulk-delete-{timezone.now().date().isoformat()}')
+
+        return Response(
+            {'success': True, 'deleted_count': count},
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_update_candidature_status(request):
+    """Bulk update candidature status (admin and responsable_commission only)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    candidature_ids = request.data.get('candidature_ids', [])
+    new_status = request.data.get('status')
+    reason = request.data.get('reason', '')
+
+    if not candidature_ids or not isinstance(candidature_ids, list):
+        return Response({'error': 'candidature_ids doit etre une liste'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not new_status:
+        return Response({'error': 'status est requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        candidatures = Candidature.objects.filter(id__in=candidature_ids)
+
+        # If responsable_commission, only allow updating candidatures for their masters
+        if role == 'responsable_commission':
+            user_masters = MembreCommission.objects.filter(
+                user=request.user, actif=True
+            ).values_list('commission__master_id', flat=True).distinct()
+            candidatures = candidatures.filter(master_id__in=user_masters)
+
+        count = 0
+        for candidature in candidatures:
+            candidature.statut = new_status
+            candidature.date_changement_statut = timezone.now()
+            candidature.save()
+            
+            # Send notification to candidate
+            titre = f'Statut de candidature modifié'
+            message = f'Votre candidature #{candidature.id} a un nouveau statut: {new_status}'
+            if reason:
+                message += f'\nMotif: {reason}'
+            _safe_create_notification(
+                candidature.candidat.user,
+                titre,
+                message,
+                'info' if new_status in ['preselectionne', 'inscrit'] else 'warning',
+                f'status-update-{candidature.id}-{timezone.now().date().isoformat()}'
+            )
+            count += 1
+
+        return Response(
+            {'success': True, 'updated_count': count},
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assign_candidatures_to_member(request):
+    """Assign candidatures to a commission member (admin and responsable_commission only)"""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    candidature_ids = request.data.get('candidature_ids', [])
+    member_id = request.data.get('member_id')
+    commission_id = request.data.get('commission_id')
+
+    if not candidature_ids or not isinstance(candidature_ids, list):
+        return Response({'error': 'candidature_ids doit etre une liste'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not member_id or not commission_id:
+        return Response({'error': 'member_id et commission_id sont requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Verify the member exists
+        member = MembreCommission.objects.get(id=member_id, actif=True)
+        
+        # If responsable_commission, check they can assign to this commission
+        if role == 'responsable_commission':
+            user_commissions = MembreCommission.objects.filter(
+                user=request.user, actif=True
+            ).values_list('commission_id', flat=True)
+            if commission_id not in user_commissions:
+                return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get candidatures
+        candidatures = Candidature.objects.filter(id__in=candidature_ids)
+
+        # Create or update assignment records (if using an Assignment model)
+        # For now, we'll track this via a simple notification
+        count = len(candidatures)
+        titre = f'Nouvelles candidatures assignées'
+        message = f'{count} candidature(s) vous ont été assignée(s) pour évaluation'
+        _safe_create_notification(
+            member.user,
+            titre,
+            message,
+            'info',
+            f'assignment-{member_id}-{timezone.now().date().isoformat()}'
+        )
+
+        return Response(
+            {'success': True, 'assigned_count': count, 'member_id': member_id},
+            status=status.HTTP_200_OK,
+        )
+    except MembreCommission.DoesNotExist:
+        return Response({'error': 'Membre non trouve'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_admin_dashboard_stats(request):
+    """Get admin dashboard statistics (admin only)"""
+    role = getattr(request.user, 'role', None)
+    if role != 'admin':
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        total_candidatures = Candidature.objects.count()
+        total_avis = AvisMembre.objects.count()
+        total_commissions = Commission.objects.filter(actif=True).count()
+        total_members = MembreCommission.objects.filter(actif=True).count()
+
+        # Status breakdown
+        statuts = Candidature.objects.values('statut').annotate(count=Count('id'))
+        status_breakdown = {item['statut']: item['count'] for item in statuts}
+
+        # Avis statistics
+        avis_favorables = AvisMembre.objects.filter(avis=True).count()
+        avis_defavorables = AvisMembre.objects.filter(avis=False).count()
+
+        return Response(
+            {
+                'total_candidatures': total_candidatures,
+                'total_avis': total_avis,
+                'total_commissions': total_commissions,
+                'total_members': total_members,
+                'status_breakdown': status_breakdown,
+                'avis_statistics': {
+                    'favorables': avis_favorables,
+                    'defavorables': avis_defavorables,
+                    'total': total_avis,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
