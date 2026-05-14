@@ -9,7 +9,7 @@
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
     linear-gradient(180deg, #f4f8ff 0%, #eef4fb 100%);
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--body-font);
 }
 
 /* ========================================

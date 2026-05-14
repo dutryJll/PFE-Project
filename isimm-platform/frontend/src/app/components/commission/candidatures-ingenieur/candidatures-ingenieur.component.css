@@ -1,0 +1,593 @@
+/* ========================================
+   CONTAINER PRINCIPAL
+   ======================================== */
+.candidatures-ingenieur-container {
+  padding: 20px;
+  background: #f5f5f5;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ========================================
+   SECTION STATISTIQUES
+   ======================================== */
+.stats-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 28px;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  border-radius: 2px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-left: 4px solid #8b5cf6;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: #f3e8ff;
+  border-radius: 8px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #8b5cf6;
+}
+
+/* ========================================
+   SECTION FILTRES
+   ======================================== */
+.filters-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: flex-end;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.search-input,
+.filter-select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #2c3e50;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.search-input::placeholder {
+  color: #bdc3c7;
+}
+
+.btn-reset {
+  padding: 10px 20px;
+  background: #f0f0f0;
+  color: #2c3e50;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-reset:hover {
+  background: #e0e0e0;
+  border-color: #999;
+}
+
+/* ========================================
+   SECTION CAROUSEL
+   ======================================== */
+.carousel-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.carousel-header {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.carousel-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.carousel-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-nav {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.carousel-counter {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.carousel-content {
+  padding: 30px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   CANDIDAT CARD
+   ======================================== */
+.candidat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.card-section {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 20px;
+}
+
+.card-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.card-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* ========================================
+   INFO GRID
+   ======================================== */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.info-item p {
+  font-size: 15px;
+  color: #2c3e50;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ========================================
+   SPÉCIALITÉ BADGE
+   ======================================== */
+.specialite-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+/* ========================================
+   SCORE DISPLAY
+   ======================================== */
+.score-display {
+  width: 100%;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.score-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #84cc16);
+  transition: all 0.3s ease;
+}
+
+.score-value {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ========================================
+   BADGES
+   ======================================== */
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.badge-complet {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-incomplet {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.badge-admis {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-rejete {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.badge-attente {
+  background: #dbeafe;
+  color: #0c2d6b;
+}
+
+/* ========================================
+   PIÈCES JUSTIFICATIVES
+   ======================================== */
+.pieces-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #ddd;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+/* doc-chip verified (ok) */
+.doc-chip.dc-v {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.doc-chip.dc-v .piece-icon {
+  color: #059669;
+  font-weight: 700;
+}
+
+/* doc-chip pending/missing */
+.doc-chip.dc-p {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.doc-chip.dc-p .piece-icon {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.piece-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+}
+
+.piece-nom {
+  display: flex;
+  align-items: center;
+}
+
+/* ========================================
+   ACTION BUTTONS
+   ======================================== */
+.action-section {
+  background: #f9f9f9;
+  padding: 20px;
+  margin: -20px -30px -30px -30px;
+  border-radius: 0 0 8px 8px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  flex: 1;
+  min-width: 150px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-accepter {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.btn-accepter:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-accepter:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-refuser {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.btn-refuser:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-refuser:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+.empty-state {
+  background: white;
+  border-radius: 8px;
+  padding: 60px 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #7f8c8d;
+  margin-bottom: 20px;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+@media (max-width: 768px) {
+  .candidatures-ingenieur-container {
+    padding: 15px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .filters-section {
+    grid-template-columns: 1fr;
+  }
+
+  .carousel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .carousel-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .carousel-content {
+    padding: 20px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-title {
+    font-size: 18px;
+  }
+
+  .carousel-header h3 {
+    font-size: 16px;
+  }
+
+  .carousel-counter {
+    min-width: 50px;
+    font-size: 12px;
+  }
+
+  .btn-nav {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .pieces-container {
+    gap: 8px;
+  }
+
+  .doc-chip {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}

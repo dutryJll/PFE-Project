@@ -242,34 +242,29 @@
       <div class="two-col">
         <div class="card">
           <div class="card-title">Notifications récentes</div>
-          <div class="notif-list">
-            <div class="notif-item unread">
-              <div class="notif-dot"></div>
+          <div class="notif-list" *ngIf="notificationsCandidat.length > 0; else dashboardNotificationsEmpty">
+            <div
+              class="notif-item"
+              *ngFor="let notification of notificationsCandidat.slice(0, 3)"
+              [class.unread]="!notification.lue"
+              (click)="switchView('notifications')"
+            >
+              <div class="notif-dot" [class.read]="notification.lue"></div>
               <div class="notif-content">
-                <div class="notif-title">Dossier en cours d'examen</div>
-                <div class="notif-sub">
-                  Votre dossier MRGL a été pris en charge par la commission
-                </div>
+                <div class="notif-title">{{ notification.titre }}</div>
+                <div class="notif-sub">{{ notification.message }}</div>
               </div>
-              <div class="notif-time">Il y a 2h</div>
-            </div>
-            <div class="notif-item unread">
-              <div class="notif-dot"></div>
-              <div class="notif-content">
-                <div class="notif-title">Pièce manquante détectée</div>
-                <div class="notif-sub">Votre CV n'a pas encore été déposé</div>
+              <div class="notif-time">
+                {{ notification.date | date: 'dd/MM HH:mm' }}
               </div>
-              <div class="notif-time">Hier</div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-dot read"></div>
-              <div class="notif-content">
-                <div class="notif-title">Candidature soumise avec succès</div>
-                <div class="notif-sub">Master Génie Logiciel 2025-2026</div>
-              </div>
-              <div class="notif-time">14/04</div>
             </div>
           </div>
+          <ng-template #dashboardNotificationsEmpty>
+            <div class="empty-notifications-state">
+              <strong>Aucune notification pour le moment.</strong>
+              <p>Les alertes de candidature, de dossier et de statut apparaîtront ici.</p>
+            </div>
+          </ng-template>
         </div>
 
         <div class="deadline-card">
@@ -2132,6 +2127,25 @@
           <h2>Notifications</h2>
           <p class="subtitle">Toutes vos alertes de preinscription, candidature et reclamation.</p>
           <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
+        </div>
+
+        <div class="status-rail">
+          <div class="status-pill status-pill--info">
+            <span>Soumises</span>
+            <strong>{{ countByStatut('soumis') }}</strong>
+          </div>
+          <div class="status-pill status-pill--warning">
+            <span>En examen</span>
+            <strong>{{ countByStatut('sous_examen') }}</strong>
+          </div>
+          <div class="status-pill status-pill--success">
+            <span>Admis / sélectionnés</span>
+            <strong>{{ countByStatut('selectionne') + countByStatut('inscrit') }}</strong>
+          </div>
+          <div class="status-pill status-pill--danger">
+            <span>Rejetés</span>
+            <strong>{{ countByStatut('rejete') }}</strong>
+          </div>
         </div>
 
         <div class="notifications-kpi-grid">

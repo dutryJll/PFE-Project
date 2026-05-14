@@ -18,6 +18,8 @@ import {
   OffreMasterDialogComponent,
   OffreMasterDialogData,
 } from '../offre-master-dialog/offre-master-dialog.component';
+import { CandidaturesMasterComponent } from '../candidatures-master/candidatures-master.component';
+import { CandidaturesIngenieurComponent } from '../candidatures-ingenieur/candidatures-ingenieur.component';
 
 interface Candidature {
   id: number;
@@ -170,10 +172,13 @@ interface DossierOCR {
 interface CandidatureVoteAvis {
   membreNom: string;
   role: 'membre' | 'responsable';
-  recommandation: 'favorable' | 'defavorable' | 'reserve';
+  avis?: boolean;
+  recommandation?: 'favorable' | 'defavorable' | 'reserve';
   commentaire: string;
+  argument?: string;
   date: string;
   diplomeConforme?: boolean;
+  commissionName?: string;
 }
 
 interface InscriptionVerificationRow {
@@ -284,7 +289,8 @@ type CommissionView =
   | 'deliberations'
   | 'reclamations'
   | 'notifications'
-  | 'ma-commission';
+  | 'ma-commission'
+  | 'offre-wizard';
 
 type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx';
 type ExportRow = Record<string, string | number | boolean | null | undefined>;
@@ -425,7 +431,15 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
-  imports: [CommonModule, FormsModule, SkeletonLoaderComponent, MatDialogModule, MatCardModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SkeletonLoaderComponent,
+    MatDialogModule,
+    MatCardModule,
+    CandidaturesMasterComponent,
+    CandidaturesIngenieurComponent,
+  ],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
 })
@@ -1730,9 +1744,8 @@ export class DashboardCommissionComponent implements OnInit {
   // Modal avis
   showModalAvis: boolean = false;
   candidatureSelectionnee: Candidature | null = null;
-  avisText: string = '';
-  avisRecommandation: string = 'favorable';
-  avisDiplomeConforme: 'conforme' | 'non_conforme' = 'conforme';
+  avisArgument: string = '';
+  avisRecommandation: 'favorable' | 'defavorable' = 'favorable';
   showModalConsultation: boolean = false;
   candidatureConsultationSelectionnee: Candidature | null = null;
   showModalAvisListe: boolean = false;
@@ -3287,8 +3300,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.filtres.concours = 'masters';
-    this.switchView('candidatures');
-    this.appliquerFiltres();
+    this.switchView('candidatures-master');
   }
 
   openCandidaturesIngenieurMenu(): void {
@@ -3297,16 +3309,12 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    if (this.isResponsable) {
-      this.filtres.concours = 'ingenieur';
-      this.switchView('candidatures-ingenieur');
-      this.appliquerFiltresResponsable();
-      return;
-    }
-
     this.filtres.concours = 'ingenieur';
-    this.switchView('candidatures');
-    this.appliquerFiltres();
+    this.switchView('candidatures-ingenieur');
+  }
+
+  allerOffreWizard(): void {
+    this.router.navigate(['/commission/offre-wizard/new']);
   }
 
   getCandidaturesResponsableByType(type: 'masters' | 'ingenieur'): Candidature[] {
@@ -5222,17 +5230,16 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.candidatureSelectionnee = candidature;
-    this.avisText = candidature.avis || '';
+    this.avisArgument = '';
     this.avisRecommandation = 'favorable';
-    this.avisDiplomeConforme = 'conforme';
     this.showModalAvis = true;
   }
 
   fermerModalAvis(): void {
     this.showModalAvis = false;
     this.candidatureSelectionnee = null;
-    this.avisText = '';
-    this.avisDiplomeConforme = 'conforme';
+    this.avisArgument = '';
+    this.avisRecommandation = 'favorable';
   }
 
   ouvrirModalAvisListe(liste: Liste): void {
@@ -5279,59 +5286,65 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    if (!this.avisText.trim()) {
-      this.showAlertMessage('❌ Veuillez saisir un avis');
+    if (this.avisRecommandation === 'defavorable' && !this.avisArgument.trim()) {
+      this.showAlertMessage('❌ Veuillez saisir un argument pour un avis défavorable');
       return;
     }
 
-    const token = this.authService.getAccessToken();
+    const candidatureId = this.candidatureSelectionnee?.id;
+    if (!candidatureId) {
+      this.showAlertMessage('❌ Aucune candidature sélectionnée');
+      return;
+    }
 
-    this.http
-      .post(
-        `http://localhost:8003/api/candidatures/${this.candidatureSelectionnee?.id}/avis/`,
-        {
-          avis: this.avisText,
-          recommandation: this.avisRecommandation,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .subscribe({
-        next: () => {
-          this.showAlertMessage('✅ Avis enregistré avec succès !');
+    const activeCommissionIdRaw = localStorage.getItem('active_commission_id');
+    const activeCommissionId = activeCommissionIdRaw ? Number(activeCommissionIdRaw) : null;
 
-          if (this.candidatureSelectionnee) {
-            const candidatureId = this.candidatureSelectionnee.id;
-            const existingVotes = this.candidatureVotes[candidatureId] || [];
-            const membreNom = this.currentUser?.username || this.currentUser?.email || 'Membre';
-            const filteredVotes = existingVotes.filter((vote) => vote.membreNom !== membreNom);
+    const payload: { avis: boolean; argument: string; commission_id?: number } = {
+      avis: this.avisRecommandation === 'favorable',
+      argument: this.avisArgument.trim(),
+    };
 
-            this.candidatureVotes[candidatureId] = [
-              ...filteredVotes,
-              {
-                membreNom,
-                role: this.isResponsable ? 'responsable' : 'membre',
-                recommandation: this.avisRecommandation as 'favorable' | 'defavorable' | 'reserve',
-                commentaire: `${this.avisText.trim()} | Diplôme ${this.avisDiplomeConforme === 'conforme' ? 'conforme' : 'non conforme'}`,
-                date: new Date().toISOString(),
-                diplomeConforme: this.avisDiplomeConforme === 'conforme',
-              },
-            ];
+    if (Number.isFinite(activeCommissionId as number)) {
+      payload.commission_id = activeCommissionId as number;
+    }
 
-            const index = this.candidatures.findIndex(
-              (c) => c.id === this.candidatureSelectionnee!.id,
-            );
-            if (index !== -1) {
-              this.candidatures[index].avis = this.avisText;
-            }
-          }
+    this.candidatureService.submitAvis(candidatureId, payload).subscribe({
+      next: (response: any) => {
+        this.showAlertMessage(response?.message || '✅ Avis enregistré avec succès !');
 
-          this.fermerModalAvis();
-        },
-        error: (error) => {
-          console.error('Erreur:', error);
-          this.showAlertMessage("❌ Erreur lors de l'enregistrement de l'avis");
-        },
-      });
+        const existingVotes = this.candidatureVotes[candidatureId] || [];
+        const membreNom = this.currentUser?.first_name && this.currentUser?.last_name
+          ? `${this.currentUser.first_name} ${this.currentUser.last_name}`
+          : this.currentUser?.username || this.currentUser?.email || 'Membre';
+        const commissionName = activeCommissionId ? `Commission #${activeCommissionId}` : 'Commission';
+
+        this.candidatureVotes[candidatureId] = [
+          ...existingVotes.filter((vote) => vote.membreNom !== membreNom),
+          {
+            membreNom,
+            role: this.isResponsable ? 'responsable' : 'membre',
+            avis: payload.avis,
+            recommandation: payload.avis ? 'favorable' : 'defavorable',
+            commentaire: payload.argument || 'Sans argument',
+            argument: payload.argument,
+            date: new Date().toISOString(),
+            commissionName,
+          },
+        ];
+
+        const index = this.candidatures.findIndex((c) => c.id === candidatureId);
+        if (index !== -1) {
+          this.candidatures[index].avis = payload.argument || this.candidatures[index].avis;
+        }
+
+        this.fermerModalAvis();
+      },
+      error: (error) => {
+        console.error('Erreur:', error);
+        this.showAlertMessage(error?.error?.error || "❌ Erreur lors de l'enregistrement de l'avis");
+      },
+    });
   }
 
   getVotesForCandidature(candidatureId: number): CandidatureVoteAvis[] {
@@ -5348,14 +5361,12 @@ export class DashboardCommissionComponent implements OnInit {
       .map((vote) => {
         const role = vote.role === 'responsable' ? 'Responsable' : 'Membre';
         const recomm =
-          vote.recommandation === 'favorable'
+          vote.avis === true || vote.recommandation === 'favorable'
             ? 'Favorable'
-            : vote.recommandation === 'defavorable'
-              ? 'Défavorable'
-              : 'Réserve';
-        const diplome =
-          vote.diplomeConforme === false ? 'Diplôme non conforme' : 'Diplôme conforme';
-        return `${role} ${vote.membreNom}: ${recomm} (${diplome})`;
+            : 'Défavorable';
+        const argument = (vote.argument || vote.commentaire || '').trim();
+        const commission = vote.commissionName ? ` · ${vote.commissionName}` : '';
+        return `${role} ${vote.membreNom}${commission}: ${recomm}${argument ? ` (${argument})` : ''}`;
       })
       .join(' | ');
   }

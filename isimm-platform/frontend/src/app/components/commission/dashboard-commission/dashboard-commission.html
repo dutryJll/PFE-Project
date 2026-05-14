@@ -63,13 +63,22 @@
         <span>Offre De Préinscription</span>
       </a>
 
+      <a
+        class="nav-item"
+        [class.active]="currentView === 'offre-wizard'"
+        (click)="allerOffreWizard()"
+      >
+        <i class="fas fa-wand-magic-sparkles"></i>
+        <span>Créer Offre (Wizard)</span>
+      </a>
+
       <!-- ÉVALUATION -->
       <div class="nav-section-title">ÉVALUATION</div>
 
       <a
         class="nav-item"
         [class.active]="
-          currentView === 'candidatures' || currentView === 'candidatures-responsable'
+          currentView === 'candidatures' || currentView === 'candidatures-responsable' || currentView === 'candidatures-master'
         "
         [class.disabled]="!canOpenCandidaturesMasterMenu()"
         (click)="openCandidaturesMasterMenu()"
@@ -1386,8 +1395,14 @@
       "
       class="view-content"
     >
+      <!-- COMPOSANT CANDIDATURES MASTER -->
+      <div *ngIf="isCurrentView('candidatures-master')" class="section" style="background: #f5f5f5">
+        <app-candidatures-master></app-candidatures-master>
+      </div>
+
+      <!-- ANCIEN CONTENU CANDIDATURES (POUR BACKWARD COMPATIBILITY) -->
       <div
-        *ngIf="isCurrentView('candidatures-master') || currentView === 'candidatures'"
+        *ngIf="!isCurrentView('candidatures-master') && currentView === 'candidatures'"
         class="section"
         style="min-height: 60vh; background: #fff"
       >
@@ -4501,8 +4516,15 @@
           </script>
         </div>
       </div>
+
+      <!-- COMPOSANT CANDIDATURES INGÉNIEUR -->
+      <div *ngIf="isCurrentView('candidatures-ingenieur')" class="section" style="background: #f5f5f5">
+        <app-candidatures-ingenieur></app-candidatures-ingenieur>
+      </div>
+
+      <!-- CONTENU ALTERNATIF POUR AUTRE VUES DE CANDIDATURES -->
       <div
-        *ngIf="!isCurrentView('candidatures-master') && currentView !== 'candidatures'"
+        *ngIf="!isCurrentView('candidatures-master') && currentView !== 'candidatures' && !isCurrentView('candidatures-ingenieur')"
         class="section"
       >
         <div class="section-title">
@@ -8678,10 +8700,7 @@
             </div>
             <div class="avis-list">
               <div class="avis-item" *ngFor="let vote of getVotesForCandidature(c.id)">
-                <div
-                  class="avis-avatar"
-                  [ngClass]="vote.diplomeConforme ? 'av-green' : 'av-orange'"
-                >
+                <div class="avis-avatar" [ngClass]="vote.avis ? 'av-green' : 'av-orange'">
                   {{ (vote.membreNom || 'XX').charAt(0)
                   }}{{ ((vote.membreNom || 'XX').split(' ')[1] || '').charAt(0) }}
                 </div>
@@ -8692,25 +8711,23 @@
                       >· {{ vote.role === 'responsable' ? 'Évaluateur' : 'Évaluatrice' }}</span
                     >
                   </div>
-                  <div class="avis-comment">{{ vote.commentaire }}</div>
+                  <div class="avis-comment">
+                    {{ vote.argument || vote.commentaire || 'Aucun argument renseigné' }}
+                  </div>
                 </div>
                 <div>
                   <div
                     class="avis-badge"
                     [ngClass]="
-                      vote.recommandation === 'favorable'
+                      vote.avis === true || vote.recommandation === 'favorable'
                         ? 'ab-fav'
-                        : vote.recommandation === 'reserve'
-                          ? 'ab-res'
-                          : ''
+                        : 'ab-def'
                     "
                   >
                     {{
-                      vote.recommandation === 'favorable'
+                      vote.avis === true || vote.recommandation === 'favorable'
                         ? 'Favorable'
-                        : vote.recommandation === 'reserve'
-                          ? 'Réservé'
-                          : 'Défavorable'
+                        : 'Défavorable'
                     }}
                   </div>
                 </div>
@@ -8722,7 +8739,7 @@
 
           <div>
             <div class="section-lbl">
-              Votre recommandation <span style="color: #e24b4a">*</span>
+              Votre avis <span style="color: #e24b4a">*</span>
             </div>
             <div class="recomm-grid">
               <button
@@ -8733,17 +8750,6 @@
               >
                 <div class="rec-icon ri-fav"><i class="fas fa-check" style="color: #fff"></i></div>
                 <div class="rec-label">Favorable</div>
-              </button>
-              <button
-                type="button"
-                class="rec-btn"
-                [ngClass]="{ 'active-res': avisRecommandation === 'reserve' }"
-                (click)="avisRecommandation = 'reserve'"
-              >
-                <div class="rec-icon ri-res" style="background: #ba7517">
-                  <i class="fas fa-minus" style="color: #fff"></i>
-                </div>
-                <div class="rec-label">Réservé</div>
               </button>
               <button
                 type="button"
@@ -8759,45 +8765,21 @@
 
           <div>
             <div class="section-lbl">
-              Diplôme requis conforme ? <span style="color: #e24b4a">*</span>
-            </div>
-            <div class="diplome-row">
-              <button
-                type="button"
-                class="dip-btn"
-                [ngClass]="{ 'active-ok': avisDiplomeConforme === 'conforme' }"
-                (click)="avisDiplomeConforme = 'conforme'"
-              >
-                <span class="dip-dot dot-ok"></span>
-                Conforme
-              </button>
-              <button
-                type="button"
-                class="dip-btn"
-                [ngClass]="{ 'active-nok': avisDiplomeConforme === 'non_conforme' }"
-                (click)="avisDiplomeConforme = 'non_conforme'"
-              >
-                <span class="dip-dot dot-nok"></span>
-                Non conforme
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div class="section-lbl">
-              Commentaire <span style="color: var(--color-text-secondary)">(optionnel)</span>
+              Argument
+              <span *ngIf="avisRecommandation === 'defavorable'" style="color: #e24b4a">*</span>
+              <span *ngIf="avisRecommandation !== 'defavorable'" style="color: var(--color-text-secondary)">(optionnel)</span>
             </div>
             <textarea
               class="note-area"
               id="note-area"
               rows="3"
-              [(ngModel)]="avisText"
-              name="avisText"
+              [(ngModel)]="avisArgument"
+              name="avisArgument"
               placeholder="Détaillez votre avis..."
               maxlength="400"
             ></textarea>
             <div class="char-count">
-              {{ avisText && avisText.length ? avisText.length : 0 }} / 400 caractères
+              {{ avisArgument && avisArgument.length ? avisArgument.length : 0 }} / 400 caractères
             </div>
           </div>
 
@@ -8812,13 +8794,11 @@
 
           <div class="modal-ftr">
             <div class="ftr-left" id="ftr-status">
-              Recommandation sélectionnée :
+              Avis sélectionné :
               <strong>{{
                 avisRecommandation === 'favorable'
                   ? 'Favorable'
-                  : avisRecommandation === 'reserve'
-                    ? 'Réservé'
-                    : 'Défavorable'
+                  : 'Défavorable'
               }}</strong>
             </div>
             <div class="ftr-btns">
@@ -8829,7 +8809,7 @@
                 type="submit"
                 class="btn btn-save"
                 id="btn-save"
-                [disabled]="!(avisText && avisText.trim())"
+                [disabled]="avisRecommandation === 'defavorable' && !(avisArgument && avisArgument.trim())"
               >
                 <i class="fas fa-check"></i> Enregistrer mon avis
               </button>

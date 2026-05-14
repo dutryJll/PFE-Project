@@ -19,7 +19,7 @@
     radial-gradient(circle at 14% 24%, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0) 42%),
     radial-gradient(circle at 86% 85%, rgba(217, 119, 6, 0.22), rgba(217, 119, 6, 0) 40%),
     linear-gradient(145deg, var(--bg-start) 0%, var(--bg-end) 74%);
-  font-family: 'Manrope', 'Trebuchet MS', sans-serif;
+  font-family: var(--body-font);
 }
 
 .login-admin-page::before {

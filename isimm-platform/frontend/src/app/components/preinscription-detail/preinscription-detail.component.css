@@ -5,7 +5,7 @@
     radial-gradient(circle at 8% 8%, rgba(44, 123, 229, 0.15), transparent 36%),
     radial-gradient(circle at 92% 88%, rgba(0, 153, 102, 0.12), transparent 40%), #f4f7fb;
   color: #1b2a3a;
-  font-family: 'Manrope', 'Trebuchet MS', sans-serif;
+  font-family: var(--body-font);
 }
 
 .detail-header {

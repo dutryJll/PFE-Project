@@ -127,7 +127,7 @@ export class CandidatureSpecialiteFormComponent implements OnInit {
       error: (error: any) => {
         console.error('Error loading specialites:', error);
         this.errorMessage = error.error?.error || 'Erreur lors du chargement des spécialités';
-        this.toastService.showError(this.errorMessage);
+        this.toastService.show(this.errorMessage, 'error');
         this.isLoading = false;
       },
     });
@@ -150,7 +150,7 @@ export class CandidatureSpecialiteFormComponent implements OnInit {
 
     // Here you would call a service method to update the candidature
     // For now, we'll just show a success message
-    this.toastService.showSuccess(`Spécialité '${selectedSpecialite}' enregistrée`);
+    this.toastService.show(`Spécialité '${selectedSpecialite}' enregistrée`, 'success');
 
     this.isSubmitting = false;
   }

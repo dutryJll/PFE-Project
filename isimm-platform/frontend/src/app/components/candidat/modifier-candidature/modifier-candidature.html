@@ -105,7 +105,7 @@
           <i class="fas fa-times"></i>
           Annuler
         </button>
-        <button class="btn-save" (click)="sauvegarder()">
+        <button class="btn-save" (click)="sauvegarder()" [disabled]="candidature?.peut_modifier === false">
           <i class="fas fa-save"></i>
           Enregistrer les modifications
         </button>

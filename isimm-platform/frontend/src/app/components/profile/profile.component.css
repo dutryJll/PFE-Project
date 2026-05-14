@@ -59,14 +59,14 @@
   margin-bottom: 1.5rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   border: 6px solid rgba(255, 255, 255, 0.2);
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--body-font);
 }
 
 .header-content h1 {
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0 0 0.5rem;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--body-font);
 }
 
 .user-email {
@@ -221,7 +221,7 @@
   font-size: 1rem;
   transition: all 0.3s;
   background: #f8fafc;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--body-font);
 }
 
 .input-group-modern input:focus,

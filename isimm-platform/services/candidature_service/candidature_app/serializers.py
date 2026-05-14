@@ -301,3 +301,35 @@ class AvisMembreSerializer(serializers.ModelSerializer):
 
     def get_avis_type(self, obj):
         return 'favorable' if obj.avis else 'defavorable'
+
+
+class MembreCommissionSerializer(serializers.ModelSerializer):
+    commission_name = serializers.CharField(source='commission.nom', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    member_name = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import MembreCommission as _MembreCommission
+
+        model = _MembreCommission
+        fields = [
+            'id',
+            'commission',
+            'commission_name',
+            'user',
+            'user_id',
+            'first_name',
+            'last_name',
+            'member_name',
+            'email',
+            'role',
+            'date_nomination',
+            'actif',
+        ]
+
+    def get_member_name(self, obj):
+        full_name = f"{getattr(obj.user, 'first_name', '')} {getattr(obj.user, 'last_name', '')}".strip()
+        return full_name or getattr(obj.user, 'username', '') or getattr(obj.user, 'email', '')

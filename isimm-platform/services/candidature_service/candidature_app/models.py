@@ -658,13 +658,13 @@ class AvisMembre(models.Model):
     """
     membre = models.ForeignKey(MembreCommission, on_delete=models.CASCADE, related_name='avis')
     candidature = models.ForeignKey(Candidature, on_delete=models.CASCADE, related_name='avis_membres')
-    commission = models.ForeignKey(Commission, on_delete=models.CASCADE, null=True, blank=True, related_name='avis')
+    commission = models.ForeignKey(Commission, on_delete=models.CASCADE, related_name='avis_membres')
     avis = models.BooleanField()
     argument = models.TextField(blank=True)
     date_avis = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ['membre', 'candidature']
+        unique_together = ['membre', 'candidature', 'commission']
         ordering = ['-date_avis']
         indexes = [
             models.Index(fields=['commission', 'date_avis']),
@@ -1710,20 +1710,6 @@ def archiver_candidatures_annee_precedente():
     return count_archive
 
 
-# Model: AvisMembre — avis d'un membre de commission sur une candidature
-class AvisMembre(models.Model):
-    membre = models.ForeignKey(MembreCommission, on_delete=models.CASCADE, related_name='avis')
-    candidature = models.ForeignKey(Candidature, on_delete=models.CASCADE, related_name='avis_membres')
-    commission = models.ForeignKey(Commission, on_delete=models.CASCADE, related_name='avis_membres')
-    avis = models.BooleanField(help_text='True = favorable, False = défavorable')
-    argument = models.TextField(blank=True)
-    date_avis = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ['membre', 'candidature', 'commission']
-
-    def __str__(self):
-        return f"Avis {self.pk}: {self.candidature.numero} - {self.membre.user.get_full_name()} - {'Favorable' if self.avis else 'Défavorable'}"
 class DocumentType(models.Model):
     """Types de documents accept�s par master"""
     TYPE_CHOICES = [
@@ -1881,3 +1867,141 @@ class Dossier(models.Model):
         
         self.save()
         return self.score_completude
+
+class SpecialiteParcoursMapping(models.Model):
+    """
+    Mappe les spécialités (licences) requises pour chaque parcours (Master ou Cycle Ingénieur).
+    
+    Exemples:
+    - Master DS: Lic Mathématiques Appliquées, Lic Sciences de l'Informatique, etc.
+    - Master GL: Lic Informatique, Lic Informatique de Gestion, etc.
+    - Master 3I: Lic Électronique, Lic MIM, etc.
+    """
+    # Référence au Master ou à un type de formation (pour Cycle Ingénieur)
+    master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='specialites_requises', null=True, blank=True)
+    
+    # Type de formation: 'master' ou 'ingenieur'
+    type_formation = models.CharField(max_length=20, choices=[
+        ('master', 'Master'),
+        ('ingenieur', 'Cycle Ingénieur'),
+    ], default='master')
+    
+    # Code du parcours (ex: MPDS, MPGL, MP3I, MRGL, MRMI, ING_APPLI)
+    code_parcours = models.CharField(max_length=50)
+    nom_parcours = models.CharField(max_length=200)  # ex: "Master Professionnel Data Science"
+    
+    # Liste des spécialités requises (en JSON pour flexibilité)
+    # Format: [
+    #   {"nom": "Licence en Mathématiques Appliquées", "abreviation": "LMA"},
+    #   {"nom": "Licence en Sciences de l'Informatique", "abreviation": "LSI"},
+    # ]
+    specialites = models.JSONField(default=list, blank=True)
+    
+    # Numéro d'ordre d'affichage
+    ordre = models.IntegerField(default=0)
+    
+    actif = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['ordre', 'nom_parcours']
+        unique_together = ['code_parcours', 'type_formation']
+        indexes = [
+            models.Index(fields=['code_parcours']),
+            models.Index(fields=['type_formation']),
+        ]
+    
+    def __str__(self):
+        return f"{self.nom_parcours} ({self.code_parcours})"
+
+
+class StatusHistory(models.Model):
+    """
+    Historique des changements de statut pour chaque candidature.
+    Permet de tracker le workflow complet d'une candidature.
+    """
+    STATUT_TYPES = [
+        ('soumis', 'Soumis'),
+        ('annule', 'Annulé'),
+        ('sous_examen', 'Sous examen'),
+        ('rejete', 'Rejeté/Invalide'),
+        ('preselectionne', 'Présélectionné'),
+        ('en_attente_dossier', 'En attente de dossier numérique'),
+        ('dossier_non_depose', 'Dossier non déposé'),
+        ('dossier_depose', 'Dossier déposé'),
+        ('en_attente', 'En attente'),
+        ('selectionne', 'Sélectionné/Admis'),
+        ('inscrit', 'Inscrit'),
+    ]
+    
+    candidature = models.ForeignKey(
+        Candidature,
+        on_delete=models.CASCADE,
+        related_name='status_history'
+    )
+    ancien_statut = models.CharField(max_length=30, choices=STATUT_TYPES, null=True, blank=True)
+    nouveau_statut = models.CharField(max_length=30, choices=STATUT_TYPES)
+    
+    raison = models.TextField(blank=True, help_text="Raison du changement de statut")
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='status_changes_made'
+    )
+    
+    date_changement = models.DateTimeField(auto_now_add=True)
+    notification_envoyee = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-date_changement']
+        indexes = [
+            models.Index(fields=['candidature', '-date_changement']),
+            models.Index(fields=['nouveau_statut']),
+        ]
+    
+    def __str__(self):
+        return f"{self.candidature.numero}: {self.ancien_statut} → {self.nouveau_statut}"
+
+
+class NotificationQueue(models.Model):
+    """
+    Queue des notifications à envoyer (in-app et email).
+    Permet de gérer les envois asynchrones sans bloquer les endpoints.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'En attente'),
+        ('sent', 'Envoyée'),
+        ('failed', 'Échouée'),
+    ]
+    
+    notification = models.OneToOneField(
+        Notification,
+        on_delete=models.CASCADE,
+        related_name='queue_entry'
+    )
+    email = models.EmailField()
+    subject = models.CharField(max_length=255)
+    body_text = models.TextField()
+    body_html = models.TextField(null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    retry_count = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Notification {self.notification_id} - {self.status}"
+    
+    def get_specialites_list(self):
+        """Retourne la liste des spécialités sous forme de strings."""
+        return [s['nom'] for s in self.specialites if isinstance(s, dict) and 'nom' in s]

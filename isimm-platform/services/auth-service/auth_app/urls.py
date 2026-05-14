@@ -24,4 +24,8 @@ urlpatterns = [
     path('admin/action-roles/matrix/', views.action_roles_matrix, name='action_roles_matrix'),
     path('admin/action-roles/matrix/update/', views.update_action_roles_matrix, name='update_action_roles_matrix'),
     path('my-actions/', views.my_enabled_actions, name='my_enabled_actions'),
+    
+    # ÉTAPE 3: Commissions multiples
+    path('my-commissions/', views.my_commissions, name='my_commissions'),
+    path('select-commission/', views.select_commission, name='select_commission'),
 ]

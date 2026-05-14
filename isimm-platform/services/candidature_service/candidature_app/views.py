@@ -40,6 +40,7 @@ from .models import (
     InscriptionEnLigne,
     InscriptionRapprochementAudit,
     Notification,
+    SpecialiteParcoursMapping,
 )
 from .services import (
     GestionListesService,
@@ -57,6 +58,8 @@ from .serializers import (
     OffreMasterSerializer,
     UserUpdateSerializer,
     AvisMembreSerializer,
+    MembreCommissionSerializer,
+    UserSerializer,
 )
 from .emails import (
     envoyer_email_changement_statut,
@@ -346,6 +349,72 @@ def _validate_formulaire_commission(configuration, formulaire_payload):
         }
 
     return {'ok': True}
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def commission_members_list(request, commission_id):
+    commission = get_object_or_404(Commission, id=commission_id)
+    membres = MembreCommission.objects.filter(commission=commission).select_related('user')
+    serializer = MembreCommissionSerializer(membres, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+def _is_user_responsable_for_commission(user, commission):
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    if getattr(user, 'is_staff', False):
+        return True
+    return MembreCommission.objects.filter(commission=commission, user=user, role__icontains='responsable').exists()
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def commission_add_member(request, commission_id):
+    commission = get_object_or_404(Commission, id=commission_id)
+    if not _is_user_responsable_for_commission(request.user, commission):
+        return Response({'detail': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    user_id = request.data.get('user_id')
+    role = request.data.get('role', 'membre')
+    if not user_id:
+        return Response({'detail': 'user_id requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.get(id=int(user_id))
+    except Exception:
+        return Response({'detail': 'Utilisateur introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        with transaction.atomic():
+            membre = MembreCommission.objects.create(commission=commission, user=user, role=role)
+    except IntegrityError:
+        return Response({'detail': 'L utilisateur est deja membre de cette commission'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception('Erreur ajout membre commission')
+        return Response({'detail': 'Erreur serveur'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    serializer = MembreCommissionSerializer(membre, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def commission_remove_member(request, commission_id, membre_id):
+    commission = get_object_or_404(Commission, id=commission_id)
+    if not _is_user_responsable_for_commission(request.user, commission):
+        return Response({'detail': 'Acces refuse'}, status=status.HTTP_403_FORBIDDEN)
+
+    membre = get_object_or_404(MembreCommission, id=membre_id, commission=commission)
+    try:
+        membre.delete()
+    except Exception:
+        logger.exception('Erreur suppression membre commission')
+        return Response({'detail': 'Erreur serveur'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'detail': 'Membre supprime'}, status=status.HTTP_200_OK)
 
 
 def _normalize_offre_rich_content(payload, offer_id):
@@ -1072,8 +1141,6 @@ def mes_notifications(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def marquer_toutes_notifications_lues(request):
     """Mark all unread notifications as read for the current user."""
     unread_count = Notification.objects.filter(
@@ -1087,6 +1154,8 @@ def marquer_toutes_notifications_lues(request):
     })
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def marquer_notification_lue(request, notification_id):
     try:
         notification = Notification.objects.get(id=notification_id, user=request.user)
@@ -1118,12 +1187,18 @@ def preview_score_candidature(request):
     try:
         master = Master.objects.select_related('formule_score').get(id=master_id)
     except Master.DoesNotExist:
-        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Master non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as exc:
+        logger.exception("Erreur retrieving Master for preview_score_candidature: %s", exc)
+        return Response(
+            {'error': "Erreur interne: impossible de récupérer le master. Réessayez plus tard."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     formule = getattr(master, 'formule_score', None)
     if formule is None:
         return Response(
-            {'error': 'Aucune formule de score est definie pour ce master'},
+            {'error': 'Aucune formule de score est définie pour ce master'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -1151,6 +1226,7 @@ def preview_score_candidature(request):
                 return 0.0
             return sum(cleaned) / len(cleaned)
 
+        # Validate that academic_data sections are dictionaries
         common = academic_data.get('common', {}) if isinstance(academic_data.get('common'), dict) else {}
         gl_ds = academic_data.get('glDs', {}) if isinstance(academic_data.get('glDs'), dict) else {}
         i3 = academic_data.get('i3', {}) if isinstance(academic_data.get('i3'), dict) else {}
@@ -1164,54 +1240,70 @@ def preview_score_candidature(request):
         payload['payload'] = academic_data
         payload['session_reussite'] = common.get('session')
 
-        if formation_code in {'MPGL', 'MPDS'}:
-            moyenne_generale = _avg([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')])
-            payload['moyenne_generale'] = round(moyenne_generale, 2)
-            payload['moyenne_specialite'] = round(moyenne_generale, 2)
-            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', 0), 0))
-        elif formation_code == 'MP3I':
-            moyenne_generale = _avg([i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')])
-            payload['moyenne_generale'] = round(moyenne_generale, 2)
-            payload['moyenne_specialite'] = round(_as_float(i3.get('moyBac'), moyenne_generale), 2)
-            payload['nb_redoublements'] = int(_as_float(i3.get('nombreRedoublement', common.get('redoublements', 0)), 0))
-        elif formation_code == 'MRGL':
-            parcours = academic_data.get('mrglParcours', 'licence')
-            if parcours == 'maitrise':
-                moyenne_generale = _avg([mrgl_maitrise.get('moy1'), mrgl_maitrise.get('moy2'), mrgl_maitrise.get('moy3'), mrgl_maitrise.get('moy4')])
-                payload['moyenne_generale'] = round(moyenne_generale, 2)
-                payload['moyenne_specialite'] = round(_as_float(mrgl_maitrise.get('moyBac'), moyenne_generale), 2)
-            else:
-                moyenne_generale = _avg([mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')])
-                payload['moyenne_generale'] = round(moyenne_generale, 2)
-                payload['moyenne_specialite'] = round(_as_float(mrgl_licence.get('moyBac'), moyenne_generale), 2)
-            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrgl_licence.get('nombreRedoublement', 0)), 0))
-        elif formation_code == 'MRMI':
-            parcours = academic_data.get('mrmiParcours', 'cas1')
-            if parcours == 'cas2':
-                moyenne_generale = _as_float(mrmi_cas2.get('moyIng1'), 0.0)
+        try:
+            if formation_code in {'MPGL', 'MPDS'}:
+                moyenne_generale = _avg([gl_ds.get('moy1'), gl_ds.get('moy2'), gl_ds.get('moy3')])
                 payload['moyenne_generale'] = round(moyenne_generale, 2)
                 payload['moyenne_specialite'] = round(moyenne_generale, 2)
-            else:
-                moyenne_generale = _avg([mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')])
+                payload['nb_redoublements'] = int(_as_float(common.get('redoublements', 0), 0))
+            elif formation_code == 'MP3I':
+                moyenne_generale = _avg([i3.get('moyL1'), i3.get('moyL2'), i3.get('moyL3')])
                 payload['moyenne_generale'] = round(moyenne_generale, 2)
-                payload['moyenne_specialite'] = round(_as_float(mrmi_cas1.get('moyBac'), moyenne_generale), 2)
-            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrmi_cas1.get('nombreRedoublement', 0)), 0))
-        elif formation_code in {'ING_INFO_GL', 'ING_EM'}:
-            parcours = academic_data.get('ingParcours', 'cas1')
-            if parcours == 'cas2':
-                moyenne_generale = _avg([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')])
-            else:
-                moyenne_generale = _avg([ing_cas1.get('moy1'), ing_cas1.get('moy2')])
-            payload['moyenne_generale'] = round(moyenne_generale, 2)
-            payload['moyenne_specialite'] = round(moyenne_generale, 2)
-            payload['nb_redoublements'] = int(_as_float(common.get('redoublements', ing_cas1.get('nombreRedoublement', 0)), 0))
+                payload['moyenne_specialite'] = round(_as_float(i3.get('moyBac'), moyenne_generale), 2)
+                payload['nb_redoublements'] = int(_as_float(i3.get('nombreRedoublement', common.get('redoublements', 0)), 0))
+            elif formation_code == 'MRGL':
+                parcours = academic_data.get('mrglParcours', 'licence')
+                if parcours == 'maitrise':
+                    moyenne_generale = _avg([mrgl_maitrise.get('moy1'), mrgl_maitrise.get('moy2'), mrgl_maitrise.get('moy3'), mrgl_maitrise.get('moy4')])
+                    payload['moyenne_generale'] = round(moyenne_generale, 2)
+                    payload['moyenne_specialite'] = round(_as_float(mrgl_maitrise.get('moyBac'), moyenne_generale), 2)
+                else:
+                    moyenne_generale = _avg([mrgl_licence.get('moy1'), mrgl_licence.get('moy2'), mrgl_licence.get('moy3')])
+                    payload['moyenne_generale'] = round(moyenne_generale, 2)
+                    payload['moyenne_specialite'] = round(_as_float(mrgl_licence.get('moyBac'), moyenne_generale), 2)
+                payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrgl_licence.get('nombreRedoublement', 0)), 0))
+            elif formation_code == 'MRMI':
+                parcours = academic_data.get('mrmiParcours', 'cas1')
+                if parcours == 'cas2':
+                    moyenne_generale = _as_float(mrmi_cas2.get('moyIng1'), 0.0)
+                    payload['moyenne_generale'] = round(moyenne_generale, 2)
+                    payload['moyenne_specialite'] = round(moyenne_generale, 2)
+                else:
+                    moyenne_generale = _avg([mrmi_cas1.get('moyL1'), mrmi_cas1.get('moyL2'), mrmi_cas1.get('moyL3')])
+                    payload['moyenne_generale'] = round(moyenne_generale, 2)
+                    payload['moyenne_specialite'] = round(_as_float(mrmi_cas1.get('moyBac'), moyenne_generale), 2)
+                payload['nb_redoublements'] = int(_as_float(common.get('redoublements', mrmi_cas1.get('nombreRedoublement', 0)), 0))
+            elif formation_code in {'ING_INFO_GL', 'ING_EM'}:
+                parcours = academic_data.get('ingParcours', 'cas1')
+                if parcours == 'cas2':
+                    moyenne_generale = _avg([ing_cas2.get('m1'), ing_cas2.get('m2'), ing_cas2.get('m3')])
+                else:
+                    moyenne_generale = _avg([ing_cas1.get('moy1'), ing_cas1.get('moy2')])
+                payload['moyenne_generale'] = round(moyenne_generale, 2)
+                payload['moyenne_specialite'] = round(moyenne_generale, 2)
+                payload['nb_redoublements'] = int(_as_float(common.get('redoublements', ing_cas1.get('nombreRedoublement', 0)), 0))
+        except (TypeError, ValueError) as e:
+            logger.error("Erreur validation données académiques: %s", e)
+            return Response(
+                {'error': 'Les données académiques contiennent des valeurs invalides. Vérifiez que toutes les moyennes sont des nombres.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     try:
         # Pass payload directly to calculate score
         score = formule.calculer_score(payload)
+    except (TypeError, ValueError) as e:
+        logger.error("Erreur calcul score (données invalides): %s", e)
+        return Response(
+            {'error': 'Erreur lors du calcul du score: données invalides. Vérifiez votre saisie.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as exc:
         logger.exception("Erreur preview_score_candidature: %s", exc)
-        return Response({'error': f'Erreur calcul score: {str(exc)}'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'Erreur interne lors du calcul du score. Réessayez plus tard.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     
     # Convert Decimal to float for JSON serialization
     if hasattr(score, 'real'):
@@ -5046,3 +5138,391 @@ def valider_paiement_enligne(request, inscription_id):
         {'error': 'Action invalide'},
         status=status.HTTP_400_BAD_REQUEST
     )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_candidatures(request):
+    try:
+        # User ID is passed in headers by the Gateway or available from the token
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return Response({'error': 'User ID not found'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        candidatures = Candidature.objects.filter(user_id=user_id)
+        serializer = CandidatureSerializer(candidatures, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_candidature_exists(request, master_id):
+    try:
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return Response({'error': 'User ID not found'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        exists = Candidature.objects.filter(user_id=user_id, master_id=master_id).exists()
+        return Response({'exists': exists})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_specialites_by_parcours(request):
+    """
+    API endpoint pour récupérer les spécialités requises pour un parcours spécifique.
+    
+    Query params:
+    - parcours_code: Code du parcours (ex: MPDS, MPGL, MP3I, MRGL, MRMI, ING_APPLI)
+    """
+    parcours_code = request.query_params.get('parcours_code')
+    
+    if not parcours_code:
+        return Response({'error': 'Paramètre parcours_code est requis'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        mapping = SpecialiteParcoursMapping.objects.get(
+            code_parcours=parcours_code,
+            actif=True
+        )
+        return Response({
+            'code_parcours': mapping.code_parcours,
+            'nom_parcours': mapping.nom_parcours,
+            'type_formation': mapping.type_formation,
+            'specialites': mapping.specialites,
+        })
+    except SpecialiteParcoursMapping.DoesNotExist:
+        return Response(
+            {'error': f'Parcours {parcours_code} non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_all_parcours(request):
+    """
+    API endpoint pour récupérer la liste de tous les parcours avec leurs spécialités.
+    
+    Query params optionnels:
+    - type_formation: Filtrer par type ('master' ou 'ingenieur')
+    """
+    type_formation = request.query_params.get('type_formation')
+    
+    query = SpecialiteParcoursMapping.objects.filter(actif=True).order_by('ordre', 'nom_parcours')
+    
+    if type_formation:
+        query = query.filter(type_formation=type_formation)
+    
+    parcours_list = [
+        {
+            'code_parcours': p.code_parcours,
+            'nom_parcours': p.nom_parcours,
+            'type_formation': p.type_formation,
+            'specialites': p.specialites,
+            'nombre_specialites': len(p.specialites) if p.specialites else 0,
+        }
+        for p in query
+    ]
+    
+    return Response(parcours_list)
+
+
+# ============================================================================
+# ÉTAPE 2: SYSTÈME DE STATUT + NOTIFICATIONS
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def changer_statut_candidature_endpoint(request, candidature_id):
+    """
+    Endpoint pour changer le statut d'une candidature et envoyer les notifications.
+    
+    Request body:
+    {
+        "nouveau_statut": "sous_examen",  # Requis
+        "raison": "Sélection par commission",  # Optionnel
+        "envoyer_notification": true  # Optionnel, défaut true
+    }
+    """
+    from .services_statut_notifications import StatutNotificationService
+    
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response(
+            {'error': f'Candidature {candidature_id} non trouvée'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Vérifier les permissions (admin ou responsable)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return Response(
+            {'error': 'Permissions insuffisantes pour changer un statut'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    data = request.data
+    nouveau_statut = data.get('nouveau_statut')
+    raison = data.get('raison', '')
+    envoyer_notification = data.get('envoyer_notification', True)
+    
+    if not nouveau_statut:
+        return Response(
+            {'error': 'Le paramètre "nouveau_statut" est requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        status_history = StatutNotificationService.changer_statut(
+            candidature=candidature,
+            nouveau_statut=nouveau_statut,
+            raison=raison,
+            changed_by=request.user,
+            envoyer_notification=envoyer_notification,
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Statut changé à {nouveau_statut}',
+            'candidature_numero': candidature.numero,
+            'ancien_statut': status_history.ancien_statut,
+            'nouveau_statut': status_history.nouveau_statut,
+            'date_changement': status_history.date_changement,
+            'notification_envoyee': status_history.notification_envoyee,
+        })
+    except ValueError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(
+            f"Erreur lors du changement de statut: {str(e)}",
+            exc_info=True
+        )
+        return Response(
+            {'error': 'Erreur interne du serveur'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recuperer_historique_statuts_endpoint(request, candidature_id):
+    """
+    Endpoint pour récupérer l'historique complet des changements de statut.
+    """
+    from .services_statut_notifications import StatutNotificationService
+    
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response(
+            {'error': f'Candidature {candidature_id} non trouvée'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Vérifier les permissions (candidat ou admin)
+    if candidature.candidat != request.user and not request.user.is_staff:
+        return Response(
+            {'error': 'Permissions insuffisantes'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        historique = StatutNotificationService.recuperer_historique_statuts(candidature)
+        
+        return Response({
+            'candidature_id': candidature.id,
+            'candidature_numero': candidature.numero,
+            'master': candidature.master.nom,
+            'statut_actuel': candidature.statut,
+            'historique': historique,
+            'total_changements': len(historique),
+        })
+    except Exception as e:
+        logger.error(
+            f"Erreur lors de la récupération de l'historique: {str(e)}",
+            exc_info=True
+        )
+        return Response(
+            {'error': 'Erreur interne du serveur'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# ============================================================================
+# ÉTAPE 3: SYSTÈME MULTI-COMMISSIONS - ENDPOINTS DE COMMISSION
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_commissions_from_candidature(request):
+    """
+    GET /api/commissions/my-commissions/
+    
+    Retourne la liste des commissions liées à l'utilisateur authentifié.
+    Appelé par auth-service pour lister les commissions disponibles.
+    
+    Query params:
+    - user_id (optionnel): ID de l'utilisateur. Si absent, utilise request.user.id
+    
+    Returns:
+    {
+        "success": true,
+        "user_id": 42,
+        "count": 2,
+        "commissions": [
+            {
+                "id": 1,
+                "nom": "Commission MPGL",
+                "description": "Commission Master Professionnel Génie Logiciel",
+                "master_id": 5,
+                "master_nom": "Master Professionnel en Ingenierie Logicielle",
+                "actif": true,
+                "role": "responsable"
+            }
+        ]
+    }
+    """
+    from django.db.models import Q
+    
+    user_id = request.query_params.get('user_id')
+    if user_id:
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'user_id invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    else:
+        user_id = request.user.id
+    
+    try:
+        # Récupérer toutes les commissions liées à l'utilisateur
+        commissions = Commission.objects.filter(
+            Q(membres__user_id=user_id, membres__actif=True) |
+            Q(membre_commission_links__user_id=user_id, membre_commission_links__actif=True)
+        ).distinct().select_related('master').filter(actif=True)
+        
+        data = []
+        for commission in commissions:
+            # Déterminer le rôle de l'utilisateur dans cette commission
+            membre_role = 'membre'
+            membre = MembreCommission.objects.filter(
+                commission=commission,
+                user_id=user_id,
+                actif=True
+            ).first()
+            if membre:
+                membre_role = membre.role or 'membre'
+            
+            data.append({
+                'id': commission.id,
+                'nom': commission.nom,
+                'description': commission.description or '',
+                'master_id': commission.master_id,
+                'master_nom': commission.master.nom if commission.master else '',
+                'actif': commission.actif,
+                'role': membre_role,
+            })
+        
+        return Response({
+            'success': True,
+            'user_id': user_id,
+            'count': len(data),
+            'commissions': data,
+        })
+    
+    except Exception as e:
+        logger.exception("Erreur get_my_commissions_from_candidature pour user %s: %s", user_id, e)
+        return Response(
+            {'error': f'Erreur serveur: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_commission_members_list(request):
+    """
+    GET /api/commissions/commission-members/?commission_id=<id>
+    
+    Retourne la liste des membres d'une commission spécifique.
+    Appelé par auth-service pour afficher les responsables et membres.
+    
+    Query params:
+    - commission_id (requis): ID de la commission
+    
+    Returns:
+    {
+        "success": true,
+        "commission_id": 1,
+        "commission_nom": "Commission MPGL",
+        "count": 3,
+        "members": [
+            {
+                "id": 1,
+                "user_id": 42,
+                "first_name": "Ahmed",
+                "last_name": "Ben Ali",
+                "email": "ahmed@isimm.tn",
+                "role": "responsable",
+                "date_nomination": "2024-01-15"
+            }
+        ]
+    }
+    """
+    commission_id = request.query_params.get('commission_id')
+    
+    if not commission_id:
+        return Response(
+            {'error': 'commission_id est requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        commission = Commission.objects.get(id=commission_id, actif=True)
+    except Commission.DoesNotExist:
+        return Response(
+            {'error': f'Commission {commission_id} non trouvée'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    try:
+        # Récupérer les membres actifs de la commission
+        membres = MembreCommission.objects.filter(
+            commission=commission,
+            actif=True
+        ).select_related('user').order_by('-role', 'user__first_name')
+        
+        data = []
+        for membre in membres:
+            data.append({
+                'id': membre.id,
+                'user_id': membre.user.id,
+                'first_name': membre.user.first_name or '',
+                'last_name': membre.user.last_name or '',
+                'email': membre.user.email,
+                'role': membre.role or 'membre',
+                'date_nomination': membre.date_nomination.isoformat() if membre.date_nomination else None,
+            })
+        
+        return Response({
+            'success': True,
+            'commission_id': commission.id,
+            'commission_nom': commission.nom,
+            'count': len(data),
+            'members': data,
+        })
+    
+    except Exception as e:
+        logger.exception("Erreur get_commission_members_list pour commission %s: %s", commission_id, e)
+        return Response(
+            {'error': f'Erreur serveur: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

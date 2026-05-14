@@ -9,9 +9,14 @@
 
   <!-- Choix des candidatures -->
   <div class="choix-container">
+    <!-- Validation Message -->
+    <div *ngIf="showValidationMessage" [ngClass]="'validation-message ' + validationMessageType">
+      {{ validationMessage }}
+    </div>
+
     <div class="choix-grid">
       <!-- CANDIDATURE MASTER -->
-      <div class="choix-card master" (click)="choisirType('master')">
+      <div class="choix-card master" (click)="selectType('master')" [class.selected]="selectedType === 'master'">
         <div class="card-icon">
           <i class="fas fa-graduation-cap"></i>
         </div>
@@ -51,7 +56,7 @@
       </div>
 
       <!-- CANDIDATURE CYCLE INGÉNIEUR -->
-      <div class="choix-card ingenieur" (click)="choisirType('ingenieur')">
+      <div class="choix-card ingenieur" (click)="selectType('ingenieur')" [class.selected]="selectedType === 'ingenieur'">
         <div class="card-icon">
           <i class="fas fa-cogs"></i>
         </div>
@@ -81,5 +86,27 @@
         {{ 'choix.back' | translate }}
       </a>
     </div>
+  </div>
+
+  <!-- Validation Actions -->
+  <div class="validation-actions">
+    <button
+      type="button"
+      class="btn-verification"
+      (click)="verifierSelection()"
+      [disabled]="!selectedType"
+    >
+      <i class="fas fa-check-circle"></i>
+      Vérifier la sélection
+    </button>
+    <button
+      type="button"
+      class="btn-confirmer"
+      [disabled]="!selectedType"
+      (click)="confirmerEtProceeder()"
+    >
+      <i class="fas fa-arrow-right"></i>
+      Procéder à la candidature
+    </button>
   </div>
 </div>

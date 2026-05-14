@@ -39,7 +39,7 @@
   <div class="form-container">
     <form [formGroup]="avisForm" (ngSubmit)="submitAvis()">
       <div class="form-group">
-        <label>Votre Avis *</label>
+        <label>Votre avis *</label>
         <div class="radio-group">
           <div class="radio-option">
             <input
@@ -74,13 +74,13 @@
       </div>
 
       <div class="form-group">
-        <label
-          >Argument
+        <label>
+          Argument
           <span *ngIf="avisForm.get('avis')?.value === false" class="required">*</span>
         </label>
         <textarea
           formControlName="argument"
-          placeholder="Justifiez votre avis (au moins 10 caractères requis pour un avis défavorable)"
+          placeholder="Justifiez votre avis (requis pour un avis défavorable)"
           rows="4"
           class="form-textarea"
           [class.required-field]="avisForm.get('avis')?.value === false"
@@ -99,18 +99,19 @@
       </div>
 
       <div class="form-group">
-        <label>Commission (optionnel)</label>
-        <input
-          type="number"
-          formControlName="commission_id"
-          placeholder="ID de la commission"
-          class="form-input"
-        />
+        <label>Commission active</label>
+        <select formControlName="commission_id" class="form-input">
+          <option [ngValue]="null">Sélectionnez une commission</option>
+          <option *ngFor="let commission of commissionOptions" [ngValue]="commission.id">
+            {{ commission.nom }}
+          </option>
+        </select>
       </div>
 
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" [disabled]="!avisForm.valid || submitting">
-          <span *ngIf="!submitting">✓ Soumettre Avis</span>
+          <span *ngIf="!submitting && !editingAvisId">✓ Soumettre avis</span>
+          <span *ngIf="!submitting && editingAvisId">✓ Mettre à jour l'avis</span>
           <span *ngIf="submitting">⏳ Envoi...</span>
         </button>
         <button type="button" (click)="resetForm()" class="btn btn-secondary">Réinitialiser</button>
@@ -124,16 +125,16 @@
     <div class="history-list">
       <div *ngFor="let avis of avisHistory" class="history-item" [class.defavorable]="!avis.avis">
         <div class="history-header">
-          <span class="member-name">{{ avis.membre }}</span>
+          <span class="member-name">{{ avis.member_name || avis.membre_name || 'Membre' }}</span>
           <span class="avis-badge" [class.favorable]="avis.avis" [class.defavorable]="!avis.avis">
             {{ avis.avis ? '✓ Favorable' : '✗ Défavorable' }}
           </span>
           <span class="avis-date">{{ avis.date | date: 'dd/MM/yyyy HH:mm' }}</span>
         </div>
         <div class="history-body">
-          <p class="argument">{{ avis.argument || 'Aucun argument' }}</p>
+            <p class="argument">{{ avis.argument || 'Aucun argument' }}</p>
           <div class="history-actions">
-            <button (click)="updateAvis(avis.id)" class="btn btn-sm btn-secondary">Modifier</button>
+            <button (click)="editAvis(avis)" class="btn btn-sm btn-secondary">Modifier</button>
             <button (click)="deleteAvis(avis.id)" class="btn btn-sm btn-danger">Supprimer</button>
           </div>
         </div>

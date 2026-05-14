@@ -2,13 +2,13 @@
   <div class="page-header">
     <div class="header-copy">
       <p class="eyebrow">Administration</p>
-      <h1>Gestion de la Commission</h1>
-      <p class="subtitle">Organisation des membres, roles et statuts de la commission</p>
+      <h1>Gestion des Responsables</h1>
+      <p class="subtitle">Administration des responsables de commission</p>
     </div>
 
     <div class="header-actions">
       <button class="btn-back" (click)="retourDashboard()">Retour au dashboard</button>
-      <button class="btn-add" (click)="ouvrirModal()">Ajouter un membre</button>
+      <button class="btn-add" (click)="ouvrirModal()">Ajouter un responsable</button>
     </div>
   </div>
 
@@ -36,7 +36,7 @@
           <td data-label="Grade">{{ membre.grade }}</td>
           <td data-label="Rôle">
             <span class="badge" [class.responsable]="membre.role === 'responsable_commission'">
-              {{ membre.role === 'responsable_commission' ? 'Responsable' : 'Membre' }}
+              Responsable
             </span>
           </td>
           <td data-label="Statut">
@@ -75,7 +75,7 @@
   <!-- MODAL AJOUT/MODIFICATION -->
   <div class="modal-overlay" *ngIf="showModal" (click)="fermerModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
-      <h2>{{ isEditMode ? 'Modifier le membre' : 'Ajouter un membre' }}</h2>
+      <h2>{{ isEditMode ? 'Modifier le responsable' : 'Ajouter un responsable' }}</h2>
 
       <form (ngSubmit)="isEditMode ? sauvegarderModification() : ajouterMembre()">
         <div class="form-row">

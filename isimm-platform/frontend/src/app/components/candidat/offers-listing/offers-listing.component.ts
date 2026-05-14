@@ -62,7 +62,7 @@ export class OffersListingComponent implements OnInit {
         if (response.offers && Array.isArray(response.offers)) {
           this.offers = response.offers;
           this.applyFilters();
-          this.toastService.showSuccess('Offres chargées avec succès');
+          this.toastService.show('Offres chargées avec succès', 'success');
         } else {
           this.errorMessage = 'Format de réponse invalide';
         }
@@ -71,7 +71,7 @@ export class OffersListingComponent implements OnInit {
       error: (error: any) => {
         console.error('Error loading offers:', error);
         this.errorMessage = error.error?.error || 'Erreur lors du chargement des offres';
-        this.toastService.showError(this.errorMessage);
+        this.toastService.show(this.errorMessage, 'error');
         this.isLoading = false;
       },
     });
@@ -112,10 +112,9 @@ export class OffersListingComponent implements OnInit {
     return daysLeft > 0 ? `${daysLeft} jours restants` : 'Délai dépassé';
   }
 
-  applyNow(offerId: number): void {
-    // This will navigate to the candidature form with the master_id
-    // Implementation depends on your routing
-    window.location.href = `/candidat/apply/${offerId}`;
+  applyNow(offer: Offer): void {
+    const type = offer.type === 'cycle_ingenieur' ? 'ingenieur' : 'master';
+    window.location.href = `/candidature?type=${encodeURIComponent(type)}`;
   }
 
   getUniqueSpecialites(): string[] {

@@ -1,0 +1,230 @@
+<div class="candidatures-master-container">
+  <!-- ========================================
+      HEADER / STATISTIQUES
+      ======================================== -->
+  <div class="stats-section">
+    <h2 class="section-title">Gestion des Candidatures - Master</h2>
+
+    <div class="stats-grid">
+      <div class="stat-card" *ngFor="let stat of statistiques" [style.border-left-color]="stat.couleur">
+        <div class="stat-icon">{{ stat.icon }}</div>
+        <div class="stat-content">
+          <div class="stat-label">{{ stat.label }}</div>
+          <div class="stat-number" [style.color]="stat.couleur">{{ stat.nombre }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+      FILTRES
+      ======================================== -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label>Recherche (nom/email/cin)</label>
+      <input
+        type="text"
+        placeholder="Entrez un nom, email ou CIN..."
+        [(ngModel)]="recherche"
+        (input)="appliquerFiltres()"
+        class="search-input"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label>Statut</label>
+      <select [(ngModel)]="filtreStatut" (change)="appliquerFiltres()" class="filter-select">
+        <option value="">Tous les statuts</option>
+        <option value="En attente">En attente</option>
+        <option value="Admis">Admis</option>
+        <option value="Rejeté">Rejeté</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>État du Dossier</label>
+      <select [(ngModel)]="filtreEtatDossier" (change)="appliquerFiltres()" class="filter-select">
+        <option value="">Tous les états</option>
+        <option value="Complet">Complet</option>
+        <option value="Incomplet">Incomplet</option>
+      </select>
+    </div>
+
+    <button class="btn-reset" (click)="reinitialiserFiltres()">Réinitialiser</button>
+  </div>
+
+  <!-- TABLEAU DES CANDIDATURES -->
+  <div class="table-section card" style="margin-bottom:20px;padding:16px">
+    <div class="table-actions">
+      <button class="btn-reset" (click)="toggleSelectAll()">{{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}</button>
+      <button class="btn" (click)="consulterSelection()" style="background:#378ADD;color:#fff">Consulter sélection</button>
+    </div>
+
+    <table class="candidature-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()"/></th>
+          <th>Rang</th>
+          <th>Numéro</th>
+          <th>Nom complet</th>
+          <th>Spécialité</th>
+          <th>Score</th>
+          <th>Statut</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of candidatsFiltres; let i = index">
+          <td><input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)"/></td>
+          <td>{{ i + 1 }}</td>
+          <td>{{ c.id }}</td>
+          <td>{{ c.nom }}</td>
+          <td>{{ c.master }}</td>
+          <td>{{ c.score }}</td>
+          <td><span [ngClass]="getStatutBadgeClass(c.statut)" class="badge small">{{ c.statut }}</span></td>
+          <td><button class="btn small" (click)="consulterUn(c)">Consulter</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ========================================
+      CAROUSEL / DÉTAILS CANDIDAT
+      ======================================== -->
+  <div class="carousel-section" *ngIf="candidatActuel">
+    <div class="carousel-header">
+      <h3>Candidat {{ numeroActuel }} / {{ totalCandidatures }}</h3>
+      <div class="carousel-controls">
+        <button
+          class="btn-nav"
+          (click)="prevCandidat()"
+          [disabled]="totalCandidatures <= 1"
+          title="Candidat précédent"
+        >
+          ← Précédent
+        </button>
+        <span class="carousel-counter">{{ numeroActuel }} / {{ totalCandidatures }}</span>
+        <button
+          class="btn-nav"
+          (click)="nextCandidat()"
+          [disabled]="totalCandidatures <= 1"
+          title="Candidat suivant"
+        >
+          Suivant →
+        </button>
+      </div>
+    </div>
+
+    <div class="carousel-content" [@fadeIn]>
+      <!-- INFOS PERSONNELLES -->
+      <div class="candidat-card">
+        <div class="card-section">
+          <h4>Informations Générales</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Nom Complet</label>
+              <p>{{ candidatActuel.nom }}</p>
+            </div>
+            <div class="info-item">
+              <label>Email</label>
+              <p>{{ candidatActuel.email || 'N/A' }}</p>
+            </div>
+            <div class="info-item">
+              <label>CIN</label>
+              <p>{{ candidatActuel.cin || 'N/A' }}</p>
+            </div>
+            <div class="info-item">
+              <label>Date de Candidature</label>
+              <p>{{ candidatActuel.date_candidature || 'N/A' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MASTER ET SCORE -->
+        <div class="card-section">
+          <h4>Candidature</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Master</label>
+              <p class="master-badge">{{ candidatActuel.master }}</p>
+            </div>
+            <div class="info-item">
+              <label>Score</label>
+              <div class="score-display">
+                <div
+                  class="score-bar"
+                  [style.width.%]="scorePercentage"
+                  [style.background-color]="getScoreColor()"
+                ></div>
+              </div>
+              <p class="score-value" [style.color]="getScoreColor()">
+                {{ candidatActuel.score }}/20
+              </p>
+            </div>
+            <div class="info-item">
+              <label>État du Dossier</label>
+              <span [ngClass]="['badge', getEtatBadgeClass(candidatActuel.etat_dossier)]">
+                {{ candidatActuel.etat_dossier }}
+              </span>
+            </div>
+            <div class="info-item">
+              <label>Statut</label>
+              <span [ngClass]="['badge', getStatutBadgeClass(candidatActuel.statut)]">
+                {{ candidatActuel.statut }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PIÈCES JUSTIFICATIVES -->
+        <div class="card-section">
+          <h4>
+            Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})
+          </h4>
+          <div class="pieces-container">
+            <div
+              *ngFor="let piece of candidatActuel.pieces"
+              [ngClass]="['doc-chip', piece.statut === 'ok' ? 'dc-v' : 'dc-p']"
+            >
+              <span class="piece-icon">
+                {{ piece.statut === 'ok' ? '✓' : '✕' }}
+              </span>
+              <span class="piece-nom">{{ piece.nom }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="card-section action-section">
+          <h4>Actions</h4>
+          <div class="action-buttons">
+            <button
+              class="btn btn-accepter"
+              (click)="accepterCandidat()"
+              [disabled]="!getStatutBoutons().accepter"
+            >
+              ✓ Accepter
+            </button>
+            <button
+              class="btn btn-refuser"
+              (click)="refuserCandidat()"
+              [disabled]="!getStatutBoutons().refuser"
+            >
+              ✕ Refuser
+            </button>
+            <button class="btn small" (click)="fermerConsultation()" *ngIf="viewingSelection">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+      MESSAGE VIDE
+      ======================================== -->
+  <div class="empty-state" *ngIf="!candidatActuel && totalCandidatures === 0">
+    <div class="empty-icon">📭</div>
+    <p>Aucun candidat ne correspond aux critères de recherche.</p>
+    <button class="btn-reset" (click)="reinitialiserFiltres()">Afficher tous les candidats</button>
+  </div>
+</div>

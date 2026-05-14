@@ -21,6 +21,11 @@ interface AvisHistoryItem {
   date_avis?: string;
 }
 
+interface UserCommissionOption {
+  id: number;
+  nom: string;
+}
+
 @Component({
   selector: 'app-avis-submission',
   standalone: true,
@@ -32,12 +37,14 @@ export class AvisSubmissionComponent implements OnInit {
   @Input() candidatureId: number | null = null;
 
   avisForm: FormGroup;
+  commissionOptions: UserCommissionOption[] = [];
   submitting = false;
   errorMessage = '';
   successMessage = '';
   avisStatistics: any = null;
   avisHistory: AvisHistoryItem[] = [];
   loadingStats = false;
+  editingAvisId: number | null = null;
 
   constructor(
     private candidatureService: CandidatureService,
@@ -45,15 +52,50 @@ export class AvisSubmissionComponent implements OnInit {
   ) {
     this.avisForm = this.formBuilder.group({
       avis: [null, Validators.required],
-      argument: ['', [Validators.required, Validators.minLength(10)]],
+      argument: ['', [Validators.minLength(10)]],
       commission_id: [null],
     });
   }
 
   ngOnInit(): void {
+    this.loadCommissions();
     if (this.candidatureId) {
       this.loadAvisStatistics();
     }
+
+    this.avisForm.get('avis')?.valueChanges.subscribe((avisValue) => {
+      const argumentControl = this.avisForm.get('argument');
+      if (!argumentControl) {
+        return;
+      }
+
+      if (avisValue === false) {
+        argumentControl.setValidators([Validators.required, Validators.minLength(10)]);
+      } else {
+        argumentControl.setValidators([Validators.minLength(10)]);
+      }
+
+      argumentControl.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private loadCommissions(): void {
+    const activeCommissionId = localStorage.getItem('active_commission_id');
+    const activeCommissionNumericId = activeCommissionId ? Number(activeCommissionId) : null;
+
+    this.candidatureService.getMyCommissions(activeCommissionNumericId).subscribe({
+      next: (res: any) => {
+        this.commissionOptions = res.commissions || [];
+        const selectedId =
+          res.active_commission_id || activeCommissionNumericId || this.commissionOptions[0]?.id || null;
+        this.avisForm.patchValue({ commission_id: selectedId }, { emitEvent: false });
+      },
+      error: () => {
+        if (activeCommissionNumericId) {
+          this.avisForm.patchValue({ commission_id: activeCommissionNumericId }, { emitEvent: false });
+        }
+      },
+    });
   }
 
   loadAvisStatistics(): void {
@@ -80,7 +122,8 @@ export class AvisSubmissionComponent implements OnInit {
     }
 
     const avisValue = this.avisForm.get('avis')?.value;
-    if (avisValue === false && !this.avisForm.get('argument')?.value.trim()) {
+    const argumentValue = String(this.avisForm.get('argument')?.value || '').trim();
+    if (avisValue === false && !argumentValue) {
       this.errorMessage = 'Un argument est requis pour un avis défavorable';
       return;
     }
@@ -91,14 +134,15 @@ export class AvisSubmissionComponent implements OnInit {
 
     const payload = {
       avis: avisValue,
-      argument: this.avisForm.get('argument')?.value || '',
+      argument: argumentValue,
       commission_id: this.avisForm.get('commission_id')?.value || null,
     };
 
     this.candidatureService.submitAvis(this.candidatureId, payload).subscribe({
       next: (res: any) => {
         this.successMessage = res?.message || 'Avis soumis avec succès';
-        this.avisForm.reset();
+        this.avisForm.reset({ avis: null, argument: '', commission_id: this.avisForm.get('commission_id')?.value || null });
+        this.editingAvisId = null;
         this.loadAvisStatistics();
         this.submitting = false;
       },
@@ -127,21 +171,30 @@ export class AvisSubmissionComponent implements OnInit {
   }
 
   updateAvis(avisId: number): void {
-    if (!this.avisForm.valid) {
+    if (!this.avisForm.valid || !this.candidatureId) {
       this.errorMessage = 'Veuillez remplir tous les champs obligatoires';
+      return;
+    }
+
+    const avisValue = this.avisForm.get('avis')?.value;
+    const argumentValue = String(this.avisForm.get('argument')?.value || '').trim();
+    if (avisValue === false && !argumentValue) {
+      this.errorMessage = 'Un argument est requis pour un avis défavorable';
       return;
     }
 
     this.submitting = true;
     const payload = {
-      avis: this.avisForm.get('avis')?.value,
-      argument: this.avisForm.get('argument')?.value || '',
+      avis: avisValue,
+      argument: argumentValue,
+      commission_id: this.avisForm.get('commission_id')?.value || null,
     };
 
-    this.candidatureService.updateAvis(this.candidatureId || 0, avisId, payload).subscribe({
+    this.candidatureService.updateAvis(this.candidatureId, avisId, payload).subscribe({
       next: () => {
         this.successMessage = 'Avis modifié avec succès';
-        this.avisForm.reset();
+        this.avisForm.reset({ avis: null, argument: '', commission_id: this.avisForm.get('commission_id')?.value || null });
+        this.editingAvisId = null;
         this.loadAvisStatistics();
         this.submitting = false;
       },
@@ -152,8 +205,18 @@ export class AvisSubmissionComponent implements OnInit {
     });
   }
 
+  editAvis(avis: AvisHistoryItem): void {
+    this.editingAvisId = avis.id;
+    this.avisForm.patchValue({
+      avis: avis.avis,
+      argument: avis.argument || '',
+      commission_id: this.avisForm.get('commission_id')?.value || null,
+    });
+  }
+
   resetForm(): void {
-    this.avisForm.reset();
+    this.avisForm.reset({ avis: null, argument: '', commission_id: this.avisForm.get('commission_id')?.value || null });
+    this.editingAvisId = null;
     this.errorMessage = '';
     this.successMessage = '';
   }

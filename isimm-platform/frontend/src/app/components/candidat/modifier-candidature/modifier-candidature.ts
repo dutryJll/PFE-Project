@@ -17,6 +17,7 @@ export class ModifierCandidatureComponent implements OnInit {
   candidature: any = null;
   voeux: string[] = [];
   selectedCandidatureId: number | null = null;
+  selectedMasterId: number | null = null;
   candidatureAccessInfo: {
     can_reapply?: boolean;
     can_edit?: boolean;
@@ -41,7 +42,9 @@ export class ModifierCandidatureComponent implements OnInit {
 
   ngOnInit(): void {
     const candidatureIdParam = this.route.snapshot.queryParamMap.get('candidatureId');
+    const masterIdParam = this.route.snapshot.queryParamMap.get('masterId');
     this.selectedCandidatureId = candidatureIdParam ? Number(candidatureIdParam) : null;
+    this.selectedMasterId = masterIdParam ? Number(masterIdParam) : null;
     this.loadCandidature();
   }
 
@@ -53,6 +56,10 @@ export class ModifierCandidatureComponent implements OnInit {
         if (this.selectedCandidatureId && !Number.isNaN(this.selectedCandidatureId)) {
           this.candidature =
             candidatures.find((c: any) => Number(c?.id) === this.selectedCandidatureId) ?? null;
+        } else if (this.selectedMasterId && !Number.isNaN(this.selectedMasterId)) {
+          this.candidature =
+            candidatures.find((c: any) => Number(c?.master_id ?? c?.master) === this.selectedMasterId) ??
+            null;
         }
 
         if (!this.candidature) {
@@ -63,6 +70,13 @@ export class ModifierCandidatureComponent implements OnInit {
         if (!this.candidature) {
           this.toastService.show('Aucune candidature trouvée.', 'warning');
           return;
+        }
+
+        if (this.selectedMasterId && !this.selectedCandidatureId) {
+          const resolvedMasterId = Number(this.candidature?.master_id ?? this.candidature?.master);
+          if (resolvedMasterId !== this.selectedMasterId) {
+            this.toastService.show('Aucune candidature correspondante à cette offre.', 'warning');
+          }
         }
 
         const masterId = Number(this.candidature?.master_id ?? this.candidature?.master);

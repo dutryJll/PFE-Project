@@ -2069,6 +2069,56 @@
   background: #fff;
 }
 
+.status-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.status-pill {
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #dbe7f4;
+  background: linear-gradient(180deg, #fafdff 0%, #f3f8fe 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.status-pill span {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.status-pill strong {
+  font-size: 1.15rem;
+  color: #0f2f4a;
+}
+
+.status-pill--success {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.status-pill--warning {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffdf2 0%, #fef3c7 100%);
+}
+
+.status-pill--danger {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff1f2 0%, #fee2e2 100%);
+}
+
+.status-pill--info {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+}
+
 .notifications-actions {
   display: flex;
   justify-content: flex-end;
@@ -2098,6 +2148,24 @@
 .notification-card.unread {
   border-left: 4px solid #3b82f6;
   background: #eff6ff;
+}
+
+.empty-notifications-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(180deg, #fbfdff 0%, #f8fafc 100%);
+  color: #334155;
+}
+
+.empty-notifications-state strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.empty-notifications-state p {
+  margin: 0;
+  color: #64748b;
 }
 
 .notification-head {

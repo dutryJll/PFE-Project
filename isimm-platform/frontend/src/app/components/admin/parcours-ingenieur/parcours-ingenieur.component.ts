@@ -95,13 +95,13 @@ interface Parcours {
         </table>
       </div>
 
-      <p *ngIf="!parcours || parcours.length === 0" class="text-muted">Aucun parcours ingénieur</p>
+      <p *ngIf="!parcours || parcours.length === 0" class="text-muted">Aucun Parcours Ingénieur</p>
 
       <!-- Formulaire Modal -->
       <div class="modal" *ngIf="showForm">
         <div class="modal-content">
           <span class="close" (click)="closeForm()">&times;</span>
-          <h3>{{ isEditing ? 'Modifier' : 'Créer' }} un parcours ingénieur</h3>
+          <h3>{{ isEditing ? 'Modifier' : 'Créer' }} un Parcours Ingénieur</h3>
 
           <form [formGroup]="parcourForm" (ngSubmit)="saveParcours()">
             <div class="form-group">

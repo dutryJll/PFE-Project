@@ -4,7 +4,7 @@
     radial-gradient(circle at 10% 15%, rgba(255, 226, 182, 0.42), transparent 38%),
     radial-gradient(circle at 85% 5%, rgba(189, 217, 255, 0.38), transparent 40%), #f4f8ff;
   padding: 1.8rem;
-  font-family: 'Segoe UI', 'Trebuchet MS', sans-serif;
+  font-family: var(--body-font);
 }
 
 .guide-header {

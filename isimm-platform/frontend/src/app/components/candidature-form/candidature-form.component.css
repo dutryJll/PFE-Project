@@ -75,7 +75,7 @@
 .form-header h1 {
   position: relative;
   z-index: 1;
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: var(--body-font);
   font-size: clamp(2rem, 4.2vw, 2.7rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -394,7 +394,7 @@
 }
 
 .form-section h2 {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: var(--body-font);
   font-size: clamp(1.22rem, 2.7vw, 1.65rem);
   color: var(--text-primary);
   margin: 0 0 1rem;

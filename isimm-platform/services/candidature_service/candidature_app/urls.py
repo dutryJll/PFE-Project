@@ -1,4 +1,4 @@
-from django.urls import path
+﻿from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from . import views
@@ -96,5 +96,14 @@ urlpatterns = router.urls + [
     path('listes/<int:liste_id>/export/excel/', views.exporter_liste_excel, name='exporter_liste_excel'),
     path('send-member-credentials/', views.send_member_credentials, name='send_member_credentials'),
     path('export/', views_export.export_candidatures, name='export_candidatures'),
+    path('specialites/by-parcours/', views.get_specialites_by_parcours, name='get_specialites_by_parcours'),
+    path('all-parcours/', views.list_all_parcours, name='list_all_parcours'),
+    path('commissions/my-commissions/', views.get_my_commissions, name='get_user_commissions'),
+    path('commissions/<int:commission_id>/members/', views.get_commission_members_list, name='get_commission_members'),
+    path('commissions/<int:commission_id>/members/add/', views.commission_add_member, name='commission_add_member'),
+    path('commissions/<int:commission_id>/members/<int:membre_id>/delete/', views.commission_remove_member, name='commission_remove_member'),
+    path('<int:candidature_id>/statut/changer/', views.changer_statut_candidature_endpoint, name='changer_statut_candidature'),
+    path('<int:candidature_id>/statut/historique/', views.recuperer_historique_statuts_endpoint, name='recuperer_historique_statuts'),
 ]
+
 

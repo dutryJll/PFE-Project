@@ -34,7 +34,7 @@
         (click)="switchView('masters')"
       >
         <i class="fas fa-graduation-cap"></i>
-        <span>Parcours master</span>
+        <span>Parcours Master</span>
       </a>
 
       <a
@@ -43,12 +43,17 @@
         (click)="allerGestionConcoursIngenieur()"
       >
         <i class="fas fa-cogs"></i>
-        <span>Parcours ingénieurs</span>
+        <span>Parcours Ingénieur</span>
       </a>
 
       <a class="nav-item" (click)="allerGestionCommission()">
         <i class="fas fa-user-tie"></i>
         <span>Gestion des Commissions </span>
+      </a>
+
+      <a class="nav-item" (click)="allerGestionResponsables()">
+        <i class="fas fa-id-badge"></i>
+        <span>Gestion des Responsables</span>
       </a>
 
       <a
@@ -438,14 +443,14 @@
     <div *ngIf="currentView === 'concours-ingenieur'" class="view-content">
       <div class="section-card">
         <div class="section-header">
-          <h2>🛤️ Parcours ingénieurs</h2>
+          <h2>🛤️ Parcours Ingénieur</h2>
           <button class="btn-primary" (click)="ajouterOffreIngenieur()">
             <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
         </div>
 
         <p class="admin-site-subtitle">
-          Gérez les parcours ingénieurs: ajout, modification, ouverture/fermeture et suppression.
+          Gérez les Parcours Ingénieur: ajout, modification, ouverture/fermeture et suppression.
           Chaque parcours enregistré apparaît ensuite côté responsable.
         </p>
 
@@ -494,7 +499,7 @@
                 </tr>
                 <tr *ngIf="getOffresResponsableSyncByType('cycle_ingenieur').length === 0">
                   <td colspan="5" class="empty-candidatures-row">
-                    Aucun parcours ingénieur synchronisé pour le moment.
+                    Aucun Parcours Ingénieur synchronisé pour le moment.
                   </td>
                 </tr>
               </tbody>
@@ -575,7 +580,7 @@
     <div *ngIf="currentView === 'masters'" class="view-content">
       <div class="section-card">
         <div class="section-header">
-          <h2>🛤️ Parcours master</h2>
+          <h2>🛤️ Parcours Master</h2>
           <button type="button" class="btn-primary" (click)="ajouterMaster()">
             <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
@@ -949,6 +954,11 @@
             <button class="btn-primary" (click)="exporterDonnees()">
               <i class="fas fa-file-excel"></i>
               Exporter données Excel
+            </button>
+
+            <button class="btn-outline" (click)="exporterMetricsTxt()" title="Exporter métriques au format .txt">
+              <i class="fas fa-file-alt"></i>
+              Exporter métriques (.txt)
             </button>
           </div>
         </div>

@@ -129,9 +129,9 @@ export class MastersComponent implements OnInit {
           this.isLoadingReferentiel = false;
         },
         error: (err) => {
-          console.error('Erreur chargement rÃ©fÃ©rentiel masters:', err);
+          console.error('Erreur chargement référentiel masters:', err);
           this.referentielMessage =
-            'Impossible de charger les dÃ©tails officiels des appels d inscription. VÃ©rifiez que le service candidature est actif sur le port 8003.';
+            'Impossible de charger les détails officiels des appels d inscription. Vérifiez que le service candidature est actif sur le port 8003.';
           this.isLoadingReferentiel = false;
         },
       });

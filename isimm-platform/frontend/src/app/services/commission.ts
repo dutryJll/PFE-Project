@@ -139,4 +139,29 @@ export class CommissionService {
       responseType: 'blob',
     });
   }
+
+  // ========================================
+  // COMMISSION MEMBERS MANAGEMENT
+  // ========================================
+
+  listCommissionMembers(commissionId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/commissions/${commissionId}/members/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  addCommissionMember(commissionId: number, userId: number, role: string = 'membre'): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/commissions/${commissionId}/members/add/`,
+      { user_id: userId, role },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  removeCommissionMember(commissionId: number, membreId: number): Observable<any> {
+    return this.http.delete(
+      `${this.apiUrl}/commissions/${commissionId}/members/${membreId}/delete/`,
+      { headers: this.getHeaders() },
+    );
+  }
 }

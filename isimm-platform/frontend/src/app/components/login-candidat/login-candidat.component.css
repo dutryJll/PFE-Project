@@ -19,7 +19,7 @@
     radial-gradient(circle at 12% 22%, rgba(59, 130, 246, 0.34) 0, rgba(59, 130, 246, 0) 36%),
     radial-gradient(circle at 88% 84%, rgba(37, 99, 235, 0.32) 0, rgba(37, 99, 235, 0) 42%),
     linear-gradient(140deg, var(--bg-start) 0%, var(--bg-end) 70%);
-  font-family: 'Manrope', 'Trebuchet MS', sans-serif;
+  font-family: var(--body-font);
 }
 
 .login-candidat-page::before {

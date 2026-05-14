@@ -170,6 +170,9 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='ISIMM Admission <nore
 EMAIL_SUBJECT_PREFIX = config('EMAIL_SUBJECT_PREFIX', default='[ISIMM] ')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:4200')
 
+# URL du service candidature (utilisé pour récupérer les commissions liées à un utilisateur)
+CANDIDATURE_SERVICE_URL = config('CANDIDATURE_SERVICE_URL', default='http://localhost:8003')
+
 # Pour production (Gmail - décommenter quand prêt)
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'

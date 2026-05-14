@@ -68,3 +68,36 @@ class UserDeleteView(generics.DestroyAPIView):
     """Supprime un utilisateur"""
     queryset = UserProfile.objects.all()
     permission_classes = [AllowAny]  # ✅ DÉSACTIVÉ temporairement
+
+
+class AdminListResponsablesView(generics.ListAPIView):
+    """Admin: List all responsables (commission leaders)"""
+    queryset = UserProfile.objects.filter(role='responsable_commission')
+    serializer_class = UserProfileSerializer
+    permission_classes = [AllowAny]  # ✅ DÉSACTIVÉ temporairement
+
+
+class AdminCreateResponsableView(generics.CreateAPIView):
+    """Admin: Create a new responsable user"""
+    serializer_class = UserProfileSerializer
+    permission_classes = [AllowAny]  # ✅ DÉSACTIVÉ temporairement
+    
+    def perform_create(self, serializer):
+        # Ensure role is set to responsable_commission
+        serializer.save(role='responsable_commission')
+
+
+class AdminDeleteResponsableView(generics.DestroyAPIView):
+    """Admin: Delete a responsable user"""
+    queryset = UserProfile.objects.filter(role='responsable_commission')
+    permission_classes = [AllowAny]  # ✅ DÉSACTIVÉ temporairement
+    
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        user_info = {
+            'id': user.id,
+            'email': user.email,
+            'name': user.get_full_name()
+        }
+        user.delete()
+        return Response({'message': f'Responsable {user_info["email"]} supprimé avec succès', 'user': user_info}, status=status.HTTP_200_OK)

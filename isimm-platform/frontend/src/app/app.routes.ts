@@ -52,6 +52,8 @@ import { EditUserComponent } from './components/admin/edit-user/edit-user';
 import { EditMasterComponent } from './components/admin/edit-master/edit-master';
 import { EditOffreIngenieurComponent } from './components/admin/edit-offre-ingenieur/edit-offre-ingenieur';
 import { EditCommissionMemberComponent } from './components/admin/edit-commission-member/edit-commission-member';
+import { ManageCommissionMembersComponent } from './components/admin/manage-commission-members/manage-commission-members';
+import { ManageResponsablesComponent } from './components/admin/manage-responsables/manage-responsables';
 
 // ========================================
 // COMMISSION COMPONENTS
@@ -67,6 +69,7 @@ import { ExaminerOcrComponent } from './components/commission/examiner-ocr/exami
 import { TraiterReclamationsComponent } from './components/commission/traiter-reclamations/traiter-reclamations';
 import { GererInscriptionsComponent } from './components/commission/gerer-inscriptions/gerer-inscriptions';
 import { OffrePreinscriptionEditorComponent } from './components/commission/offre-preinscription-editor/offre-preinscription-editor';
+import { OfferCreationWizardComponent } from './components/commission/offer-creation-wizard/offer-creation-wizard';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
 import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 
@@ -231,6 +234,12 @@ export const routes: Routes = [
     data: { roles: ['commission', 'responsable_commission'] },
   },
   {
+    path: 'commission/gestion-membres/:commission_id',
+    component: ManageCommissionMembersComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
+  {
     path: 'commission/dossiers',
     component: ListeDossiersComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
@@ -326,6 +335,18 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard, actionGuard],
     data: { roles: ['commission', 'responsable_commission'], actions: ['Dépôt de dossier'] },
   },
+  {
+    path: 'commission/offre-wizard/new',
+    component: OfferCreationWizardComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
+  {
+    path: 'commission/offre-wizard/:master_id/edit',
+    component: OfferCreationWizardComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
 
   // ========================================
   // ROUTES ADMIN
@@ -343,10 +364,22 @@ export const routes: Routes = [
     data: { roles: ['admin'] },
   },
   {
+    path: 'admin/gestion-responsables',
+    component: ManageResponsablesComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['admin'] },
+  },
+  {
+    path: 'admin/gestion-commission/:commission_id/members',
+    component: ManageCommissionMembersComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
+  {
     path: 'admin/gestion-commission/:id/edit',
     component: EditCommissionMemberComponent,
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['admin'] },
+    data: { roles: ['responsable_commission'] },
   },
   {
     path: 'admin/candidatures',

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import uuid
+import requests
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -404,8 +405,8 @@ def delete_user(request, user_id):
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def user_detail_update(request, user_id):
-    """Consulter ou modifier un utilisateur (Admin)."""
-    if request.user.role != 'admin':
+    """Consulter ou modifier un utilisateur (Admin ou responsable commission)."""
+    if request.user.role not in ['admin', 'responsable_commission']:
         return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
 
     try:
@@ -416,7 +417,16 @@ def user_detail_update(request, user_id):
     if request.method == 'GET':
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
-    serializer = UserSerializer(user, data=request.data, partial=True)
+    if request.user.role == 'responsable_commission' and user.role == 'admin':
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.user.role == 'responsable_commission':
+        data_to_use = request.data.copy()
+        data_to_use['role'] = 'commission'
+    else:
+        data_to_use = request.data
+
+    serializer = UserSerializer(user, data=data_to_use, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -494,8 +504,8 @@ def update_user_account_status(request, user_id):
 @permission_classes([IsAuthenticated])
 def create_commission_member(request):
     """Créer un membre de commission et envoyer lien d'activation"""
-    # Vérifier que c'est un admin
-    if request.user.role != 'admin':
+    # Vérifier que c'est un admin ou un responsable de commission.
+    if request.user.role not in ['admin', 'responsable_commission']:
         return Response(
             {'error': 'Accès refusé'}, 
             status=status.HTTP_403_FORBIDDEN
@@ -506,7 +516,15 @@ def create_commission_member(request):
     last_name = request.data.get('last_name')
     specialite = request.data.get('specialite')
     grade = request.data.get('grade')
-    role = request.data.get('role')
+    requested_role = request.data.get('role')
+    role = requested_role
+
+    # Un responsable ne peut créer que des membres de commission.
+    if request.user.role == 'responsable_commission':
+        role = 'commission'
+
+    if role not in ['commission', 'responsable_commission']:
+        role = 'commission'
     
     if not email or not first_name or not last_name:
         return Response(
@@ -920,3 +938,237 @@ def my_enabled_actions(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+# ========================================
+# COMMISSIONS MULTIPLES (ÉTAPE 3)
+# ========================================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_commissions(request):
+    """
+    GET /api/auth/my-commissions/
+    
+    Récupérer la liste des commissions liées à l'utilisateur actuel.
+    Appelle le endpoint candidature_service: GET /api/commissions/my-commissions/
+    
+    Returns:
+    {
+        "success": true,
+        "count": 2,
+        "user_id": 42,
+        "role": "responsable_commission",
+        "commissions": [
+            {
+                "id": 1,
+                "nom": "Commission MPGL",
+                "description": "...",
+                "master_id": 5,
+                "master_nom": "MPGL",
+                "actif": true,
+                "role": "responsable"
+            }
+        ]
+    }
+    """
+    if request.user.role not in ['commission', 'responsable_commission', 'admin']:
+        return Response(
+            {'error': 'Accès refusé. Vous devez être membre de commission.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Appeler le service candidature pour récupérer les commissions
+        # GET /api/commissions/my-commissions/?user_id=<id>
+        candidature_url = f"{settings.CANDIDATURE_SERVICE_URL}/api/commissions/my-commissions/"
+        
+        # Passer le token d'authentification
+        auth_header = request.headers.get('Authorization', '')
+        headers = {
+            'Authorization': auth_header,
+            'Content-Type': 'application/json'
+        }
+        params = {'user_id': request.user.id}
+        
+        response = requests.get(candidature_url, headers=headers, params=params, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return Response(data, status=status.HTTP_200_OK)
+        
+        elif response.status_code == 404:
+            # Pas de commission trouvée pour cet utilisateur
+            return Response(
+                {
+                    'success': True,
+                    'commissions': [],
+                    'count': 0,
+                    'user_id': request.user.id,
+                    'message': 'Aucune commission trouvée pour cet utilisateur'
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        else:
+            print(f"⚠️ Service candidature retourne: {response.status_code}")
+            return Response(
+                {
+                    'error': f'Erreur service candidature: {response.status_code}',
+                    'commissions': [],
+                    'count': 0
+                },
+                status=status.HTTP_200_OK
+            )
+    
+    except requests.exceptions.Timeout:
+        print("❌ Timeout lors de l'appel à candidature_service")
+        return Response(
+            {
+                'error': 'Timeout - service candidature indisponible',
+                'commissions': [],
+                'count': 0
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+    
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erreur connexion service candidature: {e}")
+        return Response(
+            {
+                'error': f'Erreur connexion: {str(e)}',
+                'commissions': [],
+                'count': 0
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def select_commission(request):
+    """
+    POST /api/auth/select-commission/
+    
+    Sélectionner la commission active pour l'utilisateur.
+    Stocke l'ID de la commission sélectionnée côté client (localStorage).
+    
+    Request:
+    {
+        "commission_id": 1
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Commission sélectionnée avec succès",
+        "commission_id": 1,
+        "commission": {
+            "id": 1,
+            "nom": "Commission MPGL",
+            "members": [...]
+        }
+    }
+    """
+    if request.user.role not in ['commission', 'responsable_commission', 'admin']:
+        return Response(
+            {'error': 'Accès refusé. Vous devez être membre de commission.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    commission_id = request.data.get('commission_id')
+    
+    if not commission_id:
+        return Response(
+            {'error': 'commission_id requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Récupérer les détails de la commission et ses membres
+        # pour valider l'accès
+        candidature_url = f"{settings.CANDIDATURE_SERVICE_URL}/api/commissions/commission-members/"
+        
+        auth_header = request.headers.get('Authorization', '')
+        headers = {
+            'Authorization': auth_header,
+            'Content-Type': 'application/json'
+        }
+        params = {'commission_id': commission_id}
+        
+        response = requests.get(candidature_url, headers=headers, params=params, timeout=5)
+        
+        if response.status_code == 200:
+            members_data = response.json()
+            
+            # Vérifier que l'utilisateur est membre de cette commission
+            members = members_data.get('members', [])
+            user_is_member = any(m['user_id'] == request.user.id for m in members)
+            
+            if not user_is_member and request.user.role != 'admin':
+                return Response(
+                    {'error': 'Vous n\'êtes pas membre de cette commission'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Stocker la sélection en session (le frontend stockera aussi en localStorage)
+            request.session['selected_commission_id'] = commission_id
+            
+            return Response(
+                {
+                    'success': True,
+                    'message': 'Commission sélectionnée avec succès',
+                    'commission_id': commission_id,
+                    'commission_nom': members_data.get('commission_nom', ''),
+                    'members_count': len(members),
+                    'members': members
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        elif response.status_code == 404:
+            return Response(
+                {'error': 'Commission non trouvée'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        else:
+            print(f"⚠️ Service candidature retourne: {response.status_code}")
+            # Fallback: accepter la sélection même si le service a une erreur
+            request.session['selected_commission_id'] = commission_id
+            return Response(
+                {
+                    'success': True,
+                    'message': 'Commission sélectionnée (validation service indisponible)',
+                    'commission_id': commission_id,
+                    'warning': f'Service candidature indisponible (status {response.status_code})'
+                },
+                status=status.HTTP_200_OK
+            )
+    
+    except requests.exceptions.Timeout:
+        print("❌ Timeout lors de la validation de la commission")
+        # Fallback: accepter la sélection même si le service est indisponible
+        request.session['selected_commission_id'] = commission_id
+        return Response(
+            {
+                'success': True,
+                'message': 'Commission sélectionnée (service timeout)',
+                'commission_id': commission_id,
+                'warning': 'Service candidature indisponible'
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erreur validation commission: {e}")
+        # Fallback: accepter la sélection même si le service est indisponible
+        request.session['selected_commission_id'] = commission_id
+        return Response(
+            {
+                'success': True,
+                'message': 'Commission sélectionnée (service indisponible)',
+                'commission_id': commission_id,
+                'warning': f'Erreur service: {str(e)}'
+            },
+            status=status.HTTP_200_OK
+        )

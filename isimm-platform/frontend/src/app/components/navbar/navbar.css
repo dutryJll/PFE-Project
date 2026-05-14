@@ -55,7 +55,7 @@
 }
 
 .logo-text {
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--body-font);
   font-size: 1.8rem;
   font-weight: 900;
   background: linear-gradient(135deg, #0f4c5c, #e85d04);

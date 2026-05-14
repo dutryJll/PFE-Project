@@ -279,9 +279,9 @@ export class DashboardAdminComponent implements OnInit {
   customRoleActions: string[] = [];
   private readonly knownActionNameSet = new Set<string>([
     normalizeActionLabel('Gestion des utilisateurs'),
-    normalizeActionLabel('Parcours master'),
+    normalizeActionLabel('Parcours Master'),
     normalizeActionLabel("Gestion concours d'ingénieur"),
-    normalizeActionLabel('Parcours ingénieurs'),
+    normalizeActionLabel('Parcours Ingénieur'),
     normalizeActionLabel('Administration du site'),
     normalizeActionLabel('Rapports'),
     normalizeActionLabel('Statistique'),
@@ -681,8 +681,8 @@ export class DashboardAdminComponent implements OnInit {
       dashboard: 'Tableau de bord',
       analytics: 'Analytiques avancées',
       utilisateurs: 'Gestion des utilisateurs',
-      masters: 'Parcours master',
-      'concours-ingenieur': 'Parcours ingénieurs',
+      masters: 'Parcours Master',
+      'concours-ingenieur': 'Parcours Ingénieur',
       candidatures: 'Gestion de candidature',
       administration: 'Administration système',
       logs: "Journaux d'activité",
@@ -2187,6 +2187,10 @@ export class DashboardAdminComponent implements OnInit {
     this.router.navigate(['/admin/gestion-commission']);
   }
 
+  allerGestionResponsables(): void {
+    this.router.navigate(['/admin/gestion-responsables']);
+  }
+
   allerGestionConcoursIngenieur(): void {
     this.switchView('concours-ingenieur');
     this.loadReglementReference();
@@ -2296,8 +2300,8 @@ export class DashboardAdminComponent implements OnInit {
       this.makeActionRow(6, 'Préselection', { commission: true, responsable_commission: true }),
       this.makeActionRow(7, 'Sélection finale', { responsable_commission: true }),
       this.makeActionRow(8, 'Gestion des utilisateurs', { admin: true }),
-      this.makeActionRow(9, 'Parcours master', { admin: true }),
-      this.makeActionRow(10, 'Parcours ingénieurs', { admin: true }),
+      this.makeActionRow(9, 'Parcours Master', { admin: true }),
+      this.makeActionRow(10, 'Parcours Ingénieur', { admin: true }),
     ];
   }
 
@@ -2476,6 +2480,58 @@ export class DashboardAdminComponent implements OnInit {
       `candidatures-donnees-${this.reportPeriod}`,
       'Export candidatures',
     );
+  }
+
+  exporterMetricsTxt(): void {
+    const lines: string[] = [];
+    const now = new Date();
+    lines.push('Rapport de métriques - ISIMM');
+    lines.push(`Période: ${this.reportPeriod}`);
+    lines.push(`Généré le: ${now.toLocaleString()}`);
+    lines.push('');
+
+    lines.push(`Total candidatures: ${this.candidaturesList.length}`);
+    lines.push(`Sélectionnées: ${this.candidaturesSelectionneesCount}`);
+    lines.push(`En attente: ${this.candidaturesEnAttenteCount}`);
+    lines.push(`Rejetées: ${this.candidaturesRejeteesCount}`);
+    lines.push(`Score moyen: ${this.reportAverageScore.toFixed(2)}`);
+    lines.push('');
+
+    lines.push('Répartition par statut:');
+    for (const item of this.reportStatusBreakdown) {
+      lines.push(`- ${this.getStatutLabel(item.key)}: ${item.count}`);
+    }
+    lines.push('');
+
+    lines.push('Top masters (par volume):');
+    const top = this.reportTopMasters.slice(0, 10);
+    for (const t of top) {
+      lines.push(`- ${t.master}: ${t.count}`);
+    }
+    lines.push('');
+
+    lines.push(`Utilisateurs actifs: ${this.activeUsersCount}`);
+    lines.push(`Comptes suspendus: ${this.suspendedUsersCount}`);
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const filename = `isimm-metrics-${this.reportPeriod}-${now.toISOString().slice(0,10)}.txt`;
+
+    // Trigger download
+    if (window.navigator && (window.navigator as any).msSaveOrOpenBlob) {
+      // IE/Edge
+      (window.navigator as any).msSaveOrOpenBlob(blob, filename);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   getReportStatusClass(statut: string): string {

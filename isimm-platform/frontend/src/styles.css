@@ -139,6 +139,23 @@ img {
   box-shadow: 0 4px 15px rgba(0, 61, 91, 0.3);
 }
 
+/* Global status pill for consistent status indicators */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+}
+
+.status-pill--ok { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.status-pill--warn { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.status-pill--danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.status-pill--info { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+
 .btn-primary:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 61, 91, 0.4);
@@ -241,6 +258,34 @@ textarea.form-control {
 }
 .mb-1 {
   margin-bottom: 0.5rem;
+}
+
+/* Compatibility aliases for old chip/status classes to new status-pill tokens */
+.chip-success, .chip--success, .badge-success, .statut-selectionne, .status-selectionne {
+  @apply --dummy; /* placeholder to keep tooling happy when migrating */
+  background: var(--status-pill-bg, #dcfce7);
+  color: var(--status-pill-color, #166534);
+  border-color: rgba(0,0,0,0.05);
+}
+.chip-warning, .chip--warning, .badge-warning, .statut-en-attente, .status-en-attente {
+  background: var(--status-pill-warn-bg, #fef3c7);
+  color: var(--status-pill-warn-color, #92400e);
+  border-color: rgba(0,0,0,0.03);
+}
+.chip-danger, .chip--danger, .badge-danger, .statut-rejete, .status-rejete {
+  background: var(--status-pill-danger-bg, #fee2e2);
+  color: var(--status-pill-danger-color, #991b1b);
+  border-color: rgba(0,0,0,0.03);
+}
+.chip-info, .chip--info, .badge-info, .statut-soumis, .status-soumis {
+  background: var(--status-pill-info-bg, #dbeafe);
+  color: var(--status-pill-info-color, #1d4ed8);
+  border-color: rgba(0,0,0,0.03);
+}
+
+/* Map existing chip classes to use the status-pill visual tokens */
+.chip-success::before, .chip-warning::before, .chip-danger::before, .chip-info::before {
+  display:none;
 }
 .mb-2 {
   margin-bottom: 1rem;

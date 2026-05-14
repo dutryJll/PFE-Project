@@ -20,6 +20,10 @@ interface ReferentielMasters {
 export class ChoixCandidatureComponent {
   private readonly candidatureApiBase = environment.candidatureServiceUrl;
   referentielMasters: ReferentielMasters | null = null;
+  selectedType: 'master' | 'ingenieur' | null = null;
+  showValidationMessage: boolean = false;
+  validationMessageType: 'success' | 'warning' = 'success';
+  validationMessage: string = '';
 
   constructor(
     private router: Router,
@@ -36,7 +40,7 @@ export class ChoixCandidatureComponent {
           this.referentielMasters = data;
         },
         error: (err) => {
-          console.error('Erreur chargement rÃ©fÃ©rentiel dans choix candidature:', err);
+          console.error('Erreur chargement référentiel dans choix candidature:', err);
         },
       });
   }
@@ -44,6 +48,34 @@ export class ChoixCandidatureComponent {
   getTotalPlaces(code: string): number | null {
     const total = this.referentielMasters?.sections_masters?.[code]?.capacites?.total;
     return typeof total === 'number' ? total : null;
+  }
+
+  selectType(type: 'master' | 'ingenieur'): void {
+    this.selectedType = type;
+    this.showValidationMessage = false;
+  }
+
+  verifierSelection(): void {
+    if (!this.selectedType) {
+      this.validationMessageType = 'warning';
+      this.validationMessage = '⚠️ Veuillez d\'abord sélectionner un type de candidature.';
+      this.showValidationMessage = true;
+      return;
+    }
+
+    this.validationMessageType = 'success';
+    this.validationMessage = `✓ Sélection validée : ${this.selectedType === 'master' ? 'Masters' : 'Cycle Ingénieur'}. Vous pouvez procéder à la candidature.`;
+    this.showValidationMessage = true;
+  }
+
+  confirmerEtProceeder(): void {
+    if (!this.selectedType) {
+      this.verifierSelection();
+      return;
+    }
+
+    // Proceed with selected type
+    this.choisirType(this.selectedType);
   }
 
   choisirType(type: string): void {

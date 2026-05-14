@@ -105,7 +105,9 @@ export class GestionCommissionComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.isUsingFallbackData = false;
-          this.membres = response;
+          this.membres = (response || []).filter(
+            (membre) => membre.role === 'responsable_commission',
+          );
           console.log('✅ Membres chargés depuis la base:', this.membres);
         },
         error: (error) => {
@@ -126,7 +128,7 @@ export class GestionCommissionComponent implements OnInit {
             .subscribe({
               next: (users) => {
                 const membres = (users ?? [])
-                  .filter((u) => u?.role === 'commission' || u?.role === 'responsable_commission')
+                  .filter((u) => u?.role === 'responsable_commission')
                   .map((u) => this.mapUserToMembre(u));
 
                 this.isUsingFallbackData = false;
@@ -186,6 +188,7 @@ export class GestionCommissionComponent implements OnInit {
     }
 
     this.nouveauMembre.email = normalizedEmail;
+    this.nouveauMembre.role = 'responsable_commission';
 
     const dejaMembre = this.membres.some(
       (m) => (m.email || '').trim().toLowerCase() === normalizedEmail,
@@ -243,7 +246,7 @@ export class GestionCommissionComponent implements OnInit {
                 last_name: membre.last_name,
                 specialite: membre.specialite,
                 grade: membre.grade,
-                role: membre.role,
+                role: 'responsable_commission',
               },
               { headers: { Authorization: `Bearer ${token}` } },
             )

@@ -33,28 +33,28 @@ export class CandidatureService {
     return new HttpHeaders(headers);
   }
 
-  // CrÃ©er une candidature
+  // Créer une candidature
   createCandidature(data: any): Observable<any> {
     const endpoint = `${this.apiUrl}/create/`;
     return this.http.post(endpoint, data, { headers: this.getHeaders() });
   }
 
-  // RÃ©cupÃ©rer mes candidatures
+  // Récupérer mes candidatures
   getMesCandidatures(): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // RÃ©cupÃ©rer une candidature spÃ©cifique
+  // Récupérer une candidature spécifique
   getCandidature(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // Mettre Ã  jour une candidature
+  // Mettre à jour une candidature
   updateCandidature(id: number, data: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/modifier/`, data, { headers: this.getHeaders() });
   }
 
-  // Mettre Ã  jour le statut d'une candidature
+  // Mettre à jour le statut d'une candidature
   updateStatus(candidatureId: number, newStatus: string, motifRejet?: string): Observable<any> {
     const payload = {
       statut: newStatus,
@@ -65,12 +65,12 @@ export class CandidatureService {
     });
   }
 
-  // RÃ©cupÃ©rer les mÃ©triques en temps rÃ©el pour le candidat (score, classement, total)
+  // Récupérer les métriques en temps réel pour le candidat (score, classement, total)
   getCandidateLiveMetrics(): Observable<any> {
     return this.http.get(`${this.apiUrl}/candidate-live-metrics/`, { headers: this.getHeaders() });
   }
 
-  // RÃ©cupÃ©rer les coefficients de calcul d'un master.
+  // Récupérer les coefficients de calcul d'un master.
   getMasterCoefficients(masterId: number): Observable<MasterScoreCoefficients> {
     return this.http.get<MasterScoreCoefficients>(
       `${this.apiUrl}/masters/${masterId}/coefficients/`,
@@ -80,17 +80,17 @@ export class CandidatureService {
     );
   }
 
-  // RÃ©cupÃ©rer tous les masters ouverts
+  // Récupérer tous les masters ouverts
   getMastersOuverts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/masters/`, { headers: this.getHeaders() });
   }
 
-  // POUR ADMIN/COMMISSION : RÃ©cupÃ©rer toutes les candidatures
+  // POUR ADMIN/COMMISSION : Récupérer toutes les candidatures
   getAllCandidatures(): Observable<any> {
     return this.http.get(`${this.apiUrl}/mes-candidatures/`, { headers: this.getHeaders() });
   }
 
-  // POUR COMMISSION : rÃ©cupÃ©rer la liste classÃ©e des candidatures masters
+  // POUR COMMISSION : récupérer la liste classée des candidatures masters
   getCandidaturesCommissionClassees(masterId?: number | string): Observable<any> {
     let params = new HttpParams().set('type', 'masters');
     if (
@@ -121,7 +121,7 @@ export class CandidatureService {
     );
   }
 
-  // DÃ©poser ou ajuster le dossier numÃ©rique pour une candidature prÃ©sÃ©lectionnÃ©e
+  // Déposer ou ajuster le dossier numérique pour une candidature présélectionnée
   deposerDossierNumerique(candidatureId: number, payload: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/${candidatureId}/deposer-dossier/`, payload, {
       headers: this.getHeaders(),
@@ -139,31 +139,31 @@ export class CandidatureService {
     });
   }
 
-  // Calculer le score rÃ©el du wizard via le backend (pour preview en temps rÃ©el)
+  // Calculer le score réel du wizard via le backend (pour preview en temps réel)
   calculateWizardScore(payload: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/preview-score/`, payload, {
       headers: this.getHeaders(),
     });
   }
 
-  // CrÃ©er une rÃ©clamation
+  // Créer une réclamation
   createReclamation(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/reclamations/`, data, { headers: this.getHeaders() });
   }
 
-  // RÃ©cupÃ©rer mes rÃ©clamations
+  // Récupérer mes réclamations
   getMesReclamations(): Observable<any> {
     return this.http.get(`${this.apiUrl}/reclamations/mes-reclamations/`, {
       headers: this.getHeaders(),
     });
   }
 
-  // POUR COMMISSION : RÃ©cupÃ©rer toutes les rÃ©clamations
+  // POUR COMMISSION : Récupérer toutes les réclamations
   getAllReclamations(): Observable<any> {
     return this.http.get(`${this.apiUrl}/reclamations/`, { headers: this.getHeaders() });
   }
 
-  // Traiter une rÃ©clamation (accepter/rejeter)
+  // Traiter une réclamation (accepter/rejeter)
   traiterReclamation(id: number, decision: string, motif?: string): Observable<any> {
     return this.http.post(
       `${this.apiUrl}/reclamations/${id}/traiter/`,
@@ -190,6 +190,27 @@ export class CandidatureService {
   getCanReapply(masterId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/masters/${masterId}/can-reapply/`, {
       headers: this.getHeaders(),
+    });
+  }
+
+  // Get specialites by parcours code (MPDS, MPGL, MP3I, MRGL, MRMI, ING_APPLI)
+  getSpecialitesParParcours(parcoursCode: string): Observable<any> {
+    let params = new HttpParams().set('parcours_code', parcoursCode);
+    return this.http.get(`${this.apiUrl}/specialites/by-parcours/`, {
+      headers: this.getHeaders(),
+      params,
+    });
+  }
+
+  // Get all parcours (Masters and Ingénieur)
+  getAllParcours(typeFormation?: 'master' | 'ingenieur'): Observable<any> {
+    let params = new HttpParams();
+    if (typeFormation) {
+      params = params.set('type_formation', typeFormation);
+    }
+    return this.http.get(`${this.apiUrl}/all-parcours/`, {
+      headers: this.getHeaders(),
+      params,
     });
   }
 
@@ -355,6 +376,38 @@ export class CandidatureService {
   getAdminDashboardStats(): Observable<any> {
     return this.http.get(`${this.apiUrl}/admin/dashboard-stats/`, {
       headers: this.getHeaders(),
+    });
+  }
+
+  // Configuration Appel / Offre Management
+  getConfiguration(masterId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/configuration/${masterId}/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  createConfiguration(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/configuration/`, data, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  updateConfiguration(masterId: number, data: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/configuration/${masterId}/`, data, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  uploadConfigurationDocument(masterId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('document_pdf', file);
+
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+    });
+
+    return this.http.post(`${this.apiUrl}/configuration/${masterId}/document-pdf/`, formData, {
+      headers,
     });
   }
 }

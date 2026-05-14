@@ -1,6 +1,8 @@
 import { Component, AfterViewInit, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { CommissionService } from '../../../services/commission';
 import { CandidatureService } from '../../../services/candidature.service';
 
 @Component({
@@ -15,7 +17,11 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
   selectedCommissionId: number | null = null;
   private readonly activeCommissionStorageKey = 'active_commission_id';
 
-  constructor(private candidatureService: CandidatureService) {}
+  constructor(
+    private candidatureService: CandidatureService,
+    private commissionService: CommissionService,
+    private router: Router,
+  ) {}
 
   ngOnInit(): void {
     const storedId = localStorage.getItem(this.activeCommissionStorageKey);
@@ -29,68 +35,7 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
     // provided HTML keep working without deep template refactor.
     const w = window as any;
 
-    w.membres = [
-      {
-        id: 1,
-        prenom: 'Karim',
-        nom: 'Tounsi',
-        email: 'k.tounsi@isimm.tn',
-        spec: 'Génie Logiciel',
-        commissionId: 1,
-        assigns: 3,
-        traites: 3,
-        avis: 3,
-        statut: 'actif',
-        lastActivity: "Aujourd'hui 14:32",
-        avatarBg: '#E6F1FB',
-        avatarColor: '#185FA5',
-      },
-      {
-        id: 2,
-        prenom: 'Leila',
-        nom: 'Mansour',
-        email: 'l.mansour@isimm.tn',
-        spec: 'Data Science',
-        commissionId: 2,
-        assigns: 2,
-        traites: 1,
-        avis: 2,
-        statut: 'actif',
-        lastActivity: 'Hier 11:15',
-        avatarBg: '#E1F5EE',
-        avatarColor: '#0F6E56',
-      },
-      {
-        id: 3,
-        prenom: 'Sana',
-        nom: 'Hajri',
-        email: 's.hajri@isimm.tn',
-        spec: 'Réseaux & IoT',
-        commissionId: 1,
-        assigns: 1,
-        traites: 1,
-        avis: 1,
-        statut: 'actif',
-        lastActivity: '05/05/2026',
-        avatarBg: '#EEEDFE',
-        avatarColor: '#534AB7',
-      },
-      {
-        id: 4,
-        prenom: 'Omar',
-        nom: 'Riahi',
-        email: 'o.riahi@isimm.tn',
-        spec: 'IA & Big Data',
-        commissionId: 2,
-        assigns: 0,
-        traites: 0,
-        avis: 0,
-        statut: 'inactif',
-        lastActivity: '02/05/2026',
-        avatarBg: '#FAEEDA',
-        avatarColor: '#854F0B',
-      },
-    ];
+    w.membres = [];
 
     w.candidats = [
       { num: '2603-00001-GL', nom: 'Fatma Gharbi' },
@@ -105,7 +50,7 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
     // in the template. We intentionally keep logic here as the original script
     // to avoid template refactor and prevent Angular template parsing issues.
     w.selected = new Set();
-    w.filtered = [...w.membres];
+    w.filtered = [];
     w.assignMap = {};
     w.selectedCommissionId = this.selectedCommissionId;
     w.commissionOptions = this.commissionOptions;
@@ -266,7 +211,6 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
       } else {
         localStorage.removeItem('active_commission_id');
       }
-      (this as any).selectedCommissionId = w.selectedCommissionId;
       w.renderTable();
       w.showToast('Commission active mise à jour', 't-info');
     }.bind(this);
@@ -486,12 +430,8 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
       /* ignore */
     }
 
-    // Initial render
-    try {
-      w.renderTable();
-    } catch (e) {
-      console.error(e);
-    }
+    // Initial render will happen after the roster loads.
+    this.loadRosterForSelectedCommission();
   }
 
   private loadMyCommissions(): void {
@@ -503,6 +443,7 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
         }
         this.persistCommissionSelection();
         this.applyCommissionContextToMembers();
+        this.loadRosterForSelectedCommission();
       },
       error: () => {
         if (!this.selectedCommissionId) {
@@ -514,6 +455,7 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
         ];
         this.persistCommissionSelection();
         this.applyCommissionContextToMembers();
+        this.loadRosterForSelectedCommission();
       },
     });
   }
@@ -530,12 +472,6 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
     const w = window as any;
     if (!w.membres || !this.commissionOptions.length) return;
 
-    w.membres = w.membres.map((member: any, index: number) => ({
-      ...member,
-      commissionId:
-        member.commissionId || this.commissionOptions[index % this.commissionOptions.length].id,
-    }));
-
     w.selectedCommissionId = this.selectedCommissionId;
     w.renderTable();
   }
@@ -547,11 +483,71 @@ export class MaCommissionComponent implements OnInit, AfterViewInit {
 
     const w = window as any;
     w.selectedCommissionId = this.selectedCommissionId;
-    if (typeof w.renderTable === 'function') {
-      w.renderTable();
-    }
+    this.loadRosterForSelectedCommission();
     if (typeof w.showToast === 'function') {
       w.showToast('Commission active mise à jour', 't-info');
     }
+  }
+
+  private loadRosterForSelectedCommission(): void {
+    const commissionId = this.selectedCommissionId;
+    if (!commissionId) {
+      return;
+    }
+
+    this.commissionService.listCommissionMembers(commissionId).subscribe({
+      next: (response: any) => {
+        const rawMembers = Array.isArray(response) ? response : response?.members || [];
+        const roster = rawMembers.map((member: any, index: number) => {
+          const firstName = String(member.first_name || '').trim();
+          const lastName = String(member.last_name || '').trim();
+          const memberName = String(member.member_name || `${firstName} ${lastName}` || member.email || `Membre ${index + 1}`).trim();
+          const parts = memberName.split(' ');
+          const prenom = firstName || parts[0] || 'Membre';
+          const nom = lastName || parts.slice(1).join(' ') || '';
+          const roleLabel = member.role === 'responsable' ? 'Responsable' : 'Membre';
+
+          return {
+            id: member.user_id || member.id || index + 1,
+            prenom,
+            nom,
+            email: member.email || member.user_email || '',
+            spec: roleLabel,
+            commissionId,
+            assigns: member.actif === false ? 0 : 1,
+            traites: member.actif === false ? 0 : 1,
+            avis: member.role === 'responsable' ? 1 : 0,
+            statut: member.actif === false ? 'inactif' : 'actif',
+            lastActivity: member.date_nomination || '',
+            avatarBg: member.role === 'responsable' ? '#E6F1FB' : '#E1F5EE',
+            avatarColor: member.role === 'responsable' ? '#185FA5' : '#0F6E56',
+          };
+        });
+
+        const w = window as any;
+        w.membres = roster;
+        w.filtered = [...roster];
+        if (typeof w.renderTable === 'function') {
+          w.renderTable();
+        }
+      },
+      error: (error: any) => {
+        console.error('Erreur chargement roster commission:', error);
+        const w = window as any;
+        w.membres = [];
+        w.filtered = [];
+        if (typeof w.renderTable === 'function') {
+          w.renderTable();
+        }
+      },
+    });
+  }
+
+  openMembersManagement(): void {
+    if (!this.selectedCommissionId) {
+      return;
+    }
+
+    this.router.navigate(['/commission/gestion-membres', this.selectedCommissionId]);
   }
 }

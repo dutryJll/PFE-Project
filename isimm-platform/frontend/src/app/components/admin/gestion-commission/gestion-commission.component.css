@@ -18,7 +18,7 @@
 .gestion-commission-page {
   min-height: 100vh;
   padding: 2rem;
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: var(--body-font);
   color: var(--ink-900);
   background:
     radial-gradient(circle at 100% 0%, #d7edf1 0%, transparent 34%),

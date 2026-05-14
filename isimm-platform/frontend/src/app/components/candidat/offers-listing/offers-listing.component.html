@@ -96,15 +96,23 @@
       </mat-card-content>
 
       <mat-card-actions>
-        <button
-          mat-raised-button
-          color="primary"
-          [disabled]="offer.already_applied"
-          (click)="applyNow(offer.master_id)"
-        >
-          <mat-icon>send</mat-icon>
-          {{ offer.already_applied ? 'Déjà postulé' : 'Postuler maintenant' }}
-        </button>
+        <ng-container *ngIf="offer.already_applied; else canApply">
+          <button
+            mat-stroked-button
+            color="accent"
+            [routerLink]="['/candidat/candidature/modifier']"
+            [queryParams]="{ masterId: offer.master_id }"
+          >
+            <mat-icon>edit</mat-icon>
+            Voir / Modifier
+          </button>
+        </ng-container>
+        <ng-template #canApply>
+          <button mat-raised-button color="primary" (click)="applyNow(offer)">
+            <mat-icon>send</mat-icon>
+            Postuler maintenant
+          </button>
+        </ng-template>
       </mat-card-actions>
     </mat-card>
   </div>
