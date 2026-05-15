@@ -30,8 +30,32 @@
         <td>{{ c.specialite }}</td>
         <td>
           <button class="btn btn-secondary" (click)="consultCandidate(c.id)">Consulter</button>
+          <button class="btn btn-primary" (click)="openAvisModal(c)">Donner Avis</button>
         </td>
       </tr>
     </tbody>
   </table>
+
+  <!-- Modal Donner Avis -->
+  <div class="modal" *ngIf="showAvisModal">
+    <div class="modal-content">
+      <h3>Donner un avis pour {{ currentCandidature?.nom_complet || currentCandidature?.candidat_nom }}</h3>
+      <label>
+        <input type="radio" name="avis" [(ngModel)]="avisValue" [value]="true" /> Favorable
+      </label>
+      <label>
+        <input type="radio" name="avis" [(ngModel)]="avisValue" [value]="false" /> Défavorable
+      </label>
+
+      <div *ngIf="avisValue === false">
+        <textarea [(ngModel)]="avisArgument" placeholder="Argumentation (obligatoire pour défavorable)"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" (click)="closeAvisModal()">Annuler</button>
+        <button class="btn btn-primary" (click)="submitAvis()">Envoyer</button>
+      </div>
+      <div class="error" *ngIf="avisError">{{ avisError }}</div>
+    </div>
+  </div>
 </div>

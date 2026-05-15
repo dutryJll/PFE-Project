@@ -51,6 +51,7 @@ urlpatterns = router.urls + [
     path('<int:candidature_id>/avis/<int:avis_id>/', views.get_avis_detail, name='get_avis_detail'),
     path('<int:candidature_id>/avis/', views.soumettre_avis_membre, name='soumettre_avis_membre'),
     path('<int:candidature_id>/annuler/', views.annuler_candidature, name='annuler_candidature'),
+    path('<int:candidature_id>/decision-responsable/', views.set_decision_finale_responsable, name='set_decision_finale_responsable'),
     path('corbeille/', views.corbeille_candidatures, name='corbeille_candidatures'),
     path('configuration/<int:master_id>/', views.gerer_configuration_appel, name='gerer_configuration'),
     path('configuration/', views.gerer_configuration_appel, name='creer_configuration'),
@@ -102,6 +103,8 @@ urlpatterns = router.urls + [
     path('commissions/<int:commission_id>/members/', views.get_commission_members_list, name='get_commission_members'),
     path('commissions/<int:commission_id>/members/add/', views.commission_add_member, name='commission_add_member'),
     path('commissions/<int:commission_id>/members/<int:membre_id>/delete/', views.commission_remove_member, name='commission_remove_member'),
+    path('commissions/<int:commission_id>/appel-avis/', views.send_appel_avis, name='send_appel_avis'),
+    path('commissions/<int:commission_id>/avis-global/', views.commission_avis_global, name='commission_avis_global'),
     path('<int:candidature_id>/statut/changer/', views.changer_statut_candidature_endpoint, name='changer_statut_candidature'),
     path('<int:candidature_id>/statut/historique/', views.recuperer_historique_statuts_endpoint, name='recuperer_historique_statuts'),
 ]

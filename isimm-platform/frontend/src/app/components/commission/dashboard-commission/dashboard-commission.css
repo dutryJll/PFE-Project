@@ -2357,6 +2357,49 @@
   align-items: center;
 }
 
+.commission-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 8px 24px rgba(30, 41, 59, 0.06);
+}
+
+.commission-switcher-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.commission-switcher-select {
+  min-width: 220px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.commission-switcher-select:focus {
+  border-color: #378add;
+  box-shadow: 0 0 0 3px rgba(55, 138, 221, 0.18);
+}
+
+.commission-switcher-select:hover {
+  transform: translateY(-1px);
+}
+
 .date {
   color: #64748b;
   font-size: 0.9rem;
@@ -4129,6 +4172,23 @@
 
 .profile-form-card {
   margin-bottom: 0;
+}
+
+.profile-subtle {
+  margin: 0.25rem 0 0.75rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.profile-commissions-picker select {
+  width: 100%;
+  max-width: 460px;
+  padding: 0.68rem 0.78rem;
+  border: 1px solid #c7d8eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #16314a;
+  font-weight: 600;
 }
 
 .profile-collapse {
@@ -7527,6 +7587,21 @@ a:focus-visible {
 }
 
 @media (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .commission-switcher {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .commission-switcher-select {
+    width: 100%;
+    min-width: 0;
+  }
+
   .filter-row {
     grid-template-columns: 1fr;
   }

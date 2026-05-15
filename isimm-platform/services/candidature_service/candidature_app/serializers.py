@@ -13,6 +13,7 @@ from .models import (
     OffreMaster,
     ParcoursAdmission,
     AvisMembre,
+    AvisSelection,
     ValeurCritere,
 )
 
@@ -301,6 +302,47 @@ class AvisMembreSerializer(serializers.ModelSerializer):
 
     def get_avis_type(self, obj):
         return 'favorable' if obj.avis else 'defavorable'
+
+
+class AvisSelectionSerializer(serializers.ModelSerializer):
+    membre_id = serializers.IntegerField(source='membre.id', read_only=True)
+    membre_user = serializers.CharField(source='membre.user.username', read_only=True)
+    membre_name = serializers.SerializerMethodField()
+    commission_id = serializers.IntegerField(source='commission.id', read_only=True)
+    commission_name = serializers.CharField(source='commission.nom', read_only=True)
+
+    class Meta:
+        model = AvisSelection
+        fields = [
+            'id',
+            'commission',
+            'commission_id',
+            'commission_name',
+            'membre',
+            'membre_id',
+            'membre_user',
+            'membre_name',
+            'statut',
+            'commentaire',
+            'date_avis',
+            'is_global',
+        ]
+        read_only_fields = [
+            'id',
+            'commission_id',
+            'commission_name',
+            'membre_id',
+            'membre_user',
+            'membre_name',
+            'date_avis',
+        ]
+
+    def get_membre_name(self, obj):
+        user = getattr(obj.membre, 'user', None)
+        if not user:
+            return ''
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        return full_name or user.username
 
 
 class MembreCommissionSerializer(serializers.ModelSerializer):

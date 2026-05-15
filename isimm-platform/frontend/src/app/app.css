@@ -16,6 +16,29 @@
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
   cursor: pointer;
 }
+.global-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, #ffffff, #f7f9fb);
+  border-bottom: 1px solid #e6eef6;
+}
+.global-commission {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.global-commission select {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1e3f0;
+  background: #fff;
+}
+.global-actions {
+  display: flex;
+  align-items: center;
+}
 
 .theme-toggle:hover {
   transform: translateY(-1px);

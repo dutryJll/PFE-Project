@@ -1,6 +1,7 @@
 # -*- coding: cp1252 -*-
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
@@ -103,6 +104,8 @@ class Commission(models.Model):
     nom = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     actif = models.BooleanField(default=True)
+    # Date/heure limite pour la soumission des avis par les membres
+    deadline_avis = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -678,6 +681,69 @@ class AvisMembre(models.Model):
             user_name = str(self.membre_id)
         cand = getattr(self.candidature, 'numero', str(self.candidature_id))
         return f"Avis {user_name} on {cand}: {'OK' if self.avis else 'NOK'}"
+
+
+class AvisSelection(models.Model):
+    """Avis global d'un membre pour une commission et une présélection.
+
+    Cet avis représente l'opinion consolidée sur la liste complète.
+    """
+
+    STATUT_CHOICES = [
+        ('favorable', 'Favorable'),
+        ('defavorable', 'Defavorable'),
+    ]
+
+    commission = models.ForeignKey(
+        Commission,
+        on_delete=models.CASCADE,
+        related_name='avis_selection',
+    )
+    membre = models.ForeignKey(
+        MembreCommission,
+        on_delete=models.CASCADE,
+        related_name='avis_selection',
+    )
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES)
+    commentaire = models.TextField(blank=True)
+    date_avis = models.DateTimeField(auto_now=True)
+    is_global = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-date_avis']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['commission', 'membre', 'is_global'],
+                name='unique_global_avis_selection',
+            ),
+            models.CheckConstraint(
+                check=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
+                name='avis_selection_commentaire_required_if_defavorable',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['commission', 'date_avis']),
+            models.Index(fields=['membre', 'is_global']),
+        ]
+
+    def clean(self):
+        commentaire = (self.commentaire or '').strip()
+        self.commentaire = commentaire
+        if self.statut == 'defavorable' and not commentaire:
+            raise ValidationError('Le commentaire est obligatoire pour un avis défavorable.')
+
+    def save(self, *args, **kwargs):
+        self.commentaire = (self.commentaire or '').strip()
+        if self.statut == 'defavorable' and not self.commentaire:
+            raise ValidationError('Le commentaire est obligatoire pour un avis défavorable.')
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        try:
+            user_name = self.membre.user.get_full_name() or self.membre.user.username
+        except Exception:
+            user_name = str(self.membre_id)
+        return f"AvisSelection {user_name} - {self.commission.nom}: {self.statut}"
 
 
 class FormuleScore(models.Model):

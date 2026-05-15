@@ -71,8 +71,9 @@ import { GererInscriptionsComponent } from './components/commission/gerer-inscri
 import { OffrePreinscriptionEditorComponent } from './components/commission/offre-preinscription-editor/offre-preinscription-editor';
 import { OfferCreationWizardComponent } from './components/commission/offer-creation-wizard/offer-creation-wizard';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
-import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 
+import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
+import { PreselectionDashboardComponent } from './components/commission/preselection-dashboard/preselection-dashboard.component';
 export const routes: Routes = [
   // ========================================
   // ROUTES PUBLIQUES
@@ -251,8 +252,14 @@ export const routes: Routes = [
   {
     path: 'commission/liste-preselection',
     component: ListePreselection,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['commission', 'responsable_commission'] },
+  },
+  {
+    path: 'commission/decision-collegiale',
+    component: PreselectionDashboardComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
-    data: { roles: ['commission', 'responsable_commission'], actions: ['Préselection'] },
+    data: { roles: ['responsable_commission'], actions: ['Préselection'] },
   },
   {
     path: 'commission/liste-selection',

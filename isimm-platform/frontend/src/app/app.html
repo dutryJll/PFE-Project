@@ -1,6 +1,1 @@
 <router-outlet />
-
-<button class="theme-toggle" type="button" (click)="toggleTheme()" aria-label="Basculer le thème">
-  <i class="fas" [ngClass]="(themeService.isDark$ | async) ? 'fa-sun' : 'fa-moon'"></i>
-  <span>{{ (themeService.isDark$ | async) ? 'Mode clair' : 'Mode sombre' }}</span>
-</button>

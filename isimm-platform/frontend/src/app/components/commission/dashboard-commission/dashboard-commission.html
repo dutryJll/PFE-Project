@@ -78,7 +78,9 @@
       <a
         class="nav-item"
         [class.active]="
-          currentView === 'candidatures' || currentView === 'candidatures-responsable' || currentView === 'candidatures-master'
+          currentView === 'candidatures' ||
+          currentView === 'candidatures-responsable' ||
+          currentView === 'candidatures-master'
         "
         [class.disabled]="!canOpenCandidaturesMasterMenu()"
         (click)="openCandidaturesMasterMenu()"
@@ -172,6 +174,18 @@
     <header class="content-header">
       <h1>{{ getViewTitle() }}</h1>
       <div class="header-actions">
+        <div class="commission-switcher" *ngIf="availableCommissions.length > 0">
+          <span class="commission-switcher-label">Commission active</span>
+          <select
+            class="commission-switcher-select"
+            [ngModel]="activeCommissionId"
+            (ngModelChange)="onActiveCommissionChange($event)"
+          >
+            <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
+              {{ commission.nom }}
+            </option>
+          </select>
+        </div>
         <span class="date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
       </div>
     </header>
@@ -679,6 +693,30 @@
               {{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}
             </span>
           </div>
+        </div>
+
+        <div class="section-card profile-form-card">
+          <h2>Mes Commissions</h2>
+          <p class="profile-subtle">
+            Sélectionnez la commission active (parcours + année) pour filtrer les vues.
+          </p>
+          <div
+            class="profile-commissions-picker"
+            *ngIf="availableCommissions.length > 0; else noCommissionLinked"
+          >
+            <select
+              [ngModel]="activeCommissionId"
+              (ngModelChange)="onActiveCommissionChange($event)"
+            >
+              <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
+                {{ commission.nom
+                }}{{ commission.description ? ' - ' + commission.description : '' }}
+              </option>
+            </select>
+          </div>
+          <ng-template #noCommissionLinked>
+            <p class="profile-subtle">Aucune commission liée à votre profil.</p>
+          </ng-template>
         </div>
 
         <div class="section-card profile-form-card">
@@ -4518,13 +4556,21 @@
       </div>
 
       <!-- COMPOSANT CANDIDATURES INGÉNIEUR -->
-      <div *ngIf="isCurrentView('candidatures-ingenieur')" class="section" style="background: #f5f5f5">
+      <div
+        *ngIf="isCurrentView('candidatures-ingenieur')"
+        class="section"
+        style="background: #f5f5f5"
+      >
         <app-candidatures-ingenieur></app-candidatures-ingenieur>
       </div>
 
       <!-- CONTENU ALTERNATIF POUR AUTRE VUES DE CANDIDATURES -->
       <div
-        *ngIf="!isCurrentView('candidatures-master') && currentView !== 'candidatures' && !isCurrentView('candidatures-ingenieur')"
+        *ngIf="
+          !isCurrentView('candidatures-master') &&
+          currentView !== 'candidatures' &&
+          !isCurrentView('candidatures-ingenieur')
+        "
         class="section"
       >
         <div class="section-title">
@@ -8738,9 +8784,7 @@
           <div class="divider"></div>
 
           <div>
-            <div class="section-lbl">
-              Votre avis <span style="color: #e24b4a">*</span>
-            </div>
+            <div class="section-lbl">Votre avis <span style="color: #e24b4a">*</span></div>
             <div class="recomm-grid">
               <button
                 type="button"
@@ -8767,7 +8811,11 @@
             <div class="section-lbl">
               Argument
               <span *ngIf="avisRecommandation === 'defavorable'" style="color: #e24b4a">*</span>
-              <span *ngIf="avisRecommandation !== 'defavorable'" style="color: var(--color-text-secondary)">(optionnel)</span>
+              <span
+                *ngIf="avisRecommandation !== 'defavorable'"
+                style="color: var(--color-text-secondary)"
+                >(optionnel)</span
+              >
             </div>
             <textarea
               class="note-area"
@@ -8796,9 +8844,7 @@
             <div class="ftr-left" id="ftr-status">
               Avis sélectionné :
               <strong>{{
-                avisRecommandation === 'favorable'
-                  ? 'Favorable'
-                  : 'Défavorable'
+                avisRecommandation === 'favorable' ? 'Favorable' : 'Défavorable'
               }}</strong>
             </div>
             <div class="ftr-btns">
@@ -8809,7 +8855,9 @@
                 type="submit"
                 class="btn btn-save"
                 id="btn-save"
-                [disabled]="avisRecommandation === 'defavorable' && !(avisArgument && avisArgument.trim())"
+                [disabled]="
+                  avisRecommandation === 'defavorable' && !(avisArgument && avisArgument.trim())
+                "
               >
                 <i class="fas fa-check"></i> Enregistrer mon avis
               </button>

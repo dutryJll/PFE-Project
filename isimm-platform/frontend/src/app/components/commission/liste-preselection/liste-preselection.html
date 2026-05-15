@@ -9,6 +9,14 @@
         <h1>Liste de Présélection</h1>
         <p>Consulter et donner votre avis sur les candidats présélectionnés</p>
       </div>
+      <div class="commission-picker">
+        <label>Commission active</label>
+        <select [ngModel]="activeCommissionId" (ngModelChange)="onCommissionChange($event)">
+          <option *ngFor="let c of commissions" [ngValue]="c.id">
+            {{ getCommissionLabel(c) }}
+          </option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -34,6 +42,16 @@
         <div>
           <span class="info-label">Score moyen</span>
           <span class="info-value">{{ calculateAverage() }}/20</span>
+        </div>
+      </div>
+      <div class="info-item" *ngIf="globalAvisSummary">
+        <i class="fas fa-comments"></i>
+        <div>
+          <span class="info-label">Avis globaux</span>
+          <span class="info-value"
+            >{{ globalAvisSummary.favorables }} Favorables /
+            {{ globalAvisSummary.defavorables }} Défavorables</span
+          >
         </div>
       </div>
     </div>
@@ -104,6 +122,10 @@
     </div>
 
     <div class="action-buttons">
+      <button class="btn-action btn-global-avis" (click)="openGlobalAvisModal()">
+        <i class="fas fa-balance-scale"></i>
+        Donner mon avis pour le parcours
+      </button>
       <button class="btn-action btn-export">
         <i class="fas fa-file-excel"></i>
         Exporter Excel
@@ -117,6 +139,10 @@
 
   <!-- Liste des candidats -->
   <div class="content-container">
+    <div *ngIf="loading" class="empty-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des candidatures...</p>
+    </div>
     <div class="candidats-grid">
       <div class="candidat-card" *ngFor="let candidat of candidatsFiltres; let i = index">
         <!-- Classement -->
@@ -197,14 +223,6 @@
               Favorable
             </button>
             <button
-              class="btn-avis btn-neutre"
-              [class.active]="candidat.monAvis === 'neutre'"
-              (click)="donnerAvis(candidat, 'neutre')"
-            >
-              <i class="fas fa-minus"></i>
-              Neutre
-            </button>
-            <button
               class="btn-avis btn-defavorable"
               [class.active]="candidat.monAvis === 'defavorable'"
               (click)="donnerAvis(candidat, 'defavorable')"
@@ -218,7 +236,11 @@
             *ngIf="candidat.monAvis"
             class="commentaire-input"
             [(ngModel)]="candidat.commentaire"
-            placeholder="Commentaire (optionnel)..."
+            [placeholder]="
+              candidat.monAvis === 'defavorable'
+                ? 'Argumentaire obligatoire pour avis défavorable...'
+                : 'Commentaire (optionnel)...'
+            "
             rows="3"
           ></textarea>
         </div>
@@ -250,5 +272,56 @@
       <i class="fas fa-save"></i>
       Sauvegarder mes avis
     </button>
+  </div>
+
+  <div class="global-avis-modal" *ngIf="showGlobalAvisModal">
+    <div class="global-avis-content">
+      <h3>Donner mon avis pour le parcours</h3>
+      <p>
+        Votre avis s'applique à toute la liste de présélection du parcours lié à la commission
+        active.
+      </p>
+
+      <div class="global-avis-choices">
+        <label>
+          <input type="radio" name="globalAvis" value="favorable" [(ngModel)]="globalAvisStatut" />
+          Favorable
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="globalAvis"
+            value="defavorable"
+            [(ngModel)]="globalAvisStatut"
+          />
+          Défavorable
+        </label>
+      </div>
+
+      <textarea
+        rows="4"
+        [(ngModel)]="globalAvisCommentaire"
+        [placeholder]="
+          globalAvisStatut === 'defavorable'
+            ? 'Argumentaire obligatoire...'
+            : 'Commentaire global (optionnel)...'
+        "
+      ></textarea>
+
+      <div class="global-avis-actions">
+        <button class="btn-action btn-print" type="button" (click)="closeGlobalAvisModal()">
+          Annuler
+        </button>
+        <button
+          class="btn-action btn-global-avis"
+          type="button"
+          [disabled]="globalAvisSubmitting"
+          (click)="submitGlobalAvis()"
+        >
+          <i class="fas fa-paper-plane"></i>
+          {{ globalAvisSubmitting ? 'Envoi...' : 'Soumettre' }}
+        </button>
+      </div>
+    </div>
   </div>
 </div>

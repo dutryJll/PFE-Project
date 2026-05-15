@@ -268,6 +268,15 @@ interface CommissionMember {
   master_rattachement?: string;
 }
 
+interface UserCommissionOption {
+  id: number;
+  nom: string;
+  description?: string;
+  actif?: boolean;
+  is_active?: boolean;
+  role?: string;
+}
+
 type CommissionView =
   | 'dashboard'
   | 'profil'
@@ -451,6 +460,10 @@ export class DashboardCommissionComponent implements OnInit {
   currentDate: Date = new Date();
   Number = Number;
   isResponsable: boolean = false;
+  activeCommissionId: number | null = null;
+  availableCommissions: UserCommissionOption[] = [];
+  commissionsLoading = false;
+  commissionsLoadError = '';
 
   actionPermissions: CommissionActionPermissions = {
     consultationCandidature: true,
@@ -1821,6 +1834,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
+    this.loadUserCommissions();
 
     this.syncViewFromRoute();
     this.resetSelectionState();
@@ -1899,6 +1913,96 @@ export class DashboardCommissionComponent implements OnInit {
       this.wsStatusSub = null;
     }
     this.webSocketService.disconnect();
+  }
+
+  getActiveCommissionLabel(): string {
+    if (this.commissionsLoading) {
+      return 'Chargement des commissions...';
+    }
+
+    if (!this.availableCommissions.length) {
+      return 'Aucune commission disponible';
+    }
+
+    return (
+      this.availableCommissions.find((commission) => commission.id === this.activeCommissionId)
+        ?.nom || this.availableCommissions[0].nom
+    );
+  }
+
+  onActiveCommissionChange(value: string | number): void {
+    const commissionId = Number(value);
+    if (!Number.isFinite(commissionId)) {
+      return;
+    }
+
+    this.activeCommissionId = commissionId;
+    localStorage.setItem('active_commission_id', String(commissionId));
+    this.refreshCommissionScopedData();
+  }
+
+  loadUserCommissions(): void {
+    this.commissionsLoading = true;
+    this.commissionsLoadError = '';
+
+    const storedActiveIdRaw = localStorage.getItem('active_commission_id');
+    const storedActiveId = storedActiveIdRaw ? Number(storedActiveIdRaw) : null;
+
+    this.candidatureService.getMyCommissions(storedActiveId).subscribe({
+      next: (response: any) => {
+        const commissions = Array.isArray(response?.commissions) ? response.commissions : [];
+        this.availableCommissions = commissions.map((commission: any) => ({
+          id: Number(commission.id),
+          nom: commission.nom || `Commission #${commission.id}`,
+          description: commission.description || '',
+          actif: commission.actif ?? true,
+          is_active: commission.is_active ?? false,
+          role: commission.role || '',
+        }));
+
+        const responseActiveId = Number(response?.active_commission_id);
+        const candidateActiveId = Number.isFinite(responseActiveId)
+          ? responseActiveId
+          : Number.isFinite(storedActiveId as number)
+            ? (storedActiveId as number)
+            : this.availableCommissions.find((commission) => commission.is_active)?.id ||
+              this.availableCommissions[0]?.id ||
+              null;
+
+        this.activeCommissionId = Number.isFinite(candidateActiveId as number)
+          ? (candidateActiveId as number)
+          : null;
+
+        if (this.activeCommissionId !== null) {
+          localStorage.setItem('active_commission_id', String(this.activeCommissionId));
+        } else {
+          localStorage.removeItem('active_commission_id');
+        }
+
+        this.commissionsLoading = false;
+        this.refreshCommissionScopedData();
+      },
+      error: (error) => {
+        console.error('Erreur chargement commissions utilisateur:', error);
+        this.commissionsLoadError = 'Impossible de charger les commissions';
+        this.commissionsLoading = false;
+
+        if (Number.isFinite(storedActiveId as number)) {
+          this.activeCommissionId = storedActiveId as number;
+        }
+      },
+    });
+  }
+
+  private refreshCommissionScopedData(): void {
+    this.loadNotifications();
+    this.loadResponsibleNotifications();
+    if (this.isResponsable) {
+      this.loadCandidaturesResponsable();
+    }
+    this.appliquerFiltres();
+    this.appliquerFiltresResponsable();
+    this.updateFinalSelectionFiltered();
   }
 
   private syncViewFromRoute(): void {
@@ -3272,12 +3376,17 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    if (view === 'listes') {
-      this.typeListe = 'selection';
+    if (view === 'avis-listes') {
+      if (this.isResponsable) {
+        this.router.navigate(['/commission/decision-collegiale']);
+      } else {
+        this.router.navigate(['/commission/liste-preselection']);
+      }
+      return;
     }
 
-    if (view === 'avis-listes') {
-      this.typeListe = 'preselection';
+    if (view === 'listes') {
+      this.typeListe = 'selection';
     }
 
     this.switchView(view);
@@ -5314,10 +5423,13 @@ export class DashboardCommissionComponent implements OnInit {
         this.showAlertMessage(response?.message || '✅ Avis enregistré avec succès !');
 
         const existingVotes = this.candidatureVotes[candidatureId] || [];
-        const membreNom = this.currentUser?.first_name && this.currentUser?.last_name
-          ? `${this.currentUser.first_name} ${this.currentUser.last_name}`
-          : this.currentUser?.username || this.currentUser?.email || 'Membre';
-        const commissionName = activeCommissionId ? `Commission #${activeCommissionId}` : 'Commission';
+        const membreNom =
+          this.currentUser?.first_name && this.currentUser?.last_name
+            ? `${this.currentUser.first_name} ${this.currentUser.last_name}`
+            : this.currentUser?.username || this.currentUser?.email || 'Membre';
+        const commissionName = activeCommissionId
+          ? `Commission #${activeCommissionId}`
+          : 'Commission';
 
         this.candidatureVotes[candidatureId] = [
           ...existingVotes.filter((vote) => vote.membreNom !== membreNom),
@@ -5342,7 +5454,9 @@ export class DashboardCommissionComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erreur:', error);
-        this.showAlertMessage(error?.error?.error || "❌ Erreur lors de l'enregistrement de l'avis");
+        this.showAlertMessage(
+          error?.error?.error || "❌ Erreur lors de l'enregistrement de l'avis",
+        );
       },
     });
   }
@@ -5361,9 +5475,7 @@ export class DashboardCommissionComponent implements OnInit {
       .map((vote) => {
         const role = vote.role === 'responsable' ? 'Responsable' : 'Membre';
         const recomm =
-          vote.avis === true || vote.recommandation === 'favorable'
-            ? 'Favorable'
-            : 'Défavorable';
+          vote.avis === true || vote.recommandation === 'favorable' ? 'Favorable' : 'Défavorable';
         const argument = (vote.argument || vote.commentaire || '').trim();
         const commission = vote.commissionName ? ` · ${vote.commissionName}` : '';
         return `${role} ${vote.membreNom}${commission}: ${recomm}${argument ? ` (${argument})` : ''}`;

@@ -119,6 +119,13 @@ AUTH_USER_MODEL = 'auth_app.User'
 # ========================================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
+    "http://localhost:4201",
+    "http://localhost:4202",
+    "http://localhost:4203",
+    "http://127.0.0.1:4200",
+    "http://127.0.0.1:4201",
+    "http://127.0.0.1:4202",
+    "http://127.0.0.1:4203",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

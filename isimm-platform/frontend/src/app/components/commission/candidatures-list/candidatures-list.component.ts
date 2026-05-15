@@ -14,6 +14,11 @@ export class CandidaturesListComponent implements OnInit {
   candidatures: any[] = [];
   selectedIds: number[] = [];
   isAllSelected = false;
+  showAvisModal = false;
+  currentCandidature: any = null;
+  avisValue: boolean | null = null;
+  avisArgument = '';
+  avisError = '';
 
   constructor(private candidatureService: CandidatureService) {}
 
@@ -53,6 +58,43 @@ export class CandidaturesListComponent implements OnInit {
 
   consultCandidate(id: number): void {
     console.log('Consulter', id);
+  }
+
+  openAvisModal(candidature: any): void {
+    this.currentCandidature = candidature;
+    this.avisValue = true;
+    this.avisArgument = '';
+    this.avisError = '';
+    this.showAvisModal = true;
+  }
+
+  closeAvisModal(): void {
+    this.showAvisModal = false;
+    this.currentCandidature = null;
+  }
+
+  submitAvis(): void {
+    this.avisError = '';
+    if (this.avisValue === false && (!this.avisArgument || !this.avisArgument.trim())) {
+      this.avisError = 'Argumentation requise pour un avis défavorable.';
+      return;
+    }
+
+    const payload: any = { avis: this.avisValue, argument: this.avisArgument || '' };
+    // Optionally include commission_id from localStorage
+    const activeCommission = localStorage.getItem('active_commission_id');
+    if (activeCommission) payload.commission_id = Number(activeCommission);
+
+    this.candidatureService.submitAvis(this.currentCandidature.id, payload).subscribe(
+      (res) => {
+        this.closeAvisModal();
+        // Optionally refresh list or show toast
+        this.loadCandidatures();
+      },
+      (err) => {
+        this.avisError = err?.error?.error || 'Erreur lors de l envoi de l avis.';
+      },
+    );
   }
 
   downloadZip(): void {

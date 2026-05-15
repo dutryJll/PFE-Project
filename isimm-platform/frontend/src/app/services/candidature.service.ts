@@ -26,6 +26,11 @@ export class CandidatureService {
       Authorization: `Bearer ${token}`,
     };
 
+    const activeCommissionId = localStorage.getItem('active_commission_id');
+    if (activeCommissionId && activeCommissionId !== 'null') {
+      headers['X-Active-Commission-Id'] = activeCommissionId;
+    }
+
     if (includeJsonContentType) {
       headers['Content-Type'] = 'application/json';
     }
@@ -408,6 +413,65 @@ export class CandidatureService {
 
     return this.http.post(`${this.apiUrl}/configuration/${masterId}/document-pdf/`, formData, {
       headers,
+    });
+  }
+
+  // Get user's commissions (multi-commission support)
+  getUserCommissions(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/me/commissions/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Get avis list for a candidature
+  getAvisList(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${candidatureId}/avis/list/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Get avis statistics for a candidature
+  getAvisStats(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${candidatureId}/avis/statistiques/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Responsable: set final decision for a candidature
+  setDecisionResponsable(
+    candidatureId: number,
+    decision: 'valide' | 'rejete' | 'en_attente',
+  ): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${candidatureId}/decision-responsable/`,
+      { decision },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // Responsable: envoyer un appel à avis aux membres d'une commission
+  sendAppelAvis(commissionId: number, message?: string): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/commissions/${commissionId}/appel-avis/`,
+      { message: message || '' },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // Member: submit one global avis for the active preselection list
+  submitGlobalAvis(
+    commissionId: number,
+    data: { statut: 'favorable' | 'defavorable'; commentaire?: string; is_global?: boolean },
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/commissions/${commissionId}/avis-global/`, data, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Responsable: get collégial summary table for global avis responses
+  getCommissionGlobalAvisSummary(commissionId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/commissions/${commissionId}/avis-global/`, {
+      headers: this.getHeaders(),
     });
   }
 }

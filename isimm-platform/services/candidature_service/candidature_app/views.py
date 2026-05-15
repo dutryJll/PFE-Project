@@ -25,6 +25,7 @@ from .models import (
     Candidature,
     CandidatListe,
     AvisMembre,
+    AvisSelection,
     Commission,
     MembreCommission,
     Concours,
@@ -58,6 +59,7 @@ from .serializers import (
     OffreMasterSerializer,
     UserUpdateSerializer,
     AvisMembreSerializer,
+    AvisSelectionSerializer,
     MembreCommissionSerializer,
     UserSerializer,
 )
@@ -2281,6 +2283,40 @@ def commission_decision_candidature(request, candidature_id):
     )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def set_decision_finale_responsable(request, candidature_id):
+    """Set the decision_finale_responsable field for a candidature.
+
+    Expects payload: { decision: 'valide' | 'rejete' | 'en_attente' }
+    """
+    if getattr(request.user, 'role', None) not in ['responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    decision = str(request.data.get('decision', '')).strip().lower()
+    valid = {'valide', 'rejete', 'en_attente'}
+    if decision not in valid:
+        return Response({'error': 'decision invalide'}, status=status.HTTP_400_BAD_REQUEST)
+
+    candidature.decision_finale_responsable = decision
+    candidature.save(update_fields=['decision_finale_responsable', 'updated_at'])
+
+    _safe_create_notification(
+        user=candidature.candidat,
+        titre='Décision finale du responsable',
+        message=f"La décision finale pour votre candidature a été mise à jour: {decision}",
+        notif_type='info',
+        dedup_key=f'decision-finale-{candidature.id}-{timezone.now().date().isoformat()}',
+    )
+
+    return Response({'success': True, 'decision': decision}, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def can_reapply_to_master(request, master_id):
@@ -2503,6 +2539,13 @@ def soumettre_avis_membre(request, candidature_id):
         return Response({'error': 'Aucune commission active pour cet utilisateur'}, status=status.HTTP_403_FORBIDDEN)
 
     commission = membre_commission.commission
+    # Enforce deadline_avis if defined
+    try:
+        deadline = commission.deadline_avis
+        if deadline and timezone.now() > deadline:
+            return Response({'error': 'La date limite pour soumettre des avis est depassee'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        pass
     avis_normalized = str(avis_bool).strip().lower()
     avis_value = avis_normalized in ['true', '1', 'oui', 'favorable', 'yes']
 
@@ -2881,6 +2924,253 @@ def get_commission_members_for_master(request, master_id):
             'master_nom': master.nom,
             'count': len(commission_members),
             'members': commission_members,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_appel_avis(request, commission_id):
+    """Endpoint pour que le responsable envoie un appel à avis aux membres d'une commission.
+
+    Corps attendu: { 'message': optional custom message }
+    """
+    role = getattr(request.user, 'role', None)
+    try:
+        commission = Commission.objects.get(id=commission_id)
+    except Commission.DoesNotExist:
+        return Response({'error': 'Commission non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if role not in ['admin', 'responsable_commission'] and not _is_user_responsable_for_commission(request.user, commission):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    custom_message = request.data.get('message') or ''
+    # Prefer a user-facing parcours/master name when available, fall back to commission.nom
+    parcours_display = None
+    try:
+        # If commission links directly to a master, try to use a ParcoursAdmission name for clarity
+        if hasattr(commission, 'master') and commission.master is not None:
+            # Try to find an active ParcoursAdmission for this master
+            parcours = ParcoursAdmission.objects.filter(master=commission.master, actif=True).first()
+            if parcours and getattr(parcours, 'nom', None):
+                parcours_display = parcours.nom
+            else:
+                parcours_display = commission.master.nom if getattr(commission, 'master', None) else None
+    except Exception:
+        parcours_display = None
+
+    if not parcours_display:
+        parcours_display = commission.nom
+
+    titre = f"Demande d'avis pour le parcours {parcours_display}"
+    message_default = (
+        f"Demande d'avis pour le parcours {parcours_display}. "
+        "Merci de renseigner votre avis sur la présélection avant la date limite."
+    )
+    message = custom_message.strip() or message_default
+
+    membres = MembreCommission.objects.filter(commission=commission, actif=True).select_related('user')
+    sent = 0
+    failed = 0
+    for membre in membres:
+        try:
+            creer_notification_avec_email(
+                user=membre.user,
+                titre=titre,
+                message=message,
+                notif_type='info',
+                dedup_key=f'appel-avis-commission-{commission.id}-{membre.user.id}-{timezone.now().date().isoformat()}'
+            )
+            sent += 1
+        except Exception:
+            logger.exception('Erreur envoi appel avis pour user %s', getattr(membre.user, 'id', None))
+            failed += 1
+
+    return Response({'success': True, 'sent': sent, 'failed': failed, 'total': sent + failed})
+
+
+def _resolve_user_membre_for_commission(user, commission_id):
+    return (
+        MembreCommission.objects.filter(
+            user=user,
+            actif=True,
+            commission_id=commission_id,
+        )
+        .select_related('commission', 'user')
+        .first()
+    )
+
+
+def _ensure_auto_validated_global_avis(commission):
+    """Create default favorable global avis for members after deadline expiry."""
+    if not commission or not getattr(commission, 'deadline_avis', None):
+        return 0
+    if timezone.now() <= commission.deadline_avis:
+        return 0
+
+    expected_members = MembreCommission.objects.filter(
+        commission=commission,
+        actif=True,
+        role='membre',
+    )
+
+    created_count = 0
+    for membre in expected_members:
+        _, created = AvisSelection.objects.get_or_create(
+            commission=commission,
+            membre=membre,
+            is_global=True,
+            defaults={
+                'statut': 'favorable',
+                'commentaire': 'Auto-validé (absence de réponse avant deadline).',
+            },
+        )
+        if created:
+            created_count += 1
+    return created_count
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def commission_avis_global(request, commission_id):
+    """Global advisory endpoint for Sprint 3 collegial decision workflow.
+
+    - POST: member submits one global opinion for the full preselection list.
+    - GET: responsable/admin gets aggregated table + majority status + can_decide flag.
+    """
+    role = getattr(request.user, 'role', None)
+    if role not in ['commission', 'responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        commission = Commission.objects.get(id=commission_id, actif=True)
+    except Commission.DoesNotExist:
+        return Response({'error': 'Commission non trouvee'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        membre = _resolve_user_membre_for_commission(request.user, commission_id)
+        if not membre and role != 'admin':
+            return Response({'error': 'Aucune appartenance a cette commission'}, status=status.HTTP_403_FORBIDDEN)
+
+        statut = str(request.data.get('statut', '')).strip().lower()
+        commentaire = str(request.data.get('commentaire', '')).strip()
+        is_global = bool(request.data.get('is_global', True))
+
+        if statut not in ['favorable', 'defavorable']:
+            return Response(
+                {'error': 'Statut invalide. Utilisez favorable ou defavorable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if statut == 'defavorable' and not commentaire:
+            return Response(
+                {'error': 'Le commentaire est obligatoire pour un avis defavorable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if commission.deadline_avis and timezone.now() > commission.deadline_avis:
+            return Response({'error': 'La date limite des avis est depassee.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role == 'admin' and not membre:
+            member_id = request.data.get('member_id')
+            membre = MembreCommission.objects.filter(
+                id=member_id,
+                commission_id=commission_id,
+                actif=True,
+            ).first()
+            if not membre:
+                return Response({'error': 'Membre commission introuvable pour admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        avis_obj, created = AvisSelection.objects.update_or_create(
+            commission=commission,
+            membre=membre,
+            is_global=is_global,
+            defaults={
+                'statut': statut,
+                'commentaire': commentaire,
+            },
+        )
+
+        serializer = AvisSelectionSerializer(avis_obj, context={'request': request})
+        return Response(
+            {
+                'success': True,
+                'created': created,
+                'message': 'Avis global enregistre.',
+                'avis': serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # GET
+    if role not in ['responsable_commission', 'admin'] and not _is_user_responsable_for_commission(request.user, commission):
+        return Response({'error': 'Acces reserve au responsable de commission.'}, status=status.HTTP_403_FORBIDDEN)
+
+    _ensure_auto_validated_global_avis(commission)
+
+    expected_members = list(
+        MembreCommission.objects.filter(
+            commission=commission,
+            actif=True,
+            role='membre',
+        ).select_related('user')
+    )
+    avis_qs = AvisSelection.objects.filter(
+        commission=commission,
+        is_global=True,
+    ).select_related('membre__user').order_by('-date_avis')
+
+    avis_by_membre_id = {avis.membre_id: avis for avis in avis_qs}
+    rows = []
+    favorables = 0
+    defavorables = 0
+
+    for membre in expected_members:
+        avis = avis_by_membre_id.get(membre.id)
+        member_name = f"{membre.user.first_name} {membre.user.last_name}".strip() or membre.user.username
+        if avis:
+            if avis.statut == 'favorable':
+                favorables += 1
+            elif avis.statut == 'defavorable':
+                defavorables += 1
+
+        rows.append(
+            {
+                'membre_id': membre.id,
+                'membre_name': member_name,
+                'membre_email': membre.user.email,
+                'statut': avis.statut if avis else 'en_attente',
+                'commentaire': avis.commentaire if avis else '',
+                'date_avis': avis.date_avis if avis else None,
+                'is_global': True,
+            }
+        )
+
+    total_members = len(expected_members)
+    completed_count = sum(1 for r in rows if r['statut'] != 'en_attente')
+    pending_count = total_members - completed_count
+    deadline_expired = bool(commission.deadline_avis and timezone.now() > commission.deadline_avis)
+    can_decide_final = pending_count == 0 or deadline_expired
+    majority_recommendation = 'favorable' if favorables >= defavorables else 'defavorable'
+
+    return Response(
+        {
+            'commission': {
+                'id': commission.id,
+                'nom': commission.nom,
+                'deadline_avis': commission.deadline_avis,
+            },
+            'summary': {
+                'total_members': total_members,
+                'completed_count': completed_count,
+                'pending_count': pending_count,
+                'favorables': favorables,
+                'defavorables': defavorables,
+                'deadline_expired': deadline_expired,
+                'can_decide_final': can_decide_final,
+                'majority_recommendation': majority_recommendation,
+            },
+            'responses': rows,
         },
         status=status.HTTP_200_OK,
     )
