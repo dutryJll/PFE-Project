@@ -1,68 +1,66 @@
-<div class="liste-preselection-page">
-  <!-- Header -->
-  <div class="page-header">
+<div class="liste-preselection-page page">
+  <section class="hero-card">
     <div class="header-content">
-      <button class="btn-back" [routerLink]="['/commission/dashboard']">
+      <button class="btn-back" [routerLink]="['/commission/dashboard']" aria-label="Retour">
         <i class="fas fa-arrow-left"></i>
       </button>
-      <div>
+      <div class="hero-title-block">
+        <div class="eyebrow">Commission / Présélection</div>
         <h1>Liste de Présélection</h1>
         <p>Consulter et donner votre avis sur les candidats présélectionnés</p>
       </div>
-      <div class="commission-picker">
+      <div class="commission-picker card-field" *ngIf="userRole === 'membre'">
         <label>Commission active</label>
-        <select [ngModel]="activeCommissionId" (ngModelChange)="onCommissionChange($event)">
+        <select
+          class="form-control"
+          [ngModel]="activeCommissionId"
+          (ngModelChange)="onCommissionChange($event)"
+        >
           <option *ngFor="let c of commissions" [ngValue]="c.id">
             {{ getCommissionLabel(c) }}
           </option>
         </select>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Informations liste -->
-  <div class="info-banner">
-    <div class="banner-content">
-      <div class="info-item">
-        <i class="fas fa-calendar"></i>
-        <div>
-          <span class="info-label">Session</span>
-          <span class="info-value">2026 - Master & Cycle Ingénieur</span>
-        </div>
-      </div>
-      <div class="info-item">
-        <i class="fas fa-users"></i>
-        <div>
-          <span class="info-label">Total présélectionnés</span>
-          <span class="info-value">{{ candidats.length }} candidats</span>
-        </div>
-      </div>
-      <div class="info-item">
-        <i class="fas fa-chart-line"></i>
-        <div>
-          <span class="info-label">Score moyen</span>
-          <span class="info-value">{{ calculateAverage() }}/20</span>
-        </div>
-      </div>
-      <div class="info-item" *ngIf="globalAvisSummary">
-        <i class="fas fa-comments"></i>
-        <div>
-          <span class="info-label">Avis globaux</span>
-          <span class="info-value"
-            >{{ globalAvisSummary.favorables }} Favorables /
-            {{ globalAvisSummary.defavorables }} Défavorables</span
-          >
-        </div>
+  <section class="summary-grid">
+    <div class="summary-card">
+      <i class="fas fa-calendar"></i>
+      <div>
+        <span class="info-label">Session</span>
+        <span class="info-value">2026 - Master & Cycle Ingénieur</span>
       </div>
     </div>
-  </div>
-
-  <!-- Statistiques rapides -->
-  <div class="stats-grid">
-    <div class="stat-card masters">
-      <div class="stat-icon">
-        <i class="fas fa-graduation-cap"></i>
+    <div class="summary-card">
+      <i class="fas fa-users"></i>
+      <div>
+        <span class="info-label">Total présélectionnés</span>
+        <span class="info-value">{{ candidats.length }} candidats</span>
       </div>
+    </div>
+    <div class="summary-card">
+      <i class="fas fa-chart-line"></i>
+      <div>
+        <span class="info-label">Score moyen</span>
+        <span class="info-value">{{ calculateAverage() }}/20</span>
+      </div>
+    </div>
+    <div class="summary-card" *ngIf="globalAvisSummary">
+      <i class="fas fa-comments"></i>
+      <div>
+        <span class="info-label">Avis globaux</span>
+        <span class="info-value"
+          >{{ globalAvisSummary.favorables }} Favorables /
+          {{ globalAvisSummary.defavorables }} Défavorables</span
+        >
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    <div class="stat-card masters">
+      <div class="stat-icon"><i class="fas fa-graduation-cap"></i></div>
       <div class="stat-content">
         <h3>Masters</h3>
         <p class="stat-number">{{ countByType('master') }}</p>
@@ -71,9 +69,7 @@
     </div>
 
     <div class="stat-card ingenieurs">
-      <div class="stat-icon">
-        <i class="fas fa-cogs"></i>
-      </div>
+      <div class="stat-icon"><i class="fas fa-cogs"></i></div>
       <div class="stat-content">
         <h3>Cycle Ingénieur</h3>
         <p class="stat-number">{{ countByType('ingenieur') }}</p>
@@ -82,9 +78,7 @@
     </div>
 
     <div class="stat-card avis-positifs">
-      <div class="stat-icon">
-        <i class="fas fa-thumbs-up"></i>
-      </div>
+      <div class="stat-icon"><i class="fas fa-thumbs-up"></i></div>
       <div class="stat-content">
         <h3>Avis Favorables</h3>
         <p class="stat-number">{{ countAvis('favorable') }}</p>
@@ -93,27 +87,28 @@
     </div>
 
     <div class="stat-card avis-negatifs">
-      <div class="stat-icon">
-        <i class="fas fa-thumbs-down"></i>
-      </div>
+      <div class="stat-icon"><i class="fas fa-thumbs-down"></i></div>
       <div class="stat-content">
         <h3>Avis Défavorables</h3>
         <p class="stat-number">{{ countAvis('defavorable') }}</p>
         <small>Membres commission</small>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Actions -->
-  <div class="actions-bar">
+  <section class="toolbar-card">
     <div class="filters-group">
-      <select [(ngModel)]="filtreType" (change)="appliquerFiltres()">
+      <label *ngIf="userRole === 'responsable'" class="select-all">
+        <input type="checkbox" (change)="toggleAll($event)" />
+        Sélectionner tout
+      </label>
+      <select class="form-control" [(ngModel)]="filtreType" (change)="appliquerFiltres()">
         <option value="">Tous les types</option>
         <option value="master">Masters uniquement</option>
         <option value="ingenieur">Ingénieurs uniquement</option>
       </select>
 
-      <select [(ngModel)]="filtreAvis" (change)="appliquerFiltres()">
+      <select class="form-control" [(ngModel)]="filtreAvis" (change)="appliquerFiltres()">
         <option value="">Tous les avis</option>
         <option value="favorable">Favorables</option>
         <option value="defavorable">Défavorables</option>
@@ -122,35 +117,48 @@
     </div>
 
     <div class="action-buttons">
-      <button class="btn-action btn-global-avis" (click)="openGlobalAvisModal()">
+      <button class="btn btn-action btn-global-avis" (click)="openGlobalAvisModal()">
         <i class="fas fa-balance-scale"></i>
         Donner mon avis pour le parcours
       </button>
-      <button class="btn-action btn-export">
+      <button
+        *ngIf="userRole === 'responsable'"
+        class="btn btn-action btn-validate"
+        (click)="validateSelection()"
+      >
+        <i class="fas fa-check-circle"></i>
+        Valider sélection
+      </button>
+      <button class="btn btn-action btn-export">
         <i class="fas fa-file-excel"></i>
         Exporter Excel
       </button>
-      <button class="btn-action btn-print">
+      <button class="btn btn-action btn-print">
         <i class="fas fa-print"></i>
         Imprimer Liste
       </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Liste des candidats -->
-  <div class="content-container">
+  <section class="listing-panel">
     <div *ngIf="loading" class="empty-state">
       <i class="fas fa-spinner fa-spin"></i>
       <p>Chargement des candidatures...</p>
     </div>
+
     <div class="candidats-grid">
       <div class="candidat-card" *ngFor="let candidat of candidatsFiltres; let i = index">
-        <!-- Classement -->
+        <div class="select-checkbox" *ngIf="userRole === 'responsable'">
+          <input
+            type="checkbox"
+            [checked]="isSelected(candidat.id)"
+            (click)="toggleSelect(candidat.id, $event)"
+          />
+        </div>
         <div class="classement-badge" [class.top3]="i < 3">
           <span class="classement-number">#{{ i + 1 }}</span>
         </div>
 
-        <!-- Info candidat -->
         <div class="candidat-header">
           <div class="candidat-avatar">
             {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
@@ -171,7 +179,6 @@
           </div>
         </div>
 
-        <!-- Détails -->
         <div class="candidat-details">
           <div class="detail-row">
             <span class="detail-label">
@@ -206,7 +213,6 @@
           </div>
         </div>
 
-        <!-- Avis commission -->
         <div class="avis-section">
           <h4>
             <i class="fas fa-comments"></i>
@@ -234,7 +240,7 @@
 
           <textarea
             *ngIf="candidat.monAvis"
-            class="commentaire-input"
+            class="commentaire-input form-control"
             [(ngModel)]="candidat.commentaire"
             [placeholder]="
               candidat.monAvis === 'defavorable'
@@ -245,13 +251,20 @@
           ></textarea>
         </div>
 
-        <!-- Actions -->
         <div class="candidat-actions">
-          <button class="btn-card btn-view" (click)="voirDossier(candidat.id)">
+          <button
+            *ngIf="userRole !== 'membre'"
+            class="btn-card btn-view"
+            (click)="voirDossier(candidat.id)"
+          >
             <i class="fas fa-folder-open"></i>
             Voir Dossier
           </button>
-          <button class="btn-card btn-details" (click)="voirDetails(candidat.id)">
+          <button
+            *ngIf="userRole !== 'membre'"
+            class="btn-card btn-details"
+            (click)="voirDetails(candidat.id)"
+          >
             <i class="fas fa-info-circle"></i>
             Détails
           </button>
@@ -259,14 +272,12 @@
       </div>
     </div>
 
-    <!-- Message si vide -->
-    <div *ngIf="candidatsFiltres.length === 0" class="empty-state">
+    <div *ngIf="candidatsFiltres.length === 0 && !loading" class="empty-state">
       <i class="fas fa-inbox"></i>
       <p>Aucun candidat présélectionné</p>
     </div>
-  </div>
+  </section>
 
-  <!-- Bouton sauvegarder -->
   <div class="save-section" *ngIf="hasAvisChanged()">
     <button class="btn-save-avis" (click)="sauvegarderAvis()">
       <i class="fas fa-save"></i>
@@ -299,6 +310,7 @@
       </div>
 
       <textarea
+        class="form-control"
         rows="4"
         [(ngModel)]="globalAvisCommentaire"
         [placeholder]="

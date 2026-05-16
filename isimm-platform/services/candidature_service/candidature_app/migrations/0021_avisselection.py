@@ -40,6 +40,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='avisselection',
-            constraint=models.CheckConstraint(check=(~models.Q(statut='defavorable') | ~models.Q(commentaire='')), name='avis_selection_commentaire_required_if_defavorable'),
+            constraint=models.CheckConstraint(condition=(~models.Q(statut='defavorable') | ~models.Q(commentaire='')), name='avis_selection_commentaire_required_if_defavorable'),
         ),
     ]

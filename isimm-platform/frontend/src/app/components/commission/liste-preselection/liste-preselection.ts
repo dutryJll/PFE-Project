@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { CandidatureService } from '../../../services/candidature.service';
+import { AuthService } from '../../../services/auth.service';
 
 interface Candidat {
   id: number;
@@ -50,12 +51,21 @@ export class ListePreselection implements OnInit {
 
   avisChanged: { [key: number]: 'favorable' | 'defavorable' | null } = {};
 
+  // User and role
+  userRole: string | null = null;
+
+  // Responsable selection state
+  selectedIds: number[] = [];
+
   constructor(
     private router: Router,
     private candidatureService: CandidatureService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
+    const me = this.authService.getCurrentUser();
+    this.userRole = me?.role || me?.type || null;
     this.loadCommissionsAndData();
   }
 
@@ -163,6 +173,58 @@ export class ListePreselection implements OnInit {
       const matchAvis = !this.filtreAvis || c.monAvis === this.filtreAvis;
       return matchType && matchAvis;
     });
+    // keep selection in sync with filtered list
+    this.selectedIds = this.selectedIds.filter((id) =>
+      this.candidatsFiltres.some((c) => c.id === id),
+    );
+  }
+
+  // Responsable selection helpers
+  toggleSelect(id: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    const i = this.selectedIds.indexOf(id);
+    if (i >= 0) this.selectedIds.splice(i, 1);
+    else this.selectedIds.push(id);
+  }
+
+  toggleAll(event: any): void {
+    const allIds = this.candidatsFiltres.map((c) => c.id);
+    if (event.target.checked) {
+      this.selectedIds = [...new Set([...this.selectedIds, ...allIds])];
+    } else {
+      this.selectedIds = [];
+    }
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedIds.includes(id);
+  }
+
+  validateSelection(): void {
+    if (this.selectedIds.length === 0) {
+      alert('Veuillez sélectionner au moins un candidat');
+      return;
+    }
+    const confirmMsg = `Êtes-vous sûr de vouloir marquer ${this.selectedIds.length} candidat(s) comme présélectionné(s) ?`;
+    if (!confirm(confirmMsg)) return;
+
+    const reason = `Présélectionné manuellement`;
+    this.candidatureService
+      .bulkUpdateCandidatureStatus(this.selectedIds, 'preselectionne', reason)
+      .subscribe({
+        next: (response: any) => {
+          alert(
+            `✅ ${response?.updated_count || this.selectedIds.length} candidat(s) présélectionné(s) avec succès`,
+          );
+          this.selectedIds = [];
+          this.loadCandidats();
+        },
+        error: (error: any) => {
+          const message =
+            error?.error?.error || error?.error?.message || 'Erreur lors de la validation';
+          alert(`❌ Erreur: ${message}`);
+        },
+      });
   }
 
   donnerAvis(candidat: Candidat, avis: 'favorable' | 'defavorable'): void {

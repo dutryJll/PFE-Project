@@ -101,6 +101,13 @@ class OffreMaster(models.Model):
 
 class Commission(models.Model):
     """Représente une commission (groupe d'examen/validation)."""
+    master = models.ForeignKey(
+        Master,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='commissions',
+    )
     nom = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     actif = models.BooleanField(default=True)
@@ -717,7 +724,7 @@ class AvisSelection(models.Model):
                 name='unique_global_avis_selection',
             ),
             models.CheckConstraint(
-                check=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
+                condition=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
                 name='avis_selection_commentaire_required_if_defavorable',
             ),
         ]
