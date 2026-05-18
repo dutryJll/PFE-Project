@@ -1,239 +1,252 @@
-<div class="wizard-shell wizard-shell--modal">
-  <div class="root">
-    <header class="topbar">
-      <div>
-        <div class="topbar-title">Offre de préinscription</div>
-        <div class="topbar-meta">Modal responsable · création, publication et quotas</div>
-      </div>
+<div style="position: relative">
+  <div style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: center">
+    <button class="btn btn-sec btn-sm" (click)="retourOffreList()">
+      <i class="fas fa-arrow-left" style="margin-right: 0.4rem"></i>
+      Retour
+    </button>
+  </div>
+  <div class="stepper" id="stepper">
+    <button class="step-tab" [class.active]="currentStep === 1" id="tab-1" (click)="goStep(1)">
+      <div class="step-num" id="sn-1">1</div>
+      Infos générales
+    </button>
+    <button class="step-tab" [class.active]="currentStep === 2" id="tab-2" (click)="goStep(2)">
+      <div class="step-num" id="sn-2">2</div>
+      Calendrier
+    </button>
+    <button class="step-tab" [class.active]="currentStep === 3" id="tab-3" (click)="goStep(3)">
+      <div class="step-num" id="sn-3">3</div>
+      Quotas &amp; Diplômes
+    </button>
+  </div>
 
-      <div class="wizard-card-badges">
-        <span class="wizard-chip wizard-chip--info">Responsable</span>
-        <span class="badge" [ngClass]="getRowStatusClass(isStatusOpen())">{{
-          getRowStatusText(isStatusOpen())
-        }}</span>
-      </div>
-
-      <div class="topbar-actions">
-        <button class="btn btn-sec btn-sm" (click)="syncLive()">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
-          </svg>
-          Synchroniser
-        </button>
-        <button class="btn btn-sec btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
-          Enregistrer
-        </button>
-        <button class="btn btn-primary btn-sm" (click)="publierOffre()" [disabled]="isSavingOffre">
-          {{ isSavingOffre ? 'Publication...' : 'Publier maintenant' }}
-        </button>
-      </div>
-    </header>
-
-    <div [class]="getStatusBarClass()">
-      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-        <circle cx="6" cy="6" r="4.5"></circle>
-      </svg>
-      <span>{{ getStatusText() }}</span>
-    </div>
-
-    <div *ngIf="errorMessage" class="toast t-warn">
-      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-        <path d="M6 1.5l4.5 7.5H1.5L6 1.5z"></path>
-      </svg>
-      <span>{{ errorMessage }}</span>
-    </div>
-
-    <div class="kpi-grid">
-      <div class="card">
-        <div class="section-title">Capacité totale</div>
-        <div class="topbar-title">{{ capaciteTotal }} places</div>
-        <div class="topbar-meta">Somme des quotas saisis</div>
-      </div>
-      <div class="card">
-        <div class="section-title">Période</div>
-        <div class="topbar-title">{{ dateDebut }} → {{ dateFin }}</div>
-        <div class="topbar-meta">Fenêtre de préinscription</div>
-      </div>
-      <div class="card">
-        <div class="section-title">PDF officiel</div>
-        <div class="topbar-title">{{ selectedPdfFile?.name || 'Aucun fichier' }}</div>
-        <div class="topbar-meta">Document signé à joindre</div>
-      </div>
-    </div>
-
-    <div class="stepper">
-      <button class="step-tab" [class.active]="currentStep === 1" (click)="goStep(1)">
-        <span class="step-num">1</span>
-        Général
-      </button>
-      <button class="step-tab" [class.active]="currentStep === 2" (click)="goStep(2)">
-        <span class="step-num">2</span>
-        Calendrier
-      </button>
-      <button class="step-tab" [class.active]="currentStep === 3" (click)="goStep(3)">
-        <span class="step-num">3</span>
-        Quotas
-      </button>
-    </div>
-
-    <div class="card">
-      <div *ngIf="currentStep === 1" class="step-panel">
-        <div class="section-title">Informations générales</div>
+  <div class="card-wrapper">
+    <div class="step-content">
+      <div class="step-panel" [class.active]="currentStep === 1" id="panel-1">
         <div class="form-grid">
-          <label class="form-field">
-            <span>Titre</span>
-            <input class="input" [(ngModel)]="titre" (input)="syncLive()" />
-          </label>
-          <label class="form-field">
-            <span>Type de formation</span>
-            <select class="input" [(ngModel)]="typeFormation" (change)="syncLive()">
+          <div class="form-group">
+            <div class="flbl">Titre de l'offre</div>
+            <input type="text" class="finput" [(ngModel)]="titre" (input)="syncLive()" />
+          </div>
+          <div class="form-group">
+            <div class="flbl">Type</div>
+            <select class="finput" [(ngModel)]="typeFormation" (change)="syncLive()">
               <option value="master">Master</option>
-              <option value="licence">Licence</option>
-              <option value="ingenieur">Ingénieur</option>
+              <option value="ingenieur">Cycle Ingénieur</option>
             </select>
-          </label>
-          <label class="form-field">
-            <span>Sous-type</span>
-            <select class="input" [(ngModel)]="soustype" (change)="syncLive()">
+          </div>
+          <div class="form-group">
+            <div class="flbl">Sous-type</div>
+            <select class="finput" [(ngModel)]="soustype" (change)="syncLive()">
               <option value="professionnel">Professionnel</option>
               <option value="recherche">Recherche</option>
             </select>
-          </label>
-          <label class="form-field">
-            <span>Spécialité</span>
-            <input class="input" [(ngModel)]="spec" (input)="syncLive()" />
-          </label>
+          </div>
+          <div class="form-group">
+            <div class="flbl">Spécialité</div>
+            <input type="text" class="finput" [(ngModel)]="spec" (input)="syncLive()" />
+          </div>
+          <div class="form-group full">
+            <div class="flbl">Description</div>
+            <textarea class="finput" [(ngModel)]="description" (input)="syncLive()"></textarea>
+          </div>
+          <div class="form-group full" style="gap: 0.55rem">
+            <div class="toggle-row">
+              <div
+                class="toggle"
+                [class.on]="appel"
+                [class.blue]="appel"
+                id="tog-appel"
+                (click)="toggleAppel()"
+              ></div>
+              <span id="tog-appel-lbl">{{ appel ? 'Appel actif' : 'Appel inactif' }}</span>
+            </div>
+            <div class="vis-toggle">
+              <div
+                class="toggle"
+                [class.on]="visibilite"
+                [class.green]="visibilite"
+                id="tog-vis"
+                (click)="toggleVis()"
+              ></div>
+              <span id="tog-vis-lbl"
+                >Visibilité : <strong>{{ visibilite ? 'Validée' : 'Masquée' }}</strong></span
+              >
+            </div>
+          </div>
         </div>
-
-        <label class="form-field" style="margin-top: 0.75rem">
-          <span>Description</span>
-          <textarea
-            class="input textarea"
-            rows="5"
-            [(ngModel)]="description"
-            (input)="syncLive()"
-          ></textarea>
-        </label>
-
-        <div class="quota-toolbar">
-          <label class="check-toggle">
-            <input type="checkbox" [checked]="visibilite" (change)="toggleVis()" />
-            Visible pour les candidats
-          </label>
-          <label class="check-toggle">
-            <input type="checkbox" [checked]="appel" (change)="toggleAppel()" />
-            Appel à candidatures actif
-          </label>
-          <label class="check-toggle">
-            <input type="checkbox" [checked]="row1Open" (change)="toggleRow1()" />
-            Publication active
-          </label>
-        </div>
-
-        <div class="topbar-meta" style="margin-top: 0.6rem">
-          Synchronisation instantanée avec le résumé et les quotas.
+        <div class="nav-footer">
+          <div></div>
+          <button class="btn btn-primary btn-primary-large" (click)="goStep(2)">
+            Suivant
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 2l4 3-4 3"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <div *ngIf="currentStep === 2" class="step-panel">
-        <div class="section-title">Calendrier et publication</div>
+      <div class="step-panel" [class.active]="currentStep === 2" id="panel-2">
         <div class="cal-grid">
-          <label class="form-field">
-            <span>Date de début</span>
-            <input class="input" type="date" [(ngModel)]="dateDebut" (input)="syncLive()" />
-          </label>
-          <label class="form-field">
-            <span>Date de fin</span>
-            <input class="input" type="date" [(ngModel)]="dateFin" (input)="syncLive()" />
-          </label>
-          <label class="form-field">
-            <span>Limite préinscription</span>
-            <input class="input" type="date" [(ngModel)]="dateLimitePre" (input)="syncLive()" />
-          </label>
-          <label class="form-field">
-            <span>Limite dépôt dossier</span>
-            <input class="input" type="date" [(ngModel)]="dateLimiteDep" (input)="syncLive()" />
-          </label>
+          <div class="form-group">
+            <div class="flbl">Date début visibilité</div>
+            <input type="date" class="finput" [(ngModel)]="dateDebut" (change)="syncLive()" />
+          </div>
+          <div class="form-group">
+            <div class="flbl">Date fin visibilité</div>
+            <input type="date" class="finput" [(ngModel)]="dateFin" (change)="syncLive()" />
+          </div>
+          <div class="form-group">
+            <div class="flbl">Date limite préinscription</div>
+            <input type="date" class="finput" [(ngModel)]="dateLimitePre" (change)="syncLive()" />
+          </div>
+          <div class="form-group">
+            <div class="flbl">Date limite dépôt dossier</div>
+            <input type="date" class="finput" [(ngModel)]="dateLimiteDep" (change)="syncLive()" />
+          </div>
         </div>
+        <div class="nav-footer">
+          <button class="btn btn-sec btn-sm" (click)="goStep(1)">
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M7 2L3 5l4 3"></path>
+            </svg>
+            Précédent
+          </button>
+          <button class="btn btn-primary btn-primary-large" (click)="goStep(3)">
+            Suivant
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 2l4 3-4 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
 
-        <div class="card" style="margin-top: 0.9rem">
-          <div class="section-title">Document officiel</div>
-          <input
-            class="input"
-            type="file"
-            accept="application/pdf"
-            (change)="onPdfSelected($event)"
-          />
-          <div class="topbar-meta" style="margin-top: 0.5rem">
-            {{ selectedPdfFile ? selectedPdfFile.name : 'Aucun PDF sélectionné' }}
+      <div class="step-panel" [class.active]="currentStep === 3" id="panel-3">
+        <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 0.55rem">
+          Tableau dynamique des quotas (ISIMM Internes, Externes...)
+        </div>
+        <table class="quota-table" id="quota-table">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th>Établissement</th>
+              <th>Places</th>
+              <th>Diplôme requis</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="quota-body">
+            <tr *ngFor="let q of quotas; let i = index">
+              <td>
+                <input type="text" class="qt-input" [(ngModel)]="q.cat" (change)="syncLive()" />
+              </td>
+              <td>
+                <input type="text" class="qt-input" [(ngModel)]="q.etab" (change)="syncLive()" />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="qt-input"
+                  style="width: 60px"
+                  [(ngModel)]="q.places"
+                  (change)="updateTotal(); syncLive()"
+                />
+              </td>
+              <td>
+                <input type="text" class="qt-input" [(ngModel)]="q.diplome" (change)="syncLive()" />
+              </td>
+              <td>
+                <button class="del-btn" (click)="delQuota(i)" title="Supprimer">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 3h8M5 3V2h2v1M4 3v6h4V3"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+          "
+        >
+          <button class="btn btn-sec btn-sm" (click)="addQuota()">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <line x1="6" y1="2" x2="6" y2="10"></line>
+              <line x1="2" y1="6" x2="10" y2="6"></line>
+            </svg>
+            Ajouter un quota
+          </button>
+          <div class="total-pill">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="8" cy="5" r="2.5"></circle>
+              <path d="M1 10c0-2.5 2-4 5-4M11 10c0-1.5-1-2.5-3-3"></path>
+            </svg>
+            Capacité totale : <strong id="cap-total">{{ capaciteTotal }}</strong> places
+          </div>
+        </div>
+        <div class="nav-footer">
+          <button class="btn btn-sec btn-sm" (click)="goStep(2)">
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M7 2L3 5l4 3"></path>
+            </svg>
+            Précédent
+          </button>
+          <div style="display: flex; gap: 0.5rem">
+            <button class="btn btn-amber btn-sm" (click)="togglePreview()">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
+                <circle cx="6" cy="6" r="1.5"></circle>
+              </svg>
+              Aperçu candidat
+            </button>
+            <button class="btn btn-teal btn-sm" (click)="enregistrer()">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+                <path d="M2 6l3 3 5-5"></path>
+              </svg>
+              Enregistrer
+            </button>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <div *ngIf="currentStep === 3" class="step-panel">
-        <div class="section-title">Quotas et diplômes</div>
-        <div class="quota-toolbar">
-          <div class="topbar-meta">Total calculé: {{ capaciteTotal }} places</div>
-          <button class="btn btn-amber btn-sm" (click)="addQuota()">Ajouter un quota</button>
-        </div>
-
-        <div class="table-wrap" style="margin-top: 0.75rem">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Catégorie</th>
-                <th>Etablissement</th>
-                <th>Diplôme</th>
-                <th style="width: 90px">Places</th>
-                <th style="width: 64px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let quota of quotas; let i = index">
-                <td><input class="input" [(ngModel)]="quota.cat" (input)="syncLive()" /></td>
-                <td><input class="input" [(ngModel)]="quota.etab" (input)="syncLive()" /></td>
-                <td><input class="input" [(ngModel)]="quota.diplome" (input)="syncLive()" /></td>
-                <td>
-                  <input
-                    class="input"
-                    type="number"
-                    min="0"
-                    [(ngModel)]="quota.places"
-                    (input)="updateTotal(); syncLive()"
-                  />
-                </td>
-                <td>
-                  <button class="btn btn-danger btn-sm" (click)="delQuota(i)">Sup.</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="nav-actions" style="margin-top: 0.9rem; justify-content: space-between">
-        <button
-          class="btn btn-sec btn-sm"
-          [disabled]="currentStep === 1"
-          (click)="goStep(currentStep - 1)"
-        >
-          Précédent
+  <div
+    id="preview-wrap"
+    *ngIf="previewOpen"
+    style="
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 8, 23, 0.5);
+      z-index: 50;
+      border-radius: var(--border-radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    "
+  >
+    <div class="preview-modal">
+      <div class="preview-head">
+        <span>Aperçu — Vue candidat</span>
+        <button class="preview-close" (click)="togglePreview()">
+          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="2" y1="2" x2="8" y2="8"></line>
+            <line x1="8" y1="2" x2="2" y2="8"></line>
+          </svg>
         </button>
-        <div class="nav-actions">
-          <button
-            class="btn btn-sec btn-sm"
-            [disabled]="currentStep === 3"
-            (click)="goStep(currentStep + 1)"
-          >
-            Suivant
-          </button>
-          <button class="btn btn-primary btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
-            Enregistrer
-          </button>
-          <button class="btn btn-teal btn-sm" (click)="publierOffre()" [disabled]="isSavingOffre">
-            Publier
-          </button>
-        </div>
+      </div>
+      <div id="preview-card-wrap" style="padding: 0.75rem">
+        <div class="offre-title">{{ titre }}</div>
+        <div class="offre-desc" style="margin-top: 0.4rem">{{ description }}</div>
+        <div class="offre-info-row" style="margin-top: 0.55rem">Spécialité: {{ spec }}</div>
+        <div class="offre-info-row">Date limite: {{ dateLimitePre }}</div>
+        <div class="offre-info-row">Capacité: {{ capaciteTotal }} places</div>
       </div>
     </div>
   </div>

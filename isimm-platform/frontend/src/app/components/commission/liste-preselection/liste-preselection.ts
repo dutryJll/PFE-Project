@@ -5,6 +5,7 @@ import { RouterLink, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { CandidatureService } from '../../../services/candidature.service';
 import { AuthService } from '../../../services/auth.service';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 interface Candidat {
   id: number;
@@ -43,6 +44,8 @@ export class ListePreselection implements OnInit {
 
   filtreType: string = '';
   filtreAvis: string = '';
+  selectedSpecialite: string = '';
+  availableSpecialites: string[] = [];
   globalAvisStatut: 'favorable' | 'defavorable' = 'favorable';
   globalAvisCommentaire = '';
   showGlobalAvisModal = false;
@@ -61,12 +64,16 @@ export class ListePreselection implements OnInit {
     private router: Router,
     private candidatureService: CandidatureService,
     private authService: AuthService,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     const me = this.authService.getCurrentUser();
     this.userRole = me?.role || me?.type || null;
     this.loadCommissionsAndData();
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   loadCommissionsAndData(): void {
@@ -171,7 +178,8 @@ export class ListePreselection implements OnInit {
     this.candidatsFiltres = this.candidats.filter((c) => {
       const matchType = !this.filtreType || c.type === this.filtreType;
       const matchAvis = !this.filtreAvis || c.monAvis === this.filtreAvis;
-      return matchType && matchAvis;
+      const matchSpecialite = !this.selectedSpecialite || c.specialite === this.selectedSpecialite;
+      return matchType && matchAvis && matchSpecialite;
     });
     // keep selection in sync with filtered list
     this.selectedIds = this.selectedIds.filter((id) =>

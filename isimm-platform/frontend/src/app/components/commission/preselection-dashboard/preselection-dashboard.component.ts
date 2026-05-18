@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { CandidatureService } from '../../../services/candidature.service';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 @Component({
   selector: 'app-preselection-dashboard',
@@ -40,12 +41,21 @@ export class PreselectionDashboardComponent implements OnInit {
   globalAvisSummary: any = null;
   globalAvisResponses: any[] = [];
   finalDecisionApplying = false;
+  // spécialités
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
 
-  constructor(private candidatureService: CandidatureService) {}
+  constructor(
+    private candidatureService: CandidatureService,
+    private specialitesService: SpecialitesService,
+  ) {}
 
   ngOnInit(): void {
     this.loadPreselectionCandidates();
     this.loadCommissionGlobalAvisSummary();
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   loadPreselectionCandidates(): void {
@@ -212,8 +222,11 @@ export class PreselectionDashboardComponent implements OnInit {
           (c.decision_preselection === 'preselectionne' || c.decision_preselection === 'valide')) ||
         (this.statusFilter === 'exam' && c.decision_preselection === 'sous_examen');
       const matchTop100 = !this.top100Only || (c.rang && c.rang <= 100);
+      const matchSpecialite =
+        !this.selectedSpecialite ||
+        (c.specialite || c.master_nom || '') === this.selectedSpecialite;
 
-      return matchName && matchScore && matchStatus && matchTop100;
+      return matchName && matchScore && matchStatus && matchTop100 && matchSpecialite;
     });
   }
 

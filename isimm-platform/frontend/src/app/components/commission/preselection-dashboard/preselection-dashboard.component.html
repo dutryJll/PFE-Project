@@ -142,9 +142,9 @@
       <div>
         <div class="flbl">Statut</div>
         <select class="finput">
-          <option>Tous</option>
-          <option>Présélectionné</option>
-          <option>Sous examen</option>
+          <option value="">Tous</option>
+          <option value="preselectionne">Présélectionné</option>
+          <option value="sous_examen">Sous examen</option>
         </select>
       </div>
       <div>
@@ -152,6 +152,20 @@
           <input type="checkbox" (change)="toggleTop100()" />
           <span>Top 100 seulement</span>
         </label>
+      </div>
+    </div>
+    <div class="fg">
+      <div>
+        <div class="flbl">Spécialité</div>
+        <select
+          class="finput"
+          *ngIf="availableSpecialites && availableSpecialites.length > 0"
+          [(ngModel)]="selectedSpecialite"
+          (change)="applyFilter()"
+        >
+          <option value="">Toutes les spécialités</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+        </select>
       </div>
     </div>
     <div class="filter-row3">

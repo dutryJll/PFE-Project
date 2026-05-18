@@ -119,6 +119,11 @@
         <option *ngFor="let master of masters" [value]="master.id">{{ master.nom }}</option>
       </select>
 
+      <select [(ngModel)]="selectedSpecialite" (change)="filtrerReclamations()">
+        <option value="">Toutes les spécialités</option>
+        <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+      </select>
+
       <button class="btn-reset" (click)="resetFiltres()">
         <i class="fas fa-redo"></i>
         Réinitialiser

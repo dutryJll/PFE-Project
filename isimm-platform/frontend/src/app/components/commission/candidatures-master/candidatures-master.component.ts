@@ -1,7 +1,8 @@
 import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { SpecialitesService } from '../../../services/specialites.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDialogModule } from '@angular/material/dialog';
 import { CandidaturesConsultationModalComponent } from './candidatures-consultation-modal.component';
@@ -55,8 +56,8 @@ interface StatistiqueCard {
 })
 export class CandidaturesMasterComponent implements OnInit {
   constructor(
-    private http: HttpClient,
     private dialog: MatDialog,
+    private specialitesService: SpecialitesService, private http: HttpClient
   ) {}
 
   @Input() availableCommissions: { id: number; nom: string }[] = [];
@@ -189,10 +190,11 @@ export class CandidaturesMasterComponent implements OnInit {
   // ========================================
   ngOnInit(): void {
     this.appliquerFiltres();
-    // load specialites mapping
-    try {
-      // HttpClient injected below will load the JSON
-    } catch (e) {}
+    // subscribe to SpecialitesService for specialties mapping
+    this.specialitesService.getSpecialitesData().subscribe((data: any) => {
+      this.specialitesData = data || {};
+      this.recomputeAvailableSpecialites();
+    });
     // initialize selected commission from input
     if (!this.selectedCommissionId && this.activeCommissionId) {
       this.selectedCommissionId = this.activeCommissionId;
@@ -206,8 +208,8 @@ export class CandidaturesMasterComponent implements OnInit {
       }
     });
     this.distinctYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
-    // load specialties JSON
-    this.http.get('/assets/specialites.json').subscribe((data) => {
+    // load specialties via SpecialitesService if available
+    this.http.get('/assets/specialites.json').subscribe((data: any) => {
       this.specialitesData = data || {};
       this.recomputeAvailableSpecialites();
     });

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { environment } from '../../../../environments/environment';
 
@@ -37,6 +38,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private authService: AuthService,
+    private router: Router,
   ) {}
 
   // Form fields
@@ -353,5 +355,11 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
 
   getHeadBadgeClass(soustype: string): string {
     return soustype === 'recherche' ? 'hb-recherche' : 'hb-professionnel';
+  }
+
+  retourOffreList(): void {
+    this.router.navigate(['/commission/dashboard'], {
+      queryParams: { view: 'configuration-appels' },
+    });
   }
 }

@@ -1,1 +1,10 @@
-<p>consulter-inscriptions works!</p>
+<div class="consulter-inscriptions">
+  <h2>Inscriptions</h2>
+  <div class="filters">
+    <label>Spécialité</label>
+    <select [(ngModel)]="selectedSpecialite">
+      <option value="">Toutes</option>
+      <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+    </select>
+  </div>
+</div>

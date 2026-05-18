@@ -19,6 +19,7 @@ import {
   OffreMasterDialogData,
 } from '../offre-master-dialog/offre-master-dialog.component';
 import { CandidaturesMasterComponent } from '../candidatures-master/candidatures-master.component';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 interface Candidature {
   id: number;
@@ -1942,6 +1943,7 @@ export class DashboardCommissionComponent implements OnInit {
     private dialog: MatDialog,
     private webSocketService: WebSocketService,
     public location: Location,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
@@ -1949,6 +1951,19 @@ export class DashboardCommissionComponent implements OnInit {
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
     this.loadUserCommissions();
+
+    // Prefer to source specialities from SpecialitesService when available
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      if (data && data.programs) {
+        this.specialites = Object.keys(data.programs).map((code, idx) => ({
+          id: idx + 1,
+          nom: data.programs[code].full_name || code,
+          statut: 'actuel' as 'actuel',
+          nb_candidatures: 0,
+          nb_dossiers: 0,
+        }));
+      }
+    });
 
     this.syncViewFromRoute();
     this.resetSelectionState();

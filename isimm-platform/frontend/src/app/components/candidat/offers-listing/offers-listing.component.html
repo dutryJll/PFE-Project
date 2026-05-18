@@ -60,6 +60,14 @@
           {{ spec }}
         </button>
       </div>
+
+      <!-- mobile / compact: select fallback -->
+      <div class="filter-select-compact">
+        <select [(ngModel)]="filterSpecialite" (change)="applyFilters()">
+          <option value="all">Toutes</option>
+          <option *ngFor="let s of getUniqueSpecialites()" [value]="s">{{ s }}</option>
+        </select>
+      </div>
     </div>
   </div>
 

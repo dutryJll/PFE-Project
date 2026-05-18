@@ -76,6 +76,16 @@
         <option value="defavorable">Défavorables</option>
         <option value="neutre">Neutres</option>
       </select>
+
+      <select
+        *ngIf="availableSpecialites && availableSpecialites.length > 0"
+        class="form-control"
+        [(ngModel)]="selectedSpecialite"
+        (change)="appliquerFiltres()"
+      >
+        <option value="">Toutes les spécialités</option>
+        <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+      </select>
     </div>
 
     <div class="action-buttons">

@@ -10,6 +10,13 @@
         }}
       </p>
     </div>
+    <div class="header-filters" *ngIf="!selectedCandidature">
+      <label>Spécialité</label>
+      <select [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()">
+        <option value="">Toutes</option>
+        <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+      </select>
+    </div>
     <div class="header-actions" *ngIf="selectedCandidature">
       <button class="btn-ghost" (click)="retourDashboard()">Retour dashboard</button>
     </div>

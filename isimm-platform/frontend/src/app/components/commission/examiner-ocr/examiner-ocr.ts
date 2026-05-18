@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { SpecialitesService } from '../../../services/specialites.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 interface Candidat {
@@ -57,8 +58,10 @@ export class ExaminerOcrComponent implements OnInit {
   recherche: string = '';
   filtreMaster: string = '';
   filtreStatut: string = '';
+  selectedSpecialite: string = '';
 
   masters: any[] = [];
+  availableSpecialites: string[] = [];
   candidatsEnAttente: Candidat[] = [];
   candidatsFiltres: Candidat[] = [];
   candidatSelectionne: Candidat | null = null;
@@ -72,11 +75,20 @@ export class ExaminerOcrComponent implements OnInit {
   constructor(
     private router: Router,
     private sanitizer: DomSanitizer,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     this.loadMasters();
     this.loadCandidats();
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+      // prefer using service programs to populate masters list
+      const progs = this.specialitesService.getPrograms();
+      if (progs && progs.length) {
+        this.masters = progs.map((p) => ({ id: p.code, nom: p.name }));
+      }
+    });
   }
 
   loadMasters(): void {
@@ -139,9 +151,10 @@ export class ExaminerOcrComponent implements OnInit {
         c.email.toLowerCase().includes(this.recherche.toLowerCase());
 
       const matchMaster = !this.filtreMaster || c.master_id.toString() === this.filtreMaster;
+      const matchSpecialite = !this.selectedSpecialite || c.master_nom === this.selectedSpecialite;
       const matchStatut = !this.filtreStatut || c.statut_analyse === this.filtreStatut;
 
-      return matchRecherche && matchMaster && matchStatut;
+      return matchRecherche && matchMaster && matchStatut && matchSpecialite;
     });
   }
 

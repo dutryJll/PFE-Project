@@ -10,6 +10,13 @@
           Téléchargez les documents requis pour cette candidature
         </p>
       </div>
+      <div class="commission-dossier-upload__specialite">
+        <label>Spécialité</label>
+        <select [(ngModel)]="selectedSpecialite">
+          <option value="">Choisir une spécialité</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+        </select>
+      </div>
     </div>
   </header>
 

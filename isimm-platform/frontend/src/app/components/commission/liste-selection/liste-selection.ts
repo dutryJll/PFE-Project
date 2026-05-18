@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
+import { CandidaturesConsultationModalComponent } from '../candidatures-master/candidatures-consultation-modal.component';
+import { SpecialitesService } from '../../../services/specialites.service';
 import { AuthService } from '../../../services/auth.service';
 import { CandidatureService } from '../../../services/candidature.service';
 
@@ -49,7 +53,6 @@ interface DossierDocumentView {
     description?: string;
   };
 }
-
 interface FinalSelectionFilters {
   session: string;
   type: FinalSelectionTypeFilter;
@@ -118,6 +121,8 @@ export class ListeSelection implements OnInit {
     private router: Router,
     private authService: AuthService,
     private candidatureService: CandidatureService,
+    private dialog: MatDialog,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
@@ -126,6 +131,13 @@ export class ListeSelection implements OnInit {
     this.showDossierButton =
       this.userRole === 'commission' || this.userRole === 'responsable_commission';
     this.loadListes();
+    // load specialties options from service
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      if (data) {
+        // trigger recompute of options via getter
+        this.updateFinalSelectionFiltered();
+      }
+    });
   }
 
   loadListes(): void {
@@ -312,6 +324,9 @@ export class ListeSelection implements OnInit {
 
   /********* Final selection helpers (moved) *********/
   get finalSelectionSpecialiteOptions(): string[] {
+    // prefer using specialites service if available
+    const all = this.specialitesService.getAllSpecialties();
+    if (all && all.length > 0) return all;
     const uniques = new Set(this.finalSelectionCandidates.map((c) => c.spec));
     return Array.from(uniques).sort();
   }

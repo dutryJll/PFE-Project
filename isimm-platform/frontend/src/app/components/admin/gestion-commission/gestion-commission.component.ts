@@ -28,6 +28,12 @@ export class GestionCommissionComponent implements OnInit {
   membres: MembreCommission[] = [];
   showModal: boolean = false;
   showActionsMenu: number | null = null;
+  actionsMenuStyle: { top: string; left: string; right: string; transform: string } = {
+    top: '0px',
+    left: '0px',
+    right: 'auto',
+    transform: 'none',
+  };
   isUsingFallbackData: boolean = false;
 
   nouveauMembre = {
@@ -294,8 +300,41 @@ export class GestionCommissionComponent implements OnInit {
       });
   }
 
-  toggleActionsMenu(membreId: number): void {
-    this.showActionsMenu = this.showActionsMenu === membreId ? null : membreId;
+  toggleActionsMenu(membreId: number, event?: MouseEvent): void {
+    if (this.showActionsMenu === membreId) {
+      this.showActionsMenu = null;
+      return;
+    }
+
+    this.showActionsMenu = membreId;
+
+    const target = event?.currentTarget as HTMLElement | null;
+    if (!target) return;
+
+    const rect = target.getBoundingClientRect();
+    const menuWidth = 230;
+    const menuHeight = 290;
+    const spacing = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = rect.right - menuWidth;
+    if (left + menuWidth > viewportWidth - 12) {
+      left = viewportWidth - menuWidth - 12;
+    }
+    if (left < 12) {
+      left = 12;
+    }
+
+    const openUp = rect.bottom + menuHeight + spacing > viewportHeight;
+    const top = openUp ? rect.top - menuHeight - spacing : rect.bottom + spacing;
+
+    this.actionsMenuStyle = {
+      top: `${Math.max(12, top)}px`,
+      left: `${left}px`,
+      right: 'auto',
+      transform: 'none',
+    };
   }
 
   editerMembre(membre: MembreCommission): void {
@@ -325,6 +364,31 @@ export class GestionCommissionComponent implements OnInit {
       alert(`✅ Membre ${action === 'suspendre' ? 'suspendu' : 'activé'} avec succès`);
     }
     this.showActionsMenu = null;
+  }
+
+  designerResponsable(membre: MembreCommission): void {
+    const newResponsable = prompt(
+      `Designer ${membre.first_name} ${membre.last_name} comme responsable.\n\nEntrez son nom complet :`,
+      `${membre.first_name} ${membre.last_name}`,
+    );
+    if (newResponsable && newResponsable.trim()) {
+      this.showActionsMenu = null;
+      alert(`✅ ${newResponsable} a été désigné comme responsable.`);
+      // TODO: appel backend pour persister la modification
+    }
+  }
+
+  cloturerMandat(membre: MembreCommission): void {
+    const confirm_action = confirm(
+      `⚠️ Clôturer le mandat de ${membre.first_name} ${membre.last_name} ?\n\nCette action marquera son mandat comme clos.`,
+    );
+    if (confirm_action) {
+      this.showActionsMenu = null;
+      alert(
+        `✅ Le mandat de ${membre.first_name} ${membre.last_name} a été clôturé.\n\nL'utilisateur conserve son accès mais ne peut plus modifier les commissions.`,
+      );
+      // TODO: appel backend pour persister l'état 'mandat_clos'
+    }
   }
 
   supprimerMembre(membre: MembreCommission): void {

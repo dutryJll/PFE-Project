@@ -9,6 +9,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
 import { ToastService } from '../../../services/toast.service';
+import { SpecialitesService } from '../../../services/specialites.service';
+import { FormsModule } from '@angular/forms';
 
 interface Offer {
   id: number;
@@ -25,6 +27,7 @@ interface Offer {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -43,14 +46,19 @@ export class OffersListingComponent implements OnInit {
   errorMessage = '';
   filterType = 'all';
   filterSpecialite = 'all';
+  availableSpecialites: string[] = [];
 
   constructor(
     private candidatureService: CandidatureService,
     private toastService: ToastService,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     this.loadAvailableOffers();
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   loadAvailableOffers(): void {
@@ -118,6 +126,9 @@ export class OffersListingComponent implements OnInit {
   }
 
   getUniqueSpecialites(): string[] {
+    if (this.availableSpecialites && this.availableSpecialites.length) {
+      return this.availableSpecialites;
+    }
     const specialites = new Set(this.offers.map((o) => o.specialite));
     return Array.from(specialites).filter((s) => s && s.trim() !== '');
   }

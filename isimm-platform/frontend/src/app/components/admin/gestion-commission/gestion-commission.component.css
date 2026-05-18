@@ -100,6 +100,7 @@
   box-shadow: var(--shadow);
   background: var(--bg-card);
   overflow-x: auto;
+  overflow-y: visible;
 }
 
 .membres-table {
@@ -212,16 +213,17 @@
 }
 
 .kebab-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.35rem);
-  min-width: 190px;
+  position: fixed;
+  min-width: 220px;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: #fff;
-  overflow: hidden;
-  box-shadow: 0 12px 25px rgba(17, 38, 60, 0.18);
-  z-index: 20;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 320px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  padding: 0.25rem;
 }
 
 .menu-item {
@@ -230,12 +232,16 @@
   background: transparent;
   color: var(--ink-900);
   text-align: left;
-  padding: 0.72rem 0.9rem;
+  padding: 0.42rem 0.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-weight: 600;
+  gap: 10px; /* icon/text gap */
+  font-weight: 700;
+  border-radius: 9px;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .menu-item:hover {
@@ -244,6 +250,16 @@
 
 .menu-item.edit:hover {
   color: #0d5397;
+}
+
+.menu-item.assign:hover {
+  color: #0e6d3b;
+  background: #ebf8f0;
+}
+
+.menu-item.close-mandat:hover {
+  color: #7a3d0b;
+  background: #fff3e8;
 }
 
 .menu-item.suspend:hover {
@@ -255,8 +271,18 @@
 }
 
 .menu-icon {
-  width: 1.2rem;
+  width: 1.45rem;
   text-align: center;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 0.3rem 0.2rem;
+  background: #e5edf5;
 }
 
 .modal-overlay {

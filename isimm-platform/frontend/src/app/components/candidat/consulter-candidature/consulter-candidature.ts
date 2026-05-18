@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 interface Candidature {
   id: number;
@@ -63,14 +64,21 @@ export class ConsulterCandidaturesComponent implements OnInit {
     recherche: '',
   };
 
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
+
   constructor(
     private candidatureService: CandidatureService,
     private router: Router,
     private route: ActivatedRoute,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     this.demoMode = false;
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
     this.route.paramMap.subscribe((params) => {
       const idParam = params.get('id');
       if (!idParam) {
@@ -343,7 +351,11 @@ export class ConsulterCandidaturesComponent implements OnInit {
         cin.includes(this.filtres.recherche) ||
         email.includes(search);
 
-      return matchType && matchStatut && matchRecherche;
+      const matchSpecialite =
+        !this.selectedSpecialite ||
+        (c.specialite || c.master_nom || '') === this.selectedSpecialite;
+
+      return matchType && matchStatut && matchRecherche && matchSpecialite;
     });
   }
 

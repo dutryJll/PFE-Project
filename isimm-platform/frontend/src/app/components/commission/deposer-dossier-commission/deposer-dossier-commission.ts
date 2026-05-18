@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
 import { ToastService } from '../../../services/toast.service';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 interface FilePreview {
   fileName: string;
@@ -16,7 +18,7 @@ interface FilePreview {
 @Component({
   selector: 'app-deposer-dossier-commission',
   standalone: true,
-  imports: [CommonModule, MatProgressBarModule],
+  imports: [CommonModule, MatProgressBarModule, FormsModule],
   templateUrl: './deposer-dossier-commission.html',
   styleUrls: ['./deposer-dossier-commission.css'],
 })
@@ -31,16 +33,22 @@ export class DeposerDossierCommissionComponent implements OnInit {
   private previews: { [key: string]: FilePreview } = {};
   private progress: { [key: string]: number } = {};
   photoPreview: string | null = null;
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
 
   constructor(
     private router: Router,
     private candidatureService: CandidatureService,
     private toastService: ToastService,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     // Initialiser les données du candidat depuis les paramètres de route ou service
     this.initializeCandidatData();
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   private initializeCandidatData(): void {

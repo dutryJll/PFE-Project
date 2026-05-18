@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 // ========================================
 // INTERFACES
@@ -50,6 +51,10 @@ interface StatistiqueCard {
   ],
 })
 export class CandidaturesIngenieurComponent implements OnInit {
+  // spécialités
+  specialitesData: any = null;
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
   // ========================================
   // DONNÉES
   // ========================================
@@ -145,8 +150,15 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // ========================================
   // LIFECYCLE
   // ========================================
+  constructor(private specialitesService: SpecialitesService) {}
+
   ngOnInit(): void {
     this.appliquerFiltres();
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      this.specialitesData = data || {};
+      // fallback to all specialties list
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   // ========================================
@@ -208,6 +220,11 @@ export class CandidaturesIngenieurComponent implements OnInit {
           c.email?.toLowerCase().includes(terme) ||
           c.cin?.includes(terme),
       );
+    }
+
+    // Filtre par spécialité
+    if (this.selectedSpecialite) {
+      resultats = resultats.filter((c) => c.specialite === this.selectedSpecialite);
     }
 
     this.candidatsFiltres = resultats;

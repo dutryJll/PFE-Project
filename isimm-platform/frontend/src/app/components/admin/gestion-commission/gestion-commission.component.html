@@ -50,13 +50,26 @@
           </td>
           <td data-label="Date création">{{ membre.date_creation | date: 'dd/MM/yyyy' }}</td>
           <td data-label="Actions" class="actions-cell">
-            <button class="btn-kebab" (click)="toggleActionsMenu(membre.id)">⋮</button>
+            <button class="btn-kebab" (click)="toggleActionsMenu(membre.id, $event)">⋮</button>
 
-            <div class="kebab-menu" *ngIf="showActionsMenu === membre.id">
+            <div
+              class="kebab-menu"
+              *ngIf="showActionsMenu === membre.id"
+              [ngStyle]="actionsMenuStyle"
+            >
               <button class="menu-item edit" (click)="editerMembre(membre)">
                 <span class="menu-icon">✏️</span>
                 <span>Modifier</span>
               </button>
+              <button class="menu-item assign" (click)="designerResponsable(membre)">
+                <span class="menu-icon">👤</span>
+                <span>Designer responsable</span>
+              </button>
+              <button class="menu-item close-mandat" (click)="cloturerMandat(membre)">
+                <span class="menu-icon">📋</span>
+                <span>Clôturer mandat</span>
+              </button>
+              <div class="menu-divider"></div>
               <button class="menu-item suspend" (click)="suspendreMembre(membre)">
                 <span class="menu-icon">{{ membre.statut === 'actif' ? '⏸️' : '▶️' }}</span>
                 <span>{{ membre.statut === 'actif' ? 'Suspendre' : 'Activer' }}</span>

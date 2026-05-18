@@ -1,9 +1,11 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpEventType } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CandidatureService } from '../../../services/candidature.service';
+import { SpecialitesService } from '../../../services/specialites.service';
+import { FormsModule } from '@angular/forms';
 
 interface FilePreview {
   fileName: string;
@@ -16,11 +18,11 @@ interface FilePreview {
 @Component({
   selector: 'app-deposer-documents',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatProgressBarModule],
+  imports: [CommonModule, RouterLink, MatProgressBarModule, FormsModule],
   templateUrl: './deposer-documents.html',
   styleUrl: './deposer-documents.css',
 })
-export class DeposerDocumentsComponent implements OnDestroy {
+export class DeposerDocumentsComponent implements OnInit, OnDestroy {
   readonly requiredDocumentTypes = ['cin', 'releves', 'diplome', 'photo'];
 
   selectedFiles: { [key: string]: File | null } = {
@@ -49,10 +51,20 @@ export class DeposerDocumentsComponent implements OnDestroy {
     photo: 0,
   };
 
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
+
   constructor(
     private router: Router,
     private candidatureService: CandidatureService,
+    private specialitesService: SpecialitesService,
   ) {}
+
+  ngOnInit(): void {
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
+  }
 
   ngOnDestroy(): void {
     this.clearAllObjectUrls();

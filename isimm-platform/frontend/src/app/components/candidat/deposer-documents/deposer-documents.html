@@ -10,6 +10,16 @@
           Telechargez les documents requis pour votre candidature
         </p>
       </div>
+      <div
+        class="upload-dossier__specialite"
+        *ngIf="availableSpecialites && availableSpecialites.length"
+      >
+        <label>Spécialité</label>
+        <select [(ngModel)]="selectedSpecialite">
+          <option value="">Toutes</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+        </select>
+      </div>
     </div>
   </header>
 

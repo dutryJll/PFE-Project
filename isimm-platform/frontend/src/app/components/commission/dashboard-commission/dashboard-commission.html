@@ -63,15 +63,7 @@
         <span>Offre De Préinscription</span>
       </a>
 
-      <a
-        *ngIf="isResponsable"
-        class="nav-item"
-        [class.active]="currentView === 'offre-wizard'"
-        (click)="allerOffreWizard()"
-      >
-        <i class="fas fa-wand-magic-sparkles"></i>
-        <span>Créer Offre (Wizard)</span>
-      </a>
+      <!-- 'Créer Offre (Wizard)' removed as requested for responsables -->
 
       <!-- ÉVALUATION -->
       <div class="nav-section-title">ÉVALUATION</div>

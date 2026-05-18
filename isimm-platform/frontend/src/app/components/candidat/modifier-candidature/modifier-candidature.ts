@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { RouterLink, Router } from '@angular/router';
 import { CandidatureService } from '../../../services/candidature.service';
 import { ToastService } from '../../../services/toast.service';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 @Component({
   selector: 'app-modifier-candidature',
@@ -32,12 +33,14 @@ export class ModifierCandidatureComponent implements OnInit {
     'Master Ingénierie Instrumentation',
   ];
   specialite: string = '';
+  availableSpecialites: string[] = [];
 
   constructor(
     private candidatureService: CandidatureService,
     private route: ActivatedRoute,
     private router: Router,
     private toastService: ToastService,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
@@ -46,6 +49,9 @@ export class ModifierCandidatureComponent implements OnInit {
     this.selectedCandidatureId = candidatureIdParam ? Number(candidatureIdParam) : null;
     this.selectedMasterId = masterIdParam ? Number(masterIdParam) : null;
     this.loadCandidature();
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   loadCandidature(): void {
@@ -58,8 +64,9 @@ export class ModifierCandidatureComponent implements OnInit {
             candidatures.find((c: any) => Number(c?.id) === this.selectedCandidatureId) ?? null;
         } else if (this.selectedMasterId && !Number.isNaN(this.selectedMasterId)) {
           this.candidature =
-            candidatures.find((c: any) => Number(c?.master_id ?? c?.master) === this.selectedMasterId) ??
-            null;
+            candidatures.find(
+              (c: any) => Number(c?.master_id ?? c?.master) === this.selectedMasterId,
+            ) ?? null;
         }
 
         if (!this.candidature) {

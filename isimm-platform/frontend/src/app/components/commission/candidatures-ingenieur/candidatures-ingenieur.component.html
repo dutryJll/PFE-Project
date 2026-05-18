@@ -54,6 +54,14 @@
       </select>
     </div>
 
+    <div class="filter-group" *ngIf="availableSpecialites && availableSpecialites.length > 0">
+      <label>Spécialité</label>
+      <select [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()" class="filter-select">
+        <option value="">Toutes les spécialités</option>
+        <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+
     <button class="btn-reset" (click)="reinitialiserFiltres()">Réinitialiser</button>
   </div>
 

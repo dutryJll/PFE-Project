@@ -69,6 +69,11 @@
           <option value="analyse_ok">Analyse OK</option>
           <option value="probleme">Problèmes détectés</option>
         </select>
+
+        <select [(ngModel)]="selectedSpecialite" (change)="filtrerCandidats()">
+          <option value="">Toutes les spécialités</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+        </select>
       </div>
 
       <!-- Liste des candidats -->

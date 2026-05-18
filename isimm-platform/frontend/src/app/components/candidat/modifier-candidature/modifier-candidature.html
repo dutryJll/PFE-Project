@@ -94,8 +94,7 @@
 
         <select [(ngModel)]="specialite" class="specialite-select">
           <option value="">-- Sélectionnez une spécialité --</option>
-          <option value="Génie Informatique">Génie Informatique</option>
-          <option value="Génie Électrique">Génie Électrique</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
         </select>
       </div>
 
@@ -105,7 +104,11 @@
           <i class="fas fa-times"></i>
           Annuler
         </button>
-        <button class="btn-save" (click)="sauvegarder()" [disabled]="candidature?.peut_modifier === false">
+        <button
+          class="btn-save"
+          (click)="sauvegarder()"
+          [disabled]="candidature?.peut_modifier === false"
+        >
           <i class="fas fa-save"></i>
           Enregistrer les modifications
         </button>

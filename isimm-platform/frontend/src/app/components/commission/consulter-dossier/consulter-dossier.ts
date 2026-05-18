@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SpecialitesService } from '../../../services/specialites.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 interface Document {
@@ -58,6 +59,8 @@ export class ConsulterDossierComponent implements OnInit {
     d4: 'pending',
     d5: 'valid',
   };
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
 
   documents: Document[] = [
     {
@@ -163,6 +166,7 @@ export class ConsulterDossierComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private sanitizer: DomSanitizer,
+    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
@@ -185,6 +189,9 @@ export class ConsulterDossierComponent implements OnInit {
       };
     }
     this.loadCandidature();
+    this.specialitesService.getSpecialitesData().subscribe(() => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
   }
 
   /* Integration helpers for embedded HTML snippet */

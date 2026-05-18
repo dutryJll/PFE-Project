@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { SpecialitesService } from '../../../services/specialites.service';
 
 interface Reclamation {
   id: number;
@@ -32,6 +33,9 @@ export class TraiterReclamationsComponent implements OnInit {
   reclamations: Reclamation[] = [];
   reclamationsFiltrees: Reclamation[] = [];
   masters: any[] = [];
+  availableSpecialites: string[] = [];
+
+  selectedSpecialite: string = '';
 
   recherche: string = '';
   filtreStatut: string = '';
@@ -46,15 +50,27 @@ export class TraiterReclamationsComponent implements OnInit {
   prolongerDelai: boolean = false;
   nouvelleDeadline: string = '';
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private specialitesService: SpecialitesService,
+  ) {}
 
   ngOnInit(): void {
     this.loadMasters();
+    this.specialitesService.getSpecialitesData().subscribe((data) => {
+      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    });
     this.loadReclamations();
   }
 
   loadMasters(): void {
-    // TODO: Charger depuis l'API
+    // Prefer using SpecialitesService program list when available
+    const progs = this.specialitesService.getPrograms();
+    if (progs && progs.length) {
+      this.masters = progs.map((p) => ({ id: p.code, nom: p.name }));
+      return;
+    }
+    // Fallback static list
     this.masters = [
       { id: 1, nom: 'Master Recherche Génie Logiciel' },
       { id: 2, nom: 'Master Professionnel Data Science' },
@@ -152,8 +168,9 @@ export class TraiterReclamationsComponent implements OnInit {
 
       const matchStatut = !this.filtreStatut || r.statut === this.filtreStatut;
       const matchMaster = !this.filtreMaster || r.master_id.toString() === this.filtreMaster;
+      const matchSpecialite = !this.selectedSpecialite || r.master_nom === this.selectedSpecialite;
 
-      return matchRecherche && matchStatut && matchMaster;
+      return matchRecherche && matchStatut && matchMaster && matchSpecialite;
     });
   }
 
