@@ -299,9 +299,44 @@ export class ListeSelection implements OnInit {
       setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
       return;
     }
-    // TODO: call backend to save global opinion for the commission
-    this.finalSelectionToast = { message: 'Avis global soumis', type: 't-success', visible: true };
-    setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
+
+    const commissionIdRaw = localStorage.getItem('active_commission_id');
+    const commissionId = commissionIdRaw ? Number(commissionIdRaw) : NaN;
+    if (!Number.isFinite(commissionId)) {
+      this.finalSelectionToast = {
+        message: 'Aucune commission active sélectionnée',
+        type: 't-error',
+        visible: true,
+      };
+      setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
+      return;
+    }
+
+    const statut = this.globalOpinion === 'approve' ? 'favorable' : 'defavorable';
+    this.candidatureService
+      .submitGlobalAvis(commissionId, {
+        statut: statut as 'favorable' | 'defavorable',
+        commentaire: this.globalComment.trim(),
+        is_global: true,
+      })
+      .subscribe({
+        next: () => {
+          this.finalSelectionToast = {
+            message: 'Avis global soumis',
+            type: 't-success',
+            visible: true,
+          };
+          setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
+        },
+        error: (error: any) => {
+          this.finalSelectionToast = {
+            message: error?.error?.error || "Erreur lors de la soumission de l'avis global",
+            type: 't-error',
+            visible: true,
+          };
+          setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
+        },
+      });
   }
 
   imprimerListe(): void {

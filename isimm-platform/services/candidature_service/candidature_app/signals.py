@@ -29,6 +29,10 @@ def candidature_post_save(sender, instance, created, **kwargs):
 	if created:
 		return
 
+	# Skip duplicate notifications when the workflow service already handled them.
+	if getattr(instance, '_skip_status_signal', False):
+		return
+
 	ancien = getattr(instance, '_old_statut', None)
 	nouveau = instance.statut
 

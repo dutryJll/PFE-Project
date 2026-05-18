@@ -3532,7 +3532,8 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     if (view === 'listes') {
-      this.typeListe = 'selection';
+      this.router.navigate(['/commission/liste-selection']);
+      return;
     }
 
     this.switchView(view);
@@ -3549,16 +3550,16 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canOpenCandidaturesIngenieurMenu(): boolean {
-    if (this.isResponsable) {
-      return this.isEngineerScope();
+    if (!this.isEngineerScope()) {
+      return false;
     }
 
-    if (
-      this.currentUser?.role === 'membre' &&
-      Array.isArray(this.availableCommissions) &&
-      this.availableCommissions.length > 0
-    ) {
-      return this.isEngineerScope();
+    if (this.isResponsable) {
+      return true;
+    }
+
+    if (this.currentUser?.role === 'membre') {
+      return Array.isArray(this.availableCommissions) && this.availableCommissions.length > 0;
     }
 
     return this.actionPermissions.consultationCandidature;
@@ -5179,6 +5180,11 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   isEngineerScope(): boolean {
+    const commissionLabel = this.getActiveCommissionLabel().toLowerCase();
+    if (commissionLabel && commissionLabel !== 'aucune commission disponible') {
+      return commissionLabel.includes('ingénieur') || commissionLabel.includes('ingenieur');
+    }
+
     const label = this.getUserMasterOrSpecialiteLabel().toLowerCase();
     return label.includes('ingénieur') || label.includes('ingenieur');
   }

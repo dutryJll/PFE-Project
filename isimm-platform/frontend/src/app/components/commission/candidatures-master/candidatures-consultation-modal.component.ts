@@ -1,8 +1,8 @@
 import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { catchError, of } from 'rxjs';
+import { HttpClientModule } from '@angular/common/http';
+import { CandidatureService } from '../../../services/candidature.service';
 
 interface PieceJustificative {
   nom: string;
@@ -35,7 +35,7 @@ export class CandidaturesConsultationModalComponent {
   loading = false;
 
   constructor(
-    private http: HttpClient,
+    private candidatureService: CandidatureService,
     private dialogRef: MatDialogRef<CandidaturesConsultationModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { list: Candidat[]; startIndex: number },
   ) {
@@ -61,24 +61,16 @@ export class CandidaturesConsultationModalComponent {
   }
 
   private changeStatusRequest(id: number, newStatus: string) {
-    // Try action endpoint first
-    const actionUrl = `/api/candidatures/${id}/actions/change_status/`;
-    const patchUrl = `/api/candidatures/${id}/`;
-    return this.http.post(actionUrl, { new_status: newStatus }).pipe(
-      catchError(() => {
-        // fallback to PATCH
-        return this.http.patch(patchUrl, { statut: newStatus }).pipe(catchError(() => of(null)));
-      }),
-    );
+    return this.candidatureService.updateStatus(id, newStatus);
   }
 
   valider(): void {
     const c = this.current;
     if (!c) return;
     this.loading = true;
-    this.changeStatusRequest(c.id, 'Preselectionne').subscribe((res) => {
+    this.changeStatusRequest(c.id, 'preselectionne').subscribe(() => {
       this.loading = false;
-      c.statut = 'Preselectionne';
+      c.statut = 'preselectionne';
       this.next();
     });
   }
@@ -87,9 +79,9 @@ export class CandidaturesConsultationModalComponent {
     const c = this.current;
     if (!c) return;
     this.loading = true;
-    this.changeStatusRequest(c.id, 'Rejeté').subscribe((res) => {
+    this.changeStatusRequest(c.id, 'rejete').subscribe(() => {
       this.loading = false;
-      c.statut = 'Rejeté';
+      c.statut = 'rejete';
       this.next();
     });
   }

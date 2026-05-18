@@ -108,6 +108,7 @@ class StatutNotificationService:
         # Mettre à jour la candidature
         candidature.statut = nouveau_statut
         candidature.date_changement_statut = timezone.now()
+        candidature._skip_status_signal = True
         candidature.save(update_fields=['statut', 'date_changement_statut'])
         
         logger.info(

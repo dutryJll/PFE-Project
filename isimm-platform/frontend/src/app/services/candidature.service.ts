@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface MasterScoreCoefficients {
@@ -61,13 +61,38 @@ export class CandidatureService {
 
   // Mettre à jour le statut d'une candidature
   updateStatus(candidatureId: number, newStatus: string, motifRejet?: string): Observable<any> {
+    const headers = this.getHeaders();
     const payload = {
-      statut: newStatus,
-      motif_rejet: motifRejet || '',
+      nouveau_statut: newStatus,
+      raison: motifRejet || '',
     };
-    return this.http.patch(`${this.apiUrl}/${candidatureId}/update-status/`, payload, {
-      headers: this.getHeaders(),
-    });
+
+    return this.http
+      .post(`${this.apiUrl}/${candidatureId}/statut/changer/`, payload, {
+        headers,
+      })
+      .pipe(
+        catchError(() =>
+          this.http
+            .patch(
+              `${this.apiUrl}/${candidatureId}/update-status/`,
+              {
+                statut: newStatus,
+                motif_rejet: motifRejet || '',
+              },
+              { headers },
+            )
+            .pipe(
+              catchError(() =>
+                this.http.patch(
+                  `${this.apiUrl}/${candidatureId}/`,
+                  { statut: newStatus },
+                  { headers },
+                ),
+              ),
+            ),
+        ),
+      );
   }
 
   // Récupérer les métriques en temps réel pour le candidat (score, classement, total)
