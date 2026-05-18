@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { SpecialitesService } from '../../../services/specialites.service';
+import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
+import { CandidaturesConsultationModalComponent } from '../candidatures-master/candidatures-consultation-modal.component';
 
 // ========================================
 // INTERFACES
@@ -150,7 +153,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // ========================================
   // LIFECYCLE
   // ========================================
-  constructor(private specialitesService: SpecialitesService) {}
+  constructor(
+    private specialitesService: SpecialitesService,
+    private dialog: MatDialog,
+  ) {}
 
   ngOnInit(): void {
     this.appliquerFiltres();
@@ -266,20 +272,25 @@ export class CandidaturesIngenieurComponent implements OnInit {
     } else {
       list = this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id));
     }
-
-    if (list.length === 0) {
-      return;
-    }
-
-    this.viewingList = list;
-    this.viewingSelection = true;
-    this.currentIndex = 0;
+    if (list.length === 0) return;
+    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
+      data: { list, startIndex: 0 },
+      width: '760px',
+    });
+    dialogRef.afterClosed().subscribe(() => {
+      this.appliquerFiltres();
+      this.selectionSet.clear();
+      this.selectAll = false;
+    });
   }
 
   consulterUn(c: Candidat): void {
-    this.viewingList = [c];
-    this.viewingSelection = true;
-    this.currentIndex = 0;
+    const list = [c];
+    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
+      data: { list, startIndex: 0 },
+      width: '760px',
+    });
+    dialogRef.afterClosed().subscribe(() => this.appliquerFiltres());
   }
 
   fermerConsultation(): void {

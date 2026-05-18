@@ -155,6 +155,19 @@
             </option>
           </select>
         </div>
+        <div>
+          <div class="flbl">Statut sélection</div>
+          <select
+            class="finput"
+            [(ngModel)]="finalSelectionFilters.statut"
+            (change)="updateFinalSelectionFiltered()"
+          >
+            <option value="all">Tous</option>
+            <option value="lp">Admis (LP)</option>
+            <option value="la">Liste d'attente (LA)</option>
+            <option value="refuse">Refusé</option>
+          </select>
+        </div>
       </div>
       <div class="filter-row2">
         <div>
@@ -222,6 +235,46 @@
         </select>
         <button class="btn btn-primary" type="button" (click)="applyFinalSelectionBulkAction()">
           Appliquer
+        </button>
+      </div>
+    </div>
+
+    <!-- Avis Global -->
+    <div
+      class="avis-global-card"
+      style="margin-top: 1rem; padding: 1rem; background: var(--surface); box-shadow: var(--shadow)"
+    >
+      <h3>Avis Global</h3>
+      <p>Soumettez votre avis final sur la liste de sélection de la commission active.</p>
+      <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem">
+        <label style="display: flex; align-items: center; gap: 0.5rem">
+          <input
+            type="radio"
+            name="globalOpinion"
+            [(ngModel)]="globalOpinion"
+            [value]="'approve'"
+          />
+          Approuver
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem">
+          <input type="radio" name="globalOpinion" [(ngModel)]="globalOpinion" [value]="'reject'" />
+          Défavorable
+        </label>
+      </div>
+      <div style="margin-top: 0.75rem">
+        <textarea
+          [(ngModel)]="globalComment"
+          placeholder="Commentaire (obligatoire si défavorable)"
+          rows="3"
+          style="width: 100%"
+        ></textarea>
+      </div>
+      <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end">
+        <button class="btn btn-sec" type="button" (click)="globalOpinion = ''; globalComment = ''">
+          Annuler
+        </button>
+        <button class="btn btn-primary" type="button" (click)="submitGlobalOpinion()">
+          Soumettre l'avis global
         </button>
       </div>
     </div>

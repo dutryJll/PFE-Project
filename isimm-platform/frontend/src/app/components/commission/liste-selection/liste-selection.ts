@@ -56,6 +56,7 @@ interface DossierDocumentView {
 interface FinalSelectionFilters {
   session: string;
   type: FinalSelectionTypeFilter;
+  statut: string;
   specialite: string;
   scoreMin: number;
   scoreMax: number;
@@ -107,12 +108,17 @@ export class ListeSelection implements OnInit {
   finalSelectionFilters: FinalSelectionFilters = {
     session: '2025/2026',
     type: 'all',
+    statut: 'all',
     specialite: 'all',
     scoreMin: 0,
     scoreMax: 20,
     search: '',
     hideValides: false,
   };
+
+  // Avis global
+  globalOpinion: '' | 'approve' | 'reject' = '';
+  globalComment: string = '';
 
   userRole: string | null = null;
   showDossierButton = false;
@@ -258,6 +264,46 @@ export class ListeSelection implements OnInit {
     // TODO: Filtrer les listes selon la recherche
   }
 
+  finalSelectionConsult(candidate: FinalSelectionCandidate | null): void {
+    if (!candidate) return;
+    const list = [
+      {
+        id: candidate.id,
+        nom: candidate.nom,
+        master: candidate.spec,
+        score: candidate.score,
+        etat_dossier: 'Complet',
+        statut:
+          candidate.statut === 'lp'
+            ? 'Admis'
+            : candidate.statut === 'la'
+              ? "Liste d'attente"
+              : 'Rejeté',
+        pieces: [],
+      },
+    ];
+    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
+      data: { list, startIndex: 0 },
+      width: '760px',
+    });
+    dialogRef.afterClosed().subscribe(() => this.updateFinalSelectionFiltered());
+  }
+
+  submitGlobalOpinion(): void {
+    if (this.globalOpinion === 'reject' && !this.globalComment.trim()) {
+      this.finalSelectionToast = {
+        message: 'Commentaire obligatoire pour un avis défavorable',
+        type: 't-error',
+        visible: true,
+      };
+      setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
+      return;
+    }
+    // TODO: call backend to save global opinion for the commission
+    this.finalSelectionToast = { message: 'Avis global soumis', type: 't-success', visible: true };
+    setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
+  }
+
   imprimerListe(): void {
     window.print();
   }
@@ -349,6 +395,10 @@ export class ListeSelection implements OnInit {
     if (type === 'interne') rows = rows.filter((c) => c.interne);
     else if (type === 'externe') rows = rows.filter((c) => !c.interne);
     if (specialite && specialite !== 'all') rows = rows.filter((c) => c.spec === specialite);
+    // Filtre par statut selection
+    const statutFilter = this.finalSelectionFilters.statut;
+    if (statutFilter && statutFilter !== 'all')
+      rows = rows.filter((c) => c.statut === statutFilter);
     if (hideValides) rows = rows.filter((c) => !c.statut);
     if (this.finalSelectionTop100On)
       rows = rows
@@ -470,6 +520,7 @@ export class ListeSelection implements OnInit {
     this.finalSelectionFilters = {
       session: '2025/2026',
       type: 'all',
+      statut: 'all',
       specialite: 'all',
       scoreMin: 0,
       scoreMax: 20,
@@ -493,10 +544,7 @@ export class ListeSelection implements OnInit {
     this.showFinalSelectionToast(`${selectedIds.length} candidat(s) mis a jour`, 't-success');
   }
 
-  finalSelectionConsult(candidate: FinalSelectionCandidate): void {
-    if (!candidate) return;
-    this.showFinalSelectionToast(`Ouverture du dossier de ${candidate.nom}`, 't-info');
-  }
+  // finalSelectionConsult handled above (opens consultation modal)
 
   toggleFinalSelectionExportMenu(event: MouseEvent): void {
     event.stopPropagation();
