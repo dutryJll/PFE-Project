@@ -42,6 +42,12 @@ class DocumentSerializer(serializers.ModelSerializer):
     def get_fichier_url(self, obj):
         """Retourner l'URL du fichier"""
         if obj.fichier:
+            request = self.context.get('request')
+            if request is not None:
+                try:
+                    return request.build_absolute_uri(obj.fichier.url)
+                except Exception:
+                    pass
             return obj.fichier.url
         return None
 
@@ -160,6 +166,7 @@ class DetailedDossierSerializer(serializers.ModelSerializer):
         source='candidature.candidat.get_full_name', read_only=True
     )
     master_nom = serializers.CharField(source='candidature.master.nom', read_only=True)
+    documents = DocumentSerializer(source='candidature.documents', many=True, read_only=True)
     
     # Documents groupés par type
     documents_par_type = serializers.SerializerMethodField()
@@ -173,7 +180,7 @@ class DetailedDossierSerializer(serializers.ModelSerializer):
             'id', 'candidature_numero', 'candidat_nom', 'master_nom',
             'statut', 'date_depot', 'date_limite_depot',
             'nb_documents_attendus', 'nb_documents_soumis',
-            'score_completude', 'documents_par_type', 'evaluation',
+            'score_completude', 'documents', 'documents_par_type', 'evaluation',
             'feedback', 'created_at', 'updated_at'
         ]
     

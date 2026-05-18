@@ -266,8 +266,13 @@ export const routes: Routes = [
     component: ListeSelection,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: {
-      roles: ['commission', 'responsable_commission'],
-      actions: ['Sélection finale', 'Publier liste principale', 'Publier liste attente'],
+      roles: ['commission', 'responsable_commission', 'membre'],
+      actions: [
+        'Sélection finale',
+        'Publier liste principale',
+        'Publier liste attente',
+        'Consultation de candidature',
+      ],
     },
   },
   {
@@ -275,7 +280,7 @@ export const routes: Routes = [
     component: ConsulterCandidaturesCommissionComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: {
-      roles: ['commission', 'responsable_commission'],
+      roles: ['commission', 'responsable_commission', 'membre'],
       actions: ['Consultation de candidature'],
     },
   },
@@ -284,7 +289,7 @@ export const routes: Routes = [
     component: ConsulterCandidaturesCommissionComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: {
-      roles: ['commission', 'responsable_commission'],
+      roles: ['commission', 'responsable_commission', 'membre'],
       actions: ['Consultation de candidature'],
     },
   },

@@ -524,6 +524,218 @@
   color: white;
 }
 
+.btn-dossier {
+  background: linear-gradient(135deg, #e8f3fb, #d8ecfa);
+  border: 1px solid #7aaed6;
+  color: #185fa5;
+}
+
+.btn-dossier:hover {
+  background: linear-gradient(135deg, #d5e8f7, #c3ddf3);
+  border-color: #4f93cb;
+  color: #0f4c88;
+}
+
+.dossier-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(6px);
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.dossier-modal {
+  width: min(1180px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+}
+
+.dossier-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(135deg, #f8fbff, #edf6ff);
+}
+
+.dossier-modal-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: #185fa5;
+  font-weight: 800;
+}
+
+.dossier-modal-header h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.dossier-modal-header p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.dossier-modal-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #e6f1fb;
+  color: #185fa5;
+  cursor: pointer;
+}
+
+.dossier-modal-body {
+  padding: 1.1rem 1.4rem 1.4rem;
+  overflow: auto;
+}
+
+.dossier-loading,
+.dossier-error,
+.dossier-empty {
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  background: #f8fbff;
+  color: #334155;
+}
+
+.dossier-error {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.dossier-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dossier-summary-card {
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: #f8fbff;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+}
+
+.dossier-summary-card span {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.dossier-summary-card strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.dossier-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.dossier-doc-card {
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: #fff;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.dossier-doc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.dossier-doc-head h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #0f172a;
+}
+
+.dossier-doc-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.dossier-doc-badge {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dossier-doc-badge.valid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.dossier-preview {
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.dossier-doc-meta {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.dossier-doc-link {
+  align-self: flex-start;
+  color: #185fa5;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.dossier-modal-footer {
+  padding: 0.9rem 1.4rem 1.2rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  display: flex;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+@media (max-width: 960px) {
+  .dossier-summary-grid,
+  .dossier-doc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .btn-comment {
   background: #fef3c7;
   color: #92400e;

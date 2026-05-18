@@ -16,7 +16,7 @@ import logging
 
 from .models import (
     Document, DocumentType, ValidationDocument, Dossier, 
-    Candidature, Master
+    Candidature, Master, MembreCommission
 )
 from .serializers_documents import (
     DocumentSerializer,
@@ -35,6 +35,20 @@ class DepotDossierViewSet(viewsets.ViewSet):
     """ViewSet pour la gestion complète du dépôt de dossier"""
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
+
+    def _can_access_commission_dossier(self, request, candidature):
+        user = request.user
+        role = getattr(user, 'role', None)
+        if role in ['admin', 'responsable_commission']:
+            return True
+        if candidature.candidat_id == user.id:
+            return True
+        return MembreCommission.objects.filter(
+            user=user,
+            actif=True,
+            commission__actif=True,
+            commission__master_id=candidature.master_id,
+        ).exists()
     
     @action(detail=False, methods=['get'], url_path='requetes/(?P<candidature_id>\d+)')
     def types_documents_requis(self, request, candidature_id=None):
@@ -100,6 +114,33 @@ class DepotDossierViewSet(viewsets.ViewSet):
         serializer = DetailedDossierSerializer(dossier)
         
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='commission-dossier/(?P<candidature_id>\d+)')
+    def consulter_dossier_commission(self, request, candidature_id=None):
+        """Consulter un dossier en lecture seule depuis la commission."""
+        candidature = get_object_or_404(Candidature.objects.select_related('candidat', 'master'), pk=candidature_id)
+        if not self._can_access_commission_dossier(request, candidature):
+            return Response({'error': 'Non autorise'}, status=status.HTTP_403_FORBIDDEN)
+
+        dossier = get_object_or_404(Dossier, candidature=candidature)
+        dossier.calculer_completude()
+        serializer = DetailedDossierSerializer(dossier, context={'request': request})
+
+        return Response({
+            'success': True,
+            'dossier': serializer.data,
+            'candidature': {
+                'id': candidature.id,
+                'numero': candidature.numero,
+                'nom_complet': candidature.candidat.get_full_name(),
+                'email': candidature.candidat.email,
+                'cin': getattr(candidature.candidat, 'cin', ''),
+                'score': candidature.score,
+                'statut': candidature.statut,
+                'master_nom': candidature.master.nom if candidature.master else '',
+                'type_concours': 'ingenieur' if candidature.concours_id else 'masters',
+            },
+        })
     
     @action(detail=False, methods=['post'], url_path='soumettre/(?P<candidature_id>\d+)')
     def soumettre_dossier(self, request, candidature_id=None):

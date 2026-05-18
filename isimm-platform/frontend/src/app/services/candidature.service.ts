@@ -233,6 +233,13 @@ export class CandidatureService {
     });
   }
 
+  // Commission: consulter le dossier complet d'une candidature
+  getCommissionDossier(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/dossier/commission-dossier/${candidatureId}/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
   // Get specialites for inscription section
   getSpecialitesForInscription(masterId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/masters/${masterId}/specialites-inscription/`, {

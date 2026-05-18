@@ -133,7 +133,7 @@
               <iframe [src]="doc.urlSafe" title="Aperçu document"></iframe>
             </div>
             <p *ngIf="doc.commentaire" class="doc-note">{{ doc.commentaire }}</p>
-            <div class="doc-actions">
+            <div class="doc-actions" *ngIf="!readOnlyView">
               <button class="btn btn-sec" type="button" (click)="ouvrirFichier()">Voir</button>
               <button
                 class="btn btn-sec"
@@ -154,7 +154,7 @@
       </div>
     </section>
 
-    <section class="card decision-card full-width">
+    <section class="card decision-card full-width" *ngIf="!readOnlyView">
       <div class="section-head">
         <h3>Décision commission</h3>
         <p>{{ decisionNote }}</p>
@@ -214,7 +214,7 @@
         </div>
       </div>
 
-      <div class="tab-panel" [class.active]="activeTab === 'notes'">
+      <div class="tab-panel" [class.active]="activeTab === 'notes'" *ngIf="!readOnlyView">
         <div class="comment-existing">Karim Tounsi — Favorable : Excellent profil académique.</div>
         <div class="comment-existing">
           Leila Mansour — Réservé : Bon candidat, manque d'expérience pratique.

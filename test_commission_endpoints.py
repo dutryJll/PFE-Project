@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional
 
 # Configuration
 AUTH_SERVICE_URL = "http://localhost:8001/api/auth"
-CANDIDATURE_SERVICE_URL = "http://localhost:8003/api"
+CANDIDATURE_SERVICE_URL = "http://localhost:8003/api/candidatures"
 
 # Test credentials (modify based on your test users)
 TEST_USER_EMAIL = "commission@isimm.tn"
@@ -169,9 +169,8 @@ class CommissionEndpointTester:
                 print_error(f"Response: {response.text}")
                 return False
             
-            data = response.json()
-            
             if response.status_code == 200:
+                data = response.json()
                 print_success("Successfully fetched commissions from candidature_service!")
                 print_info(f"  Response: {json.dumps(data, indent=2)}")
                 return True
@@ -289,6 +288,73 @@ class CommissionEndpointTester:
             print_error(f"Request failed: {e}")
             return False
 
+    def test_deadline_auto_validation(self) -> bool:
+        """Test 6: Exercise deadline-based auto-validation for global avis"""
+        print_header("TEST 6: Deadline Auto-Validation")
+
+        if not self.auth_token:
+            print_error("No auth token available. Run login first.")
+            return False
+
+        if not self.commissions:
+            print_warning("No commissions available from auth-service; using seeded fallback commission id 3.")
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.auth_token}",
+                "Content-Type": "application/json",
+            }
+
+            commission_candidates = self.commissions or [{"id": 3, "nom": "Commission Data Science Demo"}]
+
+            for commission in commission_candidates:
+                commission_id = commission["id"]
+                commission_name = commission.get("nom")
+                response = self.session.get(
+                    f"{CANDIDATURE_SERVICE_URL}/commissions/{commission_id}/avis-global/",
+                    headers=headers,
+                )
+
+                print_info(f"Checking commission {commission_name} (ID: {commission_id})")
+                print_info(f"Response status: {response.status_code}")
+
+                if response.status_code != 200:
+                    print_warning(f"Skipping commission {commission_name}: {response.text}")
+                    continue
+
+                data = response.json()
+                summary = data.get("summary", {})
+
+                print_info(
+                    "  Summary: "
+                    f"total={summary.get('total_members')}, "
+                    f"completed={summary.get('completed_count')}, "
+                    f"pending={summary.get('pending_count')}, "
+                    f"deadline_expired={summary.get('deadline_expired')}"
+                )
+
+                if summary.get("deadline_expired"):
+                    responses = data.get("responses", [])
+                    if (
+                        summary.get("total_members") == 3
+                        and summary.get("completed_count") == 3
+                        and summary.get("pending_count") == 0
+                        and len(responses) == 3
+                    ):
+                        print_success("Deadline auto-validation exercised successfully!")
+                        return True
+
+                    print_error("Deadline-expired commission did not return the expected completed summary")
+                    print_info(f"  Responses: {json.dumps(responses, indent=2, default=str)}")
+                    return False
+
+            print_warning("No deadline-expired commission was returned by my-commissions")
+            return False
+
+        except requests.exceptions.RequestException as e:
+            print_error(f"Request failed: {e}")
+            return False
+
     def run_all_tests(self) -> bool:
         """Run all tests in sequence"""
         print_header("ÉTAPE 3 - COMMISSION ENDPOINTS TEST SUITE")
@@ -301,6 +367,7 @@ class CommissionEndpointTester:
             ("Direct Candidature Service Call", self.test_candidature_service_my_commissions),
             ("Select Commission", self.test_select_commission),
             ("Get Commission Members", self.test_get_commission_members),
+            ("Deadline Auto-Validation", self.test_deadline_auto_validation),
         ]
         
         results = {}

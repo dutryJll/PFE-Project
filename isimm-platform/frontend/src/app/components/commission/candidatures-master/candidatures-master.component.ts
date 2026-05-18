@@ -1,6 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
+import { CandidaturesConsultationModalComponent } from './candidatures-consultation-modal.component';
 import { trigger, transition, style, animate } from '@angular/animations';
 
 // ========================================
@@ -37,7 +41,7 @@ interface StatistiqueCard {
 @Component({
   selector: 'app-candidatures-master',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule, MatDialogModule],
   templateUrl: './candidatures-master.component.html',
   styleUrls: ['./candidatures-master.component.css'],
   animations: [
@@ -50,6 +54,23 @@ interface StatistiqueCard {
   ],
 })
 export class CandidaturesMasterComponent implements OnInit {
+  constructor(
+    private http: HttpClient,
+    private dialog: MatDialog,
+  ) {}
+
+  @Input() availableCommissions: { id: number; nom: string }[] = [];
+  @Input() activeCommissionId: number | null = null;
+
+  // selected commission used for filtering inside the component
+  selectedCommissionId: number | null = null;
+  // year filter
+  distinctYears: string[] = [];
+  selectedYear: string = '';
+  // specialites
+  specialitesData: any = null;
+  availableSpecialites: string[] = [];
+  selectedSpecialite: string = '';
   // ========================================
   // DONNÉES
   // ========================================
@@ -168,6 +189,54 @@ export class CandidaturesMasterComponent implements OnInit {
   // ========================================
   ngOnInit(): void {
     this.appliquerFiltres();
+    // load specialites mapping
+    try {
+      // HttpClient injected below will load the JSON
+    } catch (e) {}
+    // initialize selected commission from input
+    if (!this.selectedCommissionId && this.activeCommissionId) {
+      this.selectedCommissionId = this.activeCommissionId;
+    }
+    // build year list from candidats
+    const years = new Set<string>();
+    this.candidatsList.forEach((c) => {
+      if (c.date_candidature) {
+        const y = new Date(c.date_candidature).getFullYear();
+        if (Number.isFinite(y)) years.add(String(y));
+      }
+    });
+    this.distinctYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
+    // load specialties JSON
+    this.http.get('/assets/specialites.json').subscribe((data) => {
+      this.specialitesData = data || {};
+      this.recomputeAvailableSpecialites();
+    });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['activeCommissionId'] && !changes['activeCommissionId'].isFirstChange()) {
+      this.selectedCommissionId = this.activeCommissionId;
+      this.appliquerFiltres();
+    }
+    if (changes['availableCommissions'] && !changes['availableCommissions'].isFirstChange()) {
+      // keep selection consistent
+      if (!this.selectedCommissionId && this.availableCommissions.length > 0) {
+        this.selectedCommissionId = this.activeCommissionId || this.availableCommissions[0].id;
+      }
+      this.appliquerFiltres();
+    }
+  }
+
+  private recomputeAvailableSpecialites(): void {
+    const set = new Set<string>();
+    if (!this.specialitesData) return;
+    // prefer using currently filtered masters to derive specialities
+    const source = this.candidatsList;
+    source.forEach((c) => {
+      const arr = this.specialitesData.master?.[c.master];
+      if (Array.isArray(arr)) arr.forEach((s: string) => set.add(s));
+    });
+    this.availableSpecialites = Array.from(set).sort();
   }
 
   // ========================================
@@ -233,6 +302,42 @@ export class CandidaturesMasterComponent implements OnInit {
       );
     }
 
+    // Filtre par année de candidature
+    if (this.selectedYear) {
+      resultats = resultats.filter((c) => {
+        if (!c.date_candidature) return false;
+        const y = new Date(c.date_candidature).getFullYear();
+        return String(y) === String(this.selectedYear);
+      });
+    }
+
+    // Filtre par commission si une est sélectionnée (si disponible)
+    if (
+      this.selectedCommissionId &&
+      Array.isArray(this.availableCommissions) &&
+      this.availableCommissions.length > 0
+    ) {
+      const comm = this.availableCommissions.find(
+        (co) => Number(co.id) === Number(this.selectedCommissionId),
+      );
+      const commName = comm ? String(comm.nom || '').toLowerCase() : '';
+      if (commName) {
+        resultats = resultats.filter((c) =>
+          String(c.master || '')
+            .toLowerCase()
+            .includes(commName),
+        );
+      }
+    }
+
+    // Filtre par spécialité
+    if (this.selectedSpecialite) {
+      resultats = resultats.filter((c) => {
+        const arr = this.specialitesData?.master?.[c.master] || [];
+        return arr.includes(this.selectedSpecialite);
+      });
+    }
+
     this.candidatsFiltres = resultats;
 
     // Réinitialiser l'index si nécessaire
@@ -250,7 +355,8 @@ export class CandidaturesMasterComponent implements OnInit {
     } else {
       this.selectionSet.add(c.id);
     }
-    this.selectAll = this.selectionSet.size === this.candidatsFiltres.length && this.candidatsFiltres.length>0;
+    this.selectAll =
+      this.selectionSet.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0;
   }
 
   toggleSelectAll(): void {
@@ -275,9 +381,17 @@ export class CandidaturesMasterComponent implements OnInit {
       list = this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id));
     }
     if (list.length === 0) return;
-    this.viewingList = list;
-    this.viewingSelection = true;
-    this.currentIndex = 0;
+    // open modal dialog for mass consultation
+    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
+      data: { list, startIndex: 0 },
+      width: '760px',
+    });
+    dialogRef.afterClosed().subscribe((res) => {
+      // refresh local filters in case statuses changed in modal
+      this.appliquerFiltres();
+      this.selectionSet.clear();
+      this.selectAll = false;
+    });
   }
 
   consulterUn(c: Candidat): void {

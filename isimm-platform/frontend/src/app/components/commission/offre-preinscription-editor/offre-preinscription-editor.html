@@ -1,1475 +1,237 @@
-<div class="wizard-shell">
-  <header class="wizard-topbar">
-    <div class="wizard-topbar-left">
-      <div class="wizard-logo-badge"><i class="fas fa-bullhorn"></i></div>
-      <div>
-        <p class="wizard-topbar-kicker">Offre de préinscription</p>
-        <h2 class="wizard-topbar-title">Créer ou publier une offre</h2>
-        <div class="wizard-card-badges">
-          <span class="wizard-chip wizard-chip--info">Responsable</span>
-        </div>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <button class="btn btn-sec btn-sm" (click)="togglePreview()">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-          <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
-          <circle cx="6" cy="6" r="1.5"></circle>
-        </svg>
-        Aperçu candidat
-      </button>
-      <button class="btn btn-sec btn-sm" (click)="syncLive()">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-          <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
-        </svg>
-        Actualiser
-      </button>
-      <button class="btn btn-primary btn-sm" (click)="publierOffre()">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-          <path d="M1 6l4-4 4 4M5 2v8"></path>
-        </svg>
-        Publier maintenant
-      </button>
-      <button class="btn btn-teal btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-          <path d="M2 6l3 3 5-5"></path>
-        </svg>
-        {{ isSavingOffre ? 'Enregistrement...' : 'Enregistrer' }}
-      </button>
-    </div>
-  </header>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: var(--font-sans);
-      font-size: 13px;
-      color: #0f172a;
-    }
-    .root {
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem;
-      padding: 0.8rem 0.25rem 1.2rem;
-      max-width: 1220px;
-      margin: 0 auto;
-    }
-
-    .btn {
-      font-size: 12px;
-      padding: 0.44rem 0.9rem;
-      border-radius: var(--border-radius-md);
-      cursor: pointer;
-      border: 0.5px solid;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        background-color 0.15s ease;
-      white-space: nowrap;
-    }
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
-    }
-    .btn svg {
-      width: 12px;
-      height: 12px;
-      flex-shrink: 0;
-    }
-    .btn-primary {
-      background: #185fa5;
-      border-color: #185fa5;
-      color: #fff;
-    }
-    .btn-primary:hover {
-      background: #0c447c;
-    }
-    .btn-teal {
-      background: #1d9e75;
-      border-color: #1d9e75;
-      color: #fff;
-    }
-    .btn-teal:hover {
-      background: #0f6e56;
-    }
-    .btn-amber {
-      background: #faeeda;
-      border-color: #ba7517;
-      color: #854f0b;
-    }
-    .btn-amber:hover {
-      background: #fac775;
-    }
-    .btn-sec {
-      background: transparent;
-      border-color: var(--color-border-secondary);
-      color: var(--color-text-primary);
-    }
-    .btn-sec:hover {
-      background: var(--color-background-secondary);
-    }
-    .btn-danger {
-      background: #fcebeb;
-      border-color: #e24b4a;
-      color: #a32d2d;
-    }
-    .btn-danger:hover {
-      background: #f7c1c1;
-    }
-    .btn-sm {
-      font-size: 11px;
-      padding: 0.28rem 0.6rem;
-    }
-
-    .card {
-      background: var(--color-background-primary);
-      border: 0.5px solid var(--color-border-tertiary);
-      border-radius: var(--border-radius-lg);
-      padding: 0.9rem 1rem;
-      box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.05),
-        0 10px 30px rgba(15, 23, 42, 0.04);
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.65rem;
-    }
-
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.6rem 0.9rem;
-      border: 0.5px solid var(--color-border-info);
-      background: var(--color-background-info);
-      border-radius: var(--border-radius-md);
-      font-size: 12px;
-      color: var(--color-text-info);
-    }
-    .status-bar svg {
-      width: 14px;
-      height: 14px;
-      stroke: #185fa5;
-      flex-shrink: 0;
-    }
-    .status-bar.green {
-      border-color: var(--color-border-success);
-      background: var(--color-background-success);
-      color: var(--color-text-success);
-    }
-    .status-bar.green svg {
-      stroke: #0f6e56;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.8rem;
-      flex-wrap: wrap;
-      background: linear-gradient(135deg, #f8fbff 0%, #f2f8ff 45%, #f9fcff 100%);
-      border: 1px solid #d8e6f8;
-      border-radius: 14px;
-      padding: 0.75rem 0.9rem;
-    }
-    .topbar-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--color-text-primary);
-      flex: 1;
-      line-height: 1.2;
-    }
-    .topbar-meta {
-      margin-top: 0.2rem;
-      font-size: 12px;
-      color: var(--color-text-secondary);
-    }
-    .topbar-actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 10px;
-      font-weight: 500;
-      padding: 2px 8px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
-    .b-open {
-      background: #e1f5ee;
-      color: #0f6e56;
-    }
-    .b-closed {
-      background: #fcebeb;
-      color: #a32d2d;
-    }
-    .b-vis {
-      background: #e6f1fb;
-      color: #185fa5;
-    }
-
-    .stepper {
-      display: flex;
-      gap: 0;
-      border-bottom: 0.5px solid var(--color-border-tertiary);
-      background: var(--color-background-primary);
-      border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-      border: 0.5px solid var(--color-border-tertiary);
-      border-bottom: none;
-      overflow: hidden;
-    }
-    .step-tab {
-      flex: 1;
-      padding: 0.6rem 0.5rem;
-      font-size: 12px;
-      font-weight: 500;
-      border: none;
-      background: transparent;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      transition: all 0.18s ease;
-    }
-    .step-tab.active {
-      color: var(--color-text-primary);
-      border-bottom-color: #185fa5;
-      background: var(--color-background-info);
-    }
-    .step-tab:hover:not(.active) {
-      background: var(--color-background-secondary);
-    }
-    .step-num {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--color-border-tertiary);
-      color: var(--color-text-secondary);
-      font-size: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .step-tab.active .step-num {
-      background: #185fa5;
-      color: #fff;
-    }
-    .step-tab.done .step-num {
-      background: #1d9e75;
-      color: #fff;
-    }
-    .step-content {
-      background: var(--color-background-primary);
-      border: 0.5px solid var(--color-border-tertiary);
-      border-top: none;
-      border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
-      padding: 1.05rem 1.1rem;
-    }
-    .step-panel {
-      display: none;
-    }
-    .step-panel.active {
-      display: block;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.65rem;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    .form-group.full {
-      grid-column: 1/-1;
-    }
-    .flbl {
-      font-size: 11px;
-      color: var(--color-text-secondary);
-    }
-    .finput {
-      padding: 0.48rem 0.6rem;
-      border: 0.5px solid var(--color-border-secondary);
-      border-radius: var(--border-radius-md);
-      background: var(--color-background-primary);
-      color: var(--color-text-primary);
-      font-size: 12px;
-      width: 100%;
-    }
-    .finput:focus {
-      outline: none;
-      border-color: #185fa5;
-      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.12);
-    }
-    textarea.finput {
-      resize: vertical;
-      min-height: 70px;
-    }
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 12px;
-      color: var(--color-text-primary);
-    }
-    .toggle {
-      width: 32px;
-      height: 18px;
-      border-radius: 9px;
-      background: var(--color-border-tertiary);
-      position: relative;
-      cursor: pointer;
-      border: 0.5px solid var(--color-border-secondary);
-      flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .toggle.on {
-      background: #185fa5;
-      border-color: #185fa5;
-    }
-    .toggle::after {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      top: 1px;
-      left: 1px;
-      transition: left 0.2s;
-    }
-    .toggle.on::after {
-      left: 15px;
-    }
-    .vis-toggle {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 12px;
-      color: var(--color-text-primary);
-    }
-    .toggle-green.on {
-      background: #1d9e75;
-      border-color: #1d9e75;
-    }
-
-    .cal-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.55rem;
-    }
-
-    .quota-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      margin: 0.5rem 0;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .quota-table th {
-      background: var(--color-background-secondary);
-      padding: 0.45rem 0.55rem;
-      text-align: left;
-      color: var(--color-text-secondary);
-      font-size: 11px;
-      font-weight: 500;
-      border-bottom: 0.5px solid var(--color-border-tertiary);
-    }
-    .quota-table td {
-      padding: 0.4rem 0.5rem;
-      border-bottom: 0.5px solid var(--color-border-tertiary);
-      vertical-align: middle;
-    }
-    .quota-table tr:last-child td {
-      border-bottom: none;
-    }
-    .qt-input {
-      padding: 0.3rem 0.4rem;
-      border: 0.5px solid var(--color-border-secondary);
-      border-radius: var(--border-radius-md);
-      background: var(--color-background-primary);
-      color: var(--color-text-primary);
-      font-size: 11px;
-      width: 100%;
-    }
-    .qt-input:focus {
-      outline: none;
-      border-color: #185fa5;
-    }
-    .total-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: var(--border-radius-md);
-      background: #e6f1fb;
-      color: #185fa5;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .total-pill svg {
-      width: 12px;
-      height: 12px;
-    }
-    .del-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      border: 0.5px solid var(--color-border-danger);
-      color: var(--color-text-danger);
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .del-btn svg {
-      width: 11px;
-      height: 11px;
-    }
-
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-    }
-
-    .nav-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0.75rem;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .offres-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 0.8rem;
-    }
-    .offre-card {
-      background: var(--color-background-primary);
-      border: 0.5px solid var(--color-border-tertiary);
-      border-radius: var(--border-radius-lg);
-      overflow: hidden;
-      transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-    }
-    .offre-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-    }
-    .offre-card-head {
-      padding: 0.65rem 0.85rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-    .offre-card-head.recherche {
-      background: #e6f1fb;
-    }
-    .offre-card-head.professionnel {
-      background: #e1f5ee;
-    }
-    .offre-card-head.ingenieur {
-      background: #faeeda;
-    }
-    .offre-head-badge {
-      font-size: 10px;
-      font-weight: 500;
-      padding: 2px 9px;
-      border-radius: 20px;
-    }
-    .hb-recherche {
-      background: #b5d4f4;
-      color: #0c447c;
-    }
-    .hb-professionnel {
-      background: #9fe1cb;
-      color: #085041;
-    }
-    .hb-ingenieur {
-      background: #fac775;
-      color: #633806;
-    }
-    .offre-body {
-      padding: 0.75rem 0.85rem;
-    }
-    .offre-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--color-text-primary);
-      margin-bottom: 0.4rem;
-    }
-    .offre-desc {
-      font-size: 11px;
-      color: var(--color-text-secondary);
-      margin-bottom: 0.55rem;
-      line-height: 1.4;
-    }
-    .offre-info-row {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 11px;
-      color: var(--color-text-secondary);
-      margin-bottom: 0.3rem;
-    }
-    .offre-info-row svg {
-      width: 11px;
-      height: 11px;
-      flex-shrink: 0;
-    }
-    .offre-actions {
-      display: flex;
-      gap: 0.5rem;
-      padding: 0.55rem 0.85rem;
-      border-top: 0.5px solid var(--color-border-tertiary);
-    }
-    .btn-postuler {
-      flex: 1;
-      padding: 0.5rem;
-      font-size: 12px;
-      border-radius: var(--border-radius-md);
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      transition: all 0.15s;
-    }
-    .bp-open {
-      background: #185fa5;
-      color: #fff;
-    }
-    .bp-open:hover {
-      background: #0c447c;
-    }
-    .bp-closed {
-      background: var(--color-background-secondary);
-      color: var(--color-text-tertiary);
-      cursor: not-allowed;
-    }
-
-    .preview-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(2, 8, 23, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      border-radius: var(--border-radius-lg);
-    }
-    .preview-modal {
-      background: var(--color-background-primary);
-      border-radius: var(--border-radius-lg);
-      border: 0.5px solid var(--color-border-secondary);
-      width: min(420px, 90%);
-      overflow: hidden;
-    }
-    .preview-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.6rem 0.85rem;
-      border-bottom: 0.5px solid var(--color-border-tertiary);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .preview-close {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 0.5px solid var(--color-border-secondary);
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .preview-close svg {
-      width: 10px;
-      height: 10px;
-    }
-
-    .toast {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      color: #fff;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 0.55rem 1rem;
-      border-radius: var(--border-radius-lg);
-      gap: 0.5rem;
-      align-items: center;
-      z-index: 999;
-      max-width: 300px;
-    }
-    .toast.show {
-      display: flex;
-    }
-    .t-success {
-      background: #1d9e75;
-    }
-    .t-info {
-      background: #185fa5;
-    }
-    .t-warn {
-      background: #ba7517;
-    }
-    .toast svg {
-      width: 13px;
-      height: 13px;
-      stroke: #fff;
-      flex-shrink: 0;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.7rem;
-    }
-
-    .quota-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    .nav-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    @media (max-width: 960px) {
-      .root {
-        padding: 0.6rem 0 1rem;
-      }
-      .topbar {
-        padding: 0.7rem;
-      }
-      .topbar-title {
-        font-size: 16px;
-      }
-      .kpi-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .form-grid,
-      .cal-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .stepper {
-        flex-direction: column;
-        border-bottom: 0.5px solid var(--color-border-tertiary);
-      }
-      .step-tab {
-        justify-content: flex-start;
-        padding: 0.62rem 0.75rem;
-      }
-      .kpi-grid {
-        grid-template-columns: 1fr;
-      }
-      .topbar-actions,
-      .nav-actions {
-        width: 100%;
-      }
-      .topbar-actions .btn,
-      .nav-actions .btn {
-        flex: 1;
-        justify-content: center;
-      }
-      .offres-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .sync-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #1d9e75;
-      display: inline-block;
-      margin-right: 4px;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%,
-      100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.4;
-      }
-    }
-  </style>
-
+<div class="wizard-shell wizard-shell--modal">
   <div class="root">
-    <div class="topbar">
+    <header class="topbar">
       <div>
-        <div class="topbar-title">Offre de Préinscription — Espace Responsable</div>
-        <div class="topbar-meta">
-          Interface unifiée Commission/Candidat · Les modifications sont synchronisées en temps réel
-        </div>
+        <div class="topbar-title">Offre de préinscription</div>
+        <div class="topbar-meta">Modal responsable · création, publication et quotas</div>
       </div>
+
+      <div class="wizard-card-badges">
+        <span class="wizard-chip wizard-chip--info">Responsable</span>
+        <span class="badge" [ngClass]="getRowStatusClass(isStatusOpen())">{{
+          getRowStatusText(isStatusOpen())
+        }}</span>
+      </div>
+
       <div class="topbar-actions">
-        <button class="btn btn-sec btn-sm" (click)="togglePreview()">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-            <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
-            <circle cx="6" cy="6" r="1.5"></circle>
-          </svg>
-          Aperçu candidat
-        </button>
-        <button class="btn btn-sec btn-sm" (click)="sendPrompt('Actualiser la liste des offres')">
+        <button class="btn btn-sec btn-sm" (click)="syncLive()">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
             <path d="M1 6a5 5 0 105-5H4M4 1L2 3l2 2"></path>
           </svg>
-          Actualiser
+          Synchroniser
+        </button>
+        <button class="btn btn-sec btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
+          Enregistrer
         </button>
         <button class="btn btn-primary btn-sm" (click)="publierOffre()" [disabled]="isSavingOffre">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M1 6l4-4 4 4M5 2v8"></path>
-          </svg>
-          {{ isSavingOffre ? 'Publication en cours...' : 'Publier maintenant' }}
-        </button>
-        <button class="btn btn-teal btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M2 2h7l2 2v7H2V2z"></path>
-            <rect x="4" y="7" width="4" height="3"></rect>
-          </svg>
-          {{ isSavingOffre ? 'Enregistrement...' : 'Enregistrer' }}
+          {{ isSavingOffre ? 'Publication...' : 'Publier maintenant' }}
         </button>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <div [ngClass]="getStatusBarClass()">
-    <svg viewBox="0 0 12 12" fill="none" stroke-width="1.5"><path d="M2 6l3 3 5-5"></path></svg>
-    <span
-      [innerHTML]="getStatusText() + ' · <span class=&quot;sync-dot&quot;></span>Synchronisé'"
-    ></span>
-  </div>
-
-  <div
-    *ngIf="errorMessage"
-    class="status-bar"
-    style="
-      border-color: var(--color-border-danger);
-      background: var(--color-background-danger);
-      color: var(--color-text-danger);
-    "
-  >
-    <svg viewBox="0 0 12 12" fill="none" stroke-width="1.5" style="stroke: #a32d2d">
-      <path d="M6 1v10M1 6h10"></path>
-    </svg>
-    <span>{{ errorMessage }}</span>
-  </div>
-
-  <div class="kpi-grid">
-    <div class="card" style="padding: 0.65rem 0.85rem">
-      <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px">
-        Offres publiées
-      </div>
-      <div style="font-size: 20px; font-weight: 500; color: var(--color-text-primary)">
-        {{ offres.length }}
-      </div>
+    <div [class]="getStatusBarClass()">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+        <circle cx="6" cy="6" r="4.5"></circle>
+      </svg>
+      <span>{{ getStatusText() }}</span>
     </div>
-    <div class="card" style="padding: 0.65rem 0.85rem">
-      <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px">
-        Offre active
-      </div>
-      <div style="font-size: 12px; font-weight: 500; color: #185fa5">{{ titre }}</div>
+
+    <div *ngIf="errorMessage" class="toast t-warn">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M6 1.5l4.5 7.5H1.5L6 1.5z"></path>
+      </svg>
+      <span>{{ errorMessage }}</span>
     </div>
-    <div class="card" style="padding: 0.65rem 0.85rem">
-      <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px">
-        Visibilité
+
+    <div class="kpi-grid">
+      <div class="card">
+        <div class="section-title">Capacité totale</div>
+        <div class="topbar-title">{{ capaciteTotal }} places</div>
+        <div class="topbar-meta">Somme des quotas saisis</div>
       </div>
-      <div>
-        <span [ngClass]="{ badge: true, 'b-vis': visibilite }">{{
-          visibilite ? 'Visible' : 'Cachée'
-        }}</span>
+      <div class="card">
+        <div class="section-title">Période</div>
+        <div class="topbar-title">{{ dateDebut }} → {{ dateFin }}</div>
+        <div class="topbar-meta">Fenêtre de préinscription</div>
+      </div>
+      <div class="card">
+        <div class="section-title">PDF officiel</div>
+        <div class="topbar-title">{{ selectedPdfFile?.name || 'Aucun fichier' }}</div>
+        <div class="topbar-meta">Document signé à joindre</div>
       </div>
     </div>
-  </div>
 
-  <div style="position: relative">
     <div class="stepper">
-      <button class="step-tab" [ngClass]="{ active: currentStep === 1 }" (click)="goStep(1)">
-        <div class="step-num" [ngClass]="{ active: currentStep === 1, done: currentStep > 1 }">
-          1
-        </div>
-        Infos générales
+      <button class="step-tab" [class.active]="currentStep === 1" (click)="goStep(1)">
+        <span class="step-num">1</span>
+        Général
       </button>
-      <button class="step-tab" [ngClass]="{ active: currentStep === 2 }" (click)="goStep(2)">
-        <div class="step-num" [ngClass]="{ active: currentStep === 2, done: currentStep > 2 }">
-          2
-        </div>
+      <button class="step-tab" [class.active]="currentStep === 2" (click)="goStep(2)">
+        <span class="step-num">2</span>
         Calendrier
       </button>
-      <button class="step-tab" [ngClass]="{ active: currentStep === 3 }" (click)="goStep(3)">
-        <div class="step-num" [ngClass]="{ active: currentStep === 3, done: currentStep > 3 }">
-          3
-        </div>
-        Quotas &amp; Diplômes
+      <button class="step-tab" [class.active]="currentStep === 3" (click)="goStep(3)">
+        <span class="step-num">3</span>
+        Quotas
       </button>
     </div>
 
-    <div class="step-content">
-      <!-- Panel 1: Infos générales -->
-      <div class="step-panel" [ngClass]="{ active: currentStep === 1 }">
+    <div class="card">
+      <div *ngIf="currentStep === 1" class="step-panel">
+        <div class="section-title">Informations générales</div>
         <div class="form-grid">
-          <div class="form-group">
-            <div class="flbl">Titre de l'offre</div>
-            <input type="text" class="finput" [(ngModel)]="titre" (ngModelChange)="syncLive()" />
-          </div>
-          <div class="form-group">
-            <div class="flbl">Type</div>
-            <select class="finput" [(ngModel)]="typeFormation" (ngModelChange)="syncLive()">
+          <label class="form-field">
+            <span>Titre</span>
+            <input class="input" [(ngModel)]="titre" (input)="syncLive()" />
+          </label>
+          <label class="form-field">
+            <span>Type de formation</span>
+            <select class="input" [(ngModel)]="typeFormation" (change)="syncLive()">
               <option value="master">Master</option>
-              <option value="ingenieur">Cycle Ingénieur</option>
+              <option value="licence">Licence</option>
+              <option value="ingenieur">Ingénieur</option>
             </select>
-          </div>
-          <div class="form-group">
-            <div class="flbl">Sous-type</div>
-            <select class="finput" [(ngModel)]="soustype" (ngModelChange)="syncLive()">
+          </label>
+          <label class="form-field">
+            <span>Sous-type</span>
+            <select class="input" [(ngModel)]="soustype" (change)="syncLive()">
               <option value="professionnel">Professionnel</option>
               <option value="recherche">Recherche</option>
             </select>
-          </div>
-          <div class="form-group">
-            <div class="flbl">Spécialité</div>
-            <input type="text" class="finput" [(ngModel)]="spec" (ngModelChange)="syncLive()" />
-          </div>
-          <div class="form-group full">
-            <div class="flbl">Description</div>
-            <textarea
-              class="finput"
-              [(ngModel)]="description"
-              (ngModelChange)="syncLive()"
-            ></textarea>
-          </div>
-          <div class="form-group full">
-            <div class="flbl">PDF officiel signe (appel d offre)</div>
-            <input
-              type="file"
-              class="finput file-input"
-              accept=".pdf"
-              (change)="onPdfSelected($event)"
-            />
-            <div class="file-hint" *ngIf="selectedPdfFile">
-              PDF sélectionné : {{ selectedPdfFile.name }}
-            </div>
-          </div>
-          <div class="form-group full" style="gap: 0.55rem">
-            <div class="toggle-row">
-              <div class="toggle" [ngClass]="{ on: appel }" (click)="toggleAppel()"></div>
-              <span>{{ appel ? 'Appel actif' : 'Appel inactif' }}</span>
-            </div>
-            <div class="vis-toggle">
-              <div
-                class="toggle toggle-green"
-                [ngClass]="{ on: visibilite }"
-                (click)="toggleVis()"
-              ></div>
-              <span
-                >Visibilité : <strong>{{ visibilite ? 'Validée' : 'Non validée' }}</strong></span
-              >
-            </div>
-          </div>
+          </label>
+          <label class="form-field">
+            <span>Spécialité</span>
+            <input class="input" [(ngModel)]="spec" (input)="syncLive()" />
+          </label>
         </div>
-        <div class="nav-footer">
-          <div></div>
-          <button class="btn btn-primary btn-sm" (click)="goStep(2)">
-            Suivant
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M3 2l4 3-4 3"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
 
-      <!-- Panel 2: Calendrier -->
-      <div class="step-panel" [ngClass]="{ active: currentStep === 2 }">
-        <div class="cal-grid">
-          <div class="form-group">
-            <div class="flbl">Date début visibilité</div>
-            <input
-              type="date"
-              class="finput"
-              [(ngModel)]="dateDebut"
-              (ngModelChange)="syncLive()"
-            />
-          </div>
-          <div class="form-group">
-            <div class="flbl">Date fin visibilité</div>
-            <input type="date" class="finput" [(ngModel)]="dateFin" (ngModelChange)="syncLive()" />
-          </div>
-          <div class="form-group">
-            <div class="flbl">Date limite préinscription</div>
-            <input
-              type="date"
-              class="finput"
-              [(ngModel)]="dateLimitePre"
-              (ngModelChange)="syncLive()"
-            />
-          </div>
-          <div class="form-group">
-            <div class="flbl">Date limite dépôt dossier</div>
-            <input
-              type="date"
-              class="finput"
-              [(ngModel)]="dateLimiteDep"
-              (ngModelChange)="syncLive()"
-            />
-          </div>
-        </div>
-        <div class="nav-footer">
-          <button class="btn btn-sec btn-sm" (click)="goStep(1)">
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M7 2L3 5l4 3"></path>
-            </svg>
-            Précédent
-          </button>
-          <button class="btn btn-primary btn-sm" (click)="goStep(3)">
-            Suivant
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M3 2l4 3-4 3"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
+        <label class="form-field" style="margin-top: 0.75rem">
+          <span>Description</span>
+          <textarea
+            class="input textarea"
+            rows="5"
+            [(ngModel)]="description"
+            (input)="syncLive()"
+          ></textarea>
+        </label>
 
-      <!-- Panel 3: Quotas -->
-      <div class="step-panel" [ngClass]="{ active: currentStep === 3 }">
-        <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 0.55rem">
-          Tableau dynamique des quotas (ISIMM Internes, Externes…)
-        </div>
-        <table class="quota-table">
-          <thead>
-            <tr>
-              <th>Catégorie</th>
-              <th>Établissement</th>
-              <th>Places</th>
-              <th>Diplôme requis</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let q of quotas; let i = index">
-              <td>
-                <input
-                  type="text"
-                  class="qt-input"
-                  [(ngModel)]="q.cat"
-                  (ngModelChange)="syncLive()"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  class="qt-input"
-                  [(ngModel)]="q.etab"
-                  (ngModelChange)="syncLive()"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  class="qt-input"
-                  style="width: 60px"
-                  [(ngModel)]="q.places"
-                  (ngModelChange)="updateTotal(); syncLive()"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  class="qt-input"
-                  [(ngModel)]="q.diplome"
-                  (ngModelChange)="syncLive()"
-                />
-              </td>
-              <td>
-                <button class="del-btn" (click)="delQuota(i)" title="Supprimer">
-                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M2 3h8M5 3V2h2v1M4 3v6h4V3"></path>
-                  </svg>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
         <div class="quota-toolbar">
-          <button class="btn btn-sec btn-sm" (click)="addQuota()">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-              <line x1="6" y1="2" x2="6" y2="10"></line>
-              <line x1="2" y1="6" x2="10" y2="6"></line>
-            </svg>
-            Ajouter un quota
-          </button>
-          <div class="total-pill">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-              <circle cx="8" cy="5" r="2.5"></circle>
-              <path d="M1 10c0-2.5 2-4 5-4M11 10c0-1.5-1-2.5-3-3"></path>
-            </svg>
-            Capacité totale : <strong>{{ capaciteTotal }}</strong> places
-          </div>
+          <label class="check-toggle">
+            <input type="checkbox" [checked]="visibilite" (change)="toggleVis()" />
+            Visible pour les candidats
+          </label>
+          <label class="check-toggle">
+            <input type="checkbox" [checked]="appel" (change)="toggleAppel()" />
+            Appel à candidatures actif
+          </label>
+          <label class="check-toggle">
+            <input type="checkbox" [checked]="row1Open" (change)="toggleRow1()" />
+            Publication active
+          </label>
         </div>
-        <div class="nav-footer">
-          <button class="btn btn-sec btn-sm" (click)="goStep(2)">
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M7 2L3 5l4 3"></path>
-            </svg>
-            Précédent
-          </button>
-          <div class="nav-actions">
-            <button class="btn btn-amber btn-sm" (click)="togglePreview()">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-                <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
-                <circle cx="6" cy="6" r="1.5"></circle>
-              </svg>
-              Aperçu candidat
-            </button>
-            <button class="btn btn-teal btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-                <path d="M2 6l3 3 5-5"></path>
-              </svg>
-              {{ isSavingOffre ? 'Enregistrement...' : 'Enregistrer' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div
-      *ngIf="previewOpen"
-      style="
-        position: absolute;
-        inset: 0;
-        background: rgba(2, 8, 23, 0.5);
-        z-index: 50;
-        border-radius: var(--border-radius-lg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      "
-    >
-      <div class="preview-modal">
-        <div class="preview-head">
-          <span>Aperçu — Vue candidat</span>
-          <button class="preview-close" (click)="togglePreview()">
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
-              <line x1="2" y1="2" x2="8" y2="8"></line>
-              <line x1="8" y1="2" x2="2" y2="8"></line>
-            </svg>
-          </button>
-        </div>
-        <div style="padding: 0.75rem">
-          <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 0.5rem">
-            Aperçu exact — Vue candidat
-          </div>
-          <div class="offre-card">
-            <div class="offre-card-head" [ngClass]="getCardBadgeClass(soustype)">
-              <span class="offre-head-badge" [ngClass]="getHeadBadgeClass(soustype)">{{
-                getCardBadgeText(soustype)
-              }}</span>
-              <span class="badge" [ngClass]="{ 'b-open': row1Open, 'b-closed': !row1Open }">{{
-                row1Open ? 'OUVERT' : 'FERMÉ'
-              }}</span>
-            </div>
-            <div class="offre-body">
-              <div class="offre-title">{{ titre }}</div>
-              <div class="offre-desc">{{ description.substring(0, 80) }}…</div>
-              <div class="offre-info-row">
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
-                  <rect x="1" y="2" width="10" height="8" rx="1" />
-                  <line x1="1" y1="5" x2="11" y2="5" /></svg
-                >Limite : {{ dateLimitePre | date: 'dd/MM/yyyy' }}
-              </div>
-              <div class="offre-info-row">
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
-                  <circle cx="4" cy="4" r="2" />
-                  <circle cx="8" cy="4" r="2" />
-                  <path d="M1 10c0-2 1.5-3 3-3M8 7c1.5 0 3 1 3 3" /></svg
-                >Capacité d'accueil : {{ capaciteTotal }}
-              </div>
-            </div>
-            <div class="offre-actions">
-              <button class="btn btn-sec btn-sm">Détail</button>
-              <button
-                class="btn-postuler"
-                [ngClass]="{ 'bp-open': row1Open, 'bp-closed': !row1Open }"
-                [disabled]="!row1Open"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                >
-                  <path d="M1 11L11 1M11 1H5M11 1v6" />
-                </svg>
-                {{ row1Open ? 'Postuler' : 'Fermé' }}
-              </button>
-            </div>
-          </div>
-          <div
-            style="
-              margin-top: 0.5rem;
-              font-size: 11px;
-              color: var(--color-text-secondary);
-              display: flex;
-              align-items: center;
-              gap: 0.3rem;
-            "
-          >
-            <span class="sync-dot"></span>Synchronisé avec la config du responsable
-          </div>
+        <div class="topbar-meta" style="margin-top: 0.6rem">
+          Synchronisation instantanée avec le résumé et les quotas.
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="section-title">Liste des offres — Vue tableau</div>
-    <div style="overflow-x: auto">
-      <table style="width: 100%; border-collapse: collapse; font-size: 12px">
-        <thead>
-          <tr>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Offre
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Sous-type
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Spécialité
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Date limite
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Visibilité
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Statut
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Capacité
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Candidats
-            </th>
-            <th
-              style="
-                background: var(--color-background-secondary);
-                padding: 0.45rem 0.6rem;
-                text-align: left;
-                color: var(--color-text-secondary);
-                font-size: 11px;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let offre of offres">
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-                font-weight: 500;
-                color: #185fa5;
-                cursor: pointer;
-              "
-              (click)="goStep(1)"
-            >
-              {{ offre.titre }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-                color: var(--color-text-secondary);
-              "
-            >
-              {{ offre.soustype }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              {{ offre.spec }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              {{ offre.limite }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              <span class="badge b-vis">Validée</span>
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              <span [ngClass]="getRowStatusClass(offre.statut)">{{
-                getRowStatusText(offre.statut)
-              }}</span>
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              {{ offre.cap }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              {{ offre.candidats }}
-            </td>
-            <td
-              style="
-                padding: 0.42rem 0.6rem;
-                border-bottom: 0.5px solid var(--color-border-tertiary);
-              "
-            >
-              <div style="display: flex; gap: 0.35rem; align-items: center">
-                <button class="btn btn-sec btn-sm" (click)="goStep(1)">Éditer</button>
-                <label
-                  style="
-                    display: flex;
-                    align-items: center;
-                    gap: 0.3rem;
-                    font-size: 11px;
-                    cursor: pointer;
-                  "
-                >
-                  <div class="toggle" [ngClass]="{ on: offre.statut }" (click)="toggleRow1()"></div>
-                  <span>{{ offre.statut ? 'Ouverte' : 'Fermée' }}</span>
-                </label>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+      <div *ngIf="currentStep === 2" class="step-panel">
+        <div class="section-title">Calendrier et publication</div>
+        <div class="cal-grid">
+          <label class="form-field">
+            <span>Date de début</span>
+            <input class="input" type="date" [(ngModel)]="dateDebut" (input)="syncLive()" />
+          </label>
+          <label class="form-field">
+            <span>Date de fin</span>
+            <input class="input" type="date" [(ngModel)]="dateFin" (input)="syncLive()" />
+          </label>
+          <label class="form-field">
+            <span>Limite préinscription</span>
+            <input class="input" type="date" [(ngModel)]="dateLimitePre" (input)="syncLive()" />
+          </label>
+          <label class="form-field">
+            <span>Limite dépôt dossier</span>
+            <input class="input" type="date" [(ngModel)]="dateLimiteDep" (input)="syncLive()" />
+          </label>
+        </div>
 
-  <div class="card">
-    <div
-      style="
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      "
-    >
-      <div class="section-title" style="margin-bottom: 0">
-        Offres publiées — Vue cartes (aperçu candidat)
-      </div>
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          font-size: 11px;
-          color: var(--color-text-secondary);
-        "
-      >
-        <span class="sync-dot"></span>
-        Synchronisé avec l'espace candidat
-      </div>
-    </div>
-    <div class="offres-grid">
-      <div *ngFor="let offre of offres" class="offre-card">
-        <div class="offre-card-head" [ngClass]="getCardBadgeClass(offre.soustype)">
-          <span class="offre-head-badge" [ngClass]="getHeadBadgeClass(offre.soustype)">{{
-            getCardBadgeText(offre.soustype)
-          }}</span>
-          <span class="badge" [ngClass]="{ 'b-open': offre.statut, 'b-closed': !offre.statut }">{{
-            offre.statut ? 'OUVERT' : 'FERMÉ'
-          }}</span>
-        </div>
-        <div class="offre-body">
-          <div class="offre-title">{{ offre.titre }}</div>
-          <div class="offre-desc">{{ offre.desc.substring(0, 80) }}…</div>
-          <div class="offre-info-row">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
-              <rect x="1" y="2" width="10" height="8" rx="1"></rect>
-              <line x1="1" y1="5" x2="11" y2="5"></line>
-            </svg>
-            Limite : {{ offre.limite }}
-          </div>
-          <div class="offre-info-row">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
-              <circle cx="4" cy="4" r="2"></circle>
-              <circle cx="8" cy="4" r="2"></circle>
-              <path d="M1 10c0-2 1.5-3 3-3M8 7c1.5 0 3 1 3 3"></path>
-            </svg>
-            Capacité d'accueil : {{ offre.cap }}
+        <div class="card" style="margin-top: 0.9rem">
+          <div class="section-title">Document officiel</div>
+          <input
+            class="input"
+            type="file"
+            accept="application/pdf"
+            (change)="onPdfSelected($event)"
+          />
+          <div class="topbar-meta" style="margin-top: 0.5rem">
+            {{ selectedPdfFile ? selectedPdfFile.name : 'Aucun PDF sélectionné' }}
           </div>
         </div>
-        <div class="offre-actions">
+      </div>
+
+      <div *ngIf="currentStep === 3" class="step-panel">
+        <div class="section-title">Quotas et diplômes</div>
+        <div class="quota-toolbar">
+          <div class="topbar-meta">Total calculé: {{ capaciteTotal }} places</div>
+          <button class="btn btn-amber btn-sm" (click)="addQuota()">Ajouter un quota</button>
+        </div>
+
+        <div class="table-wrap" style="margin-top: 0.75rem">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Catégorie</th>
+                <th>Etablissement</th>
+                <th>Diplôme</th>
+                <th style="width: 90px">Places</th>
+                <th style="width: 64px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let quota of quotas; let i = index">
+                <td><input class="input" [(ngModel)]="quota.cat" (input)="syncLive()" /></td>
+                <td><input class="input" [(ngModel)]="quota.etab" (input)="syncLive()" /></td>
+                <td><input class="input" [(ngModel)]="quota.diplome" (input)="syncLive()" /></td>
+                <td>
+                  <input
+                    class="input"
+                    type="number"
+                    min="0"
+                    [(ngModel)]="quota.places"
+                    (input)="updateTotal(); syncLive()"
+                  />
+                </td>
+                <td>
+                  <button class="btn btn-danger btn-sm" (click)="delQuota(i)">Sup.</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="nav-actions" style="margin-top: 0.9rem; justify-content: space-between">
+        <button
+          class="btn btn-sec btn-sm"
+          [disabled]="currentStep === 1"
+          (click)="goStep(currentStep - 1)"
+        >
+          Précédent
+        </button>
+        <div class="nav-actions">
           <button
             class="btn btn-sec btn-sm"
-            (click)="sendPrompt('Voir détail offre ' + offre.titre)"
+            [disabled]="currentStep === 3"
+            (click)="goStep(currentStep + 1)"
           >
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-              <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
-            </svg>
-            Détail
+            Suivant
           </button>
-          <button
-            class="btn-postuler"
-            [ngClass]="{ 'bp-open': offre.statut, 'bp-closed': !offre.statut }"
-            [disabled]="!offre.statut"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.4"
-            >
-              <path d="M1 11L11 1M11 1H5M11 1v6"></path>
-            </svg>
-            {{ offre.statut ? 'Postuler' : 'Fermé' }}
+          <button class="btn btn-primary btn-sm" (click)="enregistrer()" [disabled]="isSavingOffre">
+            Enregistrer
+          </button>
+          <button class="btn btn-teal btn-sm" (click)="publierOffre()" [disabled]="isSavingOffre">
+            Publier
           </button>
         </div>
       </div>

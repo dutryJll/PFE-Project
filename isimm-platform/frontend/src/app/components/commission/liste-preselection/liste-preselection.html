@@ -58,44 +58,6 @@
     </div>
   </section>
 
-  <section class="stats-grid">
-    <div class="stat-card masters">
-      <div class="stat-icon"><i class="fas fa-graduation-cap"></i></div>
-      <div class="stat-content">
-        <h3>Masters</h3>
-        <p class="stat-number">{{ countByType('master') }}</p>
-        <small>Candidats</small>
-      </div>
-    </div>
-
-    <div class="stat-card ingenieurs">
-      <div class="stat-icon"><i class="fas fa-cogs"></i></div>
-      <div class="stat-content">
-        <h3>Cycle Ingénieur</h3>
-        <p class="stat-number">{{ countByType('ingenieur') }}</p>
-        <small>Candidats</small>
-      </div>
-    </div>
-
-    <div class="stat-card avis-positifs">
-      <div class="stat-icon"><i class="fas fa-thumbs-up"></i></div>
-      <div class="stat-content">
-        <h3>Avis Favorables</h3>
-        <p class="stat-number">{{ countAvis('favorable') }}</p>
-        <small>Membres commission</small>
-      </div>
-    </div>
-
-    <div class="stat-card avis-negatifs">
-      <div class="stat-icon"><i class="fas fa-thumbs-down"></i></div>
-      <div class="stat-content">
-        <h3>Avis Défavorables</h3>
-        <p class="stat-number">{{ countAvis('defavorable') }}</p>
-        <small>Membres commission</small>
-      </div>
-    </div>
-  </section>
-
   <section class="toolbar-card">
     <div class="filters-group">
       <label *ngIf="userRole === 'responsable'" class="select-all">
@@ -213,44 +175,6 @@
           </div>
         </div>
 
-        <div class="avis-section">
-          <h4>
-            <i class="fas fa-comments"></i>
-            Donner votre avis
-          </h4>
-
-          <div class="avis-buttons">
-            <button
-              class="btn-avis btn-favorable"
-              [class.active]="candidat.monAvis === 'favorable'"
-              (click)="donnerAvis(candidat, 'favorable')"
-            >
-              <i class="fas fa-thumbs-up"></i>
-              Favorable
-            </button>
-            <button
-              class="btn-avis btn-defavorable"
-              [class.active]="candidat.monAvis === 'defavorable'"
-              (click)="donnerAvis(candidat, 'defavorable')"
-            >
-              <i class="fas fa-thumbs-down"></i>
-              Défavorable
-            </button>
-          </div>
-
-          <textarea
-            *ngIf="candidat.monAvis"
-            class="commentaire-input form-control"
-            [(ngModel)]="candidat.commentaire"
-            [placeholder]="
-              candidat.monAvis === 'defavorable'
-                ? 'Argumentaire obligatoire pour avis défavorable...'
-                : 'Commentaire (optionnel)...'
-            "
-            rows="3"
-          ></textarea>
-        </div>
-
         <div class="candidat-actions">
           <button
             *ngIf="userRole !== 'membre'"
@@ -259,14 +183,6 @@
           >
             <i class="fas fa-folder-open"></i>
             Voir Dossier
-          </button>
-          <button
-            *ngIf="userRole !== 'membre'"
-            class="btn-card btn-details"
-            (click)="voirDetails(candidat.id)"
-          >
-            <i class="fas fa-info-circle"></i>
-            Détails
           </button>
         </div>
       </div>

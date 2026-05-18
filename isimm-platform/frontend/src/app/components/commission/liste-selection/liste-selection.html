@@ -276,6 +276,7 @@
               <th>Decision preselection</th>
               <th style="min-width: 148px">Statut selection</th>
               <th>Observation</th>
+              <th *ngIf="showDossierButton">Dossier</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -335,6 +336,16 @@
                   (change)="onFinalSelectionObservationChange()"
                 />
               </td>
+              <td *ngIf="showDossierButton">
+                <button
+                  class="btn btn-sec btn-dossier"
+                  type="button"
+                  (click)="voirDossierSelection(candidate)"
+                >
+                  <i class="fas fa-folder-open"></i>
+                  Voir Dossier
+                </button>
+              </td>
               <td>
                 <button
                   class="btn btn-sec"
@@ -382,6 +393,102 @@
       [ngClass]="finalSelectionToast.type"
     >
       <span>{{ finalSelectionToast.message }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="dossier-modal-backdrop" *ngIf="dossierModalOpen" (click)="closeDossierModal()">
+  <div class="dossier-modal" (click)="$event.stopPropagation()">
+    <div class="dossier-modal-header">
+      <div>
+        <div class="dossier-modal-kicker">Phase de sélection</div>
+        <h3>{{ getDossierTitle(dossierModalCandidate) }}</h3>
+        <p>
+          {{ dossierModalData?.master_nom || dossierModalCandidate?.spec }}
+          <span *ngIf="dossierModalData?.candidature_numero"
+            >· {{ dossierModalData.candidature_numero }}</span
+          >
+        </p>
+      </div>
+      <button class="dossier-modal-close" type="button" (click)="closeDossierModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="dossier-modal-body" *ngIf="dossierModalLoading">
+      <div class="dossier-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        Chargement du dossier...
+      </div>
+    </div>
+
+    <div class="dossier-modal-body" *ngIf="!dossierModalLoading && dossierModalError">
+      <div class="dossier-error">{{ dossierModalError }}</div>
+    </div>
+
+    <div class="dossier-modal-body" *ngIf="!dossierModalLoading && !dossierModalError">
+      <div class="dossier-summary-grid">
+        <div class="dossier-summary-card">
+          <span>Score</span>
+          <strong>{{
+            dossierModalData?.score_completude || dossierModalCandidate?.score || '-'
+          }}</strong>
+        </div>
+        <div class="dossier-summary-card">
+          <span>Statut</span>
+          <strong>{{ dossierModalData?.statut || dossierModalCandidate?.statut || '-' }}</strong>
+        </div>
+        <div class="dossier-summary-card">
+          <span>Documents</span>
+          <strong>{{ dossierModalDocuments.length }}</strong>
+        </div>
+      </div>
+
+      <div class="dossier-doc-grid" *ngIf="dossierModalDocuments.length">
+        <article class="dossier-doc-card" *ngFor="let doc of dossierModalDocuments">
+          <div class="dossier-doc-head">
+            <div>
+              <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
+              <p>
+                {{ doc.type_document_detail?.type_document || 'fichier' }}
+                · {{ doc.statut || 'en attente' }}
+              </p>
+            </div>
+            <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
+              {{ doc.statut }}
+            </span>
+          </div>
+
+          <iframe
+            *ngIf="isPdf(doc.fichier_url)"
+            class="dossier-preview"
+            [src]="doc.fichier_url"
+            title="Aperçu dossier"
+          ></iframe>
+
+          <div class="dossier-doc-meta">
+            <div>{{ doc.date_upload ? (doc.date_upload | date: 'dd/MM/yyyy HH:mm') : '-' }}</div>
+            <div>{{ doc.commentaire || 'Aucun commentaire' }}</div>
+          </div>
+
+          <a
+            *ngIf="doc.fichier_url"
+            class="dossier-doc-link"
+            [href]="doc.fichier_url"
+            target="_blank"
+          >
+            Ouvrir le fichier
+          </a>
+        </article>
+      </div>
+
+      <div class="dossier-empty" *ngIf="!dossierModalDocuments.length">
+        Aucun document disponible pour ce dossier.
+      </div>
+    </div>
+
+    <div class="dossier-modal-footer">
+      <button class="btn btn-sec" type="button" (click)="closeDossierModal()">Fermer</button>
     </div>
   </div>
 </div>

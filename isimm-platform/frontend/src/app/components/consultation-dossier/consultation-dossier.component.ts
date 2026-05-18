@@ -37,6 +37,7 @@ export class ConsultationDossierComponent implements OnInit {
   candidatureId: number | null = null;
   sourceContext = '';
   sourceLabel = 'Consultation du dossier';
+  readOnlyView = false;
   isLoading = true;
   showCustomSnippet = true;
   toastShow = false;
@@ -80,6 +81,7 @@ export class ConsultationDossierComponent implements OnInit {
     this.candidatureId = Number(this.route.snapshot.paramMap.get('id')) || null;
     this.sourceContext = this.route.snapshot.queryParamMap.get('source') || '';
     this.sourceLabel = this.getSourceLabel(this.sourceContext);
+    this.readOnlyView = this.sourceContext === 'selection' || this.sourceContext === 'commission';
     this.loadDossier();
   }
 
@@ -124,6 +126,7 @@ export class ConsultationDossierComponent implements OnInit {
   private getSourceLabel(source: string): string {
     if (source === 'liste-generation') return 'Ouvert depuis une liste générée';
     if (source === 'reclamations') return 'Ouvert depuis les réclamations';
+    if (source === 'selection') return 'Consultation dossier - phase de sélection';
     if (source === 'candidat') return 'Espace candidat';
     return 'Consultation du dossier';
   }
@@ -136,22 +139,35 @@ export class ConsultationDossierComponent implements OnInit {
       return;
     }
 
-    this.candidatureService.getMesCandidatures().subscribe({
+    const loader = this.readOnlyView
+      ? this.candidatureService.getCommissionDossier(id)
+      : this.candidatureService.getMesCandidatures();
+
+    loader.subscribe({
       next: (response: any) => {
-        const candidatures = Array.isArray(response)
-          ? response
-          : (response?.results ?? response?.data ?? []);
-        const candidat = candidatures.find((item: any) => Number(item?.id) === id) ?? null;
-        if (!candidat) {
-          this.showToast('Candidat introuvable pour cet identifiant', 't-danger');
+        if (this.readOnlyView) {
+          const dossier = response?.dossier || response || null;
+          const candidature = response?.candidature || null;
+          this.candidat = candidature ?? this.buildFallbackCandidate(id);
+          this.documents = this.buildDocumentsFromBackend(dossier, this.candidat);
+        } else {
+          const candidatures = Array.isArray(response)
+            ? response
+            : (response?.results ?? response?.data ?? []);
+          const candidat = candidatures.find((item: any) => Number(item?.id) === id) ?? null;
+          if (!candidat) {
+            this.showToast('Candidat introuvable pour cet identifiant', 't-danger');
+          }
+          this.candidat = candidat ?? this.buildFallbackCandidate(id);
+          this.documents = this.buildDocuments(this.candidat);
         }
-        this.candidat = candidat ?? this.buildFallbackCandidate(id);
-        this.documents = this.buildDocuments(this.candidat);
         this.isLoading = false;
       },
       error: () => {
         this.candidat = this.buildFallbackCandidate(id);
-        this.documents = this.buildDocuments(this.candidat);
+        this.documents = this.readOnlyView
+          ? this.buildDocuments(this.candidat)
+          : this.buildDocuments(this.candidat);
         this.showToast('Chargement local de secours utilisé', 't-warn');
         this.isLoading = false;
       },
@@ -231,6 +247,56 @@ export class ConsultationDossierComponent implements OnInit {
       urlSafe: item.url ? this.sanitizer.bypassSecurityTrustResourceUrl(item.url) : undefined,
       nom: item.nom.replace('Ahmed Ben Ali', `${prefix}${suffix}`),
     })) as DossierDocument[];
+  }
+
+  private buildDocumentsFromBackend(dossier: any, candidate: any): DossierDocument[] {
+    const docs = Array.isArray(dossier?.documents) ? dossier.documents : [];
+    if (!docs.length) {
+      return this.buildDocuments(candidate);
+    }
+
+    return docs.map((doc: any, index: number) => {
+      const status = String(doc?.statut || '').toLowerCase();
+      const normalizedStatus: DossierDocument['status'] =
+        status === 'valide' || status === 'valid'
+          ? 'valid'
+          : status === 'rejete' || status === 'rejected'
+            ? 'rejected'
+            : 'pending';
+      const url = doc?.fichier_url || doc?.fichier || doc?.url || '';
+      const sizeBytes = Number(doc?.taille_bytes || 0);
+
+      return {
+        id: String(doc?.id ?? index),
+        nom:
+          doc?.nom_fichier_original ||
+          doc?.type_document_detail?.description ||
+          doc?.type_document_detail?.type_document ||
+          'Document',
+        dateDepot: doc?.date_upload ? new Date(doc.date_upload).toLocaleDateString('fr-FR') : '-',
+        taille: sizeBytes > 0 ? this.formatFileSize(sizeBytes) : '-',
+        status: normalizedStatus,
+        commentaire: doc?.description || doc?.erreur_ocr || '',
+        verifiedBy: doc?.verified_by || 'Commission',
+        verifiedAt: doc?.date_traitement_ocr
+          ? new Date(doc.date_traitement_ocr).toLocaleString('fr-FR')
+          : undefined,
+        url,
+        urlSafe: url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : undefined,
+      } as DossierDocument;
+    });
+  }
+
+  private formatFileSize(sizeBytes: number): string {
+    if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) return '-';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = sizeBytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex += 1;
+    }
+    return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
   }
 
   retour(): void {

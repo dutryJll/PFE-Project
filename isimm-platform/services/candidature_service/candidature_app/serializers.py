@@ -95,6 +95,7 @@ class CandidatureSerializer(serializers.ModelSerializer):
             'choix_priorite',
             'peut_modifier',
             'jours_restants',
+            'formulaire',
         ]
         read_only_fields = ['numero', 'date_soumission']
 

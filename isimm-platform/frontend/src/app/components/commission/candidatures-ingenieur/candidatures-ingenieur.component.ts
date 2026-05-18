@@ -137,6 +137,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
   recherche: string = '';
 
   candidatsFiltres: Candidat[] = [];
+  selectionSet: Set<number> = new Set<number>();
+  selectAll: boolean = false;
+  viewingSelection: boolean = false;
+  viewingList: Candidat[] = [];
 
   // ========================================
   // LIFECYCLE
@@ -149,15 +153,16 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // NAVIGATION CAROUSEL
   // ========================================
   nextCandidat(): void {
-    if (this.candidatsFiltres.length > 0) {
-      this.currentIndex = (this.currentIndex + 1) % this.candidatsFiltres.length;
+    const list = this.viewingSelection ? this.viewingList : this.candidatsFiltres;
+    if (list.length > 0) {
+      this.currentIndex = (this.currentIndex + 1) % list.length;
     }
   }
 
   prevCandidat(): void {
-    if (this.candidatsFiltres.length > 0) {
-      this.currentIndex =
-        (this.currentIndex - 1 + this.candidatsFiltres.length) % this.candidatsFiltres.length;
+    const list = this.viewingSelection ? this.viewingList : this.candidatsFiltres;
+    if (list.length > 0) {
+      this.currentIndex = (this.currentIndex - 1 + list.length) % list.length;
     }
   }
 
@@ -211,6 +216,59 @@ export class CandidaturesIngenieurComponent implements OnInit {
     if (this.currentIndex >= this.candidatsFiltres.length && this.candidatsFiltres.length > 0) {
       this.currentIndex = 0;
     }
+
+    this.selectAll =
+      this.selectionSet.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0;
+  }
+
+  toggleSelect(c: Candidat): void {
+    if (this.selectionSet.has(c.id)) {
+      this.selectionSet.delete(c.id);
+    } else {
+      this.selectionSet.add(c.id);
+    }
+    this.selectAll =
+      this.selectionSet.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0;
+  }
+
+  toggleSelectAll(): void {
+    if (this.selectAll) {
+      this.selectionSet.clear();
+      this.selectAll = false;
+      return;
+    }
+
+    this.candidatsFiltres.forEach((c) => this.selectionSet.add(c.id));
+    this.selectAll = true;
+  }
+
+  consulterSelection(): void {
+    let list: Candidat[] = [];
+    if (this.selectAll || this.selectionSet.size === 0) {
+      list = [...this.candidatsFiltres];
+    } else {
+      list = this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id));
+    }
+
+    if (list.length === 0) {
+      return;
+    }
+
+    this.viewingList = list;
+    this.viewingSelection = true;
+    this.currentIndex = 0;
+  }
+
+  consulterUn(c: Candidat): void {
+    this.viewingList = [c];
+    this.viewingSelection = true;
+    this.currentIndex = 0;
+  }
+
+  fermerConsultation(): void {
+    this.viewingSelection = false;
+    this.viewingList = [];
+    this.currentIndex = 0;
   }
 
   reinitialiserFiltres(): void {
@@ -257,11 +315,12 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // GETTERS
   // ========================================
   get candidatActuel(): Candidat | undefined {
-    return this.candidatsFiltres[this.currentIndex];
+    const list = this.viewingSelection ? this.viewingList : this.candidatsFiltres;
+    return list[this.currentIndex];
   }
 
   get totalCandidatures(): number {
-    return this.candidatsFiltres.length;
+    return this.viewingSelection ? this.viewingList.length : this.candidatsFiltres.length;
   }
 
   get numeroActuel(): number {
@@ -277,7 +336,7 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   get scorePercentage(): number {
-    return (this.candidatActuel?.score || 0) / 20 * 100;
+    return ((this.candidatActuel?.score || 0) / 20) * 100;
   }
 
   // ========================================

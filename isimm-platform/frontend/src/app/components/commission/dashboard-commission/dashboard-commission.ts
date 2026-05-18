@@ -19,17 +19,19 @@ import {
   OffreMasterDialogData,
 } from '../offre-master-dialog/offre-master-dialog.component';
 import { CandidaturesMasterComponent } from '../candidatures-master/candidatures-master.component';
-import { CandidaturesIngenieurComponent } from '../candidatures-ingenieur/candidatures-ingenieur.component';
 
 interface Candidature {
   id: number;
   numero: string;
+  num?: string;
   candidat_nom: string;
+  nom?: string;
   candidat_email: string;
   candidat_cin?: string;
   etablissement_origine?: string;
   master_id?: number;
   specialite: string;
+  spec?: string;
   master_nom?: string;
   score: number;
   dossier_depose: boolean;
@@ -49,6 +51,7 @@ interface Candidature {
   total_candidats?: number;
   selectionStatut?: string;
   observation?: string;
+  obs?: string;
   candidat_type?: string;
 }
 
@@ -447,7 +450,6 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
     MatDialogModule,
     MatCardModule,
     CandidaturesMasterComponent,
-    CandidaturesIngenieurComponent,
   ],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
@@ -690,7 +692,7 @@ export class DashboardCommissionComponent implements OnInit {
   // Selection finale (Sélection tab)
   selectionCandidates: Candidature[] = [];
   selectionFiltered: Candidature[] = [];
-  selectionStats: { lp: number; la: number } = { lp: 0, la: 0 };
+  selectionStats: { lp: number; la: number; refuse: number } = { lp: 0, la: 0, refuse: 0 };
   selectionAvgScore: number = 0;
   selectionSelected: Set<number> = new Set();
   selectionAllChecked: boolean = false;
@@ -974,6 +976,10 @@ export class DashboardCommissionComponent implements OnInit {
   finalSelectionConfirmOpen: boolean = false;
   finalSelectionConfirmTitle: string = '';
   finalSelectionConfirmMessage: string = '';
+  finalSelectionConsultationOpen: boolean = false;
+  finalSelectionConsultationIds: number[] = [];
+  finalSelectionConsultationCandidates: FinalSelectionCandidate[] = [];
+  finalSelectionConsultationCurrentIndex: number = 0;
   finalSelectionToast: { message: string; type: string; visible: boolean } = {
     message: '0 candidats mis a jour',
     type: 't-success',
@@ -1343,7 +1349,115 @@ export class DashboardCommissionComponent implements OnInit {
 
   finalSelectionConsult(candidate: FinalSelectionCandidate): void {
     if (!candidate) return;
-    this.showFinalSelectionToast(`Ouverture du dossier de ${candidate.nom}`, 't-info');
+    this.openFinalSelectionConsultationModal(candidate);
+  }
+
+  openFinalSelectionConsultationModal(candidate?: FinalSelectionCandidate): void {
+    const selectedIds = Array.from(this.finalSelectionSelectedIds);
+    const consultationIds = selectedIds.length > 0 ? selectedIds : candidate ? [candidate.id] : [];
+
+    if (consultationIds.length === 0) {
+      this.showFinalSelectionToast('Aucun candidat selectionne', 't-warn');
+      return;
+    }
+
+    const selectedCandidates = this.finalSelectionCandidates.filter((row) =>
+      consultationIds.includes(row.id),
+    );
+
+    if (selectedCandidates.length === 0) {
+      this.showFinalSelectionToast('Aucun candidat selectionne', 't-warn');
+      return;
+    }
+
+    this.finalSelectionConsultationIds = consultationIds;
+    this.finalSelectionConsultationCandidates = selectedCandidates;
+    this.finalSelectionConsultationCurrentIndex = candidate
+      ? Math.max(
+          0,
+          selectedCandidates.findIndex((row) => row.id === candidate.id),
+        )
+      : 0;
+    this.finalSelectionConsultationOpen = true;
+  }
+
+  closeFinalSelectionConsultationModal(): void {
+    this.finalSelectionConsultationOpen = false;
+    this.finalSelectionConsultationIds = [];
+    this.finalSelectionConsultationCandidates = [];
+    this.finalSelectionConsultationCurrentIndex = 0;
+  }
+
+  getCurrentFinalSelectionConsultationCandidate(): FinalSelectionCandidate | null {
+    if (
+      this.finalSelectionConsultationCandidates.length === 0 ||
+      this.finalSelectionConsultationCurrentIndex >=
+        this.finalSelectionConsultationCandidates.length
+    ) {
+      return null;
+    }
+
+    return this.finalSelectionConsultationCandidates[this.finalSelectionConsultationCurrentIndex];
+  }
+
+  getFinalSelectionConsultationProgressLabel(): string {
+    const total = this.finalSelectionConsultationCandidates.length;
+    const current = total === 0 ? 0 : this.finalSelectionConsultationCurrentIndex + 1;
+    return `Dossier ${current} / ${total}`;
+  }
+
+  finalSelectionConsultationPrevious(): void {
+    if (this.finalSelectionConsultationCurrentIndex > 0) {
+      this.finalSelectionConsultationCurrentIndex--;
+    }
+  }
+
+  finalSelectionConsultationNext(): void {
+    if (
+      this.finalSelectionConsultationCurrentIndex <
+      this.finalSelectionConsultationCandidates.length - 1
+    ) {
+      this.finalSelectionConsultationCurrentIndex++;
+    }
+  }
+
+  private advanceFinalSelectionConsultationOrClose(): void {
+    if (
+      this.finalSelectionConsultationCurrentIndex <
+      this.finalSelectionConsultationCandidates.length - 1
+    ) {
+      this.finalSelectionConsultationNext();
+      return;
+    }
+
+    this.showFinalSelectionToast('Tous les dossiers ont ete traites', 't-success');
+    this.closeFinalSelectionConsultationModal();
+  }
+
+  finalSelectionConsultationValidate(): void {
+    const candidate = this.getCurrentFinalSelectionConsultationCandidate();
+    if (!candidate) return;
+
+    candidate.statut = 'lp';
+    this.finalSelectionCandidates = this.finalSelectionCandidates.map((row) =>
+      row.id === candidate.id ? { ...row, statut: 'lp' } : row,
+    );
+    this.updateFinalSelectionFiltered();
+    this.showFinalSelectionToast(`${candidate.nom} valide en LP`, 't-success');
+    this.advanceFinalSelectionConsultationOrClose();
+  }
+
+  finalSelectionConsultationReject(): void {
+    const candidate = this.getCurrentFinalSelectionConsultationCandidate();
+    if (!candidate) return;
+
+    candidate.statut = 'refuse';
+    this.finalSelectionCandidates = this.finalSelectionCandidates.map((row) =>
+      row.id === candidate.id ? { ...row, statut: 'refuse' } : row,
+    );
+    this.updateFinalSelectionFiltered();
+    this.showFinalSelectionToast(`${candidate.nom} rejete`, 't-success');
+    this.advanceFinalSelectionConsultationOrClose();
   }
 
   toggleFinalSelectionExportMenu(event: MouseEvent): void {
@@ -1842,10 +1956,18 @@ export class DashboardCommissionComponent implements OnInit {
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
     this.updateFinalSelectionFiltered();
-    this.loadMastersForConfiguration();
-    this.loadOffresPreinscription();
-    this.loadOffresMasterCrud();
-    this.loadResponsibleNotifications();
+    if (this.isResponsable) {
+      this.loadMastersForConfiguration();
+    }
+    // Load offers for responsables; also load preinscription offers for membres
+    if (this.isResponsable) {
+      this.loadOffresPreinscription();
+      this.loadOffresMasterCrud();
+      this.loadResponsibleNotifications();
+    } else if (this.currentUser?.role === 'membre') {
+      // members should be able to view offers relevant to their commissions
+      this.loadOffresPreinscription();
+    }
     this.loadMembers();
     this.loadNotifications();
     if (this.isResponsable) {
@@ -1877,16 +1999,18 @@ export class DashboardCommissionComponent implements OnInit {
     // Initialize test data for Inscription en ligne
     this.initInscriptionTestData();
 
-    // Start or attach to WebSocket connection and expose status for UI
-    const wsUrl = new URL('/ws/candidatures/', window.location.origin).toString();
-    this.webSocketService.connect(wsUrl).subscribe({
-      next: () => {},
-      error: (err: any) => console.warn('WebSocket service connection error (commission):', err),
-    });
+    // Start the WebSocket connection only for roles that use live notifications.
+    if (this.isResponsable) {
+      const wsUrl = new URL('/ws/candidatures/', window.location.origin).toString();
+      this.webSocketService.connect(wsUrl).subscribe({
+        next: () => {},
+        error: (err: any) => console.warn('WebSocket service connection error (commission):', err),
+      });
 
-    this.wsStatusSub = this.webSocketService.connectionStatus$.subscribe((status: any) => {
-      this.socketConnectionStatus = status;
-    });
+      this.wsStatusSub = this.webSocketService.connectionStatus$.subscribe((status: any) => {
+        this.socketConnectionStatus = status;
+      });
+    }
 
     // Close export menu when clicking outside
     try {
@@ -3289,7 +3413,14 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     if (view === 'configuration-appels') {
-      return this.isResponsable;
+      // Allow responsables, and also allow commission members who belong to
+      // at least one commission (so they can view offers for their speciality).
+      return (
+        this.isResponsable ||
+        (this.currentUser?.role === 'membre' &&
+          Array.isArray(this.availableCommissions) &&
+          this.availableCommissions.length > 0)
+      );
     }
 
     if (view === 'concours-ingenieur') {
@@ -3393,13 +3524,29 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canOpenCandidaturesMasterMenu(): boolean {
-    return this.isResponsable || this.actionPermissions.consultationCandidature;
+    return (
+      this.isResponsable ||
+      this.actionPermissions.consultationCandidature ||
+      (this.currentUser?.role === 'membre' &&
+        Array.isArray(this.availableCommissions) &&
+        this.availableCommissions.length > 0)
+    );
   }
 
   canOpenCandidaturesIngenieurMenu(): boolean {
-    return this.isResponsable
-      ? this.isEngineerScope()
-      : this.actionPermissions.consultationCandidature;
+    if (this.isResponsable) {
+      return this.isEngineerScope();
+    }
+
+    if (
+      this.currentUser?.role === 'membre' &&
+      Array.isArray(this.availableCommissions) &&
+      this.availableCommissions.length > 0
+    ) {
+      return this.isEngineerScope();
+    }
+
+    return this.actionPermissions.consultationCandidature;
   }
 
   openCandidaturesMasterMenu(): void {
@@ -4216,7 +4363,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.toastService.show(message, 'warning');
   }
 
-  private showAlertMessage(message: string): void {
+  showAlertMessage(message: string): void {
     const normalized = String(message ?? '').trim();
     const cleanMessage = normalized.replace(/[✅❌⚠️ℹ️]/g, '').trim();
     let type: 'success' | 'info' | 'warning' | 'error' = 'info';
@@ -4238,6 +4385,10 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.toastService.show(cleanMessage || 'Notification', type);
+  }
+
+  getCommissionActiveLabel(): string {
+    return this.currentYear;
   }
 
   canAnalyzeDossier(): boolean {
@@ -4769,6 +4920,14 @@ export class DashboardCommissionComponent implements OnInit {
       .length;
   }
 
+  get candidaturesIngenieurFiltrees(): Candidature[] {
+    const source =
+      this.candidaturesResponsableFiltrees && this.candidaturesResponsableFiltrees.length > 0
+        ? this.candidaturesResponsableFiltrees
+        : this.candidatures;
+    return source.filter((candidature) => candidature.type_concours === 'ingenieur');
+  }
+
   get candidaturesResponsableDossiersDeposesCount(): number {
     return this.candidaturesResponsableFiltrees.filter((c) => c.dossier_depose).length;
   }
@@ -4793,7 +4952,13 @@ export class DashboardCommissionComponent implements OnInit {
       offresEligibles.map((offre) => Number(offre.id)).filter((id) => Number.isFinite(id)),
     );
 
-    this.candidaturesResponsableFiltrees = this.candidaturesResponsable
+    // Use responsable list when available, otherwise fallback to global candidatures
+    const baseList: Candidature[] =
+      this.candidaturesResponsable && this.candidaturesResponsable.length > 0
+        ? this.candidaturesResponsable
+        : this.candidatures;
+
+    this.candidaturesResponsableFiltrees = baseList
       .filter((candidature) => {
         if (masterIdsEligibles.size > 0) {
           const masterId = Number(candidature.master_id || 0);
@@ -5017,7 +5182,19 @@ export class DashboardCommissionComponent implements OnInit {
   private getEligibleOpenOffresForCurrentProfile(): OffrePreinscription[] {
     const currentYear = this.getCurrentAcademicYear();
     const previousYear = this.getPreviousAcademicYear();
-    const profileMaster = this.getUserMasterOrSpecialiteLabel().toLowerCase();
+    // prefer active commission selection if present
+    let profileMaster = '';
+    if (this.activeCommissionId) {
+      const comm = this.availableCommissions.find(
+        (c) => Number(c.id) === Number(this.activeCommissionId),
+      );
+      if (comm && comm.nom) {
+        profileMaster = String(comm.nom).toLowerCase();
+      }
+    }
+    if (!profileMaster) {
+      profileMaster = this.getUserMasterOrSpecialiteLabel().toLowerCase();
+    }
 
     return this.offresPreinscription.filter((offre) => {
       if (offre.statut !== 'ouvert') {
@@ -6431,7 +6608,8 @@ export class DashboardCommissionComponent implements OnInit {
   updateSelectionStats(): void {
     const lp = this.selectionCandidates.filter((c) => c.selectionStatut === 'lp').length;
     const la = this.selectionCandidates.filter((c) => c.selectionStatut === 'la').length;
-    this.selectionStats = { lp, la };
+    const refuse = this.selectionCandidates.filter((c) => c.selectionStatut === 'refuse').length;
+    this.selectionStats = { lp, la, refuse };
     const scores = this.selectionCandidates.filter((c) => c.score).map((c) => c.score);
     this.selectionAvgScore =
       scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;

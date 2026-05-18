@@ -3103,7 +3103,14 @@ def commission_avis_global(request, commission_id):
         )
 
     # GET
-    if role not in ['responsable_commission', 'admin'] and not _is_user_responsable_for_commission(request.user, commission):
+    is_member_of_commission = MembreCommission.objects.filter(
+        commission=commission,
+        user=request.user,
+        actif=True,
+    ).exists()
+    if role not in ['responsable_commission', 'admin'] and not (
+        is_member_of_commission or _is_user_responsable_for_commission(request.user, commission)
+    ):
         return Response({'error': 'Acces reserve au responsable de commission.'}, status=status.HTTP_403_FORBIDDEN)
 
     _ensure_auto_validated_global_avis(commission)

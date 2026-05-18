@@ -13,8 +13,8 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   styleUrl: './login-commission.component.css',
 })
 export class LoginCommissionComponent {
-  username: string = '';
-  password: string = '';
+  username: string = 'responsable@isimm.tn';
+  password: string = 'TestPassword123!';
   errorMessage: string = '';
   isLoading: boolean = false;
 

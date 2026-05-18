@@ -6,7 +6,11 @@
     <h2 class="section-title">Gestion des Candidatures - Master</h2>
 
     <div class="stats-grid">
-      <div class="stat-card" *ngFor="let stat of statistiques" [style.border-left-color]="stat.couleur">
+      <div
+        class="stat-card"
+        *ngFor="let stat of statistiques"
+        [style.border-left-color]="stat.couleur"
+      >
         <div class="stat-icon">{{ stat.icon }}</div>
         <div class="stat-content">
           <div class="stat-label">{{ stat.label }}</div>
@@ -19,6 +23,29 @@
   <!-- ========================================
       FILTRES
       ======================================== -->
+  <div class="filter-group" *ngIf="availableCommissions && availableCommissions.length > 0">
+    <label>Commission</label>
+    <select [(ngModel)]="selectedCommissionId" (change)="appliquerFiltres()" class="filter-select">
+      <option [ngValue]="null">Toutes les commissions</option>
+      <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
+        {{ commission.nom }}
+      </option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Année</label>
+    <select [(ngModel)]="selectedYear" (change)="appliquerFiltres()" class="filter-select">
+      <option value="">Toutes les années</option>
+      <option *ngFor="let y of distinctYears" [value]="y">{{ y }}</option>
+    </select>
+  </div>
+  <div class="filter-group" *ngIf="availableSpecialites && availableSpecialites.length > 0">
+    <label>Spécialité</label>
+    <select [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()" class="filter-select">
+      <option value="">Toutes les spécialités</option>
+      <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+    </select>
+  </div>
   <div class="filters-section">
     <div class="filter-group">
       <label>Recherche (nom/email/cin)</label>
@@ -54,16 +81,20 @@
   </div>
 
   <!-- TABLEAU DES CANDIDATURES -->
-  <div class="table-section card" style="margin-bottom:20px;padding:16px">
+  <div class="table-section card" style="margin-bottom: 20px; padding: 16px">
     <div class="table-actions">
-      <button class="btn-reset" (click)="toggleSelectAll()">{{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}</button>
-      <button class="btn" (click)="consulterSelection()" style="background:#378ADD;color:#fff">Consulter sélection</button>
+      <button class="btn-reset" (click)="toggleSelectAll()">
+        {{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}
+      </button>
+      <button class="btn" (click)="consulterSelection()" style="background: #378add; color: #fff">
+        Consulter sélection
+      </button>
     </div>
 
     <table class="candidature-table">
       <thead>
         <tr>
-          <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()"/></th>
+          <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" /></th>
           <th>Rang</th>
           <th>Numéro</th>
           <th>Nom complet</th>
@@ -75,13 +106,19 @@
       </thead>
       <tbody>
         <tr *ngFor="let c of candidatsFiltres; let i = index">
-          <td><input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)"/></td>
+          <td>
+            <input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)" />
+          </td>
           <td>{{ i + 1 }}</td>
           <td>{{ c.id }}</td>
           <td>{{ c.nom }}</td>
           <td>{{ c.master }}</td>
           <td>{{ c.score }}</td>
-          <td><span [ngClass]="getStatutBadgeClass(c.statut)" class="badge small">{{ c.statut }}</span></td>
+          <td>
+            <span [ngClass]="getStatutBadgeClass(c.statut)" class="badge small">{{
+              c.statut
+            }}</span>
+          </td>
           <td><button class="btn small" (click)="consulterUn(c)">Consulter</button></td>
         </tr>
       </tbody>
@@ -178,9 +215,7 @@
 
         <!-- PIÈCES JUSTIFICATIVES -->
         <div class="card-section">
-          <h4>
-            Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})
-          </h4>
+          <h4>Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})</h4>
           <div class="pieces-container">
             <div
               *ngFor="let piece of candidatActuel.pieces"
@@ -212,7 +247,9 @@
             >
               ✕ Refuser
             </button>
-            <button class="btn small" (click)="fermerConsultation()" *ngIf="viewingSelection">Fermer</button>
+            <button class="btn small" (click)="fermerConsultation()" *ngIf="viewingSelection">
+              Fermer
+            </button>
           </div>
         </div>
       </div>

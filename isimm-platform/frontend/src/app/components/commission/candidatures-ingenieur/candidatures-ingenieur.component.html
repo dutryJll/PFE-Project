@@ -6,7 +6,11 @@
     <h2 class="section-title">Gestion des Candidatures - Ingénieur</h2>
 
     <div class="stats-grid">
-      <div class="stat-card" *ngFor="let stat of statistiques" [style.border-left-color]="stat.couleur">
+      <div
+        class="stat-card"
+        *ngFor="let stat of statistiques"
+        [style.border-left-color]="stat.couleur"
+      >
         <div class="stat-icon">{{ stat.icon }}</div>
         <div class="stat-content">
           <div class="stat-label">{{ stat.label }}</div>
@@ -51,6 +55,50 @@
     </div>
 
     <button class="btn-reset" (click)="reinitialiserFiltres()">Réinitialiser</button>
+  </div>
+
+  <div class="table-section card" style="margin-bottom: 20px; padding: 16px">
+    <div class="table-actions">
+      <button class="btn-reset" (click)="toggleSelectAll()">
+        {{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}
+      </button>
+      <button class="btn" (click)="consulterSelection()" style="background: #378add; color: #fff">
+        Consulter sélection
+      </button>
+    </div>
+
+    <table class="candidature-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" /></th>
+          <th>Rang</th>
+          <th>Numéro</th>
+          <th>Nom complet</th>
+          <th>Spécialité</th>
+          <th>Score</th>
+          <th>Statut</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of candidatsFiltres; let i = index">
+          <td>
+            <input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)" />
+          </td>
+          <td>{{ i + 1 }}</td>
+          <td>{{ c.id }}</td>
+          <td>{{ c.nom }}</td>
+          <td>{{ c.specialite }}</td>
+          <td>{{ c.score }}</td>
+          <td>
+            <span [ngClass]="getStatutBadgeClass(c.statut)" class="badge small">{{
+              c.statut
+            }}</span>
+          </td>
+          <td><button class="btn small" (click)="consulterUn(c)">Consulter</button></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- ========================================
@@ -143,9 +191,7 @@
 
         <!-- PIÈCES JUSTIFICATIVES -->
         <div class="card-section">
-          <h4>
-            Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})
-          </h4>
+          <h4>Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})</h4>
           <div class="pieces-container">
             <div
               *ngFor="let piece of candidatActuel.pieces"
@@ -176,6 +222,9 @@
               [disabled]="!getStatutBoutons().refuser"
             >
               ✕ Refuser
+            </button>
+            <button class="btn small" (click)="fermerConsultation()" *ngIf="viewingSelection">
+              Fermer
             </button>
           </div>
         </div>
