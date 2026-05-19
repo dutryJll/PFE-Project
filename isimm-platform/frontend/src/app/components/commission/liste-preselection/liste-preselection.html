@@ -6,7 +6,7 @@
       </button>
       <div class="hero-title-block">
         <div class="eyebrow">Commission / Présélection</div>
-        <h1>Liste de Présélection</h1>
+        <h1><i class="fas fa-layer-group"></i><span>Liste de Présélection</span></h1>
         <p>Consulter et donner votre avis sur les candidats présélectionnés</p>
       </div>
       <div class="commission-picker card-field" *ngIf="userRole === 'membre'">
@@ -26,28 +26,28 @@
 
   <section class="summary-grid">
     <div class="summary-card">
-      <i class="fas fa-calendar"></i>
+      <div class="summary-icon"><i class="fas fa-calendar"></i></div>
       <div>
         <span class="info-label">Session</span>
         <span class="info-value">2026 - Master & Cycle Ingénieur</span>
       </div>
     </div>
     <div class="summary-card">
-      <i class="fas fa-users"></i>
+      <div class="summary-icon"><i class="fas fa-users"></i></div>
       <div>
         <span class="info-label">Total présélectionnés</span>
         <span class="info-value">{{ candidats.length }} candidats</span>
       </div>
     </div>
     <div class="summary-card">
-      <i class="fas fa-chart-line"></i>
+      <div class="summary-icon"><i class="fas fa-chart-line"></i></div>
       <div>
         <span class="info-label">Score moyen</span>
         <span class="info-value">{{ calculateAverage() }}/20</span>
       </div>
     </div>
     <div class="summary-card" *ngIf="globalAvisSummary">
-      <i class="fas fa-comments"></i>
+      <div class="summary-icon"><i class="fas fa-comments"></i></div>
       <div>
         <span class="info-label">Avis globaux</span>
         <span class="info-value"
@@ -90,7 +90,7 @@
 
     <div class="action-buttons">
       <button class="btn btn-action btn-global-avis" (click)="openGlobalAvisModal()">
-        <i class="fas fa-balance-scale"></i>
+        <i class="fas fa-scale-balanced"></i>
         Donner mon avis pour le parcours
       </button>
       <button
@@ -198,8 +198,30 @@
       </div>
     </div>
 
-    <div *ngIf="candidatsFiltres.length === 0 && !loading" class="empty-state">
-      <i class="fas fa-inbox"></i>
+    <div *ngIf="candidatsFiltres.length === 0 && !loading" class="empty-state empty-card">
+      <div class="empty-illustration" aria-hidden="true">
+        <svg viewBox="0 0 240 160" role="img" focusable="false">
+          <defs>
+            <linearGradient id="preselectionEmptyBg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#e6f1fb" />
+              <stop offset="100%" stop-color="#f8fbff" />
+            </linearGradient>
+          </defs>
+          <rect x="22" y="18" width="196" height="124" rx="22" fill="url(#preselectionEmptyBg)" />
+          <rect x="48" y="42" width="90" height="12" rx="6" fill="#c7d8ea" />
+          <rect x="48" y="62" width="145" height="10" rx="5" fill="#d9e6f2" />
+          <rect x="48" y="80" width="118" height="10" rx="5" fill="#d9e6f2" />
+          <circle cx="174" cy="76" r="22" fill="#dbeefe" />
+          <path
+            d="M166 76l6 6 14-16"
+            fill="none"
+            stroke="#185fa5"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
       <p>Aucun candidat présélectionné</p>
     </div>
   </section>
@@ -247,11 +269,11 @@
       ></textarea>
 
       <div class="global-avis-actions">
-        <button class="btn-action btn-print" type="button" (click)="closeGlobalAvisModal()">
+        <button class="btn btn-action btn-print" type="button" (click)="closeGlobalAvisModal()">
           Annuler
         </button>
         <button
-          class="btn-action btn-global-avis"
+          class="btn btn-action btn-global-avis"
           type="button"
           [disabled]="globalAvisSubmitting"
           (click)="submitGlobalAvis()"

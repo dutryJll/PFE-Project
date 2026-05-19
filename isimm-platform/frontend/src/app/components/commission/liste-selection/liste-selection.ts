@@ -339,6 +339,11 @@ export class ListeSelection implements OnInit {
       });
   }
 
+  scrollToGlobalAvis(): void {
+    const section = document.getElementById('avis-global-section');
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   imprimerListe(): void {
     window.print();
   }
