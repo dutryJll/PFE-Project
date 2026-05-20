@@ -1,550 +1,607 @@
-<!-- Final selection template moved here from dashboard (Candidatures Master) -->
-<div class="liste-selection-final-page" (click)="onFinalSelectionPageClick($event)">
-  <div class="page">
-    <div class="page-shell">
-      <div class="filter-toolbar">
-        <div class="top-filters">
-          <div class="filter-chip">
-            <div class="flbl">Session principale</div>
-            <select
-              class="finput"
-              [(ngModel)]="finalSelectionFilters.session"
-              (change)="updateFinalSelectionFiltered()"
-            >
-              <option value="2025/2026">2025/2026</option>
-              <option value="2024/2025">2024/2025</option>
-            </select>
+<div class="liste-selection-final-page page" (click)="onFinalSelectionPageClick($event)">
+  <div class="main-container">
+    <section class="header-section">
+      <div class="hero-card">
+        <div class="header-content">
+          <button class="btn-back" [routerLink]="['/commission/dashboard']" aria-label="Retour">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="hero-title-block">
+            <div class="eyebrow">Commission / Sélection finale</div>
+            <h1><i class="fas fa-folder-open"></i><span>Liste de Sélection Finale</span></h1>
+            <p>Consulter, filtrer et publier les résultats finaux de la commission</p>
           </div>
-
-          <div class="filter-chip filter-chip--radio">
-            <div class="flbl">Type candidature</div>
-            <div class="radio-row">
-              <label class="radio-opt"
-                ><input
-                  type="radio"
-                  name="finalSelectionType"
-                  value="all"
-                  [(ngModel)]="finalSelectionFilters.type"
-                  (change)="updateFinalSelectionFiltered()"
-                />
-                Tous</label
-              >
-              <label class="radio-opt"
-                ><input
-                  type="radio"
-                  name="finalSelectionType"
-                  value="interne"
-                  [(ngModel)]="finalSelectionFilters.type"
-                  (change)="updateFinalSelectionFiltered()"
-                />
-                Interne</label
-              >
-              <label class="radio-opt"
-                ><input
-                  type="radio"
-                  name="finalSelectionType"
-                  value="externe"
-                  [(ngModel)]="finalSelectionFilters.type"
-                  (change)="updateFinalSelectionFiltered()"
-                />
-                Externe</label
-              >
-            </div>
-          </div>
-
-          <div class="filter-chip">
-            <div class="flbl">Spécialité</div>
-            <select
-              class="finput"
-              [(ngModel)]="finalSelectionFilters.specialite"
-              (change)="updateFinalSelectionFiltered()"
-            >
-              <option value="all">Tous les masters</option>
-              <option *ngFor="let spec of finalSelectionSpecialiteOptions" [value]="spec">
-                {{ spec }}
-              </option>
-            </select>
-          </div>
-
-          <div class="filter-chip">
-            <div class="flbl">Statut sélection</div>
-            <select
-              class="finput"
-              [(ngModel)]="finalSelectionFilters.statut"
-              (change)="updateFinalSelectionFiltered()"
-            >
-              <option value="all">Tous</option>
-              <option value="lp">Admis (LP)</option>
-              <option value="la">Liste d'attente (LA)</option>
-              <option value="refuse">Refusé</option>
-            </select>
-          </div>
-
-          <div class="filter-chip filter-chip--wide">
-            <div class="flbl">Score</div>
-            <div class="score-range">
-              <input
-                type="number"
-                class="finput"
-                [(ngModel)]="finalSelectionFilters.scoreMin"
-                min="0"
-                max="20"
-                step="0.5"
-                (input)="updateFinalSelectionFiltered()"
-                placeholder="Min"
-              />
-              <input
-                type="number"
-                class="finput"
-                [(ngModel)]="finalSelectionFilters.scoreMax"
-                min="0"
-                max="20"
-                step="0.5"
-                (input)="updateFinalSelectionFiltered()"
-                placeholder="Max"
-              />
-            </div>
-          </div>
-
-          <div class="filter-chip filter-chip--search">
-            <div class="flbl">Recherche</div>
-            <input
-              type="text"
-              class="finput"
-              [(ngModel)]="finalSelectionFilters.search"
-              placeholder="Rechercher par nom..."
-              (input)="updateFinalSelectionFiltered()"
-            />
-          </div>
-
-          <div class="filter-chip filter-chip--actions">
-            <label class="check-label" (click)="toggleFinalSelectionTop100()"
-              ><div class="toggle" [class.on]="finalSelectionTop100On"></div>
-              Top 100 par score</label
-            >
-            <label class="check-label"
-              ><input
-                type="checkbox"
-                [(ngModel)]="finalSelectionFilters.hideValides"
-                (change)="updateFinalSelectionFiltered()"
-              />
-              Masquer les candidats deja valides</label
-            >
-            <button class="btn btn-sec" type="button" (click)="resetFinalSelectionFilters()">
-              Réinitialiser
-            </button>
-          </div>
-        </div>
-
-        <div class="bulk-bar" [class.show]="finalSelectionSelectedIds.size > 0">
-          <div class="bulk-text">{{ getFinalSelectionSelectedCountLabel() }}</div>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
-            <select class="finput" [(ngModel)]="finalSelectionBulkAction" style="width: 160px">
-              <option value="">Action groupee...</option>
-              <option value="lp">→ Liste principale (LP)</option>
-              <option value="la">→ Liste d'attente (LA)</option>
-              <option value="refuse">→ Refuse</option>
-            </select>
-            <button class="btn btn-primary" type="button" (click)="applyFinalSelectionBulkAction()">
-              Appliquer
-            </button>
-          </div>
-        </div>
-
-        <div class="stats-row">
-          <div class="scard">
-            <div class="sicon si-blue"></div>
-            <div>
-              <div class="snum">{{ finalSelectionCandidates.length }}</div>
-              <div class="slbl">Total candidats</div>
-            </div>
-          </div>
-          <div class="scard">
-            <div class="sicon si-teal"></div>
-            <div>
-              <div class="snum">{{ getFinalSelectionLpCount() }}</div>
-              <div class="slbl">Liste principale</div>
-            </div>
-          </div>
-          <div class="scard">
-            <div class="sicon si-purple"></div>
-            <div>
-              <div class="snum">{{ getFinalSelectionLaCount() }}</div>
-              <div class="slbl">Liste d'attente</div>
-            </div>
-          </div>
-          <div class="scard">
-            <div class="sicon si-amber"></div>
-            <div>
-              <div class="snum">{{ getFinalSelectionAverageScore() | number: '1.2-2' }}</div>
-              <div class="slbl">Moyenne des scores</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="quota-card compact">
-          <div class="quota-grid">
-            <div class="quota-block">
-              <div class="quota-top">
-                <div class="quota-label">Liste principale (LP)</div>
-                <div class="quota-nums">
-                  <strong>{{ getFinalSelectionLpCount() }}</strong> /
-                  {{ finalSelectionQuotaLpTotal }} places
-                </div>
-              </div>
-            </div>
-            <div class="quota-block">
-              <div class="quota-top">
-                <div class="quota-label">Liste d'attente (LA)</div>
-                <div class="quota-nums">
-                  <strong>{{ getFinalSelectionLaCount() }}</strong> /
-                  {{ finalSelectionQuotaLaTotal }} places
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <div class="table-hdr">
-            <div class="table-hdr-title">
-              Liste des candidatures
-              <span style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400"
-                >({{ finalSelectionFiltered.length }})</span
-              >
-            </div>
-            <div class="tbl-actions">
-              <div class="export-wrap">
-                <button
-                  class="btn btn-pdf"
-                  type="button"
-                  (click)="toggleFinalSelectionExportMenu($event)"
-                >
-                  <i class="far fa-file-lines" aria-hidden="true"></i>
-                  <span>Générer PV</span>
-                </button>
-                <div class="export-menu" [class.open]="finalSelectionExportOpen">
-                  <button class="export-item" type="button" (click)="finalSelectionExportPdf()">
-                    PV officiel PDF
-                  </button>
-                  <button class="export-item" type="button" (click)="finalSelectionExportExcel()">
-                    Liste Excel
-                  </button>
-                </div>
-              </div>
-              <button class="btn btn-notify" type="button" (click)="openFinalSelectionConfirm()">
-                Publier & Notifier
-              </button>
-            </div>
-          </div>
-          <div class="table-scroll">
-            <table class="selection-table">
-              <thead>
-                <tr>
-                  <th style="width: 34px">
-                    <input
-                      type="checkbox"
-                      [checked]="areAllFinalSelectionRowsSelected()"
-                      (change)="toggleFinalSelectionAll($event.target.checked)"
-                    />
-                  </th>
-                  <th>Rang</th>
-                  <th>N°</th>
-                  <th>Nom complet</th>
-                  <th>Specialite</th>
-                  <th style="min-width: 130px">Score</th>
-                  <th>Decision preselection</th>
-                  <th style="min-width: 148px">Statut selection</th>
-                  <th>Observation</th>
-                  <th *ngIf="showDossierButton">Dossier</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  *ngFor="let candidate of finalSelectionFiltered"
-                  [class.selected]="isFinalSelectionRowSelected(candidate.id)"
-                >
-                  <td>
-                    <input
-                      type="checkbox"
-                      [checked]="isFinalSelectionRowSelected(candidate.id)"
-                      (change)="toggleFinalSelectionRow(candidate.id, $event.target.checked)"
-                    />
-                  </td>
-                  <td style="font-weight: 500; text-align: center">{{ candidate.rang }}</td>
-                  <td style="font-size: 11px; color: var(--color-text-secondary)">
-                    {{ candidate.num }}
-                  </td>
-                  <td style="font-weight: 500">{{ candidate.nom }}</td>
-                  <td style="color: var(--color-text-secondary)">{{ candidate.spec }}</td>
-                  <td>
-                    <div class="score-wrap">
-                      <span class="score-val">{{ candidate.score | number: '1.1-1' }}</span>
-                      <div class="score-bar">
-                        <div
-                          class="score-fill"
-                          [ngClass]="getFinalSelectionScoreClass(candidate.score)"
-                          [style.width.%]="getFinalSelectionScorePercent(candidate.score)"
-                        ></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span *ngIf="candidate.presel === 'oui'" class="status-pill status-pill--ok"
-                      >Oui</span
-                    >
-                    <span *ngIf="candidate.presel === 'non'" class="status-pill status-pill--danger"
-                      >Non</span
-                    >
-                  </td>
-                  <td>
-                    <select
-                      class="statut-select"
-                      [ngClass]="getFinalSelectionStatusClass(candidate.statut)"
-                      [(ngModel)]="candidate.statut"
-                      (ngModelChange)="onFinalSelectionStatusChange()"
-                    >
-                      <option value="">— Choisir —</option>
-                      <option value="lp">Admis (LP)</option>
-                      <option value="la">Liste d'attente (LA)</option>
-                      <option value="refuse">Refuse</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      class="obs-input"
-                      [(ngModel)]="candidate.obs"
-                      placeholder="Observation..."
-                      (change)="onFinalSelectionObservationChange()"
-                    />
-                  </td>
-                  <td *ngIf="showDossierButton">
-                    <button
-                      class="btn btn-sec btn-dossier"
-                      type="button"
-                      (click)="voirDossierSelection(candidate)"
-                    >
-                      <i class="far fa-folder-open" aria-hidden="true"></i>
-                      Voir Dossier
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      class="btn btn-sec"
-                      type="button"
-                      style="font-size: 11px; padding: 0.25rem 0.5rem"
-                      (click)="finalSelectionConsult(candidate)"
-                    >
-                      Consulter
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="pag-row">
-            <div class="pag-info">
-              Affichage 1-{{ finalSelectionFiltered.length }} sur
-              {{ finalSelectionFiltered.length }}
-            </div>
-            <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
-          </div>
-        </div>
-        <div id="avis-global-section" class="avis-global-card">
-          <h3>Avis Global</h3>
-          <p>Soumettez votre avis final sur la liste de sélection de la commission active.</p>
-          <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem">
-            <label style="display: flex; align-items: center; gap: 0.5rem">
-              <input
-                type="radio"
-                name="globalOpinion"
-                [(ngModel)]="globalOpinion"
-                [value]="'approve'"
-              />
-              Approuver
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.5rem">
-              <input
-                type="radio"
-                name="globalOpinion"
-                [(ngModel)]="globalOpinion"
-                [value]="'reject'"
-              />
-              Défavorable
-            </label>
-          </div>
-          <div style="margin-top: 0.75rem">
-            <textarea
-              [(ngModel)]="globalComment"
-              placeholder="Commentaire (obligatoire si défavorable)"
-              rows="3"
-              style="width: 100%"
-            ></textarea>
-          </div>
-          <div class="avis-global-actions" style="margin-top: 0.5rem">
-            <button
-              class="btn btn-sec"
-              type="button"
-              (click)="globalOpinion = ''; globalComment = ''"
-            >
-              Annuler
-            </button>
-            <button class="btn btn-primary" type="button" (click)="submitGlobalOpinion()">
-              Soumettre l'avis
-            </button>
+          <div class="commission-session-pill">
+            <label>Session active</label>
+            <span>{{ finalSelectionFilters.session }}</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- floating submit button pinned to viewport top-right -->
-    <button
-      class="global-fab"
-      type="button"
-      (click)="scrollToGlobalAvis()"
-      title="Aller à l'avis global"
-    >
-      Aller à l'avis global
-    </button>
-
-    <div class="confirm-wrap" [class.show]="finalSelectionConfirmOpen">
-      <div class="confirm-modal">
-        <div class="cm-title">Publier et notifier les candidats</div>
-        <div class="cm-text">
-          Vous allez notifier les candidats suivants :
-          <div class="cm-summary-list">
-            <span class="cm-badge"
-              ><i class="fas fa-check"></i><strong>{{ getFinalSelectionLpCount() }}</strong> admis
-              (LP)</span
-            >
-            <span class="cm-badge"
-              ><i class="fas fa-check"></i><strong>{{ getFinalSelectionLaCount() }}</strong> en
-              liste d'attente (LA)</span
-            >
-            <span class="cm-badge"
-              ><i class="fas fa-check"></i
-              ><strong>{{ getFinalSelectionRefuseCount() }}</strong> refusés</span
-            >
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-copy">
+            <span class="info-label">Total candidats</span>
+            <span class="info-value">{{ finalSelectionCandidates.length }}</span>
           </div>
-          <div class="cm-alert">
-            <i class="fas fa-triangle-exclamation"></i>
-            Cette action est irréversible.
-          </div>
+          <div class="summary-icon"><i class="fas fa-users"></i></div>
         </div>
-        <div class="cm-actions">
-          <button class="btn btn-sec" type="button" (click)="hideFinalSelectionConfirm()">
-            Annuler</button
-          ><button class="btn btn-notify" type="button" (click)="confirmFinalSelectionNotify()">
-            Confirmer l'envoi
+        <div class="summary-card">
+          <div class="summary-copy">
+            <span class="info-label">Admis LP</span>
+            <span class="info-value">{{ getFinalSelectionLpCount() }}</span>
+          </div>
+          <div class="summary-icon"><i class="fas fa-list-ol"></i></div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-copy">
+            <span class="info-label">Attente LA</span>
+            <span class="info-value">{{ getFinalSelectionLaCount() }}</span>
+          </div>
+          <div class="summary-icon"><i class="fas fa-hourglass-half"></i></div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-copy">
+            <span class="info-label">Refusés</span>
+            <span class="info-value">{{ getFinalSelectionRefuseCount() }}</span>
+          </div>
+          <div class="summary-icon"><i class="fas fa-chart-line"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="selection-card">
+      <div class="selection-card-header">
+        <div>
+          <div class="selection-card-kicker">Résultats de la commission</div>
+          <h2>Liste de Sélection Finale</h2>
+        </div>
+        <div class="selection-card-header-actions">
+          <button
+            class="btn btn-pdf"
+            type="button"
+            (click)="toggleFinalSelectionExportMenu($event)"
+          >
+            <i class="far fa-file-lines" aria-hidden="true"></i>
+            <span>Générer PV</span>
+          </button>
+          <button class="btn btn-notify" type="button" (click)="openFinalSelectionConfirm()">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+            <span>Publier</span>
           </button>
         </div>
       </div>
-    </div>
 
-    <div
-      class="toast"
-      [class.show]="finalSelectionToast.visible"
-      [ngClass]="finalSelectionToast.type"
-    >
-      <span>{{ finalSelectionToast.message }}</span>
-    </div>
+      <div class="selection-card-body">
+        <div class="toolbar-card">
+          <div class="top-filters">
+            <div class="filter-chip">
+              <div class="flbl">Session principale</div>
+              <select
+                class="finput"
+                [(ngModel)]="finalSelectionFilters.session"
+                (change)="updateFinalSelectionFiltered()"
+              >
+                <option value="2025/2026">2025/2026</option>
+                <option value="2024/2025">2024/2025</option>
+              </select>
+            </div>
+
+            <div class="filter-chip filter-chip--radio">
+              <div class="flbl">Type candidature</div>
+              <div class="radio-row">
+                <label class="radio-opt"
+                  ><input
+                    type="radio"
+                    name="finalSelectionType"
+                    value="all"
+                    [(ngModel)]="finalSelectionFilters.type"
+                    (change)="updateFinalSelectionFiltered()"
+                  />
+                  Tous</label
+                >
+                <label class="radio-opt"
+                  ><input
+                    type="radio"
+                    name="finalSelectionType"
+                    value="interne"
+                    [(ngModel)]="finalSelectionFilters.type"
+                    (change)="updateFinalSelectionFiltered()"
+                  />
+                  Interne</label
+                >
+                <label class="radio-opt"
+                  ><input
+                    type="radio"
+                    name="finalSelectionType"
+                    value="externe"
+                    [(ngModel)]="finalSelectionFilters.type"
+                    (change)="updateFinalSelectionFiltered()"
+                  />
+                  Externe</label
+                >
+              </div>
+            </div>
+
+            <div class="filter-chip">
+              <div class="flbl">Spécialité</div>
+              <select
+                class="finput"
+                [(ngModel)]="finalSelectionFilters.specialite"
+                (change)="updateFinalSelectionFiltered()"
+              >
+                <option value="all">Tous les masters</option>
+                <option *ngFor="let spec of finalSelectionSpecialiteOptions" [value]="spec">
+                  {{ spec }}
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-chip">
+              <div class="flbl">Statut sélection</div>
+              <select
+                class="finput"
+                [(ngModel)]="finalSelectionFilters.statut"
+                (change)="updateFinalSelectionFiltered()"
+              >
+                <option value="all">Tous</option>
+                <option value="lp">Admis (LP)</option>
+                <option value="la">Liste d'attente (LA)</option>
+                <option value="refuse">Refusé</option>
+              </select>
+            </div>
+
+            <div class="filter-chip filter-chip--wide">
+              <div class="flbl">Score</div>
+              <div class="score-range">
+                <input
+                  type="number"
+                  class="finput"
+                  [(ngModel)]="finalSelectionFilters.scoreMin"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  (input)="updateFinalSelectionFiltered()"
+                  placeholder="Min"
+                />
+                <input
+                  type="number"
+                  class="finput"
+                  [(ngModel)]="finalSelectionFilters.scoreMax"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  (input)="updateFinalSelectionFiltered()"
+                  placeholder="Max"
+                />
+              </div>
+            </div>
+
+            <div class="filter-chip filter-chip--search">
+              <div class="flbl">Recherche</div>
+              <input
+                type="text"
+                class="finput"
+                [(ngModel)]="finalSelectionFilters.search"
+                placeholder="Rechercher par nom..."
+                (input)="updateFinalSelectionFiltered()"
+              />
+            </div>
+
+            <div class="filter-chip filter-chip--actions">
+              <label class="check-label" (click)="toggleFinalSelectionTop100()"
+                ><div class="toggle" [class.on]="finalSelectionTop100On"></div>
+                Top 100 par score</label
+              >
+              <label class="check-label"
+                ><input
+                  type="checkbox"
+                  [(ngModel)]="finalSelectionFilters.hideValides"
+                  (change)="updateFinalSelectionFiltered()"
+                />
+                Masquer les candidats deja valides</label
+              >
+              <button class="btn btn-sec" type="button" (click)="resetFinalSelectionFilters()">
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div class="bulk-bar" [class.show]="finalSelectionSelectedIds.size > 0">
+            <div class="bulk-text">{{ getFinalSelectionSelectedCountLabel() }}</div>
+            <div class="bulk-controls">
+              <select class="finput" [(ngModel)]="finalSelectionBulkAction" style="width: 160px">
+                <option value="">Action groupee...</option>
+                <option value="lp">→ Liste principale (LP)</option>
+                <option value="la">→ Liste d'attente (LA)</option>
+                <option value="refuse">→ Refuse</option>
+              </select>
+              <button
+                class="btn btn-primary"
+                type="button"
+                (click)="applyFinalSelectionBulkAction()"
+              >
+                Appliquer
+              </button>
+            </div>
+          </div>
+
+          <div class="quota-card compact">
+            <div class="quota-grid">
+              <div class="quota-block">
+                <div class="quota-top">
+                  <div class="quota-label">Liste principale (LP)</div>
+                  <div class="quota-nums">
+                    <strong>{{ getFinalSelectionLpCount() }}</strong> /
+                    {{ finalSelectionQuotaLpTotal }} places
+                  </div>
+                </div>
+              </div>
+              <div class="quota-block">
+                <div class="quota-top">
+                  <div class="quota-label">Liste d'attente (LA)</div>
+                  <div class="quota-nums">
+                    <strong>{{ getFinalSelectionLaCount() }}</strong> /
+                    {{ finalSelectionQuotaLaTotal }} places
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-hdr">
+              <div class="table-hdr-title">
+                Liste des candidatures
+                <span style="font-size: 11px; color: var(--color-text-secondary); font-weight: 400"
+                  >({{ finalSelectionFiltered.length }})</span
+                >
+              </div>
+              <div class="tbl-actions"></div>
+            </div>
+            <div class="table-scroll">
+              <table class="selection-table">
+                <thead>
+                  <tr>
+                    <th style="width: 34px">
+                      <input
+                        type="checkbox"
+                        [checked]="areAllFinalSelectionRowsSelected()"
+                        (change)="toggleFinalSelectionAll($event.target.checked)"
+                      />
+                    </th>
+                    <th>Rang</th>
+                    <th>N°</th>
+                    <th>Nom complet</th>
+                    <th>Specialite</th>
+                    <th style="min-width: 130px">Score</th>
+                    <th>Decision preselection</th>
+                    <th style="min-width: 148px">Statut selection</th>
+                    <th>Observation</th>
+                    <th *ngIf="showDossierButton">Dossier</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let candidate of finalSelectionFiltered"
+                    [class.selected]="isFinalSelectionRowSelected(candidate.id)"
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        [checked]="isFinalSelectionRowSelected(candidate.id)"
+                        (change)="toggleFinalSelectionRow(candidate.id, $event.target.checked)"
+                      />
+                    </td>
+                    <td style="font-weight: 500; text-align: center">{{ candidate.rang }}</td>
+                    <td style="font-size: 11px; color: var(--color-text-secondary)">
+                      {{ candidate.num }}
+                    </td>
+                    <td style="font-weight: 500">{{ candidate.prenom }} {{ candidate.nom }}</td>
+                    <td style="color: var(--color-text-secondary)">{{ candidate.spec }}</td>
+                    <td>
+                      <div class="score-wrap">
+                        <span class="score-val">{{ candidate.score | number: '1.1-1' }}</span>
+                        <div class="score-bar">
+                          <div
+                            class="score-fill"
+                            [ngClass]="getFinalSelectionScoreClass(candidate.score)"
+                            [style.width.%]="getFinalSelectionScorePercent(candidate.score)"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span *ngIf="candidate.presel === 'oui'" class="status-pill status-pill--ok"
+                        >Oui</span
+                      >
+                      <span
+                        *ngIf="candidate.presel === 'non'"
+                        class="status-pill status-pill--danger"
+                        >Non</span
+                      >
+                    </td>
+                    <td>
+                      <select
+                        class="statut-select"
+                        [ngClass]="getFinalSelectionStatusClass(candidate.statut)"
+                        [(ngModel)]="candidate.statut"
+                        (ngModelChange)="onFinalSelectionStatusChange()"
+                      >
+                        <option value="">— Choisir —</option>
+                        <option value="lp">Admis (LP)</option>
+                        <option value="la">Liste d'attente (LA)</option>
+                        <option value="refuse">Refuse</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="obs-input"
+                        [(ngModel)]="candidate.obs"
+                        placeholder="Observation..."
+                        (change)="onFinalSelectionObservationChange()"
+                      />
+                    </td>
+                    <td *ngIf="showDossierButton">
+                      <button
+                        class="btn-icon btn-view small-dossier-btn"
+                        type="button"
+                        title="Voir dossier"
+                        (click)="voirDossierSelection(candidate)"
+                      >
+                        <i class="far fa-folder-open" aria-hidden="true"></i>
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        class="btn btn-sec"
+                        type="button"
+                        style="font-size: 11px; padding: 0.25rem 0.5rem"
+                        (click)="finalSelectionConsult(candidate)"
+                      >
+                        Consulter
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pag-row">
+              <div class="pag-info">
+                Affichage 1-{{ finalSelectionFiltered.length }} sur
+                {{ finalSelectionFiltered.length }}
+              </div>
+              <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
+            </div>
+          </div>
+
+          <div id="avis-global-section" class="avis-global-card">
+            <h3>Avis Global</h3>
+            <p>Soumettez votre avis final sur la liste de sélection de la commission active.</p>
+            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem">
+              <label style="display: flex; align-items: center; gap: 0.5rem">
+                <input
+                  type="radio"
+                  name="globalOpinion"
+                  [(ngModel)]="globalOpinion"
+                  [value]="'approve'"
+                />
+                Approuver
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem">
+                <input
+                  type="radio"
+                  name="globalOpinion"
+                  [(ngModel)]="globalOpinion"
+                  [value]="'reject'"
+                />
+                Défavorable
+              </label>
+            </div>
+            <div style="margin-top: 0.75rem">
+              <textarea
+                [(ngModel)]="globalComment"
+                placeholder="Commentaire (obligatoire si défavorable)"
+                rows="3"
+                style="width: 100%"
+              ></textarea>
+            </div>
+            <div class="avis-global-actions" style="margin-top: 0.5rem">
+              <button
+                class="btn btn-sec"
+                type="button"
+                (click)="globalOpinion = ''; globalComment = ''"
+              >
+                Annuler
+              </button>
+              <button class="btn btn-primary" type="button" (click)="submitGlobalOpinion()">
+                Soumettre l'avis
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- floating submit button pinned to viewport top-right -->
+      <button
+        class="global-fab"
+        type="button"
+        (click)="scrollToGlobalAvis()"
+        title="Aller à l'avis global"
+      >
+        Aller à l'avis global
+      </button>
+
+      <!-- Publish modal -->
+      <div
+        class="publish-modal-backdrop"
+        *ngIf="finalSelectionConfirmOpen"
+        (click)="hideFinalSelectionConfirm()"
+      >
+        <div class="publish-modal" (click)="$event.stopPropagation()">
+          <div class="publish-modal-header">
+            <h3>Publier les résultats</h3>
+            <button class="btn-close" type="button" (click)="hideFinalSelectionConfirm()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="publish-modal-body">
+            <p class="publish-summary">
+              Récapitulatif : <strong>{{ getFinalSelectionLpCount() }}</strong> admis (LP),
+              <strong>{{ getFinalSelectionLaCount() }}</strong> en liste d'attente,
+              <strong>{{ getFinalSelectionRefuseCount() }}</strong> refusés.
+            </p>
+            <div style="margin-top: 0.75rem">
+              <label>Commentaire global (optionnel)</label>
+              <textarea
+                [(ngModel)]="globalComment"
+                rows="4"
+                placeholder="Message qui sera joint aux notifications"
+                style="width: 100%"
+              ></textarea>
+            </div>
+          </div>
+          <div class="publish-modal-actions">
+            <button class="btn btn-sec" type="button" (click)="hideFinalSelectionConfirm()">
+              Annuler
+            </button>
+            <button class="btn btn-primary" type="button" (click)="confirmFinalSelectionNotify()">
+              Confirmer l'envoi
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="toast"
+        [class.show]="finalSelectionToast.visible"
+        [ngClass]="finalSelectionToast.type"
+      >
+        <span>{{ finalSelectionToast.message }}</span>
+      </div>
+    </section>
   </div>
 </div>
 
-<div class="dossier-modal-backdrop" *ngIf="dossierModalOpen" (click)="closeDossierModal()">
-  <div class="dossier-modal" (click)="$event.stopPropagation()">
-    <div class="dossier-modal-header">
-      <div>
-        <div class="dossier-modal-kicker">Phase de sélection</div>
-        <h3>{{ getDossierTitle(dossierModalCandidate) }}</h3>
-        <p>
-          {{ dossierModalData?.master_nom || dossierModalCandidate?.spec }}
-          <span *ngIf="dossierModalData?.candidature_numero"
-            >· {{ dossierModalData.candidature_numero }}</span
-          >
-        </p>
-      </div>
-      <button class="dossier-modal-close" type="button" (click)="closeDossierModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <div class="dossier-modal-body" *ngIf="dossierModalLoading">
-      <div class="dossier-loading">
-        <i class="fas fa-spinner fa-spin"></i>
-        Chargement du dossier...
-      </div>
-    </div>
-
-    <div class="dossier-modal-body" *ngIf="!dossierModalLoading && dossierModalError">
-      <div class="dossier-error">{{ dossierModalError }}</div>
-    </div>
-
-    <div class="dossier-modal-body" *ngIf="!dossierModalLoading && !dossierModalError">
-      <div class="dossier-summary-grid">
-        <div class="dossier-summary-card">
-          <span>Score</span>
-          <strong>{{
-            dossierModalData?.score_completude || dossierModalCandidate?.score || '-'
-          }}</strong>
+<div
+  class="dossier-modal-backdrop modal-backdrop show"
+  *ngIf="dossierModalOpen"
+  (click)="closeDossierModal()"
+>
+  <div
+    class="modal-dialog modal-xl modal-dialog-centered dossier-modal-dialog"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-content dossier-modal-content">
+      <div class="dossier-modal-header">
+        <div class="dossier-modal-header-icon">
+          <i class="fas fa-user"></i>
         </div>
-        <div class="dossier-summary-card">
-          <span>Statut</span>
-          <strong>{{ dossierModalData?.statut || dossierModalCandidate?.statut || '-' }}</strong>
+        <div>
+          <div class="dossier-modal-kicker">Phase de sélection</div>
+          <h3>{{ getDossierTitle(dossierModalCandidate) }}</h3>
+          <p>
+            {{ dossierModalData?.master_nom || dossierModalCandidate?.spec }}
+            <span *ngIf="dossierModalData?.candidature_numero"
+              >· {{ dossierModalData.candidature_numero }}</span
+            >
+          </p>
         </div>
-        <div class="dossier-summary-card">
-          <span>Documents</span>
-          <strong>{{ dossierModalDocuments.length }}</strong>
+        <button class="dossier-modal-close" type="button" (click)="closeDossierModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="dossier-modal-body" *ngIf="dossierModalLoading">
+        <div class="dossier-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          Chargement du dossier...
         </div>
       </div>
 
-      <div class="dossier-doc-grid" *ngIf="dossierModalDocuments.length">
-        <article class="dossier-doc-card" *ngFor="let doc of dossierModalDocuments">
-          <div class="dossier-doc-head">
-            <div>
-              <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
-              <p>
-                {{ doc.type_document_detail?.type_document || 'fichier' }}
-                · {{ doc.statut || 'en attente' }}
-              </p>
+      <div class="dossier-modal-body" *ngIf="!dossierModalLoading && dossierModalError">
+        <div class="dossier-error">{{ dossierModalError }}</div>
+      </div>
+
+      <div class="dossier-modal-body" *ngIf="!dossierModalLoading && !dossierModalError">
+        <div class="dossier-summary-grid">
+          <div class="dossier-summary-card">
+            <span>Score</span>
+            <strong>{{
+              dossierModalData?.score_completude || dossierModalCandidate?.score || '-'
+            }}</strong>
+          </div>
+          <div class="dossier-summary-card">
+            <span>Statut</span>
+            <strong>{{ dossierModalData?.statut || dossierModalCandidate?.statut || '-' }}</strong>
+          </div>
+          <div class="dossier-summary-card">
+            <span>Documents</span>
+            <strong>{{ dossierModalDocuments.length }}</strong>
+          </div>
+        </div>
+
+        <div class="dossier-doc-grid" *ngIf="dossierModalDocuments.length">
+          <article class="dossier-doc-card" *ngFor="let doc of dossierModalDocuments">
+            <div class="dossier-doc-head">
+              <div>
+                <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
+                <p>
+                  {{ doc.type_document_detail?.type_document || 'fichier' }}
+                  · {{ doc.statut || 'en attente' }}
+                </p>
+              </div>
+              <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
+                {{ doc.statut }}
+              </span>
             </div>
-            <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
-              {{ doc.statut }}
-            </span>
-          </div>
 
-          <iframe
-            *ngIf="isPdf(doc.fichier_url)"
-            class="dossier-preview"
-            [src]="doc.fichier_url"
-            title="Aperçu dossier"
-          ></iframe>
+            <iframe
+              *ngIf="isPdf(doc.fichier_url)"
+              class="dossier-preview"
+              [src]="doc.fichier_url"
+              title="Aperçu dossier"
+            ></iframe>
 
-          <div class="dossier-doc-meta">
-            <div>{{ doc.date_upload ? (doc.date_upload | date: 'dd/MM/yyyy HH:mm') : '-' }}</div>
-            <div>{{ doc.commentaire || 'Aucun commentaire' }}</div>
-          </div>
+            <div class="dossier-doc-meta">
+              <div>{{ doc.date_upload ? (doc.date_upload | date: 'dd/MM/yyyy HH:mm') : '-' }}</div>
+              <div>{{ doc.commentaire || 'Aucun commentaire' }}</div>
+            </div>
 
-          <a
-            *ngIf="doc.fichier_url"
-            class="dossier-doc-link"
-            [href]="doc.fichier_url"
-            target="_blank"
-          >
-            Ouvrir le fichier
-          </a>
-        </article>
+            <a
+              *ngIf="doc.fichier_url"
+              class="dossier-doc-link"
+              [href]="doc.fichier_url"
+              target="_blank"
+            >
+              Ouvrir le fichier
+            </a>
+          </article>
+        </div>
+
+        <div class="dossier-empty" *ngIf="!dossierModalDocuments.length">
+          Aucun document disponible pour ce dossier.
+        </div>
       </div>
 
-      <div class="dossier-empty" *ngIf="!dossierModalDocuments.length">
-        Aucun document disponible pour ce dossier.
+      <div class="dossier-modal-footer">
+        <button
+          class="btn btn-sec dossier-btn-secondary"
+          type="button"
+          (click)="closeDossierModal()"
+        >
+          Fermer
+        </button>
+        <button
+          class="btn btn-primary dossier-btn-primary"
+          type="button"
+          (click)="closeDossierModal()"
+        >
+          Sauvegarder
+        </button>
       </div>
-    </div>
-
-    <div class="dossier-modal-footer">
-      <button class="btn btn-sec" type="button" (click)="closeDossierModal()">Fermer</button>
     </div>
   </div>
 </div>

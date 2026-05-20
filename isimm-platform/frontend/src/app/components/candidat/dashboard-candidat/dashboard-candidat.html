@@ -242,7 +242,10 @@
       <div class="two-col">
         <div class="card">
           <div class="card-title">Notifications récentes</div>
-          <div class="notif-list" *ngIf="notificationsCandidat.length > 0; else dashboardNotificationsEmpty">
+          <div
+            class="notif-list"
+            *ngIf="notificationsCandidat.length > 0; else dashboardNotificationsEmpty"
+          >
             <div
               class="notif-item"
               *ngFor="let notification of notificationsCandidat.slice(0, 3)"
@@ -582,7 +585,7 @@
                     offre.statut === 'ferme' ||
                     dejaCandidature(offre.id)
                   "
-                  (click)="postulerOffre(offre)"
+                  (click)="postuler(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
                   {{
@@ -648,7 +651,7 @@
                     offre.statut === 'ferme' ||
                     dejaCandidature(offre.id)
                   "
-                  (click)="postulerOffre(offre)"
+                  (click)="postuler(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
                   {{
@@ -706,7 +709,7 @@
                     offre.statut === 'ferme' ||
                     dejaCandidature(offre.id)
                   "
-                  (click)="postulerOffre(offre)"
+                  (click)="postuler(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
                   {{

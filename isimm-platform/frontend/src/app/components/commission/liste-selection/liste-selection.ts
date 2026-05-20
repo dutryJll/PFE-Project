@@ -1,13 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDialogModule } from '@angular/material/dialog';
 import { CandidaturesConsultationModalComponent } from '../candidatures-master/candidatures-consultation-modal.component';
-import { SpecialitesService } from '../../../services/specialites.service';
 import { AuthService } from '../../../services/auth.service';
-import { CandidatureService } from '../../../services/candidature.service';
 
 interface Candidat {
   id: number;
@@ -32,6 +30,7 @@ interface FinalSelectionCandidate {
   id: number;
   rang: number;
   num: string;
+  prenom: string;
   nom: string;
   spec: string;
   score: number;
@@ -67,7 +66,7 @@ interface FinalSelectionFilters {
 @Component({
   selector: 'app-liste-selection',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './liste-selection.html',
   styleUrl: './liste-selection.css',
 })
@@ -126,138 +125,60 @@ export class ListeSelection implements OnInit {
   constructor(
     private router: Router,
     private authService: AuthService,
-    private candidatureService: CandidatureService,
     private dialog: MatDialog,
-    private specialitesService: SpecialitesService,
   ) {}
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     this.userRole = currentUser?.role || null;
-    this.showDossierButton =
-      this.userRole === 'commission' || this.userRole === 'responsable_commission';
+    this.showDossierButton = true;
     this.loadListes();
-    // load specialties options from service
-    this.specialitesService.getSpecialitesData().subscribe((data) => {
-      if (data) {
-        // trigger recompute of options via getter
-        this.updateFinalSelectionFiltered();
-      }
-    });
   }
 
   loadListes(): void {
-    this.candidatureService.getCandidaturesCommissionClassees().subscribe({
-      next: (response: any) => {
-        const rows = Array.isArray(response)
-          ? response
-          : response?.value || response?.results || [];
-        this.finalSelectionCandidates = rows.map((row: any, index: number) => {
-          const isSelected = String(row?.statut || '').toLowerCase() === 'preselectionne';
-          return {
-            id: Number(row?.id),
-            rang: Number(row?.classement || index + 1),
-            num: row?.numero || `C-${index + 1}`,
-            nom: row?.candidat_nom || 'Candidat',
-            spec: row?.master_nom || row?.specialite || '-',
-            score: Number(row?.score || 0),
-            interne: String(row?.parcours || '')
-              .toLowerCase()
-              .includes('interne'),
-            presel: isSelected ? 'oui' : 'non',
-            statut: isSelected ? 'lp' : '',
-            obs: '',
-          };
-        });
-        this.updateFinalSelectionFiltered();
-      },
-      error: () => {
-        const tousLesCandidates: Candidat[] = [
-          {
-            id: 1,
-            first_name: 'Ahmed',
-            last_name: 'Ben Ali',
-            email: 'ahmed@example.com',
-            cin: '12345678',
-            type: 'master',
-            formation: 'Master Génie Logiciel',
-            voeux: ['Master Génie Logiciel', 'Master Data Science'],
-            score: 17.5,
-            avisFavorables: 85,
-            statut: 'principale',
-          },
-          {
-            id: 2,
-            first_name: 'Fatma',
-            last_name: 'Trabelsi',
-            email: 'fatma@example.com',
-            cin: '87654321',
-            type: 'ingenieur',
-            formation: 'Génie Informatique',
-            specialite: 'Génie Informatique',
-            score: 15.2,
-            avisFavorables: 90,
-            statut: 'principale',
-          },
-          {
-            id: 3,
-            first_name: 'Mohammed',
-            last_name: 'Saidi',
-            email: 'mohammed@example.com',
-            cin: '11223344',
-            type: 'master',
-            formation: 'Master Microélectronique',
-            voeux: ['Master Microélectronique'],
-            score: 16.8,
-            avisFavorables: 92,
-            statut: 'principale',
-          },
-          {
-            id: 4,
-            first_name: 'Zaineb',
-            last_name: 'Khaled',
-            email: 'zaineb@example.com',
-            cin: '55665544',
-            type: 'master',
-            formation: 'Master Data Science',
-            voeux: ['Master Data Science'],
-            score: 14.5,
-            avisFavorables: 40,
-            statut: 'attente',
-          },
-          {
-            id: 5,
-            first_name: 'Ali',
-            last_name: 'Amine',
-            email: 'ali@example.com',
-            cin: '99887766',
-            type: 'ingenieur',
-            formation: 'Génie Mécanique',
-            specialite: 'Génie Mécanique',
-            score: 14.1,
-            avisFavorables: 30,
-            statut: 'attente',
-          },
-        ];
-        this.listePrincipale = tousLesCandidates.filter((c) => c.statut === 'principale');
-        this.listeAttente = tousLesCandidates.filter((c) => c.statut === 'attente');
-        this.finalSelectionCandidates = [
-          {
-            id: 1,
-            rang: 1,
-            num: '2603-00001-GL',
-            nom: 'Fatma Gharbi',
-            spec: 'Master Data Science',
-            score: 17.2,
-            interne: true,
-            presel: 'oui',
-            statut: 'lp',
-            obs: '',
-          },
-        ];
-        this.updateFinalSelectionFiltered();
-      },
-    });
+    this.finalSelectionCandidates = this.buildMockFinalSelectionCandidates();
+    this.updateFinalSelectionFiltered();
+  }
+
+  private buildMockFinalSelectionCandidates(): FinalSelectionCandidate[] {
+    const base = [
+      ['Aymen', 'Ben Amor', 'TI', 18.7, true, 'oui', 'lp'],
+      ['Nour', 'Brahmi', 'DSI', 17.9, false, 'oui', 'lp'],
+      ['Meriem', 'Jemai', 'GL', 16.8, true, 'oui', 'lp'],
+      ['Fares', 'Khelifi', 'RS', 15.9, false, 'oui', 'la'],
+      ['Asma', 'Mansouri', 'TI', 15.1, true, 'oui', 'la'],
+      ['Yassine', 'Riahi', 'DSI', 14.8, false, 'non', 'la'],
+      ['Sarra', 'Karray', 'GL', 14.2, true, 'non', 'refuse'],
+      ['Oussama', 'Bouzid', 'RS', 13.9, false, 'non', 'refuse'],
+      ['Ines', 'Chokri', 'TI', 18.2, true, 'oui', 'lp'],
+      ['Wiem', 'Gharbi', 'DSI', 17.3, false, 'oui', 'lp'],
+      ['Houssem', 'Haddad', 'GL', 16.5, true, 'oui', 'la'],
+      ['Rania', 'Miled', 'RS', 15.6, false, 'oui', 'la'],
+      ['Mehdi', 'Sassi', 'TI', 14.9, true, 'non', 'refuse'],
+      ['Lina', 'Ben Youssef', 'DSI', 13.7, false, 'non', 'refuse'],
+      ['Bassem', 'Ouertani', 'GL', 17.6, true, 'oui', 'lp'],
+      ['Sana', 'Jaziri', 'RS', 16.1, false, 'oui', 'lp'],
+      ['Amine', 'Trabelsi', 'TI', 15.3, true, 'oui', 'la'],
+      ['Farah', 'Masmoudi', 'DSI', 12.8, false, 'non', 'refuse'],
+      ['Khalil', 'Zidi', 'GL', 17.1, true, 'oui', 'lp'],
+      ['Nesrine', 'Hamdi', 'RS', 14.4, false, 'non', 'la'],
+    ] as Array<
+      [string, string, string, number, boolean, FinalSelectionPresel, FinalSelectionDecision]
+    >;
+
+    return base.map((item, index) => ({
+      id: index + 1,
+      rang: index + 1,
+      num: `2603-${String(index + 1).padStart(5, '0')}-${item[2]}`,
+      prenom: item[0],
+      nom: item[1],
+      spec: item[2],
+      score: item[3],
+      interne: item[4],
+      presel: item[5],
+      statut: item[6],
+      obs: '',
+    }));
   }
 
   filtrer(): void {
@@ -265,28 +186,9 @@ export class ListeSelection implements OnInit {
   }
 
   finalSelectionConsult(candidate: FinalSelectionCandidate | null): void {
+    // Open the built-in XL dossier modal (in-template) for demo consistency
     if (!candidate) return;
-    const list = [
-      {
-        id: candidate.id,
-        nom: candidate.nom,
-        master: candidate.spec,
-        score: candidate.score,
-        etat_dossier: 'Complet',
-        statut:
-          candidate.statut === 'lp'
-            ? 'Admis'
-            : candidate.statut === 'la'
-              ? "Liste d'attente"
-              : 'Rejeté',
-        pieces: [],
-      },
-    ];
-    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
-      data: { list, startIndex: 0 },
-      width: '760px',
-    });
-    dialogRef.afterClosed().subscribe(() => this.updateFinalSelectionFiltered());
+    this.voirDossierSelection(candidate);
   }
 
   submitGlobalOpinion(): void {
@@ -300,43 +202,27 @@ export class ListeSelection implements OnInit {
       return;
     }
 
-    const commissionIdRaw = localStorage.getItem('active_commission_id');
-    const commissionId = commissionIdRaw ? Number(commissionIdRaw) : NaN;
-    if (!Number.isFinite(commissionId)) {
-      this.finalSelectionToast = {
-        message: 'Aucune commission active sélectionnée',
-        type: 't-error',
-        visible: true,
-      };
-      setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
-      return;
-    }
+    const targetIds = this.finalSelectionSelectedIds.size
+      ? Array.from(this.finalSelectionSelectedIds)
+      : this.finalSelectionFiltered.slice(0, 1).map((candidate) => candidate.id);
+    const newStatus: FinalSelectionDecision = this.globalOpinion === 'approve' ? 'lp' : 'refuse';
 
-    const statut = this.globalOpinion === 'approve' ? 'favorable' : 'defavorable';
-    this.candidatureService
-      .submitGlobalAvis(commissionId, {
-        statut: statut as 'favorable' | 'defavorable',
-        commentaire: this.globalComment.trim(),
-        is_global: true,
-      })
-      .subscribe({
-        next: () => {
-          this.finalSelectionToast = {
-            message: 'Avis global soumis',
-            type: 't-success',
-            visible: true,
-          };
-          setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
-        },
-        error: (error: any) => {
-          this.finalSelectionToast = {
-            message: error?.error?.error || "Erreur lors de la soumission de l'avis global",
-            type: 't-error',
-            visible: true,
-          };
-          setTimeout(() => (this.finalSelectionToast.visible = false), 3000);
-        },
-      });
+    targetIds.forEach((id) => {
+      const candidate = this.finalSelectionCandidates.find((row) => row.id === id);
+      if (candidate) {
+        candidate.statut = newStatus;
+        candidate.obs = this.globalComment.trim();
+      }
+    });
+
+    this.finalSelectionSelectedIds.clear();
+    this.updateFinalSelectionFiltered();
+    this.finalSelectionToast = {
+      message: 'Avis global appliqué aux candidats de test',
+      type: 't-success',
+      visible: true,
+    };
+    setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
   }
 
   scrollToGlobalAvis(): void {
@@ -360,19 +246,34 @@ export class ListeSelection implements OnInit {
     this.dossierModalLoading = true;
     this.dossierModalError = '';
     this.dossierModalOpen = true;
-    this.candidatureService.getCommissionDossier(candidate.id).subscribe({
-      next: (response: any) => {
-        this.dossierModalData = response?.dossier || response || null;
-        this.dossierModalDocuments = Array.isArray(this.dossierModalData?.documents)
-          ? this.dossierModalData.documents
-          : [];
-        this.dossierModalLoading = false;
-      },
-      error: (error: any) => {
-        this.dossierModalError = error?.error?.error || 'Impossible de charger le dossier.';
-        this.dossierModalLoading = false;
-      },
-    });
+    this.dossierModalData = {
+      score_completude: candidate.score,
+      statut: candidate.statut || 'lp',
+      master_nom: candidate.spec,
+      candidature_numero: candidate.num,
+      documents: [
+        {
+          id: 1,
+          nom: 'Diplôme',
+          statut: 'valide',
+          commentaire: 'Pièce conforme',
+          date_upload: new Date().toISOString(),
+          fichier_url: 'https://example.com/dossier.pdf',
+          type_document_detail: { type_document: 'pdf', description: 'Diplôme de test' },
+        },
+        {
+          id: 2,
+          nom: 'Relevé de notes',
+          statut: 'en attente',
+          commentaire: 'Document fictif',
+          date_upload: new Date().toISOString(),
+          fichier_url: 'https://example.com/releve.pdf',
+          type_document_detail: { type_document: 'pdf', description: 'Relevé de notes de test' },
+        },
+      ],
+    };
+    this.dossierModalDocuments = this.dossierModalData.documents;
+    this.dossierModalLoading = false;
   }
 
   closeDossierModal(): void {
@@ -410,9 +311,6 @@ export class ListeSelection implements OnInit {
 
   /********* Final selection helpers (moved) *********/
   get finalSelectionSpecialiteOptions(): string[] {
-    // prefer using specialites service if available
-    const all = this.specialitesService.getAllSpecialties();
-    if (all && all.length > 0) return all;
     const uniques = new Set(this.finalSelectionCandidates.map((c) => c.spec));
     return Array.from(uniques).sort();
   }
@@ -429,7 +327,9 @@ export class ListeSelection implements OnInit {
     if (search)
       rows = rows.filter(
         (c) =>
+          `${c.prenom || ''} ${c.nom || ''}`.toLowerCase().includes(search) ||
           (c.nom || '').toLowerCase().includes(search) ||
+          (c.prenom || '').toLowerCase().includes(search) ||
           (c.num || '').toLowerCase().includes(search),
       );
     if (type === 'interne') rows = rows.filter((c) => c.interne);
