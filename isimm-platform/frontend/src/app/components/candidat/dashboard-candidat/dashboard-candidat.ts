@@ -2335,6 +2335,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Erreur:', error);
         this.toastService.show('Erreur lors de la soumission de la candidature.', 'error');
+        this.wizardSubmitting = false;
       },
     });
   }

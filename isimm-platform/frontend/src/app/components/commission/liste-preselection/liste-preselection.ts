@@ -4,6 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { ToastService } from '../../../services/toast.service';
 import { AuthService } from '../../../services/auth.service';
+import {
+  CommissionContextService,
+  CommissionContextOption,
+} from '../../../services/commission-context.service';
 
 interface Candidat {
   id: number;
@@ -59,6 +63,7 @@ export class ListePreselection implements OnInit {
 
   // User and role
   userRole: string | null = null;
+  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
 
   showCommentModal = false;
   candidatSelectionne: Candidat | null = null;
@@ -66,6 +71,7 @@ export class ListePreselection implements OnInit {
 
   // Responsable selection state
   selectedIds: number[] = [];
+  actionMenuOpenId: number | null = null;
   // Dossier modal state
   dossierModalOpen = false;
   dossierModalCandidate: Candidat | null = null;
@@ -76,39 +82,25 @@ export class ListePreselection implements OnInit {
     private router: Router,
     private authService: AuthService,
     private toastService: ToastService,
+    private commissionContext: CommissionContextService,
   ) {}
 
   ngOnInit(): void {
     const me = this.authService.getCurrentUser();
     this.userRole = me?.role || me?.type || null;
     this.loadCommissionsAndData();
+    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.appliquerFiltres();
+    });
   }
 
   loadCommissionsAndData(): void {
-    this.commissions = [
-      { id: 1, nom: 'Commission Demo', description: 'Session 2025/2026', is_active: true },
-    ];
-    const stored = localStorage.getItem('active_commission_id');
-    const storedId = stored && !Number.isNaN(Number(stored)) ? Number(stored) : null;
-    this.activeCommissionId = storedId || this.commissions[0]?.id || 1;
-    localStorage.setItem('active_commission_id', String(this.activeCommissionId));
     this.loadCandidats();
     this.globalAvisSummary = {
       favorables: this.candidats.filter((c) => c.statut === 'Admis').length,
       defavorables: this.candidats.filter((c) => c.statut === 'Refusé').length,
     };
-  }
-
-  onCommissionChange(value: string | number): void {
-    const parsed = Number(value);
-    this.activeCommissionId = Number.isFinite(parsed) ? parsed : null;
-    if (this.activeCommissionId) {
-      localStorage.setItem('active_commission_id', String(this.activeCommissionId));
-    } else {
-      localStorage.removeItem('active_commission_id');
-    }
-    this.loadCandidats();
-    this.loadGlobalAvisSummary();
   }
 
   getCommissionLabel(commission: CommissionOption): string {
@@ -193,17 +185,33 @@ export class ListePreselection implements OnInit {
   appliquerFiltres(): void {
     const query = this.filtreNom.trim().toLowerCase();
     this.candidatsFiltres = this.candidats.filter((c) => {
+      const scope = this.activeCommissionCategory;
+      const matchCommission =
+        !scope ||
+        (scope === 'ingenieur' && c.type === 'ingenieur') ||
+        (scope === 'master-ds' && c.type === 'master' && c.specialite === 'DSI') ||
+        (scope === 'master-gl' && c.type === 'master' && c.specialite === 'GL');
       const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
       const matchType = !this.filtreType || c.type === this.filtreType;
       const matchAvis = !this.filtreAvis || c.monAvis === this.filtreAvis;
       const matchSpecialite = !this.selectedSpecialite || c.specialite === this.selectedSpecialite;
       const matchName = !query || fullName.includes(query) || c.cin.toLowerCase().includes(query);
-      return matchType && matchAvis && matchSpecialite && matchName;
+      return matchCommission && matchType && matchAvis && matchSpecialite && matchName;
     });
     // keep selection in sync with filtered list
     this.selectedIds = this.selectedIds.filter((id) =>
       this.candidatsFiltres.some((c) => c.id === id),
     );
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) return null;
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
   }
 
   // Responsable selection helpers
@@ -225,6 +233,15 @@ export class ListePreselection implements OnInit {
 
   isSelected(id: number): boolean {
     return this.selectedIds.includes(id);
+  }
+
+  toggleActionMenu(candidateId: number, event?: Event): void {
+    event?.stopPropagation();
+    this.actionMenuOpenId = this.actionMenuOpenId === candidateId ? null : candidateId;
+  }
+
+  closeActionMenu(): void {
+    this.actionMenuOpenId = null;
   }
 
   validateSelection(): void {
@@ -285,6 +302,7 @@ export class ListePreselection implements OnInit {
       ],
     };
     this.dossierModalOpen = true;
+    this.closeActionMenu();
   }
 
   closeDossierModal(): void {
@@ -333,6 +351,10 @@ export class ListePreselection implements OnInit {
       this.bulkDossierIndex++;
       this.loadBulkDossierAtIndex(this.bulkDossierIndex);
     }
+  }
+
+  onPageClick(): void {
+    this.closeActionMenu();
   }
 
   voirDetails(id: number): void {

@@ -724,7 +724,7 @@ class AvisSelection(models.Model):
                 name='unique_global_avis_selection',
             ),
             models.CheckConstraint(
-                condition=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
+                check=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
                 name='avis_selection_commentaire_required_if_defavorable',
             ),
         ]

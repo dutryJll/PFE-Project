@@ -20,6 +20,10 @@ import {
 } from '../offre-master-dialog/offre-master-dialog.component';
 import { CandidaturesMasterComponent } from '../candidatures-master/candidatures-master.component';
 import { SpecialitesService } from '../../../services/specialites.service';
+import {
+  CommissionContextService,
+  CommissionContextOption,
+} from '../../../services/commission-context.service';
 
 interface Candidature {
   id: number;
@@ -464,6 +468,7 @@ export class DashboardCommissionComponent implements OnInit {
   Number = Number;
   isResponsable: boolean = false;
   activeCommissionId: number | null = null;
+  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
   availableCommissions: UserCommissionOption[] = [];
   commissionsLoading = false;
   commissionsLoadError = '';
@@ -1962,6 +1967,7 @@ export class DashboardCommissionComponent implements OnInit {
   public socketConnectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private wsStatusSub: Subscription | null = null;
   private routeSub: Subscription | null = null;
+  private commissionSub: Subscription | null = null;
 
   constructor(
     private router: Router,
@@ -1974,12 +1980,18 @@ export class DashboardCommissionComponent implements OnInit {
     private webSocketService: WebSocketService,
     public location: Location,
     private specialitesService: SpecialitesService,
+    private commissionContext: CommissionContextService,
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = this.currentUser?.role === 'responsable_commission';
+    this.commissionSub = this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionId = commissionId;
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.refreshCommissionScopedData();
+    });
     this.loadUserCommissions();
 
     // Prefer to source specialities from SpecialitesService when available
@@ -2106,7 +2118,8 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.activeCommissionId = commissionId;
-    localStorage.setItem('active_commission_id', String(commissionId));
+    this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+    this.commissionContext.setActiveCommissionId(commissionId);
     this.refreshCommissionScopedData();
   }
 
@@ -2141,11 +2154,12 @@ export class DashboardCommissionComponent implements OnInit {
         this.activeCommissionId = Number.isFinite(candidateActiveId as number)
           ? (candidateActiveId as number)
           : null;
+        this.activeCommissionCategory = this.getCommissionCategoryFromId(this.activeCommissionId);
 
         if (this.activeCommissionId !== null) {
-          localStorage.setItem('active_commission_id', String(this.activeCommissionId));
+          this.commissionContext.setActiveCommissionId(this.activeCommissionId);
         } else {
-          localStorage.removeItem('active_commission_id');
+          this.commissionContext.setActiveCommissionId(null);
         }
 
         this.commissionsLoading = false;
@@ -2158,6 +2172,7 @@ export class DashboardCommissionComponent implements OnInit {
 
         if (Number.isFinite(storedActiveId as number)) {
           this.activeCommissionId = storedActiveId as number;
+          this.activeCommissionCategory = this.getCommissionCategoryFromId(this.activeCommissionId);
         }
       },
     });
@@ -3570,17 +3585,13 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canOpenCandidaturesMasterMenu(): boolean {
-    return (
-      this.isResponsable ||
-      this.actionPermissions.consultationCandidature ||
-      (this.currentUser?.role === 'membre' &&
-        Array.isArray(this.availableCommissions) &&
-        this.availableCommissions.length > 0)
-    );
+    const scope = this.activeCommissionCategory;
+    const isMasterScope = !scope || scope === 'master-ds' || scope === 'master-gl';
+    return isMasterScope && (this.isResponsable || this.actionPermissions.consultationCandidature);
   }
 
   canOpenCandidaturesIngenieurMenu(): boolean {
-    if (!this.isEngineerScope()) {
+    if (this.activeCommissionCategory && this.activeCommissionCategory !== 'ingenieur') {
       return false;
     }
 
@@ -3593,6 +3604,30 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     return this.actionPermissions.consultationCandidature;
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) {
+      return null;
+    }
+
+    const fromContext = this.commissionContext.commissions.find(
+      (commission) => commission.id === commissionId,
+    );
+    if (fromContext?.category) {
+      return fromContext.category;
+    }
+
+    const fromAvailable = this.availableCommissions.find(
+      (commission) => commission.id === commissionId,
+    );
+    const label = `${fromAvailable?.nom || ''} ${fromAvailable?.description || ''}`.toLowerCase();
+    if (label.includes('ingénieur') || label.includes('ingenieur')) return 'ingenieur';
+    if (label.includes('data science')) return 'master-ds';
+    if (label.includes('génie logiciel') || label.includes('genie logiciel')) return 'master-gl';
+    return null;
   }
 
   openCandidaturesMasterMenu(): void {

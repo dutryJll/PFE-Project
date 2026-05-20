@@ -6,6 +6,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatDialogModule } from '@angular/material/dialog';
 import { CandidaturesConsultationModalComponent } from '../candidatures-master/candidatures-consultation-modal.component';
 import { AuthService } from '../../../services/auth.service';
+import {
+  CommissionContextService,
+  CommissionContextOption,
+} from '../../../services/commission-context.service';
 
 interface Candidat {
   id: number;
@@ -33,6 +37,7 @@ interface FinalSelectionCandidate {
   prenom: string;
   nom: string;
   spec: string;
+  commissionCategory: CommissionContextOption['category'];
   score: number;
   interne: boolean;
   presel: FinalSelectionPresel;
@@ -121,17 +126,23 @@ export class ListeSelection implements OnInit {
 
   userRole: string | null = null;
   showDossierButton = false;
+  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
 
   constructor(
     private router: Router,
     private authService: AuthService,
     private dialog: MatDialog,
+    private commissionContext: CommissionContextService,
   ) {}
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     this.userRole = currentUser?.role || null;
     this.showDossierButton = true;
+    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.updateFinalSelectionFiltered();
+    });
     this.loadListes();
   }
 
@@ -142,28 +153,37 @@ export class ListeSelection implements OnInit {
 
   private buildMockFinalSelectionCandidates(): FinalSelectionCandidate[] {
     const base = [
-      ['Aymen', 'Ben Amor', 'TI', 18.7, true, 'oui', 'lp'],
-      ['Nour', 'Brahmi', 'DSI', 17.9, false, 'oui', 'lp'],
-      ['Meriem', 'Jemai', 'GL', 16.8, true, 'oui', 'lp'],
-      ['Fares', 'Khelifi', 'RS', 15.9, false, 'oui', 'la'],
-      ['Asma', 'Mansouri', 'TI', 15.1, true, 'oui', 'la'],
-      ['Yassine', 'Riahi', 'DSI', 14.8, false, 'non', 'la'],
-      ['Sarra', 'Karray', 'GL', 14.2, true, 'non', 'refuse'],
-      ['Oussama', 'Bouzid', 'RS', 13.9, false, 'non', 'refuse'],
-      ['Ines', 'Chokri', 'TI', 18.2, true, 'oui', 'lp'],
-      ['Wiem', 'Gharbi', 'DSI', 17.3, false, 'oui', 'lp'],
-      ['Houssem', 'Haddad', 'GL', 16.5, true, 'oui', 'la'],
-      ['Rania', 'Miled', 'RS', 15.6, false, 'oui', 'la'],
-      ['Mehdi', 'Sassi', 'TI', 14.9, true, 'non', 'refuse'],
-      ['Lina', 'Ben Youssef', 'DSI', 13.7, false, 'non', 'refuse'],
-      ['Bassem', 'Ouertani', 'GL', 17.6, true, 'oui', 'lp'],
-      ['Sana', 'Jaziri', 'RS', 16.1, false, 'oui', 'lp'],
-      ['Amine', 'Trabelsi', 'TI', 15.3, true, 'oui', 'la'],
-      ['Farah', 'Masmoudi', 'DSI', 12.8, false, 'non', 'refuse'],
-      ['Khalil', 'Zidi', 'GL', 17.1, true, 'oui', 'lp'],
-      ['Nesrine', 'Hamdi', 'RS', 14.4, false, 'non', 'la'],
+      ['Aymen', 'Ben Amor', 'TI', 'ingenieur', 18.7, true, 'oui', 'lp'],
+      ['Nour', 'Brahmi', 'DSI', 'master-ds', 17.9, false, 'oui', 'lp'],
+      ['Meriem', 'Jemai', 'GL', 'master-gl', 16.8, true, 'oui', 'lp'],
+      ['Fares', 'Khelifi', 'RS', 'ingenieur', 15.9, false, 'oui', 'la'],
+      ['Asma', 'Mansouri', 'TI', 'master-gl', 15.1, true, 'oui', 'la'],
+      ['Yassine', 'Riahi', 'DSI', 'master-ds', 14.8, false, 'non', 'la'],
+      ['Sarra', 'Karray', 'GL', 'master-gl', 14.2, true, 'non', 'refuse'],
+      ['Oussama', 'Bouzid', 'RS', 'ingenieur', 13.9, false, 'non', 'refuse'],
+      ['Ines', 'Chokri', 'TI', 'ingenieur', 18.2, true, 'oui', 'lp'],
+      ['Wiem', 'Gharbi', 'DSI', 'master-ds', 17.3, false, 'oui', 'lp'],
+      ['Houssem', 'Haddad', 'GL', 'master-gl', 16.5, true, 'oui', 'la'],
+      ['Rania', 'Miled', 'RS', 'ingenieur', 15.6, false, 'oui', 'la'],
+      ['Mehdi', 'Sassi', 'TI', 'master-gl', 14.9, true, 'non', 'refuse'],
+      ['Lina', 'Ben Youssef', 'DSI', 'master-ds', 13.7, false, 'non', 'refuse'],
+      ['Bassem', 'Ouertani', 'GL', 'master-gl', 17.6, true, 'oui', 'lp'],
+      ['Sana', 'Jaziri', 'RS', 'ingenieur', 16.1, false, 'oui', 'lp'],
+      ['Amine', 'Trabelsi', 'TI', 'ingenieur', 15.3, true, 'oui', 'la'],
+      ['Farah', 'Masmoudi', 'DSI', 'master-ds', 12.8, false, 'non', 'refuse'],
+      ['Khalil', 'Zidi', 'GL', 'master-gl', 17.1, true, 'oui', 'lp'],
+      ['Nesrine', 'Hamdi', 'RS', 'ingenieur', 14.4, false, 'non', 'la'],
     ] as Array<
-      [string, string, string, number, boolean, FinalSelectionPresel, FinalSelectionDecision]
+      [
+        string,
+        string,
+        string,
+        CommissionContextOption['category'],
+        number,
+        boolean,
+        FinalSelectionPresel,
+        FinalSelectionDecision,
+      ]
     >;
 
     return base.map((item, index) => ({
@@ -173,10 +193,11 @@ export class ListeSelection implements OnInit {
       prenom: item[0],
       nom: item[1],
       spec: item[2],
-      score: item[3],
-      interne: item[4],
-      presel: item[5],
-      statut: item[6],
+      commissionCategory: item[3],
+      score: item[4],
+      interne: item[5],
+      presel: item[6],
+      statut: item[7],
       obs: '',
     }));
   }
@@ -322,7 +343,9 @@ export class ListeSelection implements OnInit {
     const type = this.finalSelectionFilters.type;
     const specialite = this.finalSelectionFilters.specialite;
     const hideValides = this.finalSelectionFilters.hideValides;
+    const scope = this.activeCommissionCategory;
     let rows = this.finalSelectionCandidates.slice();
+    rows = rows.filter((candidate) => !scope || candidate.commissionCategory === scope);
     rows = rows.filter((c) => c.score >= scoreMin && c.score <= scoreMax);
     if (search)
       rows = rows.filter(
@@ -346,6 +369,28 @@ export class ListeSelection implements OnInit {
         .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
         .slice(0, 100);
     this.finalSelectionFiltered = rows;
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) {
+      return null;
+    }
+
+    if (commissionId === 1) {
+      return 'ingenieur';
+    }
+
+    if (commissionId === 2) {
+      return 'master-ds';
+    }
+
+    if (commissionId === 3) {
+      return 'master-gl';
+    }
+
+    return null;
   }
 
   isFinalSelectionRowSelected(id: number): boolean {

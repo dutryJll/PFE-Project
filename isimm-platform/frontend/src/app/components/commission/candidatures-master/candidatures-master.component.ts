@@ -2,6 +2,10 @@ import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import {
+  CommissionContextService,
+  CommissionContextOption,
+} from '../../../services/commission-context.service';
 
 interface PieceJustificative {
   nom: string;
@@ -48,6 +52,7 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   actionMenuOpenId: number | null = null;
 
   selectedCommissionId: number | null = null;
+  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
   selectedYear = '';
   selectedSpecialite = '';
   filtreStatut = '';
@@ -64,10 +69,16 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   avisStatut: MasterStatus = 'Validé';
   avisCommentaire = '';
 
+  constructor(private commissionContext: CommissionContextService) {}
+
   ngOnInit(): void {
     this.candidatsList = this.buildMockCandidates();
     this.rebuildDerivedLists();
     this.selectedCommissionId = this.activeCommissionId;
+    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.appliquerFiltres();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -141,7 +152,11 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   appliquerFiltres(): void {
     const search = this.recherche.trim().toLowerCase();
     this.candidatsFiltres = this.candidatsList.filter((candidat) => {
-      const matchesCommission = true;
+      const scope = this.activeCommissionCategory;
+      const matchesCommission =
+        !scope ||
+        (scope === 'master-ds' && candidat.master.includes('DSI')) ||
+        (scope === 'master-gl' && candidat.master.includes('GL'));
       const matchesYear =
         !this.selectedYear ||
         String(new Date(candidat.dateCandidature).getFullYear()) === String(this.selectedYear);
@@ -162,6 +177,16 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     this.selectedIds = this.selectedIds.filter((id) =>
       this.candidatsFiltres.some((candidat) => candidat.id === id),
     );
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) return null;
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
   }
 
   reinitialiserFiltres(): void {

@@ -1,1 +1,23 @@
-<router-outlet />
+<div class="global-app-shell">
+  <header class="global-header" *ngIf="commissions.length > 0">
+    <div class="global-brand">
+      <span class="global-brand-kicker">Espace Commission</span>
+      <strong>ISIMM</strong>
+    </div>
+
+    <div class="global-commission">
+      <span>Commission active</span>
+      <select
+        [ngModel]="activeCommissionId"
+        (ngModelChange)="onCommissionChange($event)"
+        [disabled]="commissionsLoading"
+      >
+        <option *ngFor="let commission of commissions" [ngValue]="commission.id">
+          {{ commission.nom }}
+        </option>
+      </select>
+    </div>
+  </header>
+
+  <router-outlet />
+</div>

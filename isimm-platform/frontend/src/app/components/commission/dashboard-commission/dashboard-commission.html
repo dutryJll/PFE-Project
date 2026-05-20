@@ -167,18 +167,6 @@
     <header class="content-header">
       <h1>{{ getViewTitle() }}</h1>
       <div class="header-actions">
-        <div class="commission-switcher" *ngIf="availableCommissions.length > 0">
-          <span class="commission-switcher-label">Commission active</span>
-          <select
-            class="commission-switcher-select"
-            [ngModel]="activeCommissionId"
-            (ngModelChange)="onActiveCommissionChange($event)"
-          >
-            <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
-              {{ commission.nom }}
-            </option>
-          </select>
-        </div>
         <span class="date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
       </div>
     </header>

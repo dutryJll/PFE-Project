@@ -1,3 +1,64 @@
+.global-app-shell {
+  min-height: 100vh;
+  background: #f5f8fc;
+}
+
+.global-header {
+  position: sticky;
+  top: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #dbeafe;
+  backdrop-filter: blur(10px);
+}
+
+.global-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.global-brand-kicker {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.global-brand strong {
+  color: #174f8c;
+  font-size: 1rem;
+}
+
+.global-commission {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.global-commission select {
+  min-width: 290px;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid #dbe4ef;
+  background: #fff;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.global-commission select:disabled {
+  opacity: 0.75;
+}
+
 .theme-toggle {
   position: fixed;
   right: 1rem;
