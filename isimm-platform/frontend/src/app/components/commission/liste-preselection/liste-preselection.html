@@ -139,10 +139,19 @@
           <p>Chargement des candidatures...</p>
         </div>
 
+        <div class="bulk-select-bar" *ngIf="selectedIds.length > 0">
+          <div class="bulk-info">{{ selectedIds.length }} candidat(s) sélectionné(s)</div>
+          <button class="btn btn-primary" type="button" (click)="openBulkDossierView()">
+            <i class="fas fa-folder-open"></i>
+            Consulter dossiers
+          </button>
+        </div>
+
         <div class="candidats-grid">
           <table class="listing-table">
             <thead>
               <tr>
+                <th style="width: 40px"><input type="checkbox" (change)="toggleAll($event)" /></th>
                 <th>#</th>
                 <th>Nom complet</th>
                 <th>CIN</th>
@@ -324,6 +333,24 @@
           </table>
         </div>
         <div class="modal-footer">
+          <button
+            class="btn"
+            type="button"
+            (click)="prevBulkDossier()"
+            [disabled]="selectedIds.length <= 1 || bulkDossierIndex <= 0"
+            *ngIf="selectedIds.length > 1"
+          >
+            Précédent
+          </button>
+          <button
+            class="btn"
+            type="button"
+            (click)="nextBulkDossier()"
+            [disabled]="selectedIds.length <= 1 || bulkDossierIndex >= selectedIds.length - 1"
+            *ngIf="selectedIds.length > 1"
+          >
+            Suivant
+          </button>
           <button class="btn" type="button" (click)="closeDossierModal()">Fermer</button>
         </div>
       </div>

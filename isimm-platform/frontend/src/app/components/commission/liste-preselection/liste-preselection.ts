@@ -70,6 +70,7 @@ export class ListePreselection implements OnInit {
   dossierModalOpen = false;
   dossierModalCandidate: Candidat | null = null;
   dossierModalData: { grades?: { label: string; value: number }[] } | null = null;
+  bulkDossierIndex = -1; // For navigating through bulk dossier view
 
   constructor(
     private router: Router,
@@ -290,6 +291,48 @@ export class ListePreselection implements OnInit {
     this.dossierModalOpen = false;
     this.dossierModalCandidate = null;
     this.dossierModalData = null;
+    this.bulkDossierIndex = -1;
+  }
+
+  openBulkDossierView(): void {
+    if (this.selectedIds.length === 0) return;
+    this.bulkDossierIndex = 0;
+    this.loadBulkDossierAtIndex(0);
+  }
+
+  private loadBulkDossierAtIndex(index: number): void {
+    if (index < 0 || index >= this.selectedIds.length) return;
+    const candidateId = this.selectedIds[index];
+    const candidat = this.candidats.find((c) => c.id === candidateId);
+    if (!candidat) return;
+
+    this.dossierModalCandidate = candidat;
+    const base = candidat.score || 0;
+    const g1 = Math.max(0, Math.round((base - 1.2) * 10) / 10);
+    const g2 = Math.max(0, Math.round((base - 0.4) * 10) / 10);
+    const g3 = Math.max(0, Math.round((base + 0.6) * 10) / 10);
+    this.dossierModalData = {
+      grades: [
+        { label: 'Mathématiques', value: g1 },
+        { label: 'Algorithmique', value: g2 },
+        { label: 'Anglais', value: g3 },
+      ],
+    };
+    this.dossierModalOpen = true;
+  }
+
+  prevBulkDossier(): void {
+    if (this.bulkDossierIndex > 0) {
+      this.bulkDossierIndex--;
+      this.loadBulkDossierAtIndex(this.bulkDossierIndex);
+    }
+  }
+
+  nextBulkDossier(): void {
+    if (this.bulkDossierIndex < this.selectedIds.length - 1) {
+      this.bulkDossierIndex++;
+      this.loadBulkDossierAtIndex(this.bulkDossierIndex);
+    }
   }
 
   voirDetails(id: number): void {

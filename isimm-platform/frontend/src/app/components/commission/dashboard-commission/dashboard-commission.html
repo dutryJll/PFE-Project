@@ -694,18 +694,26 @@
             Sélectionnez la commission active (parcours + année) pour filtrer les vues.
           </p>
           <div
-            class="profile-commissions-picker"
-            *ngIf="availableCommissions.length > 0; else noCommissionLinked"
+            class="profile-commissions-grid"
+            *ngIf="profileCommissionCards.length > 0; else noCommissionLinked"
           >
-            <select
-              [ngModel]="activeCommissionId"
-              (ngModelChange)="onActiveCommissionChange($event)"
-            >
-              <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
-                {{ commission.nom
-                }}{{ commission.description ? ' - ' + commission.description : '' }}
-              </option>
-            </select>
+            <div class="commission-saas-card" *ngFor="let commission of profileCommissionCards">
+              <div class="commission-saas-card-icon">
+                <i class="fas" [ngClass]="commission.icon"></i>
+              </div>
+              <div class="commission-saas-card-copy">
+                <h3>{{ commission.title }}</h3>
+                <p>{{ commission.description }}</p>
+                <span class="commission-role-chip">{{ commission.role }}</span>
+              </div>
+              <button
+                class="btn btn-primary commission-access-btn"
+                type="button"
+                (click)="onActiveCommissionChange(commission.id)"
+              >
+                Accéder
+              </button>
+            </div>
           </div>
           <ng-template #noCommissionLinked>
             <p class="profile-subtle">Aucune commission liée à votre profil.</p>

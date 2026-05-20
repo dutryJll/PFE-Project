@@ -721,6 +721,36 @@ export class DashboardCommissionComponent implements OnInit {
     phone: '',
   };
 
+  profileCommissionCards: Array<{
+    id: number;
+    title: string;
+    role: string;
+    description: string;
+    icon: string;
+  }> = [
+    {
+      id: 1,
+      title: 'Ingénieur en Génie Logiciel (GL) - 2025/2026',
+      role: 'Rôle: Membre',
+      description: 'Accès aux dossiers de la commission GL',
+      icon: 'fa-folder-open',
+    },
+    {
+      id: 2,
+      title: 'Mastère en Data Science - 2025/2026',
+      role: 'Rôle: Membre',
+      description: 'Accès aux dossiers de la commission Data Science',
+      icon: 'fa-folder-open',
+    },
+    {
+      id: 3,
+      title: 'Mastère en Génie Logiciel (GL) - 2025/2026',
+      role: 'Rôle: Membre',
+      description: 'Accès aux dossiers de la commission GL',
+      icon: 'fa-folder-open',
+    },
+  ];
+
   passwordForm: any = {
     current_password: '',
     new_password: '',

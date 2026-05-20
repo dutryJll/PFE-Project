@@ -207,25 +207,6 @@
             </div>
           </div>
 
-          <div class="bulk-bar" [class.show]="finalSelectionSelectedIds.size > 0">
-            <div class="bulk-text">{{ getFinalSelectionSelectedCountLabel() }}</div>
-            <div class="bulk-controls">
-              <select class="finput" [(ngModel)]="finalSelectionBulkAction" style="width: 160px">
-                <option value="">Action groupee...</option>
-                <option value="lp">→ Liste principale (LP)</option>
-                <option value="la">→ Liste d'attente (LA)</option>
-                <option value="refuse">→ Refuse</option>
-              </select>
-              <button
-                class="btn btn-primary"
-                type="button"
-                (click)="applyFinalSelectionBulkAction()"
-              >
-                Appliquer
-              </button>
-            </div>
-          </div>
-
           <div class="quota-card compact">
             <div class="quota-grid">
               <div class="quota-block">
@@ -247,6 +228,22 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="bulk-controls">
+            <select
+              class="finput ng-pristine ng-valid ng-touched"
+              style="width: 160px"
+              [(ngModel)]="finalSelectionBulkAction"
+            >
+              <option value="">Action groupee...</option>
+              <option value="lp">→ Liste principale (LP)</option>
+              <option value="la">→ Liste d'attente (LA)</option>
+              <option value="refuse">→ Refuse</option>
+            </select>
+            <button type="button" class="btn btn-primary" (click)="applyFinalSelectionBulkAction()">
+              Appliquer
+            </button>
           </div>
 
           <div class="table-wrap">
@@ -278,7 +275,6 @@
                     <th>Decision preselection</th>
                     <th style="min-width: 148px">Statut selection</th>
                     <th>Observation</th>
-                    <th *ngIf="showDossierButton">Dossier</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -338,30 +334,21 @@
                     <td>
                       <input
                         type="text"
-                        class="obs-input"
+                        class="obs-field"
                         [(ngModel)]="candidate.obs"
-                        placeholder="Observation..."
+                        placeholder="Ajoutez une observation..."
                         (change)="onFinalSelectionObservationChange()"
                       />
                     </td>
-                    <td *ngIf="showDossierButton">
-                      <button
-                        class="btn-icon btn-view small-dossier-btn"
-                        type="button"
-                        title="Voir dossier"
-                        (click)="voirDossierSelection(candidate)"
-                      >
-                        <i class="far fa-folder-open" aria-hidden="true"></i>
-                      </button>
-                    </td>
                     <td>
                       <button
-                        class="btn btn-sec"
+                        class="btn btn-primary btn-sm"
                         type="button"
-                        style="font-size: 11px; padding: 0.25rem 0.5rem"
                         (click)="finalSelectionConsult(candidate)"
                       >
-                        Consulter
+                        <i class="fas fa-folder-open"></i>
+                        <br />
+                        <span>Consulter complet</span>
                       </button>
                     </td>
                   </tr>
@@ -403,9 +390,9 @@
             <div style="margin-top: 0.75rem">
               <textarea
                 [(ngModel)]="globalComment"
-                placeholder="Commentaire (obligatoire si défavorable)"
+                placeholder="Commentaire (obligatoire si défavorable)..."
                 rows="3"
-                style="width: 100%"
+                class="textarea-avis"
               ></textarea>
             </div>
             <div class="avis-global-actions" style="margin-top: 0.5rem">
@@ -454,12 +441,14 @@
               <strong>{{ getFinalSelectionRefuseCount() }}</strong> refusés.
             </p>
             <div style="margin-top: 0.75rem">
-              <label>Commentaire global (optionnel)</label>
+              <label style="font-weight: 600; margin-bottom: 8px; display: block"
+                >Message aux candidats (optionnel)</label
+              >
               <textarea
                 [(ngModel)]="globalComment"
                 rows="4"
-                placeholder="Message qui sera joint aux notifications"
-                style="width: 100%"
+                placeholder="Message joint aux notifications..."
+                class="textarea-publish"
               ></textarea>
             </div>
           </div>

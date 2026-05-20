@@ -1,267 +1,407 @@
-<div class="candidatures-master-container">
-  <!-- ========================================
-      HEADER / STATISTIQUES
-      ======================================== -->
-  <div class="stats-section">
-    <h2 class="section-title">Gestion des Candidatures - Master</h2>
-
-    <div class="stats-grid">
-      <div
-        class="stat-card"
-        *ngFor="let stat of statistiques"
-        [style.border-left-color]="stat.couleur"
-      >
-        <div class="stat-icon">{{ stat.icon }}</div>
-        <div class="stat-content">
-          <div class="stat-label">{{ stat.label }}</div>
-          <div class="stat-number" [style.color]="stat.couleur">{{ stat.nombre }}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================
-      FILTRES
-      ======================================== -->
-  <div class="filter-group" *ngIf="availableCommissions && availableCommissions.length > 0">
-    <label>Commission</label>
-    <select [(ngModel)]="selectedCommissionId" (change)="appliquerFiltres()" class="filter-select">
-      <option [ngValue]="null">Toutes les commissions</option>
-      <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
-        {{ commission.nom }}
-      </option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <label>Année</label>
-    <select [(ngModel)]="selectedYear" (change)="appliquerFiltres()" class="filter-select">
-      <option value="">Toutes les années</option>
-      <option *ngFor="let y of distinctYears" [value]="y">{{ y }}</option>
-    </select>
-  </div>
-  <div class="filter-group" *ngIf="availableSpecialites && availableSpecialites.length > 0">
-    <label>Spécialité</label>
-    <select [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()" class="filter-select">
-      <option value="">Toutes les spécialités</option>
-      <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
-    </select>
-  </div>
-  <div class="filters-section">
-    <div class="filter-group">
-      <label>Recherche (nom/email/cin)</label>
-      <input
-        type="text"
-        placeholder="Entrez un nom, email ou CIN..."
-        [(ngModel)]="recherche"
-        (input)="appliquerFiltres()"
-        class="search-input"
-      />
-    </div>
-
-    <div class="filter-group">
-      <label>Statut</label>
-      <select [(ngModel)]="filtreStatut" (change)="appliquerFiltres()" class="filter-select">
-        <option value="">Tous les statuts</option>
-        <option value="En attente">En attente</option>
-        <option value="Admis">Admis</option>
-        <option value="Rejeté">Rejeté</option>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label>État du Dossier</label>
-      <select [(ngModel)]="filtreEtatDossier" (change)="appliquerFiltres()" class="filter-select">
-        <option value="">Tous les états</option>
-        <option value="Complet">Complet</option>
-        <option value="Incomplet">Incomplet</option>
-      </select>
-    </div>
-
-    <button class="btn-reset" (click)="reinitialiserFiltres()">Réinitialiser</button>
-  </div>
-
-  <!-- TABLEAU DES CANDIDATURES -->
-  <div class="table-section card" style="margin-bottom: 20px; padding: 16px">
-    <div class="table-actions">
-      <button class="btn-reset" (click)="toggleSelectAll()">
-        {{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}
-      </button>
-      <button class="btn" (click)="consulterSelection()" style="background: #378add; color: #fff">
-        Consulter sélection
-      </button>
-    </div>
-
-    <table class="candidature-table">
-      <thead>
-        <tr>
-          <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" /></th>
-          <th>Rang</th>
-          <th>Numéro</th>
-          <th>Nom complet</th>
-          <th>Spécialité</th>
-          <th>Score</th>
-          <th>Statut</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let c of candidatsFiltres; let i = index">
-          <td>
-            <input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)" />
-          </td>
-          <td>{{ i + 1 }}</td>
-          <td>{{ c.id }}</td>
-          <td>{{ c.nom }}</td>
-          <td>{{ c.master }}</td>
-          <td>{{ c.score }}</td>
-          <td>
-            <span [ngClass]="getStatutBadgeClass(c.statut)" class="badge small">{{
-              c.statut
-            }}</span>
-          </td>
-          <td><button class="btn small" (click)="consulterUn(c)">Consulter</button></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ========================================
-      CAROUSEL / DÉTAILS CANDIDAT
-      ======================================== -->
-  <div class="carousel-section" *ngIf="candidatActuel">
-    <div class="carousel-header">
-      <h3>Candidat {{ numeroActuel }} / {{ totalCandidatures }}</h3>
-      <div class="carousel-controls">
-        <button
-          class="btn-nav"
-          (click)="prevCandidat()"
-          [disabled]="totalCandidatures <= 1"
-          title="Candidat précédent"
-        >
-          ← Précédent
-        </button>
-        <span class="carousel-counter">{{ numeroActuel }} / {{ totalCandidatures }}</span>
-        <button
-          class="btn-nav"
-          (click)="nextCandidat()"
-          [disabled]="totalCandidatures <= 1"
-          title="Candidat suivant"
-        >
-          Suivant →
-        </button>
-      </div>
-    </div>
-
-    <div class="carousel-content" [@fadeIn]>
-      <!-- INFOS PERSONNELLES -->
-      <div class="candidat-card">
-        <div class="card-section">
-          <h4>Informations Générales</h4>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Nom Complet</label>
-              <p>{{ candidatActuel.nom }}</p>
-            </div>
-            <div class="info-item">
-              <label>Email</label>
-              <p>{{ candidatActuel.email || 'N/A' }}</p>
-            </div>
-            <div class="info-item">
-              <label>CIN</label>
-              <p>{{ candidatActuel.cin || 'N/A' }}</p>
-            </div>
-            <div class="info-item">
-              <label>Date de Candidature</label>
-              <p>{{ candidatActuel.date_candidature || 'N/A' }}</p>
-            </div>
+<div class="candidatures-master-page page" (click)="onPageClick()">
+  <div class="main-container">
+    <section class="header-section">
+      <div class="hero-card">
+        <div class="header-content">
+          <button class="btn-back" [routerLink]="['/commission/dashboard']" aria-label="Retour">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="hero-title-block">
+            <div class="eyebrow">Commission / Candidatures Master</div>
+            <h1><i class="fas fa-layer-group"></i><span>Candidatures Master</span></h1>
+            <p>Consulter, filtrer et traiter les candidatures dans une interface unifiée</p>
+          </div>
+          <div class="commission-session-pill" *ngIf="availableCommissions.length > 0">
+            <label>Commission active</label>
+            <select class="finput" [(ngModel)]="selectedCommissionId" (change)="appliquerFiltres()">
+              <option [ngValue]="null">Toutes les commissions</option>
+              <option *ngFor="let commission of availableCommissions" [ngValue]="commission.id">
+                {{ commission.nom }}
+              </option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <!-- MASTER ET SCORE -->
-        <div class="card-section">
-          <h4>Candidature</h4>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Master</label>
-              <p class="master-badge">{{ candidatActuel.master }}</p>
+      <div class="summary-grid">
+        <div class="summary-card" *ngFor="let stat of statistiques">
+          <div class="summary-copy">
+            <span class="info-label">{{ stat.label }}</span>
+            <span class="info-value">{{ stat.nombre }}</span>
+          </div>
+          <div class="summary-icon" [style.color]="stat.couleur">{{ stat.icon }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="selection-card">
+      <div class="selection-card-header">
+        <div>
+          <div class="selection-card-kicker">Résultats de consultation</div>
+          <h2>Candidatures Master</h2>
+        </div>
+        <div class="selection-card-header-actions">
+          <button
+            *ngIf="canOpenMassConsultation"
+            class="btn btn-primary"
+            type="button"
+            (click)="openMassConsultation()"
+          >
+            <i class="fas fa-folder-open"></i>
+            Consultation Massive
+          </button>
+        </div>
+      </div>
+
+      <div class="selection-card-body">
+        <div class="toolbar-card">
+          <div class="top-filters">
+            <div class="filter-chip">
+              <div class="flbl">Année</div>
+              <select class="finput" [(ngModel)]="selectedYear" (change)="appliquerFiltres()">
+                <option value="">Toutes les années</option>
+                <option *ngFor="let year of distinctYears" [value]="year">{{ year }}</option>
+              </select>
             </div>
-            <div class="info-item">
-              <label>Score</label>
-              <div class="score-display">
-                <div
-                  class="score-bar"
-                  [style.width.%]="scorePercentage"
-                  [style.background-color]="getScoreColor()"
-                ></div>
+
+            <div class="filter-chip">
+              <div class="flbl">Spécialité</div>
+              <select class="finput" [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()">
+                <option value="">Toutes les spécialités</option>
+                <option *ngFor="let specialite of availableSpecialites" [value]="specialite">
+                  {{ specialite }}
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-chip">
+              <div class="flbl">Statut</div>
+              <select class="finput" [(ngModel)]="filtreStatut" (change)="appliquerFiltres()">
+                <option value="">Tous</option>
+                <option value="Validé">Validé</option>
+                <option value="En attente">En attente</option>
+                <option value="Rejeté">Rejeté</option>
+              </select>
+            </div>
+
+            <div class="filter-chip filter-chip--search">
+              <div class="flbl">Recherche</div>
+              <input
+                type="text"
+                class="finput"
+                placeholder="Nom, email ou CIN"
+                [(ngModel)]="recherche"
+                (input)="appliquerFiltres()"
+              />
+            </div>
+
+            <div class="filter-chip filter-chip--actions">
+              <label class="check-label">
+                <input
+                  type="checkbox"
+                  [checked]="isAllVisibleSelected()"
+                  (change)="toggleSelectAll($event)"
+                />
+                Check All
+              </label>
+              <button class="btn btn-sec" type="button" (click)="reinitialiserFiltres()">
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div class="bulk-bar" *ngIf="selectedIds.length > 0">
+            <div class="bulk-left">
+              <span class="bulk-count">{{ selectedIds.length }} candidat(s) sélectionné(s)</span>
+              <span class="bulk-hint"
+                >Les actions de masse s'activent après plusieurs sélections.</span
+              >
+            </div>
+            <button
+              *ngIf="canOpenMassConsultation"
+              class="btn btn-primary"
+              type="button"
+              (click)="openMassConsultation()"
+            >
+              <i class="fas fa-folder-open"></i>
+              Consultation Massive
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-hdr">
+              <div class="table-hdr-title">
+                Liste des candidatures
+                <span>({{ candidatsFiltres.length }})</span>
               </div>
-              <p class="score-value" [style.color]="getScoreColor()">
-                {{ candidatActuel.score }}/20
-              </p>
             </div>
-            <div class="info-item">
-              <label>État du Dossier</label>
-              <span [ngClass]="['badge', getEtatBadgeClass(candidatActuel.etat_dossier)]">
-                {{ candidatActuel.etat_dossier }}
-              </span>
+
+            <div class="table-scroll">
+              <table class="selection-table">
+                <thead>
+                  <tr>
+                    <th style="width: 34px">
+                      <input
+                        type="checkbox"
+                        [checked]="isAllVisibleSelected()"
+                        (change)="toggleSelectAll($event)"
+                      />
+                    </th>
+                    <th>Rang</th>
+                    <th>Nom complet</th>
+                    <th>CIN</th>
+                    <th>Master</th>
+                    <th style="min-width: 130px">Score</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let candidat of candidatsFiltres; let i = index"
+                    [class.selected]="isSelected(candidat.id)"
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        [checked]="isSelected(candidat.id)"
+                        (change)="toggleSelect(candidat.id)"
+                      />
+                    </td>
+                    <td style="font-weight: 500; text-align: center">{{ i + 1 }}</td>
+                    <td style="font-weight: 600">{{ candidat.nom }}</td>
+                    <td style="color: var(--color-text-secondary)">{{ candidat.cin }}</td>
+                    <td style="color: var(--color-text-secondary)">{{ candidat.master }}</td>
+                    <td>
+                      <div class="score-wrap">
+                        <span class="score-pill" [ngClass]="getScoreClass(candidat.score)">
+                          {{ candidat.score | number: '1.1-1' }}
+                        </span>
+                        <div class="score-bar">
+                          <div
+                            class="score-fill"
+                            [style.width.%]="getStatusPercent(candidat.score)"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span [ngClass]="getStatutBadgeClass(candidat.statut)">{{
+                        candidat.statut
+                      }}</span>
+                    </td>
+                    <td>
+                      <div class="action-menu-container">
+                        <button
+                          class="kebab-btn"
+                          type="button"
+                          aria-label="Actions"
+                          (click)="$event.stopPropagation(); toggleActionMenu(candidat.id, $event)"
+                        >
+                          <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div
+                          class="action-menu"
+                          *ngIf="actionMenuOpenId === candidat.id"
+                          (click)="$event.stopPropagation()"
+                        >
+                          <button type="button" (click)="openConsultation(candidat)">
+                            <i class="fas fa-folder-open"></i>
+                            Consulter
+                          </button>
+                          <button type="button" (click)="openAvis(candidat)">
+                            <i class="fas fa-pen-to-square"></i>
+                            Donner avis
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div class="info-item">
-              <label>Statut</label>
-              <span [ngClass]="['badge', getStatutBadgeClass(candidatActuel.statut)]">
-                {{ candidatActuel.statut }}
-              </span>
+          </div>
+
+          <div *ngIf="candidatsFiltres.length === 0" class="empty-state empty-card">
+            <div class="empty-illustration" aria-hidden="true">
+              <svg viewBox="0 0 240 160" role="img" focusable="false">
+                <defs>
+                  <linearGradient id="masterEmptyBg" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#e6f1fb" />
+                    <stop offset="100%" stop-color="#f8fbff" />
+                  </linearGradient>
+                </defs>
+                <rect x="22" y="18" width="196" height="124" rx="22" fill="url(#masterEmptyBg)" />
+                <rect x="48" y="42" width="90" height="12" rx="6" fill="#c7d8ea" />
+                <rect x="48" y="62" width="145" height="10" rx="5" fill="#d9e6f2" />
+                <rect x="48" y="80" width="118" height="10" rx="5" fill="#d9e6f2" />
+                <circle cx="174" cy="76" r="22" fill="#dbeefe" />
+                <path
+                  d="M166 76l6 6 14-16"
+                  fill="none"
+                  stroke="#185fa5"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </div>
+            <p>Aucune candidature ne correspond aux filtres actifs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="consultationModalOpen" (click)="closeConsultation()">
+    <div class="consultation-modal" (click)="$event.stopPropagation()">
+      <div class="consultation-modal-header">
+        <div>
+          <div class="modal-kicker">Consultation</div>
+          <h3>Candidature {{ consultationIndex + 1 }} / {{ consultationCandidates.length }}</h3>
+        </div>
+        <button class="modal-close" type="button" (click)="closeConsultation()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="consultation-nav" *ngIf="consultationCandidates.length > 1">
+        <button
+          type="button"
+          class="btn btn-sec"
+          (click)="prevConsultation()"
+          [disabled]="consultationIndex === 0"
+        >
+          Précédent
+        </button>
+        <span>{{ consultationIndex + 1 }} / {{ consultationCandidates.length }}</span>
+        <button
+          type="button"
+          class="btn btn-sec"
+          (click)="nextConsultation()"
+          [disabled]="consultationIndex >= consultationCandidates.length - 1"
+        >
+          Suivant
+        </button>
+      </div>
+
+      <div class="consultation-grid" *ngIf="consultationCurrent as current">
+        <div class="consultation-card">
+          <div class="consultation-card-title">Identité</div>
+          <div class="consultation-line">
+            <span>Nom</span><strong>{{ current.nom }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Email</span><strong>{{ current.email }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>CIN</span><strong>{{ current.cin }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Date</span><strong>{{ current.dateCandidature }}</strong>
           </div>
         </div>
 
-        <!-- PIÈCES JUSTIFICATIVES -->
-        <div class="card-section">
-          <h4>Pièces Justificatives ({{ piecesOk }}/{{ piecesTotales }})</h4>
-          <div class="pieces-container">
-            <div
-              *ngFor="let piece of candidatActuel.pieces"
-              [ngClass]="['doc-chip', piece.statut === 'ok' ? 'dc-v' : 'dc-p']"
-            >
-              <span class="piece-icon">
-                {{ piece.statut === 'ok' ? '✓' : '✕' }}
-              </span>
-              <span class="piece-nom">{{ piece.nom }}</span>
+        <div class="consultation-card">
+          <div class="consultation-card-title">Candidature</div>
+          <div class="consultation-line">
+            <span>Master</span><strong>{{ current.master }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Statut</span><strong>{{ current.statut }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Dossier</span><strong>{{ current.etatDossier }}</strong>
+          </div>
+          <div class="consultation-score">
+            <span>Score</span>
+            <div class="score-bar">
+              <div class="score-fill" [style.width.%]="getStatusPercent(current.score)"></div>
             </div>
+            <strong>{{ current.score }}/20</strong>
           </div>
         </div>
+      </div>
 
-        <!-- ACTIONS -->
-        <div class="card-section action-section">
-          <h4>Actions</h4>
-          <div class="action-buttons">
-            <button
-              class="btn btn-accepter"
-              (click)="accepterCandidat()"
-              [disabled]="!getStatutBoutons().accepter"
-            >
-              ✓ Accepter
-            </button>
-            <button
-              class="btn btn-refuser"
-              (click)="refuserCandidat()"
-              [disabled]="!getStatutBoutons().refuser"
-            >
-              ✕ Refuser
-            </button>
-            <button class="btn small" (click)="fermerConsultation()" *ngIf="viewingSelection">
-              Fermer
-            </button>
-          </div>
+      <div class="consultation-docs" *ngIf="consultationCurrent as current">
+        <div class="consultation-card-title">Pièces justificatives</div>
+        <div class="docs-grid">
+          <span
+            *ngFor="let piece of current.pieces"
+            class="doc-chip"
+            [class.ok]="piece.statut === 'ok'"
+            [class.missing]="piece.statut === 'missing'"
+          >
+            {{ piece.nom }}
+          </span>
         </div>
+      </div>
+
+      <div class="consultation-modal-actions">
+        <button type="button" class="btn btn-sec" (click)="closeConsultation()">Fermer</button>
       </div>
     </div>
   </div>
 
-  <!-- ========================================
-      MESSAGE VIDE
-      ======================================== -->
-  <div class="empty-state" *ngIf="!candidatActuel && totalCandidatures === 0">
-    <div class="empty-icon">📭</div>
-    <p>Aucun candidat ne correspond aux critères de recherche.</p>
-    <button class="btn-reset" (click)="reinitialiserFiltres()">Afficher tous les candidats</button>
+  <div class="modal-backdrop" *ngIf="avisModalOpen" (click)="closeAvisModal()">
+    <div class="avis-modal" (click)="$event.stopPropagation()">
+      <div class="consultation-modal-header">
+        <div>
+          <div class="modal-kicker">Donner avis</div>
+          <h3>{{ avisCandidate?.nom }}</h3>
+        </div>
+        <button class="modal-close" type="button" (click)="closeAvisModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="consultation-grid" *ngIf="avisCandidate as current">
+        <div class="consultation-card">
+          <div class="consultation-card-title">Résumé</div>
+          <div class="consultation-line">
+            <span>Master</span><strong>{{ current.master }}</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Score</span><strong>{{ current.score }}/20</strong>
+          </div>
+          <div class="consultation-line">
+            <span>Statut actuel</span><strong>{{ current.statut }}</strong>
+          </div>
+        </div>
+
+        <div class="consultation-card">
+          <div class="consultation-card-title">Nouvel avis</div>
+          <div class="avis-options">
+            <label
+              ><input type="radio" name="avisStatut" value="Validé" [(ngModel)]="avisStatut" />
+              Validé</label
+            >
+            <label
+              ><input type="radio" name="avisStatut" value="En attente" [(ngModel)]="avisStatut" />
+              En attente</label
+            >
+            <label
+              ><input type="radio" name="avisStatut" value="Rejeté" [(ngModel)]="avisStatut" />
+              Rejeté</label
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="consultation-docs">
+        <div class="consultation-card-title">Commentaire</div>
+        <textarea
+          class="finput avis-textarea"
+          rows="4"
+          [(ngModel)]="avisCommentaire"
+          placeholder="Ajouter une observation..."
+        ></textarea>
+      </div>
+
+      <div class="consultation-modal-actions">
+        <button type="button" class="btn btn-sec" (click)="closeAvisModal()">Annuler</button>
+        <button type="button" class="btn btn-primary" (click)="saveAvis()">Enregistrer</button>
+      </div>
+    </div>
   </div>
 </div>
