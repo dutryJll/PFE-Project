@@ -1453,6 +1453,7 @@
 .sidebar-nav {
   flex: 1;
   padding: 1rem 0.8rem;
+  overflow-y: auto;
 }
 
 .nav-item {
@@ -1469,6 +1470,9 @@
   border-radius: 14px;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .nav-item::before {
@@ -1542,6 +1546,15 @@
 .nav-item span {
   position: relative;
   z-index: 1;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.nav-item .badge-count,
+.nav-item .badge-danger {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .nav-divider {

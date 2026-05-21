@@ -61,8 +61,8 @@ import { ManageResponsablesComponent } from './components/admin/manage-responsab
 import { DashboardCommissionComponent } from './components/commission/dashboard-commission/dashboard-commission';
 import { ConsulterCandidaturesComponent as ConsulterCandidaturesCommissionComponent } from './components/commission/consulter-candidatures/consulter-candidatures';
 import { PreparerPreselection } from './components/commission/preparer-preselection/preparer-preselection';
-import { ListePreselection } from './components/commission/liste-preselection/liste-preselection';
-import { ListeSelection } from './components/commission/liste-selection/liste-selection';
+import { SelectionMembreComponent } from './components/commission/selection-membre/selection-membre.component';
+import { SelectionResponsableComponent } from './components/commission/selection-responsable/selection-responsable.component';
 import { ListeDossiersComponent } from './components/commission/liste-dossiers/liste-dossiers';
 import { DossierAnalysisComponent } from './components/commission/dossier-analysis/dossier-analysis';
 import { ExaminerOcrComponent } from './components/commission/examiner-ocr/examiner-ocr';
@@ -251,9 +251,9 @@ export const routes: Routes = [
   },
   {
     path: 'commission/liste-preselection',
-    component: ListePreselection,
+    component: SelectionMembreComponent,
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['commission', 'responsable_commission'] },
+    data: { roles: ['commission', 'responsable_commission', 'membre'] },
   },
   {
     path: 'commission/decision-collegiale',
@@ -263,10 +263,10 @@ export const routes: Routes = [
   },
   {
     path: 'commission/liste-selection',
-    component: ListeSelection,
+    component: SelectionResponsableComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: {
-      roles: ['commission', 'responsable_commission', 'membre'],
+      roles: ['responsable_commission'],
       actions: [
         'Sélection finale',
         'Publier liste principale',

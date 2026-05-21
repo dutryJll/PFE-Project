@@ -3,7 +3,7 @@
       HEADER / STATISTIQUES
       ======================================== -->
   <div class="stats-section">
-    <h2 class="section-title">Gestion des Candidatures - Ingénieur</h2>
+    <h2 class="section-title">Gestion des Candidatures - Ingénieurs</h2>
 
     <div class="stats-grid">
       <div
@@ -70,8 +70,13 @@
       <button class="btn-reset" (click)="toggleSelectAll()">
         {{ selectAll ? 'Désélectionner tout' : 'Cocher tout' }}
       </button>
-      <button class="btn" (click)="consulterSelection()" style="background: #378add; color: #fff">
-        Consulter sélection
+      <button
+        *ngIf="canOpenMassConsultation"
+        class="btn btn-mass-consultation"
+        (click)="consulterSelection()"
+      >
+        <i class="fas fa-users-viewfinder"></i>
+        Consulter les Dossiers Sélectionnés
       </button>
     </div>
 
@@ -80,7 +85,7 @@
         <tr>
           <th><input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" /></th>
           <th>Rang</th>
-          <th>Numéro</th>
+          <th>N° Inscription</th>
           <th>Nom complet</th>
           <th>Spécialité</th>
           <th>Score</th>
@@ -94,7 +99,7 @@
             <input type="checkbox" [checked]="selectionSet.has(c.id)" (change)="toggleSelect(c)" />
           </td>
           <td>{{ i + 1 }}</td>
-          <td>{{ c.id }}</td>
+          <td>{{ c.numeroInscription }}</td>
           <td>{{ c.nom }}</td>
           <td>{{ c.specialite }}</td>
           <td>{{ c.score }}</td>

@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from './services/theme.service';
 import { CandidatureService } from './services/candidature.service';
+import { AuthService } from './services/auth.service';
 import { FormsModule } from '@angular/forms';
 import {
   CommissionContextService,
@@ -22,18 +23,38 @@ export class AppComponent implements OnInit {
   commissions: CommissionContextOption[] = [];
   commissionsLoading = false;
   activeCommissionId: number | null = null;
+  showGlobalCommissionSelector = false;
 
   constructor(
     public themeService: ThemeService,
     private candidatureService: CandidatureService,
+    private authService: AuthService,
+    private router: Router,
     private commissionContext: CommissionContextService,
   ) {}
 
   ngOnInit(): void {
+    this.updateGlobalCommissionVisibility(this.router.url);
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.updateGlobalCommissionVisibility(event.urlAfterRedirects || event.url);
+      }
+    });
     this.loadMyCommissions();
     this.commissionContext.activeCommissionId$.subscribe((value) => {
       this.activeCommissionId = value;
     });
+  }
+
+  private updateGlobalCommissionVisibility(url: string): void {
+    const cleanUrl = (url || '').split('?')[0].split('#')[0];
+    const isPublicRoute =
+      cleanUrl === '/' ||
+      cleanUrl === '' ||
+      cleanUrl.startsWith('/login') ||
+      cleanUrl.startsWith('/candidat') ||
+      cleanUrl.startsWith('/accueil');
+    this.showGlobalCommissionSelector = !isPublicRoute && cleanUrl.startsWith('/commission');
   }
 
   loadMyCommissions(): void {
@@ -75,15 +96,13 @@ export class AppComponent implements OnInit {
     );
   }
 
-  onCommissionChange(event: Event): void {
-    const selectElement = event.target as HTMLSelectElement | null;
-    const selectedValue = selectElement?.value || '';
-
-    if (selectedValue) {
-      this.commissionContext.setActiveCommissionId(Number(selectedValue));
-    } else {
+  onCommissionChange(value: string | number | null): void {
+    if (value === null || value === '') {
       this.commissionContext.setActiveCommissionId(null);
+      return;
     }
+
+    this.commissionContext.setActiveCommissionId(Number(value));
   }
 
   toggleTheme(): void {

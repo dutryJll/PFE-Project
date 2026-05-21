@@ -8,12 +8,10 @@
           </button>
           <div class="hero-title-block">
             <div class="eyebrow">Commission / Sélection finale</div>
-            <h1><i class="fas fa-folder-open"></i><span>Liste de Sélection Finale</span></h1>
-            <p>Consulter, filtrer et publier les résultats finaux de la commission</p>
-          </div>
-          <div class="commission-session-pill">
-            <label>Session active</label>
-            <span>{{ finalSelectionFilters.session }}</span>
+            <h1>
+              <i class="fas fa-folder-open"></i><span>Sélection finale & Audit des Dossiers</span>
+            </h1>
+            <p>Contrôler les dossiers, ajuster les statuts et clôturer la commission active</p>
           </div>
         </div>
       </div>
@@ -57,17 +55,34 @@
           <h2>Liste de Sélection Finale</h2>
         </div>
         <div class="selection-card-header-actions">
-          <button
-            class="btn btn-pdf"
-            type="button"
-            (click)="toggleFinalSelectionExportMenu($event)"
-          >
-            <i class="far fa-file-lines" aria-hidden="true"></i>
-            <span>Générer PV</span>
+          <button class="btn btn-sec" type="button" (click)="launchAutomaticReepchage()">
+            <i class="fas fa-sitemap" aria-hidden="true"></i>
+            <span>Lancer le Repêchage automatique</span>
           </button>
-          <button class="btn btn-notify" type="button" (click)="openFinalSelectionConfirm()">
+          <div class="export-wrap">
+            <button
+              class="btn btn-pdf"
+              type="button"
+              (click)="toggleFinalSelectionExportMenu($event)"
+            >
+              <i class="far fa-file-lines" aria-hidden="true"></i>
+              <span>Générer PV final</span>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="export-menu" *ngIf="finalSelectionExportOpen">
+              <button type="button" class="export-menu-item" (click)="generateFinalPv()">
+                <i class="far fa-file-pdf"></i>
+                <span>PV PDF</span>
+              </button>
+              <button type="button" class="export-menu-item" (click)="finalSelectionExportExcel()">
+                <i class="far fa-file-excel"></i>
+                <span>PV Excel</span>
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-notify" type="button" (click)="notifyAndPublish()">
             <i class="fas fa-paper-plane" aria-hidden="true"></i>
-            <span>Publier</span>
+            <span>Publier & Notifier</span>
           </button>
         </div>
       </div>
@@ -134,6 +149,20 @@
                 <option *ngFor="let spec of finalSelectionSpecialiteOptions" [value]="spec">
                   {{ spec }}
                 </option>
+              </select>
+            </div>
+
+            <div class="filter-chip">
+              <div class="flbl">État audit</div>
+              <select
+                class="finput"
+                [(ngModel)]="finalSelectionFilters.auditState"
+                (change)="updateFinalSelectionFiltered()"
+              >
+                <option value="all">Tous</option>
+                <option value="en_attente">En attente d'examen</option>
+                <option value="conforme">Conforme</option>
+                <option value="non_conforme">Non conforme</option>
               </select>
             </div>
 
@@ -244,6 +273,15 @@
             <button type="button" class="btn btn-primary" (click)="applyFinalSelectionBulkAction()">
               Appliquer
             </button>
+            <button
+              *ngIf="canOpenFinalSelectionMassConsultation"
+              type="button"
+              class="btn btn-mass-consultation"
+              (click)="openFinalSelectionMassConsultation()"
+            >
+              <i class="fas fa-users-viewfinder"></i>
+              <span>Consulter les Dossiers Sélectionnés</span>
+            </button>
           </div>
 
           <div class="table-wrap">
@@ -267,15 +305,13 @@
                         (change)="toggleFinalSelectionAll($event.target.checked)"
                       />
                     </th>
-                    <th>Rang</th>
-                    <th>N°</th>
-                    <th>Nom complet</th>
-                    <th>Specialite</th>
-                    <th style="min-width: 130px">Score</th>
-                    <th>Decision preselection</th>
-                    <th style="min-width: 148px">Statut selection</th>
-                    <th>Observation</th>
-                    <th>Action</th>
+                    <th>N° Candidature</th>
+                    <th>Nom &amp; Prénom</th>
+                    <th>Spécialité Demandée</th>
+                    <th style="min-width: 130px">Moyenne Cursus</th>
+                    <th>État Audit</th>
+                    <th style="min-width: 148px">Statut Sélection</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,7 +326,6 @@
                         (change)="toggleFinalSelectionRow(candidate.id, $event.target.checked)"
                       />
                     </td>
-                    <td style="font-weight: 500; text-align: center">{{ candidate.rang }}</td>
                     <td style="font-size: 11px; color: var(--color-text-secondary)">
                       {{ candidate.num }}
                     </td>
@@ -321,6 +356,17 @@
                     <td>
                       <select
                         class="statut-select"
+                        [(ngModel)]="candidate.auditState"
+                        (ngModelChange)="updateFinalSelectionFiltered()"
+                      >
+                        <option value="en_attente">En attente d'examen</option>
+                        <option value="conforme">Conforme</option>
+                        <option value="non_conforme">Non conforme</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        class="statut-select"
                         [ngClass]="getFinalSelectionStatusClass(candidate.statut)"
                         [(ngModel)]="candidate.statut"
                         (ngModelChange)="onFinalSelectionStatusChange()"
@@ -332,24 +378,33 @@
                       </select>
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        class="obs-field"
-                        [(ngModel)]="candidate.obs"
-                        placeholder="Ajoutez une observation..."
-                        (change)="onFinalSelectionObservationChange()"
-                      />
-                    </td>
-                    <td>
-                      <button
-                        class="btn btn-primary btn-sm"
-                        type="button"
-                        (click)="finalSelectionConsult(candidate)"
-                      >
-                        <i class="fas fa-folder-open"></i>
-                        <br />
-                        <span>Consulter dossier</span>
-                      </button>
+                      <div class="action-menu-container">
+                        <button
+                          class="kebab-btn"
+                          type="button"
+                          aria-label="Actions"
+                          (click)="
+                            $event.stopPropagation();
+                            toggleSelectionActionMenu(candidate.id, $event)
+                          "
+                        >
+                          <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div
+                          class="action-menu"
+                          *ngIf="selectionActionMenuOpenId === candidate.id"
+                          (click)="$event.stopPropagation()"
+                        >
+                          <button
+                            type="button"
+                            class="menu-item"
+                            (click)="openAuditModal(candidate)"
+                          >
+                            <i class="fas fa-folder-open"></i>
+                            <span>Consulter dossier</span>
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -363,63 +418,8 @@
               <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
             </div>
           </div>
-
-          <div id="avis-global-section" class="avis-global-card">
-            <h3>Avis Global</h3>
-            <p>Soumettez votre avis final sur la liste de sélection de la commission active.</p>
-            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem">
-              <label style="display: flex; align-items: center; gap: 0.5rem">
-                <input
-                  type="radio"
-                  name="globalOpinion"
-                  [(ngModel)]="globalOpinion"
-                  [value]="'approve'"
-                />
-                Approuver
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem">
-                <input
-                  type="radio"
-                  name="globalOpinion"
-                  [(ngModel)]="globalOpinion"
-                  [value]="'reject'"
-                />
-                Défavorable
-              </label>
-            </div>
-            <div style="margin-top: 0.75rem">
-              <textarea
-                [(ngModel)]="globalComment"
-                placeholder="Commentaire (obligatoire si défavorable)..."
-                rows="3"
-                class="textarea-avis"
-              ></textarea>
-            </div>
-            <div class="avis-global-actions" style="margin-top: 0.5rem">
-              <button
-                class="btn btn-sec"
-                type="button"
-                (click)="globalOpinion = ''; globalComment = ''"
-              >
-                Annuler
-              </button>
-              <button class="btn btn-primary" type="button" (click)="submitGlobalOpinion()">
-                Soumettre l'avis
-              </button>
-            </div>
-          </div>
         </div>
       </div>
-
-      <!-- floating submit button pinned to viewport top-right -->
-      <button
-        class="global-fab"
-        type="button"
-        (click)="scrollToGlobalAvis()"
-        title="Aller à l'avis global"
-      >
-        Aller à l'avis global
-      </button>
 
       <!-- Publish modal -->
       <div
@@ -474,6 +474,109 @@
   </div>
 </div>
 
+<div class="audit-slider-backdrop" *ngIf="auditModalOpen" (click)="closeAuditModal()">
+  <aside class="audit-slider" (click)="$event.stopPropagation()">
+    <div class="dossier-modal-header">
+      <div class="dossier-modal-header-icon">
+        <i class="fas fa-clipboard-check"></i>
+      </div>
+      <div>
+        <div class="dossier-modal-kicker">Audit du dossier</div>
+        <h3>{{ auditModalCandidate?.prenom }} {{ auditModalCandidate?.nom }}</h3>
+        <p>{{ auditModalCandidate?.num }} · {{ auditModalCandidate?.spec }}</p>
+      </div>
+      <button class="dossier-modal-close" type="button" (click)="closeAuditModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="dossier-modal-body audit-slider-body">
+      <div class="audit-grid dossier-summary-grid">
+        <div class="dossier-summary-card">
+          <span>Moyenne cursus</span>
+          <strong>{{ auditModalCandidate?.score | number: '1.2-2' }}</strong>
+        </div>
+        <div class="dossier-summary-card">
+          <span>Pré-sélection</span>
+          <strong>{{ auditModalCandidate?.presel === 'oui' ? 'Oui' : 'Non' }}</strong>
+        </div>
+        <div class="dossier-summary-card">
+          <span>État audit</span>
+          <strong>{{ auditModalCandidate?.auditState }}</strong>
+        </div>
+      </div>
+
+      <div class="dossier-doc-grid audit-doc-grid" *ngIf="auditModalDocuments.length">
+        <article class="dossier-doc-card" *ngFor="let doc of auditModalDocuments">
+          <div class="dossier-doc-head">
+            <div>
+              <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
+              <p>
+                {{ doc.type_document_detail?.type_document || 'fichier' }}
+                · {{ doc.statut || 'en attente' }}
+              </p>
+            </div>
+            <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
+              {{ doc.statut }}
+            </span>
+          </div>
+
+          <a
+            *ngIf="doc.fichier_url"
+            class="dossier-doc-link"
+            [href]="doc.fichier_url"
+            target="_blank"
+          >
+            Ouvrir le fichier
+          </a>
+        </article>
+      </div>
+
+      <div class="audit-actions">
+        <label class="audit-choice" [class.active]="auditDecision === 'conforme'">
+          <input type="radio" name="auditDecision" value="conforme" [(ngModel)]="auditDecision" />
+          <span>
+            <strong>Conforme / Valider</strong>
+            <small>Le dossier est conforme au contrôle</small>
+          </span>
+        </label>
+        <label class="audit-choice" [class.active]="auditDecision === 'non_conforme'">
+          <input
+            type="radio"
+            name="auditDecision"
+            value="non_conforme"
+            [(ngModel)]="auditDecision"
+          />
+          <span>
+            <strong>Non conforme / Invalider</strong>
+            <small>Le dossier est rejeté après audit</small>
+          </span>
+        </label>
+        <textarea
+          *ngIf="auditDecision === 'non_conforme'"
+          class="textarea-avis"
+          rows="3"
+          [(ngModel)]="auditRejetMotif"
+          placeholder="Motif de rejet obligatoire"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="dossier-modal-footer audit-slider-footer">
+      <button class="btn btn-sec dossier-btn-secondary" type="button" (click)="closeAuditModal()">
+        Fermer
+      </button>
+      <button
+        class="btn btn-primary dossier-btn-primary"
+        type="button"
+        (click)="validateAuditDecision()"
+      >
+        Valider l'audit
+      </button>
+    </div>
+  </aside>
+</div>
+
 <div
   class="dossier-modal-backdrop modal-backdrop show"
   *ngIf="dossierModalOpen"
@@ -500,6 +603,31 @@
         </div>
         <button class="dossier-modal-close" type="button" (click)="closeDossierModal()">
           <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="dossier-modal-navigation" *ngIf="finalSelectionConsultationCandidates.length > 1">
+        <button
+          type="button"
+          class="btn btn-sec"
+          (click)="prevFinalSelectionConsultation()"
+          [disabled]="finalSelectionConsultationIndex === 0"
+        >
+          Précédent
+        </button>
+        <span>
+          {{ finalSelectionConsultationIndex + 1 }} /
+          {{ finalSelectionConsultationCandidates.length }}
+        </span>
+        <button
+          type="button"
+          class="btn btn-sec"
+          (click)="nextFinalSelectionConsultation()"
+          [disabled]="
+            finalSelectionConsultationIndex >= finalSelectionConsultationCandidates.length - 1
+          "
+        >
+          Suivant
         </button>
       </div>
 

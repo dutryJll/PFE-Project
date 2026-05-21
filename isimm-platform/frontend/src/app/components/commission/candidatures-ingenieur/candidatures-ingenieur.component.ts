@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { SpecialitesService } from '../../../services/specialites.service';
-import { MatDialog } from '@angular/material/dialog';
-import { MatDialogModule } from '@angular/material/dialog';
-import { CandidaturesConsultationModalComponent } from '../candidatures-master/candidatures-consultation-modal.component';
+import {
+  CommissionContextService,
+  CommissionContextOption,
+} from '../../../services/commission-context.service';
 
 // ========================================
 // INTERFACES
@@ -18,6 +18,7 @@ interface PieceJustificative {
 interface Candidat {
   id: number;
   nom: string;
+  numeroInscription: string;
   specialite: string;
   score: number;
   etat_dossier: 'Complet' | 'Incomplet';
@@ -54,96 +55,21 @@ interface StatistiqueCard {
   ],
 })
 export class CandidaturesIngenieurComponent implements OnInit {
-  // spécialités
-  specialitesData: any = null;
   availableSpecialites: string[] = [];
   selectedSpecialite: string = '';
+  filtreStatut: string = '';
+  filtreEtatDossier: string = '';
+  recherche = '';
+  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
   // ========================================
   // DONNÉES
   // ========================================
-  candidatsList: Candidat[] = [
-    {
-      id: 1,
-      nom: 'Amina Boucher',
-      specialite: 'Génie Logiciel',
-      score: 17.2,
-      etat_dossier: 'Complet',
-      statut: 'En attente',
-      email: 'amina@example.com',
-      cin: '11223344',
-      date_candidature: '2026-02-01',
-      pieces: [
-        { nom: 'Diplôme BAC', statut: 'ok' },
-        { nom: 'Relevé de Notes', statut: 'ok' },
-        { nom: 'Lettre de Motivation', statut: 'ok' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Certificat de Scolarité', statut: 'missing' },
-      ],
-    },
-    {
-      id: 2,
-      nom: 'Riyad Khalil',
-      specialite: 'Système Embarqué',
-      score: 15.8,
-      etat_dossier: 'Incomplet',
-      statut: 'En attente',
-      email: 'riyad@example.com',
-      cin: '44556677',
-      date_candidature: '2026-02-02',
-      pieces: [
-        { nom: 'Diplôme BAC', statut: 'ok' },
-        { nom: 'Relevé de Notes', statut: 'missing' },
-        { nom: 'Lettre de Motivation', statut: 'ok' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Certificat de Scolarité', statut: 'ok' },
-      ],
-    },
-    {
-      id: 3,
-      nom: 'Nadia Mansour',
-      specialite: 'Architecture Logicielle',
-      score: 18.5,
-      etat_dossier: 'Complet',
-      statut: 'Admis',
-      email: 'nadia@example.com',
-      cin: '77889900',
-      date_candidature: '2026-01-28',
-      pieces: [
-        { nom: 'Diplôme BAC', statut: 'ok' },
-        { nom: 'Relevé de Notes', statut: 'ok' },
-        { nom: 'Lettre de Motivation', statut: 'ok' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Certificat de Scolarité', statut: 'ok' },
-      ],
-    },
-    {
-      id: 4,
-      nom: 'Issam Ould',
-      specialite: 'DevOps et Cloud',
-      score: 14.1,
-      etat_dossier: 'Incomplet',
-      statut: 'En attente',
-      email: 'issam@example.com',
-      cin: '99001122',
-      date_candidature: '2026-02-03',
-      pieces: [
-        { nom: 'Diplôme BAC', statut: 'missing' },
-        { nom: 'Relevé de Notes', statut: 'ok' },
-        { nom: 'Lettre de Motivation', statut: 'missing' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Certificat de Scolarité', statut: 'ok' },
-      ],
-    },
-  ];
+  candidatsList: Candidat[] = [];
 
   // ========================================
   // STATE
   // ========================================
   currentIndex: number = 0;
-  filtreStatut: string = '';
-  filtreEtatDossier: string = '';
-  recherche: string = '';
-
   candidatsFiltres: Candidat[] = [];
   selectionSet: Set<number> = new Set<number>();
   selectAll: boolean = false;
@@ -153,18 +79,74 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // ========================================
   // LIFECYCLE
   // ========================================
-  constructor(
-    private specialitesService: SpecialitesService,
-    private dialog: MatDialog,
-  ) {}
+  constructor(private commissionContext: CommissionContextService) {}
 
   ngOnInit(): void {
+    this.candidatsList = this.buildMockCandidates();
+    this.availableSpecialites = Array.from(
+      new Set(this.candidatsList.map((c) => c.specialite)),
+    ).sort();
     this.appliquerFiltres();
-    this.specialitesService.getSpecialitesData().subscribe((data) => {
-      this.specialitesData = data || {};
-      // fallback to all specialties list
-      this.availableSpecialites = this.specialitesService.getAllSpecialties();
+    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.appliquerFiltres();
     });
+  }
+
+  private buildMockCandidates(): Candidat[] {
+    const base: Array<
+      [
+        string,
+        string,
+        'Génie Logiciel' | 'Informatique Industrielle' | 'Réseaux',
+        number,
+        'Complet' | 'Incomplet',
+        'En attente' | 'Admis' | 'Rejeté',
+      ]
+    > = [
+      ['Amina', 'Boucher', 'Génie Logiciel', 17.8, 'Complet', 'En attente'],
+      ['Riyad', 'Khalil', 'Informatique Industrielle', 15.8, 'Incomplet', 'En attente'],
+      ['Nadia', 'Mansour', 'Réseaux', 18.5, 'Complet', 'Admis'],
+      ['Issam', 'Ould', 'Génie Logiciel', 14.1, 'Incomplet', 'En attente'],
+      ['Meriem', 'Sassi', 'Informatique Industrielle', 16.4, 'Complet', 'Admis'],
+      ['Yassine', 'Ben Amor', 'Réseaux', 13.8, 'Incomplet', 'Rejeté'],
+      ['Sara', 'Brahmi', 'Génie Logiciel', 18.2, 'Complet', 'Admis'],
+      ['Anis', 'Gharbi', 'Informatique Industrielle', 12.9, 'Incomplet', 'Rejeté'],
+      ['Wiem', 'Karray', 'Réseaux', 15.3, 'Complet', 'En attente'],
+      ['Omar', 'Jaziri', 'Génie Logiciel', 17.1, 'Complet', 'Admis'],
+      ['Asma', 'Masmoudi', 'Informatique Industrielle', 14.7, 'Incomplet', 'En attente'],
+      ['Bassem', 'Mansouri', 'Réseaux', 11.8, 'Incomplet', 'Rejeté'],
+      ['Ines', 'Khelifi', 'Génie Logiciel', 16.9, 'Complet', 'Admis'],
+      ['Fares', 'Haddad', 'Informatique Industrielle', 15.1, 'Complet', 'En attente'],
+      ['Nour', 'Miled', 'Réseaux', 18.7, 'Complet', 'Admis'],
+      ['Mehdi', 'Zidi', 'Génie Logiciel', 13.4, 'Incomplet', 'Rejeté'],
+      ['Rania', 'Trabelsi', 'Informatique Industrielle', 16.1, 'Complet', 'Admis'],
+      ['Khalil', 'Hamdi', 'Réseaux', 14.3, 'Incomplet', 'En attente'],
+      ['Lina', 'Ben Youssef', 'Génie Logiciel', 17.4, 'Complet', 'Admis'],
+      ['Sami', 'Ouertani', 'Informatique Industrielle', 12.6, 'Incomplet', 'Rejeté'],
+    ];
+
+    return base.map((item, index) => ({
+      id: index + 1,
+      nom: `${item[0]} ${item[1]}`,
+      numeroInscription: `2603-${String(index + 21).padStart(5, '0')}-ING-${
+        item[2] === 'Génie Logiciel' ? 'GL' : item[2] === 'Informatique Industrielle' ? 'II' : 'RES'
+      }`,
+      specialite: item[2],
+      score: item[3],
+      etat_dossier: item[4],
+      statut: item[5],
+      email: `${item[0].toLowerCase()}.${item[1].toLowerCase().replace(/\s+/g, '.')}@example.com`,
+      cin: `${33000000 + index}`,
+      date_candidature: `2026-02-${String(1 + (index % 18)).padStart(2, '0')}`,
+      pieces: [
+        { nom: 'Diplôme BAC', statut: index % 4 === 0 ? 'missing' : 'ok' },
+        { nom: 'Relevé de Notes', statut: index % 5 === 0 ? 'missing' : 'ok' },
+        { nom: 'Lettre de Motivation', statut: index % 6 === 0 ? 'missing' : 'ok' },
+        { nom: 'CV', statut: 'ok' },
+        { nom: 'Certificat de Scolarité', statut: index % 3 === 0 ? 'missing' : 'ok' },
+      ],
+    }));
   }
 
   // ========================================
@@ -266,37 +248,39 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   consulterSelection(): void {
-    let list: Candidat[] = [];
-    if (this.selectAll || this.selectionSet.size === 0) {
-      list = [...this.candidatsFiltres];
-    } else {
-      list = this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id));
-    }
+    const list = this.selectionSet.size
+      ? this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id))
+      : [...this.candidatsFiltres];
     if (list.length === 0) return;
-    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
-      data: { list, startIndex: 0 },
-      width: '760px',
-    });
-    dialogRef.afterClosed().subscribe(() => {
-      this.appliquerFiltres();
-      this.selectionSet.clear();
-      this.selectAll = false;
-    });
+    this.viewingSelection = true;
+    this.viewingList = list;
+    this.currentIndex = 0;
   }
 
   consulterUn(c: Candidat): void {
-    const list = [c];
-    const dialogRef = this.dialog.open(CandidaturesConsultationModalComponent, {
-      data: { list, startIndex: 0 },
-      width: '760px',
-    });
-    dialogRef.afterClosed().subscribe(() => this.appliquerFiltres());
+    this.viewingSelection = true;
+    this.viewingList = [c];
+    this.currentIndex = 0;
   }
 
   fermerConsultation(): void {
     this.viewingSelection = false;
     this.viewingList = [];
     this.currentIndex = 0;
+  }
+
+  get canOpenMassConsultation(): boolean {
+    return this.selectionSet.size > 0;
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) return null;
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
   }
 
   reinitialiserFiltres(): void {
@@ -313,26 +297,26 @@ export class CandidaturesIngenieurComponent implements OnInit {
   get statistiques(): StatistiqueCard[] {
     return [
       {
-        label: 'Total Candidatures',
-        nombre: this.candidatsList.length,
+        label: 'Total Ingénieurs',
+        nombre: this.candidatsFiltres.length,
         couleur: '#8b5cf6',
         icon: '📋',
       },
       {
         label: 'Dossiers Complets',
-        nombre: this.candidatsList.filter((c) => c.etat_dossier === 'Complet').length,
+        nombre: this.candidatsFiltres.filter((c) => c.etat_dossier === 'Complet').length,
         couleur: '#22C55E',
         icon: '✓',
       },
       {
         label: 'À Vérifier',
-        nombre: this.candidatsList.filter((c) => c.statut === 'En attente').length,
+        nombre: this.candidatsFiltres.filter((c) => c.statut === 'En attente').length,
         couleur: '#F59E0B',
         icon: '⏳',
       },
       {
         label: 'Rejetés',
-        nombre: this.candidatsList.filter((c) => c.statut === 'Rejeté').length,
+        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Rejeté').length,
         couleur: '#EF4444',
         icon: '✕',
       },
@@ -349,6 +333,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
 
   get totalCandidatures(): number {
     return this.viewingSelection ? this.viewingList.length : this.candidatsFiltres.length;
+  }
+
+  get filteredCount(): number {
+    return this.candidatsFiltres.length;
   }
 
   get numeroActuel(): number {

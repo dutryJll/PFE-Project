@@ -1,5 +1,5 @@
 <div class="global-app-shell">
-  <header class="global-header" *ngIf="commissions.length > 0">
+  <header class="global-header" *ngIf="showGlobalCommissionSelector">
     <div class="global-brand">
       <span class="global-brand-kicker">Espace Commission</span>
       <strong>ISIMM</strong>
@@ -8,13 +8,13 @@
     <div class="global-commission">
       <span>Commission active</span>
       <select
+        class="form-select"
         [ngModel]="activeCommissionId"
         (ngModelChange)="onCommissionChange($event)"
-        [disabled]="commissionsLoading"
       >
-        <option *ngFor="let commission of commissions" [ngValue]="commission.id">
-          {{ commission.nom }}
-        </option>
+        <option value="1">Cycle Ingénieur en Génie Logiciel (GL)</option>
+        <option value="2">Mastère de Recherche en Data Science</option>
+        <option value="3">Mastère Professionnel en Génie Logiciel (GL)</option>
       </select>
     </div>
   </header>

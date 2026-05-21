@@ -231,12 +231,12 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   }
 
   get canOpenMassConsultation(): boolean {
-    return this.selectedIds.length > 1;
+    return this.selectedIds.length > 0;
   }
 
   openMassConsultation(): void {
     const list = this.selectedCandidates;
-    if (list.length <= 1) {
+    if (list.length === 0) {
       return;
     }
     this.consultationCandidates = list;

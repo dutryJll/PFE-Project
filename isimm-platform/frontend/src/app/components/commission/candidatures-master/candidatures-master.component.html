@@ -31,7 +31,17 @@
           <div class="selection-card-kicker">Résultats de consultation</div>
           <h2>Candidatures Master</h2>
         </div>
-        <div class="selection-card-header-actions"></div>
+        <div class="selection-card-header-actions">
+          <button
+            *ngIf="canOpenMassConsultation"
+            type="button"
+            class="btn btn-mass-consultation"
+            (click)="openMassConsultation()"
+          >
+            <i class="fas fa-users-viewfinder"></i>
+            <span>Consulter les Dossiers Sélectionnés</span>
+          </button>
+        </div>
       </div>
 
       <div class="selection-card-body">

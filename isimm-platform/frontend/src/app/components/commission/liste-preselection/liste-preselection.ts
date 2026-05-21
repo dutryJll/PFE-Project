@@ -1,34 +1,35 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, Router } from '@angular/router';
-import { ToastService } from '../../../services/toast.service';
-import { AuthService } from '../../../services/auth.service';
+import { RouterLink } from '@angular/router';
 import {
-  CommissionContextService,
   CommissionContextOption,
+  CommissionContextService,
 } from '../../../services/commission-context.service';
+import { ToastService } from '../../../services/toast.service';
+
+type CandidatStatus = 'Présélectionné' | 'En attente' | 'Refusé';
+type AvisStatut = 'favorable' | 'defavorable';
+type CandidatureType = 'interne' | 'externe';
+type TypeFilter = 'all' | CandidatureType;
+type CommissionProfile =
+  | 'master-mp-gl'
+  | 'master-ds'
+  | 'master-3i'
+  | 'master-mrgl'
+  | 'ingenieur-gl';
 
 interface Candidat {
   id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  cin: string;
-  type: 'master' | 'ingenieur';
-  voeux?: string[];
-  specialite?: string;
+  numeroCandidature: string;
+  firstName: string;
+  lastName: string;
+  specialiteDemandee: string;
+  commissionProfile: CommissionProfile;
   score: number;
-  statut: 'En attente' | 'Admis' | 'Refusé';
-  monAvis?: 'favorable' | 'defavorable' | null;
+  statut: CandidatStatus;
+  typeCandidature: CandidatureType;
   commentaire?: string;
-}
-
-interface CommissionOption {
-  id: number;
-  nom: string;
-  description?: string;
-  is_active?: boolean;
 }
 
 @Component({
@@ -39,200 +40,273 @@ interface CommissionOption {
   styleUrl: './liste-preselection.css',
 })
 export class ListePreselection implements OnInit {
+  readonly sessionText = 'Session 2025/2026';
+
   candidats: Candidat[] = [];
   candidatsFiltres: Candidat[] = [];
-  commissions: CommissionOption[] = [];
-  activeCommissionId: number | null = null;
-  loading = false;
 
-  filtreNom = '';
-  filtreType: string = '';
-  filtreAvis: string = '';
-  selectedSpecialite: string = '';
-  availableSpecialites: string[] = [];
-  globalAvisStatut: 'favorable' | 'defavorable' = 'favorable';
-  globalAvisCommentaire = '';
-  showGlobalAvisModal = false;
-  globalAvisSubmitting = false;
-  globalAvisSummary: any = null;
+  // Filtres
+  searchQuery = '';
+  selectedSpecialite = '';
+  selectedType: TypeFilter = 'all';
+  scoreMin: number | null = null;
+  scoreMax: number | null = null;
 
-  avisChanged: { [key: number]: 'favorable' | 'defavorable' | null } = {};
-  avisCandidatSelectionne: Candidat | null = null;
-  avisCandidatStatut: 'En attente' | 'Admis' | 'Refusé' = 'En attente';
-  avisCandidatCommentaire = '';
-
-  // User and role
-  userRole: string | null = null;
+  // Contexte commission
+  currentCommissionType = 'Mastère';
+  currentCommissionProfile: CommissionProfile = 'master-mp-gl';
   private activeCommissionCategory: CommissionContextOption['category'] | null = null;
 
-  showCommentModal = false;
-  candidatSelectionne: Candidat | null = null;
-  commentaire = '';
+  // Pagination
+  pageSize = 10;
+  currentPage = 1;
 
-  // Responsable selection state
+  // Selection + actions
   selectedIds: number[] = [];
   actionMenuOpenId: number | null = null;
-  // Dossier modal state
   dossierModalOpen = false;
   dossierModalCandidate: Candidat | null = null;
-  dossierModalData: { grades?: { label: string; value: number }[] } | null = null;
-  bulkDossierIndex = -1; // For navigating through bulk dossier view
+  avisModalOpen = false;
+  avisCandidate: Candidat | null = null;
+  avisStatut: AvisStatut = 'favorable';
+  avisCommentaire = '';
+  bulkDossierIndex = -1;
+  showGlobalAvisModal = false;
+  globalAvisStatut: 'favorable' | 'defavorable' = 'favorable';
+  globalAvisCommentaire = '';
+  globalAvisSummary: { favorables: number; defavorables: number; total: number } | null = null;
+
+  readonly specialitesByProfile: Record<CommissionProfile, string[]> = {
+    'master-mp-gl': ["Licence en Sciences de l'Informatique", 'Licence en Informatique de Gestion'],
+    'master-ds': ['Licence en Mathématiques Appliquées', "Licence en Sciences de l'Informatique"],
+    'master-3i': [
+      'Licence en Électronique',
+      'Licence en TIC',
+      'Licence en Mesures et Instrumentation',
+      'Licence en Génie Électrique',
+    ],
+    'master-mrgl': [
+      'Licence en Informatique',
+      'Maîtrise en Informatique',
+      'Licence/Maîtrise en Informatique de Gestion',
+    ],
+    'ingenieur-gl': ['Génie Logiciel (Informatique)'],
+  };
 
   constructor(
-    private router: Router,
-    private authService: AuthService,
-    private toastService: ToastService,
     private commissionContext: CommissionContextService,
+    private toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
-    const me = this.authService.getCurrentUser();
-    this.userRole = me?.role || me?.type || null;
-    this.loadCommissionsAndData();
+    this.candidats = this.buildMockCandidats();
+
     this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
       this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.syncCommissionProfile(commissionId);
       this.appliquerFiltres();
     });
-  }
 
-  loadCommissionsAndData(): void {
-    this.loadCandidats();
-    this.globalAvisSummary = {
-      favorables: this.candidats.filter((c) => c.statut === 'Admis').length,
-      defavorables: this.candidats.filter((c) => c.statut === 'Refusé').length,
-    };
-  }
-
-  getCommissionLabel(commission: CommissionOption): string {
-    const details = (commission.description || '').trim();
-    return details ? `${commission.nom} (${details})` : commission.nom;
-  }
-
-  loadCandidats(): void {
-    this.loading = true;
-    this.candidats = this.buildMockCandidats();
-    this.availableSpecialites = Array.from(new Set(this.candidats.map((c) => c.specialite || '')))
-      .filter(Boolean)
-      .sort();
     this.appliquerFiltres();
-    this.loading = false;
   }
 
-  private buildMockCandidats(): Candidat[] {
-    const base = [
-      ['Amina', 'Ben Salah', 'TI', 18.6, 'Admis'],
-      ['Yassine', 'Trabelsi', 'DSI', 17.9, 'Admis'],
-      ['Meriem', 'Khaldi', 'GL', 16.8, 'Admis'],
-      ['Omar', 'Jaziri', 'RS', 15.4, 'Admis'],
-      ['Nour', 'Cherif', 'TI', 14.7, 'En attente'],
-      ['Mahdi', 'Bouzid', 'DSI', 13.8, 'En attente'],
-      ['Salma', 'Haddad', 'GL', 12.9, 'Refusé'],
-      ['Anis', 'Gharbi', 'RS', 15.9, 'Admis'],
-      ['Asma', 'Masmoudi', 'TI', 14.2, 'En attente'],
-      ['Riadh', 'Hamdi', 'DSI', 11.6, 'Refusé'],
-      ['Wiem', 'Sassi', 'GL', 17.1, 'Admis'],
-      ['Hassen', 'Mnif', 'RS', 13.4, 'En attente'],
-      ['Nesrine', 'Brahmi', 'TI', 16.2, 'Admis'],
-      ['Sami', 'Ammar', 'DSI', 12.4, 'Refusé'],
-      ['Imen', 'Ben Youssef', 'GL', 15.2, 'En attente'],
-      ['Fares', 'Ouertani', 'RS', 18.1, 'Admis'],
-      ['Rania', 'Sfar', 'TI', 14.9, 'En attente'],
-      ['Mehdi', 'Zidi', 'DSI', 10.8, 'Refusé'],
-      ['Ines', 'Karray', 'GL', 17.4, 'Admis'],
-      ['Bassem', 'Mansouri', 'RS', 13.2, 'En attente'],
-    ] as Array<[string, string, string, number, 'Admis' | 'En attente' | 'Refusé']>;
-
-    return base.map((item, index) => ({
-      id: index + 1,
-      first_name: item[0],
-      last_name: item[1],
-      email: `${item[0].toLowerCase()}.${item[1].toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      cin: `${24000000 + index}`,
-      type: index % 3 === 1 ? 'ingenieur' : 'master',
-      voeux: index % 3 === 1 ? undefined : [`Master ${item[2]}`, `Master ${item[2]} Avancé`],
-      specialite: item[2],
-      score: item[3],
-      statut: item[4],
-      monAvis: item[4] === 'Admis' ? 'favorable' : item[4] === 'Refusé' ? 'defavorable' : null,
-      commentaire: '',
-    }));
+  get availableSpecialites(): string[] {
+    return this.specialitesByProfile[this.currentCommissionProfile] || [];
   }
 
-  calculateAverage(): number {
-    if (this.candidats.length === 0) return 0;
-    const sum = this.candidats.reduce((acc, c) => acc + c.score, 0);
-    return Math.round((sum / this.candidats.length) * 10) / 10;
+  get paginatedCandidats(): Candidat[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.candidatsFiltres.slice(start, start + this.pageSize);
   }
 
-  countByType(type: string): number {
-    return this.candidats.filter((c) => c.type === type).length;
+  get totalItems(): number {
+    return this.candidatsFiltres.length;
   }
 
-  countAvis(avis: string): number {
-    return this.candidats.filter((c) => c.monAvis === avis).length;
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalItems / this.pageSize));
   }
 
-  countStatut(statut: Candidat['statut']): number {
-    return this.candidats.filter((c) => c.statut === statut).length;
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
-  getCandidatStatusClass(statut: Candidat['statut']): string {
-    return statut === 'Refusé'
-      ? 'status-refuse'
-      : `status-${statut.toLowerCase().replace(/\s+/g, '-')}`;
+  get preselectionCount(): number {
+    return this.candidatsFiltres.filter((c) => c.statut === 'Présélectionné').length;
+  }
+
+  get averageScore(): number {
+    if (!this.candidatsFiltres.length) {
+      return 0;
+    }
+    const sum = this.candidatsFiltres.reduce((acc, candidat) => acc + candidat.score, 0);
+    return Math.round((sum / this.candidatsFiltres.length) * 100) / 100;
+  }
+
+  get paginationInfoText(): string {
+    if (!this.totalItems) {
+      return 'Affichage 0-0 sur 0';
+    }
+    const start = (this.currentPage - 1) * this.pageSize + 1;
+    const end = Math.min(start + this.pageSize - 1, this.totalItems);
+    return `Affichage ${start}-${end} sur ${this.totalItems}`;
   }
 
   appliquerFiltres(): void {
-    const query = this.filtreNom.trim().toLowerCase();
-    this.candidatsFiltres = this.candidats.filter((c) => {
-      const scope = this.activeCommissionCategory;
-      const matchCommission =
-        !scope ||
-        (scope === 'ingenieur' && c.type === 'ingenieur') ||
-        (scope === 'master-ds' && c.type === 'master' && c.specialite === 'DSI') ||
-        (scope === 'master-gl' && c.type === 'master' && c.specialite === 'GL');
-      const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
-      const matchType = !this.filtreType || c.type === this.filtreType;
-      const matchAvis = !this.filtreAvis || c.monAvis === this.filtreAvis;
-      const matchSpecialite = !this.selectedSpecialite || c.specialite === this.selectedSpecialite;
-      const matchName = !query || fullName.includes(query) || c.cin.toLowerCase().includes(query);
-      return matchCommission && matchType && matchAvis && matchSpecialite && matchName;
+    const q = this.searchQuery.trim().toLowerCase();
+
+    const rows = this.candidats.filter((candidat) => {
+      const matchesCommission = this.matchCommissionScope(candidat);
+      const fullName = `${candidat.firstName} ${candidat.lastName}`.toLowerCase();
+
+      const matchSearch =
+        !q || fullName.includes(q) || candidat.numeroCandidature.toLowerCase().includes(q);
+
+      const matchSpecialite =
+        !this.selectedSpecialite || candidat.specialiteDemandee === this.selectedSpecialite;
+
+      const matchType =
+        this.selectedType === 'all' || candidat.typeCandidature === this.selectedType;
+
+      const min = this.scoreMin === null || this.scoreMin === undefined ? -Infinity : this.scoreMin;
+      const max = this.scoreMax === null || this.scoreMax === undefined ? Infinity : this.scoreMax;
+      const matchScore = candidat.score >= min && candidat.score <= max;
+
+      return matchesCommission && matchSearch && matchSpecialite && matchType && matchScore;
     });
-    // keep selection in sync with filtered list
-    this.selectedIds = this.selectedIds.filter((id) =>
-      this.candidatsFiltres.some((c) => c.id === id),
-    );
-  }
 
-  private getCommissionCategoryFromId(
-    commissionId: number | null,
-  ): CommissionContextOption['category'] | null {
-    if (commissionId === null) return null;
-    if (commissionId === 1) return 'ingenieur';
-    if (commissionId === 2) return 'master-ds';
-    if (commissionId === 3) return 'master-gl';
-    return null;
-  }
+    this.candidatsFiltres = rows;
+    this.selectedIds = this.selectedIds.filter((id) => rows.some((row) => row.id === id));
 
-  // Responsable selection helpers
-  toggleSelect(id: number, event?: Event): void {
-    if (event) event.stopPropagation();
-    const i = this.selectedIds.indexOf(id);
-    if (i >= 0) this.selectedIds.splice(i, 1);
-    else this.selectedIds.push(id);
-  }
-
-  toggleAll(event: any): void {
-    const allIds = this.candidatsFiltres.map((c) => c.id);
-    if (event.target.checked) {
-      this.selectedIds = [...new Set([...this.selectedIds, ...allIds])];
-    } else {
-      this.selectedIds = [];
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
     }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+  }
+
+  changePage(delta: number): void {
+    const nextPage = this.currentPage + delta;
+    if (nextPage < 1 || nextPage > this.totalPages) {
+      return;
+    }
+    this.currentPage = nextPage;
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) {
+      return;
+    }
+    this.currentPage = page;
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
+    this.appliquerFiltres();
+  }
+
+  reinitialiserFiltres(): void {
+    this.searchQuery = '';
+    this.selectedSpecialite = '';
+    this.selectedType = 'all';
+    this.scoreMin = null;
+    this.scoreMax = null;
+    this.currentPage = 1;
+    this.appliquerFiltres();
+  }
+
+  toggleAll(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.selectedIds = this.paginatedCandidats.map((c) => c.id);
+      return;
+    }
+    this.selectedIds = [];
+  }
+
+  toggleSelect(id: number, event?: Event): void {
+    event?.stopPropagation();
+    if (this.selectedIds.includes(id)) {
+      this.selectedIds = this.selectedIds.filter((candidateId) => candidateId !== id);
+      return;
+    }
+    this.selectedIds = [...this.selectedIds, id];
   }
 
   isSelected(id: number): boolean {
     return this.selectedIds.includes(id);
+  }
+
+  isAllPageSelected(): boolean {
+    return (
+      this.paginatedCandidats.length > 0 &&
+      this.paginatedCandidats.every((candidate) => this.selectedIds.includes(candidate.id))
+    );
+  }
+
+  getStatusClass(statut: CandidatStatus): string {
+    if (statut === 'Présélectionné') return 'status-preselectionne';
+    if (statut === 'Refusé') return 'status-refuse';
+    return 'status-attente';
+  }
+
+  voirDossier(candidate: Candidat): void {
+    this.dossierModalCandidate = candidate;
+    this.dossierModalOpen = true;
+    this.bulkDossierIndex = this.selectedIds.indexOf(candidate.id);
+    this.closeActionMenu();
+  }
+
+  closeDossierModal(): void {
+    this.dossierModalOpen = false;
+    this.dossierModalCandidate = null;
+    this.bulkDossierIndex = -1;
+  }
+
+  prevBulkDossier(): void {
+    if (this.bulkDossierIndex <= 0) {
+      return;
+    }
+    this.bulkDossierIndex -= 1;
+    const targetId = this.selectedIds[this.bulkDossierIndex];
+    const target = this.candidats.find((c) => c.id === targetId) || null;
+    this.dossierModalCandidate = target;
+  }
+
+  nextBulkDossier(): void {
+    if (this.bulkDossierIndex < 0 || this.bulkDossierIndex >= this.selectedIds.length - 1) {
+      return;
+    }
+    this.bulkDossierIndex += 1;
+    const targetId = this.selectedIds[this.bulkDossierIndex];
+    const target = this.candidats.find((c) => c.id === targetId) || null;
+    this.dossierModalCandidate = target;
+  }
+
+  ouvrirAvisCandidat(candidate: Candidat): void {
+    this.avisCandidate = candidate;
+    this.avisStatut = candidate.statut === 'Refusé' ? 'defavorable' : 'favorable';
+    this.avisCommentaire = candidate.commentaire || '';
+    this.avisModalOpen = true;
+    this.closeActionMenu();
+  }
+
+  closeAvisModal(): void {
+    this.avisModalOpen = false;
+    this.avisCandidate = null;
+    this.avisCommentaire = '';
+  }
+
+  saveAvis(): void {
+    if (!this.avisCandidate) {
+      return;
+    }
+
+    this.avisCandidate.statut = this.avisStatut === 'favorable' ? 'Présélectionné' : 'Refusé';
+    this.avisCandidate.commentaire = this.avisCommentaire;
+    this.closeAvisModal();
+    this.appliquerFiltres();
   }
 
   toggleActionMenu(candidateId: number, event?: Event): void {
@@ -244,139 +318,25 @@ export class ListePreselection implements OnInit {
     this.actionMenuOpenId = null;
   }
 
-  validateSelection(): void {
-    if (this.selectedIds.length === 0) {
-      this.toastService.show('Veuillez sélectionner au moins un candidat', 'warning');
-      return;
-    }
-    const confirmMsg = `Êtes-vous sûr de vouloir marquer ${this.selectedIds.length} candidat(s) comme présélectionné(s) ?`;
-    if (!confirm(confirmMsg)) return;
-
-    this.selectedIds.forEach((id) => {
-      const candidat = this.candidats.find((item) => item.id === id);
-      if (candidat) {
-        candidat.statut = 'Admis';
-        candidat.monAvis = 'favorable';
-      }
-    });
-
-    this.selectedIds = [];
-    this.appliquerFiltres();
-    this.loadGlobalAvisSummary();
-    this.toastService.show('Candidat(s) présélectionné(s) avec succès.', 'success');
-  }
-
-  donnerAvis(candidat: Candidat, avis: 'favorable' | 'defavorable'): void {
-    candidat.monAvis = avis;
-    this.avisChanged[candidat.id] = avis;
-  }
-
-  ouvrirAvisCandidat(candidat: Candidat): void {
-    this.candidatSelectionne = candidat;
-    this.commentaire = candidat.commentaire || '';
-    this.avisCandidatSelectionne = candidat;
-    this.avisCandidatStatut = candidat.statut;
-    this.avisCandidatCommentaire = candidat.commentaire || '';
-    this.showCommentModal = true;
-  }
-
-  voirDossier(candidateOrId: Candidat | number): void {
-    let candidat: Candidat | undefined;
-    if (typeof candidateOrId === 'number') {
-      candidat = this.candidats.find((c) => c.id === candidateOrId);
-    } else {
-      candidat = candidateOrId;
-    }
-    if (!candidat) return;
-    // Prepare lightweight dossier summary (no PDFs)
-    this.dossierModalCandidate = candidat;
-    const base = candidat.score || 0;
-    const g1 = Math.max(0, Math.round((base - 1.2) * 10) / 10);
-    const g2 = Math.max(0, Math.round((base - 0.4) * 10) / 10);
-    const g3 = Math.max(0, Math.round((base + 0.6) * 10) / 10);
-    this.dossierModalData = {
-      grades: [
-        { label: 'Mathématiques', value: g1 },
-        { label: 'Algorithmique', value: g2 },
-        { label: 'Anglais', value: g3 },
-      ],
-    };
-    this.dossierModalOpen = true;
-    this.closeActionMenu();
-  }
-
-  closeDossierModal(): void {
-    this.dossierModalOpen = false;
-    this.dossierModalCandidate = null;
-    this.dossierModalData = null;
-    this.bulkDossierIndex = -1;
-  }
-
-  openBulkDossierView(): void {
-    if (this.selectedIds.length === 0) return;
-    this.bulkDossierIndex = 0;
-    this.loadBulkDossierAtIndex(0);
-  }
-
-  private loadBulkDossierAtIndex(index: number): void {
-    if (index < 0 || index >= this.selectedIds.length) return;
-    const candidateId = this.selectedIds[index];
-    const candidat = this.candidats.find((c) => c.id === candidateId);
-    if (!candidat) return;
-
-    this.dossierModalCandidate = candidat;
-    const base = candidat.score || 0;
-    const g1 = Math.max(0, Math.round((base - 1.2) * 10) / 10);
-    const g2 = Math.max(0, Math.round((base - 0.4) * 10) / 10);
-    const g3 = Math.max(0, Math.round((base + 0.6) * 10) / 10);
-    this.dossierModalData = {
-      grades: [
-        { label: 'Mathématiques', value: g1 },
-        { label: 'Algorithmique', value: g2 },
-        { label: 'Anglais', value: g3 },
-      ],
-    };
-    this.dossierModalOpen = true;
-  }
-
-  prevBulkDossier(): void {
-    if (this.bulkDossierIndex > 0) {
-      this.bulkDossierIndex--;
-      this.loadBulkDossierAtIndex(this.bulkDossierIndex);
-    }
-  }
-
-  nextBulkDossier(): void {
-    if (this.bulkDossierIndex < this.selectedIds.length - 1) {
-      this.bulkDossierIndex++;
-      this.loadBulkDossierAtIndex(this.bulkDossierIndex);
-    }
-  }
-
   onPageClick(): void {
     this.closeActionMenu();
   }
 
-  voirDetails(id: number): void {
-    this.router.navigate(['/consultation-dossier', id]);
+  exporterExcel(): void {
+    this.toastService.show('Export Excel généré (démo).', 'info');
   }
 
-  sauvegarderAvis(): void {
-    const changedIds = Object.keys(this.avisChanged);
-    if (!changedIds.length) {
-      this.toastService.show('Aucun avis à sauvegarder.', 'info');
-      return;
-    }
-
-    this.avisChanged = {};
-    this.toastService.show('Avis sauvegardés avec succès.', 'success');
-  }
-
-  hasAvisChanged(): boolean {
-    return Object.keys(this.avisChanged).length > 0;
+  imprimerListe(): void {
+    window.print();
   }
 
   openGlobalAvisModal(): void {
+    this.globalAvisSummary = {
+      favorables: this.candidatsFiltres.filter((candidat) => candidat.statut === 'Présélectionné')
+        .length,
+      defavorables: this.candidatsFiltres.filter((candidat) => candidat.statut === 'Refusé').length,
+      total: this.candidatsFiltres.length,
+    };
     this.globalAvisStatut = 'favorable';
     this.globalAvisCommentaire = '';
     this.showGlobalAvisModal = true;
@@ -384,69 +344,238 @@ export class ListePreselection implements OnInit {
 
   closeGlobalAvisModal(): void {
     this.showGlobalAvisModal = false;
+    this.globalAvisCommentaire = '';
   }
 
   submitGlobalAvis(): void {
     if (this.globalAvisStatut === 'defavorable' && !this.globalAvisCommentaire.trim()) {
-      this.toastService.show(
-        'Argumentaire obligatoire pour un avis global défavorable.',
-        'warning',
-      );
-      return;
-    }
-    this.globalAvisSubmitting = true;
-    const newStatus: Candidat['statut'] =
-      this.globalAvisStatut === 'favorable' ? 'Admis' : 'Refusé';
-    this.candidats.forEach((candidat) => {
-      candidat.statut = newStatus;
-      candidat.monAvis = this.globalAvisStatut;
-      candidat.commentaire = this.globalAvisCommentaire.trim();
-    });
-    this.appliquerFiltres();
-    this.globalAvisSummary = {
-      favorables: this.countStatut('Admis'),
-      defavorables: this.countStatut('Refusé'),
-    };
-    this.globalAvisSubmitting = false;
-    this.showGlobalAvisModal = false;
-    this.toastService.show('Avis global enregistré.', 'success');
-  }
-
-  loadGlobalAvisSummary(): void {
-    this.globalAvisSummary = {
-      favorables: this.countStatut('Admis'),
-      defavorables: this.countStatut('Refusé'),
-    };
-  }
-
-  fermerModal(): void {
-    this.showCommentModal = false;
-    this.candidatSelectionne = null;
-    this.commentaire = '';
-    this.avisCandidatSelectionne = null;
-    this.avisCandidatStatut = 'En attente';
-    this.avisCandidatCommentaire = '';
-  }
-
-  sauvegarderCommentaire(): void {
-    if (!this.candidatSelectionne) {
+      this.toastService.show('Le commentaire est obligatoire pour un avis défavorable.', 'error');
       return;
     }
 
-    const candidat = this.candidatSelectionne;
-    candidat.statut = this.avisCandidatStatut;
-    candidat.commentaire = this.avisCandidatCommentaire.trim();
-    this.commentaire = candidat.commentaire;
-    candidat.monAvis =
-      this.avisCandidatStatut === 'Admis'
-        ? 'favorable'
-        : this.avisCandidatStatut === 'Refusé'
-          ? 'defavorable'
-          : null;
-    this.avisChanged[candidat.id] = candidat.monAvis;
-    this.appliquerFiltres();
-    this.fermerModal();
-    this.loadGlobalAvisSummary();
-    this.toastService.show('Statut du candidat mis à jour.', 'success');
+    this.toastService.show('Avis global soumis (démo).', 'success');
+    this.closeGlobalAvisModal();
+  }
+
+  private matchCommissionScope(candidat: Candidat): boolean {
+    return candidat.commissionProfile === this.currentCommissionProfile;
+  }
+
+  private syncCommissionProfile(commissionId: number | null): void {
+    const active = this.commissionContext.commissions.find(
+      (commission) => commission.id === commissionId,
+    );
+    const label = (active?.nom || '').toLowerCase();
+
+    if (this.activeCommissionCategory === 'ingenieur') {
+      this.currentCommissionProfile = 'ingenieur-gl';
+      this.currentCommissionType = 'Cycle Ingénieur';
+    } else {
+      this.currentCommissionType = 'Mastère';
+      if (label.includes('data') || label.includes('ds')) {
+        this.currentCommissionProfile = 'master-ds';
+      } else if (label.includes('3i')) {
+        this.currentCommissionProfile = 'master-3i';
+      } else if (label.includes('mrgl') || label.includes('recherche')) {
+        this.currentCommissionProfile = 'master-mrgl';
+      } else {
+        this.currentCommissionProfile = 'master-mp-gl';
+      }
+    }
+
+    if (
+      this.selectedSpecialite &&
+      !this.specialitesByProfile[this.currentCommissionProfile].includes(this.selectedSpecialite)
+    ) {
+      this.selectedSpecialite = '';
+    }
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): CommissionContextOption['category'] | null {
+    if (commissionId === null) return null;
+    const commission = this.commissionContext.commissions.find((item) => item.id === commissionId);
+    if (commission?.category) return commission.category;
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
+  }
+
+  private buildMockCandidats(): Candidat[] {
+    const base: Array<
+      [string, string, string, number, CandidatStatus, CandidatureType, CommissionProfile]
+    > = [
+      [
+        'Amina',
+        'Ben Salah',
+        "Licence en Sciences de l'Informatique",
+        14.52,
+        'Présélectionné',
+        'interne',
+        'master-mp-gl',
+      ],
+      [
+        'Yassine',
+        'Trabelsi',
+        'Licence en Informatique de Gestion',
+        13.42,
+        'En attente',
+        'externe',
+        'master-mp-gl',
+      ],
+      [
+        'Meriem',
+        'Khaldi',
+        'Licence en Mathématiques Appliquées',
+        16.18,
+        'Présélectionné',
+        'interne',
+        'master-ds',
+      ],
+      [
+        'Omar',
+        'Jaziri',
+        "Licence en Sciences de l'Informatique",
+        12.76,
+        'Refusé',
+        'externe',
+        'master-ds',
+      ],
+      [
+        'Nour',
+        'Cherif',
+        'Licence en Électronique',
+        15.88,
+        'Présélectionné',
+        'interne',
+        'master-3i',
+      ],
+      ['Mahdi', 'Bouzid', 'Licence en TIC', 11.94, 'En attente', 'externe', 'master-3i'],
+      [
+        'Salma',
+        'Haddad',
+        'Licence en Mesures et Instrumentation',
+        10.73,
+        'Refusé',
+        'externe',
+        'master-3i',
+      ],
+      [
+        'Anis',
+        'Gharbi',
+        'Licence en Génie Électrique',
+        14.02,
+        'En attente',
+        'interne',
+        'master-3i',
+      ],
+      [
+        'Asma',
+        'Masmoudi',
+        'Licence en Informatique',
+        17.04,
+        'Présélectionné',
+        'interne',
+        'master-mrgl',
+      ],
+      ['Riadh', 'Hamdi', 'Maîtrise en Informatique', 13.67, 'En attente', 'externe', 'master-mrgl'],
+      [
+        'Wiem',
+        'Sassi',
+        'Licence/Maîtrise en Informatique de Gestion',
+        12.03,
+        'Refusé',
+        'externe',
+        'master-mrgl',
+      ],
+      [
+        'Hassen',
+        'Mnif',
+        'Génie Logiciel (Informatique)',
+        15.36,
+        'Présélectionné',
+        'interne',
+        'ingenieur-gl',
+      ],
+      [
+        'Nesrine',
+        'Brahmi',
+        'Génie Logiciel (Informatique)',
+        14.01,
+        'En attente',
+        'interne',
+        'ingenieur-gl',
+      ],
+      [
+        'Sami',
+        'Ammar',
+        "Licence en Sciences de l'Informatique",
+        15.76,
+        'Présélectionné',
+        'interne',
+        'master-ds',
+      ],
+      [
+        'Imen',
+        'Ben Youssef',
+        'Licence en Informatique de Gestion',
+        12.55,
+        'Refusé',
+        'externe',
+        'master-mp-gl',
+      ],
+      [
+        'Fares',
+        'Ouertani',
+        'Licence en Mathématiques Appliquées',
+        13.98,
+        'En attente',
+        'externe',
+        'master-ds',
+      ],
+      [
+        'Rania',
+        'Sfar',
+        'Licence en Informatique',
+        16.42,
+        'Présélectionné',
+        'interne',
+        'master-mrgl',
+      ],
+      [
+        'Mehdi',
+        'Zidi',
+        'Génie Logiciel (Informatique)',
+        11.22,
+        'Refusé',
+        'externe',
+        'ingenieur-gl',
+      ],
+      ['Ines', 'Karray', 'Licence en TIC', 15.44, 'Présélectionné', 'interne', 'master-3i'],
+      [
+        'Bassem',
+        'Mansouri',
+        'Licence en Électronique',
+        13.05,
+        'En attente',
+        'externe',
+        'master-3i',
+      ],
+    ];
+
+    return base.map((row, index) => ({
+      id: index + 1,
+      numeroCandidature: `2026-ING-GL-${String(index + 42).padStart(3, '0')}`,
+      firstName: row[0],
+      lastName: row[1],
+      specialiteDemandee: row[2],
+      commissionProfile: row[6],
+      score: row[3],
+      statut: row[4],
+      typeCandidature: row[5],
+      commentaire: '',
+    }));
   }
 }

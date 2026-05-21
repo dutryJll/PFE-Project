@@ -42,6 +42,8 @@ interface FinalSelectionCandidate {
   interne: boolean;
   presel: FinalSelectionPresel;
   statut: FinalSelectionDecision;
+  auditState: 'en_attente' | 'conforme' | 'non_conforme';
+  auditNote: string;
   obs: string;
 }
 
@@ -60,6 +62,7 @@ interface DossierDocumentView {
 interface FinalSelectionFilters {
   session: string;
   type: FinalSelectionTypeFilter;
+  auditState: 'all' | 'en_attente' | 'conforme' | 'non_conforme';
   statut: string;
   specialite: string;
   scoreMin: number;
@@ -97,12 +100,20 @@ export class ListeSelection implements OnInit {
   finalSelectionBulkAction: FinalSelectionDecision = '';
   finalSelectionExportOpen: boolean = false;
   finalSelectionConfirmOpen: boolean = false;
+  selectionActionMenuOpenId: number | null = null;
   dossierModalOpen: boolean = false;
   dossierModalLoading: boolean = false;
   dossierModalError = '';
   dossierModalCandidate: FinalSelectionCandidate | null = null;
   dossierModalData: any = null;
   dossierModalDocuments: DossierDocumentView[] = [];
+  auditModalOpen = false;
+  auditModalCandidate: FinalSelectionCandidate | null = null;
+  auditModalDocuments: DossierDocumentView[] = [];
+  auditRejetMotif = '';
+  auditDecision: 'conforme' | 'non_conforme' = 'conforme';
+  finalSelectionConsultationCandidates: FinalSelectionCandidate[] = [];
+  finalSelectionConsultationIndex = 0;
   finalSelectionToast: { message: string; type: string; visible: boolean } = {
     message: '0 candidats mis a jour',
     type: 't-success',
@@ -112,6 +123,7 @@ export class ListeSelection implements OnInit {
   finalSelectionFilters: FinalSelectionFilters = {
     session: '2025/2026',
     type: 'all',
+    auditState: 'all',
     statut: 'all',
     specialite: 'all',
     scoreMin: 0,
@@ -153,26 +165,26 @@ export class ListeSelection implements OnInit {
 
   private buildMockFinalSelectionCandidates(): FinalSelectionCandidate[] {
     const base = [
-      ['Aymen', 'Ben Amor', 'TI', 'ingenieur', 18.7, true, 'oui', 'lp'],
-      ['Nour', 'Brahmi', 'DSI', 'master-ds', 17.9, false, 'oui', 'lp'],
-      ['Meriem', 'Jemai', 'GL', 'master-gl', 16.8, true, 'oui', 'lp'],
-      ['Fares', 'Khelifi', 'RS', 'ingenieur', 15.9, false, 'oui', 'la'],
-      ['Asma', 'Mansouri', 'TI', 'master-gl', 15.1, true, 'oui', 'la'],
-      ['Yassine', 'Riahi', 'DSI', 'master-ds', 14.8, false, 'non', 'la'],
-      ['Sarra', 'Karray', 'GL', 'master-gl', 14.2, true, 'non', 'refuse'],
-      ['Oussama', 'Bouzid', 'RS', 'ingenieur', 13.9, false, 'non', 'refuse'],
-      ['Ines', 'Chokri', 'TI', 'ingenieur', 18.2, true, 'oui', 'lp'],
-      ['Wiem', 'Gharbi', 'DSI', 'master-ds', 17.3, false, 'oui', 'lp'],
-      ['Houssem', 'Haddad', 'GL', 'master-gl', 16.5, true, 'oui', 'la'],
-      ['Rania', 'Miled', 'RS', 'ingenieur', 15.6, false, 'oui', 'la'],
-      ['Mehdi', 'Sassi', 'TI', 'master-gl', 14.9, true, 'non', 'refuse'],
-      ['Lina', 'Ben Youssef', 'DSI', 'master-ds', 13.7, false, 'non', 'refuse'],
-      ['Bassem', 'Ouertani', 'GL', 'master-gl', 17.6, true, 'oui', 'lp'],
-      ['Sana', 'Jaziri', 'RS', 'ingenieur', 16.1, false, 'oui', 'lp'],
-      ['Amine', 'Trabelsi', 'TI', 'ingenieur', 15.3, true, 'oui', 'la'],
-      ['Farah', 'Masmoudi', 'DSI', 'master-ds', 12.8, false, 'non', 'refuse'],
-      ['Khalil', 'Zidi', 'GL', 'master-gl', 17.1, true, 'oui', 'lp'],
-      ['Nesrine', 'Hamdi', 'RS', 'ingenieur', 14.4, false, 'non', 'la'],
+      ['Aymen', 'Ben Amor', 'TI', 'ingenieur', 18.7, true, 'oui', 'lp', 'conforme'],
+      ['Nour', 'Brahmi', 'DSI', 'master-ds', 17.9, false, 'oui', 'lp', 'conforme'],
+      ['Meriem', 'Jemai', 'GL', 'master-gl', 16.8, true, 'oui', 'lp', 'conforme'],
+      ['Fares', 'Khelifi', 'RS', 'ingenieur', 15.9, false, 'oui', 'la', 'en_attente'],
+      ['Asma', 'Mansouri', 'TI', 'master-gl', 15.1, true, 'oui', 'la', 'en_attente'],
+      ['Yassine', 'Riahi', 'DSI', 'master-ds', 14.8, false, 'non', 'la', 'non_conforme'],
+      ['Sarra', 'Karray', 'GL', 'master-gl', 14.2, true, 'non', 'refuse', 'non_conforme'],
+      ['Oussama', 'Bouzid', 'RS', 'ingenieur', 13.9, false, 'non', 'refuse', 'non_conforme'],
+      ['Ines', 'Chokri', 'TI', 'ingenieur', 18.2, true, 'oui', 'lp', 'conforme'],
+      ['Wiem', 'Gharbi', 'DSI', 'master-ds', 17.3, false, 'oui', 'lp', 'conforme'],
+      ['Houssem', 'Haddad', 'GL', 'master-gl', 16.5, true, 'oui', 'la', 'en_attente'],
+      ['Rania', 'Miled', 'RS', 'ingenieur', 15.6, false, 'oui', 'la', 'en_attente'],
+      ['Mehdi', 'Sassi', 'TI', 'master-gl', 14.9, true, 'non', 'refuse', 'non_conforme'],
+      ['Lina', 'Ben Youssef', 'DSI', 'master-ds', 13.7, false, 'non', 'refuse', 'non_conforme'],
+      ['Bassem', 'Ouertani', 'GL', 'master-gl', 17.6, true, 'oui', 'lp', 'conforme'],
+      ['Sana', 'Jaziri', 'RS', 'ingenieur', 16.1, false, 'oui', 'lp', 'conforme'],
+      ['Amine', 'Trabelsi', 'TI', 'ingenieur', 15.3, true, 'oui', 'la', 'en_attente'],
+      ['Farah', 'Masmoudi', 'DSI', 'master-ds', 12.8, false, 'non', 'refuse', 'non_conforme'],
+      ['Khalil', 'Zidi', 'GL', 'master-gl', 17.1, true, 'oui', 'lp', 'conforme'],
+      ['Nesrine', 'Hamdi', 'RS', 'ingenieur', 14.4, false, 'non', 'la', 'en_attente'],
     ] as Array<
       [
         string,
@@ -183,6 +195,7 @@ export class ListeSelection implements OnInit {
         boolean,
         FinalSelectionPresel,
         FinalSelectionDecision,
+        'en_attente' | 'conforme' | 'non_conforme',
       ]
     >;
 
@@ -198,6 +211,8 @@ export class ListeSelection implements OnInit {
       interne: item[5],
       presel: item[6],
       statut: item[7],
+      auditState: item[8],
+      auditNote: '',
       obs: '',
     }));
   }
@@ -209,7 +224,66 @@ export class ListeSelection implements OnInit {
   finalSelectionConsult(candidate: FinalSelectionCandidate | null): void {
     // Open the built-in XL dossier modal (in-template) for demo consistency
     if (!candidate) return;
+    this.closeSelectionActionMenu();
+    this.finalSelectionConsultationCandidates = [candidate];
+    this.finalSelectionConsultationIndex = 0;
     this.voirDossierSelection(candidate);
+  }
+
+  get canOpenFinalSelectionMassConsultation(): boolean {
+    return this.finalSelectionSelectedIds.size > 0;
+  }
+
+  openFinalSelectionMassConsultation(): void {
+    const list = this.finalSelectionFiltered.filter((candidate) =>
+      this.finalSelectionSelectedIds.has(candidate.id),
+    );
+    if (!list.length) {
+      return;
+    }
+
+    this.finalSelectionConsultationCandidates = list;
+    this.finalSelectionConsultationIndex = 0;
+    this.voirDossierSelection(list[0]);
+  }
+
+  toggleSelectionActionMenu(candidateId: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.selectionActionMenuOpenId =
+      this.selectionActionMenuOpenId === candidateId ? null : candidateId;
+  }
+
+  closeSelectionActionMenu(): void {
+    this.selectionActionMenuOpenId = null;
+  }
+
+  prevFinalSelectionConsultation(): void {
+    if (this.finalSelectionConsultationIndex <= 0) {
+      return;
+    }
+
+    this.finalSelectionConsultationIndex -= 1;
+    const candidate =
+      this.finalSelectionConsultationCandidates[this.finalSelectionConsultationIndex];
+    if (candidate) {
+      this.voirDossierSelection(candidate);
+    }
+  }
+
+  nextFinalSelectionConsultation(): void {
+    if (
+      this.finalSelectionConsultationIndex >=
+      this.finalSelectionConsultationCandidates.length - 1
+    ) {
+      return;
+    }
+
+    this.finalSelectionConsultationIndex += 1;
+    const candidate =
+      this.finalSelectionConsultationCandidates[this.finalSelectionConsultationIndex];
+    if (candidate) {
+      this.voirDossierSelection(candidate);
+    }
   }
 
   submitGlobalOpinion(): void {
@@ -304,6 +378,87 @@ export class ListeSelection implements OnInit {
     this.dossierModalDocuments = [];
     this.dossierModalError = '';
     this.dossierModalLoading = false;
+    this.finalSelectionConsultationCandidates = [];
+    this.finalSelectionConsultationIndex = 0;
+  }
+
+  openAuditModal(candidate: FinalSelectionCandidate): void {
+    this.closeSelectionActionMenu();
+    this.auditModalCandidate = candidate;
+    this.auditDecision = candidate.auditState === 'non_conforme' ? 'non_conforme' : 'conforme';
+    this.auditRejetMotif = candidate.auditNote || '';
+    this.auditModalDocuments = [
+      {
+        id: 1,
+        nom: 'Diplôme',
+        statut: 'valide',
+        commentaire: 'Pièce conforme',
+        date_upload: new Date().toISOString(),
+        fichier_url: 'https://example.com/dossier.pdf',
+        type_document_detail: { type_document: 'pdf', description: 'Diplôme de test' },
+      },
+      {
+        id: 2,
+        nom: 'Relevé de notes',
+        statut: 'en attente',
+        commentaire: 'Document fictif',
+        date_upload: new Date().toISOString(),
+        fichier_url: 'https://example.com/releve.pdf',
+        type_document_detail: { type_document: 'pdf', description: 'Relevé de notes de test' },
+      },
+    ];
+    this.auditModalOpen = true;
+  }
+
+  closeAuditModal(): void {
+    this.auditModalOpen = false;
+    this.auditModalCandidate = null;
+    this.auditModalDocuments = [];
+    this.auditRejetMotif = '';
+    this.auditDecision = 'conforme';
+  }
+
+  validateAuditDecision(): void {
+    if (!this.auditModalCandidate) {
+      return;
+    }
+
+    if (this.auditDecision === 'non_conforme' && !this.auditRejetMotif.trim()) {
+      this.showFinalSelectionToast('Le motif de rejet est obligatoire', 't-error');
+      return;
+    }
+
+    this.auditModalCandidate.auditState = this.auditDecision;
+    this.auditModalCandidate.auditNote =
+      this.auditDecision === 'non_conforme' ? this.auditRejetMotif.trim() : '';
+    this.updateFinalSelectionFiltered();
+    this.showFinalSelectionToast('Contrôle du dossier enregistré', 't-success');
+    this.closeAuditModal();
+  }
+
+  launchAutomaticReepchage(): void {
+    const candidate = this.finalSelectionCandidates.find((row) => row.statut === 'la');
+    if (!candidate) {
+      this.showFinalSelectionToast('Aucun candidat éligible au repêchage', 't-info');
+      return;
+    }
+
+    candidate.statut = 'lp';
+    candidate.obs = 'Repêché automatiquement';
+    this.updateFinalSelectionFiltered();
+    this.showFinalSelectionToast(
+      `Repêchage automatique lancé pour ${candidate.prenom} ${candidate.nom}`,
+      't-success',
+    );
+  }
+
+  generateFinalPv(): void {
+    this.finalSelectionExportOpen = false;
+    this.showFinalSelectionToast('Génération du PV final lancée', 't-info');
+  }
+
+  notifyAndPublish(): void {
+    this.openFinalSelectionConfirm();
   }
 
   getDossierTitle(candidate: FinalSelectionCandidate | null): string {
@@ -341,9 +496,10 @@ export class ListeSelection implements OnInit {
     const scoreMax = Number(this.finalSelectionFilters.scoreMax) || 20;
     const search = (this.finalSelectionFilters.search || '').toLowerCase();
     const type = this.finalSelectionFilters.type;
+    const auditState = this.finalSelectionFilters.auditState;
     const specialite = this.finalSelectionFilters.specialite;
     const hideValides = this.finalSelectionFilters.hideValides;
-    const scope = this.activeCommissionCategory;
+    const scope = this.userRole === 'responsable_commission' ? null : this.activeCommissionCategory;
     let rows = this.finalSelectionCandidates.slice();
     rows = rows.filter((candidate) => !scope || candidate.commissionCategory === scope);
     rows = rows.filter((c) => c.score >= scoreMin && c.score <= scoreMax);
@@ -358,6 +514,7 @@ export class ListeSelection implements OnInit {
     if (type === 'interne') rows = rows.filter((c) => c.interne);
     else if (type === 'externe') rows = rows.filter((c) => !c.interne);
     if (specialite && specialite !== 'all') rows = rows.filter((c) => c.spec === specialite);
+    if (auditState && auditState !== 'all') rows = rows.filter((c) => c.auditState === auditState);
     // Filtre par statut selection
     const statutFilter = this.finalSelectionFilters.statut;
     if (statutFilter && statutFilter !== 'all')
@@ -505,6 +662,7 @@ export class ListeSelection implements OnInit {
     this.finalSelectionFilters = {
       session: '2025/2026',
       type: 'all',
+      auditState: 'all',
       statut: 'all',
       specialite: 'all',
       scoreMin: 0,
@@ -538,6 +696,7 @@ export class ListeSelection implements OnInit {
   onFinalSelectionPageClick(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
     if (!target?.closest('.export-wrap')) this.finalSelectionExportOpen = false;
+    if (!target?.closest('.action-menu-container')) this.closeSelectionActionMenu();
   }
   openFinalSelectionConfirm(): void {
     this.finalSelectionConfirmOpen = true;
