@@ -13,7 +13,102 @@
             </h1>
             <p>Contrôler les dossiers, ajuster les statuts et clôturer la commission active</p>
           </div>
+          <div class="commission-session-pill" *ngIf="!isResponsableSpace">
+            <label>Commission active</label>
+            <span>{{ currentCommissionDisplay }}</span>
+          </div>
         </div>
+      </div>
+
+      <div
+        id="avis-global-section"
+        style="
+          margin-bottom: 24px;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        "
+        *ngIf="isResponsableSpace"
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+          "
+        >
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b">
+            Réponses des membres (Avis global).
+          </h3>
+          <div style="display: flex; gap: 8px">
+            <button
+              class="btn"
+              style="
+                background-color: #10b981;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+              "
+              (click)="refreshCommissionMemberAvis()"
+            >
+              Actualiser
+            </button>
+            <button
+              class="btn"
+              style="
+                background-color: #3b82f6;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                cursor: pointer;
+              "
+              (click)="applyTop100FinalDecision()"
+            >
+              Décision Finale (Top 100)
+            </button>
+          </div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px">
+          <thead>
+            <tr style="border-bottom: 2px solid #e2e8f0; color: #64748b">
+              <th style="padding: 10px">MEMBRE</th>
+              <th style="padding: 10px">EMAIL</th>
+              <th style="padding: 10px">STATUT</th>
+              <th style="padding: 10px">COMMENTAIRE</th>
+              <th style="padding: 10px">DATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let avis of commissionMemberAvisRows"
+              style="border-bottom: 1px solid #f1f5f9"
+            >
+              <td style="padding: 10px; font-weight: 500">{{ avis.membre }}</td>
+              <td style="padding: 10px; color: #64748b">{{ avis.email }}</td>
+              <td style="padding: 10px">
+                <span
+                  style="
+                    background: #dcfce7;
+                    color: #15803d;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                  "
+                  >{{ avis.statut }}</span
+                >
+              </td>
+              <td style="padding: 10px; color: #475569">{{ avis.commentaire }}</td>
+              <td style="padding: 10px; color: #64748b">{{ avis.date | date: 'dd/MM/yyyy' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="summary-grid">
@@ -55,11 +150,16 @@
           <h2>Liste de Sélection Finale</h2>
         </div>
         <div class="selection-card-header-actions">
-          <button class="btn btn-sec" type="button" (click)="launchAutomaticReepchage()">
+          <button
+            class="btn btn-sec"
+            type="button"
+            (click)="launchAutomaticReepchage()"
+            *ngIf="isResponsableSpace"
+          >
             <i class="fas fa-sitemap" aria-hidden="true"></i>
             <span>Lancer le Repêchage automatique</span>
           </button>
-          <div class="export-wrap">
+          <div class="export-wrap" *ngIf="isResponsableSpace">
             <button
               class="btn btn-pdf"
               type="button"
@@ -80,7 +180,12 @@
               </button>
             </div>
           </div>
-          <button class="btn btn-notify" type="button" (click)="notifyAndPublish()">
+          <button
+            class="btn btn-notify"
+            type="button"
+            (click)="notifyAndPublish()"
+            *ngIf="isResponsableSpace"
+          >
             <i class="fas fa-paper-plane" aria-hidden="true"></i>
             <span>Publier & Notifier</span>
           </button>
@@ -260,17 +365,21 @@
           </div>
 
           <div class="bulk-controls">
-            <select
-              class="finput ng-pristine ng-valid ng-touched"
-              style="width: 160px"
-              [(ngModel)]="finalSelectionBulkAction"
+            <div class="bulk-select-wrap" *ngIf="isResponsableSpace">
+              <label class="bulk-select-label">Action groupée</label>
+              <select class="finput bulk-select" [(ngModel)]="finalSelectionBulkAction">
+                <option value="">Action groupée...</option>
+                <option value="lp">Liste principale (LP)</option>
+                <option value="la">Liste d'attente (LA)</option>
+                <option value="refuse">Refusé</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="applyFinalSelectionBulkAction()"
+              *ngIf="isResponsableSpace"
             >
-              <option value="">Action groupee...</option>
-              <option value="lp">→ Liste principale (LP)</option>
-              <option value="la">→ Liste d'attente (LA)</option>
-              <option value="refuse">→ Refuse</option>
-            </select>
-            <button type="button" class="btn btn-primary" (click)="applyFinalSelectionBulkAction()">
               Appliquer
             </button>
             <button
@@ -281,6 +390,15 @@
             >
               <i class="fas fa-users-viewfinder"></i>
               <span>Consulter les Dossiers Sélectionnés</span>
+            </button>
+            <button
+              *ngIf="!isResponsableSpace"
+              type="button"
+              class="btn btn-global-avis"
+              (click)="openGlobalAvisModal()"
+            >
+              <i class="fas fa-paper-plane"></i>
+              <span>Aller à l'avis global</span>
             </button>
           </div>
 
@@ -298,20 +416,22 @@
               <table class="selection-table">
                 <thead>
                   <tr>
-                    <th style="width: 34px">
+                    <th class="col-checkbox" style="width: 34px">
                       <input
                         type="checkbox"
                         [checked]="areAllFinalSelectionRowsSelected()"
                         (change)="toggleFinalSelectionAll($event.target.checked)"
                       />
                     </th>
-                    <th>N° Candidature</th>
-                    <th>Nom &amp; Prénom</th>
-                    <th>Spécialité Demandée</th>
-                    <th style="min-width: 130px">Moyenne Cursus</th>
-                    <th>État Audit</th>
-                    <th style="min-width: 148px">Statut Sélection</th>
-                    <th>Actions</th>
+                    <th class="col-rang">Rang</th>
+                    <th class="col-candidature">N° Candidature</th>
+                    <th class="col-nom">Nom &amp; Prénom</th>
+                    <th class="col-specialite">Spécialité Demandée</th>
+                    <th class="col-moyenne" style="min-width: 130px">Moyenne Cursus</th>
+                    <th class="col-preselection">Décision Présélection</th>
+                    <th class="col-audit">État Audit</th>
+                    <th class="col-statut" style="min-width: 148px">Statut Sélection</th>
+                    <th class="col-actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -319,19 +439,27 @@
                     *ngFor="let candidate of finalSelectionFiltered"
                     [class.selected]="isFinalSelectionRowSelected(candidate.id)"
                   >
-                    <td>
+                    <td class="col-checkbox">
                       <input
                         type="checkbox"
                         [checked]="isFinalSelectionRowSelected(candidate.id)"
                         (change)="toggleFinalSelectionRow(candidate.id, $event.target.checked)"
                       />
                     </td>
-                    <td style="font-size: 11px; color: var(--color-text-secondary)">
+                    <td class="cell-rang col-rang">{{ candidate.rang }}</td>
+                    <td
+                      class="col-candidature"
+                      style="font-size: 11px; color: var(--color-text-secondary)"
+                    >
                       {{ candidate.num }}
                     </td>
-                    <td style="font-weight: 500">{{ candidate.prenom }} {{ candidate.nom }}</td>
-                    <td style="color: var(--color-text-secondary)">{{ candidate.spec }}</td>
-                    <td>
+                    <td class="col-nom" style="font-weight: 500">
+                      {{ candidate.prenom }} {{ candidate.nom }}
+                    </td>
+                    <td class="col-specialite" style="color: var(--color-text-secondary)">
+                      {{ candidate.spec }}
+                    </td>
+                    <td class="col-moyenne">
                       <div class="score-wrap">
                         <span class="score-val">{{ candidate.score | number: '1.1-1' }}</span>
                         <div class="score-bar">
@@ -343,30 +471,36 @@
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td class="col-preselection">
                       <span *ngIf="candidate.presel === 'oui'" class="status-pill status-pill--ok"
-                        >Oui</span
+                        >✓ Oui</span
                       >
                       <span
                         *ngIf="candidate.presel === 'non'"
                         class="status-pill status-pill--danger"
-                        >Non</span
+                        >✕ Non</span
                       >
                     </td>
-                    <td>
-                      <select
-                        class="statut-select"
-                        [(ngModel)]="candidate.auditState"
-                        (ngModelChange)="updateFinalSelectionFiltered()"
+                    <td class="col-audit">
+                      <span
+                        *ngIf="candidate.auditState === 'conforme'"
+                        class="status-pill status-pill--ok"
+                        >Conforme</span
                       >
-                        <option value="en_attente">En attente d'examen</option>
-                        <option value="conforme">Conforme</option>
-                        <option value="non_conforme">Non conforme</option>
-                      </select>
+                      <span
+                        *ngIf="candidate.auditState === 'en_attente'"
+                        class="status-pill status-pill--warn"
+                        >En attente</span
+                      >
+                      <span
+                        *ngIf="candidate.auditState === 'non_conforme'"
+                        class="status-pill status-pill--danger"
+                        >Non conforme</span
+                      >
                     </td>
-                    <td>
+                    <td class="col-statut">
                       <select
-                        class="statut-select"
+                        class="statut-select statut-select-selection"
                         [ngClass]="getFinalSelectionStatusClass(candidate.statut)"
                         [(ngModel)]="candidate.statut"
                         (ngModelChange)="onFinalSelectionStatusChange()"
@@ -374,10 +508,10 @@
                         <option value="">— Choisir —</option>
                         <option value="lp">Admis (LP)</option>
                         <option value="la">Liste d'attente (LA)</option>
-                        <option value="refuse">Refuse</option>
+                        <option value="refuse">Refusé</option>
                       </select>
                     </td>
-                    <td>
+                    <td class="col-actions">
                       <div class="action-menu-container">
                         <button
                           class="kebab-btn"
@@ -417,6 +551,57 @@
               </div>
               <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="global-avis-modal-backdrop"
+        *ngIf="showGlobalAvisModal"
+        (click)="closeGlobalAvisModal()"
+      >
+        <div class="global-avis-modal" (click)="$event.stopPropagation()">
+          <div class="global-avis-modal-header">
+            <h3>Donner Avis Global</h3>
+            <button class="btn-close" type="button" (click)="closeGlobalAvisModal()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="global-avis-modal-body">
+            <div class="global-avis-choices">
+              <label class="global-avis-choice" [class.active]="globalOpinion === 'approve'">
+                <input
+                  type="radio"
+                  name="globalOpinion"
+                  [(ngModel)]="globalOpinion"
+                  [value]="'approve'"
+                />
+                <span>Favorable</span>
+              </label>
+              <label class="global-avis-choice" [class.active]="globalOpinion === 'reject'">
+                <input
+                  type="radio"
+                  name="globalOpinion"
+                  [(ngModel)]="globalOpinion"
+                  [value]="'reject'"
+                />
+                <span>Défavorable</span>
+              </label>
+            </div>
+            <textarea
+              class="textarea-avis"
+              rows="4"
+              [(ngModel)]="globalComment"
+              placeholder="Commentaire de la commission (obligatoire)"
+            ></textarea>
+          </div>
+          <div class="global-avis-modal-actions">
+            <button type="button" class="btn btn-sec" (click)="closeGlobalAvisModal()">
+              Annuler
+            </button>
+            <button type="button" class="btn btn-primary" (click)="submitMemberGlobalOpinion()">
+              Soumettre
+            </button>
           </div>
         </div>
       </div>
@@ -584,6 +769,7 @@
 >
   <div
     class="modal-dialog modal-xl modal-dialog-centered dossier-modal-dialog"
+    [class.massive-consultation-modal]="finalSelectionConsultationCandidates.length > 1"
     (click)="$event.stopPropagation()"
   >
     <div class="modal-content dossier-modal-content">
@@ -643,63 +829,90 @@
       </div>
 
       <div class="dossier-modal-body" *ngIf="!dossierModalLoading && !dossierModalError">
-        <div class="dossier-summary-grid">
-          <div class="dossier-summary-card">
-            <span>Score</span>
-            <strong>{{
-              dossierModalData?.score_completude || dossierModalCandidate?.score || '-'
-            }}</strong>
-          </div>
-          <div class="dossier-summary-card">
-            <span>Statut</span>
-            <strong>{{ dossierModalData?.statut || dossierModalCandidate?.statut || '-' }}</strong>
-          </div>
-          <div class="dossier-summary-card">
-            <span>Documents</span>
-            <strong>{{ dossierModalDocuments.length }}</strong>
-          </div>
-        </div>
+        <div class="massive-consultation-shell">
+          <div class="massive-layout-grid">
+            <aside class="candidate-left-sidebar massive-candidate-list">
+              <h4>Candidats sélectionnés</h4>
+              <button
+                type="button"
+                class="massive-candidate-item"
+                *ngFor="let candidate of finalSelectionConsultationCandidates; let i = index"
+                [class.active]="i === finalSelectionConsultationIndex"
+                (click)="focusConsultationCandidate(i)"
+              >
+                <span class="massive-candidate-rank">#{{ candidate.rang }}</span>
+                <span class="massive-candidate-name"
+                  >{{ candidate.prenom }} {{ candidate.nom }}</span
+                >
+                <span class="massive-candidate-num">{{ candidate.num }}</span>
+              </button>
+            </aside>
 
-        <div class="dossier-doc-grid" *ngIf="dossierModalDocuments.length">
-          <article class="dossier-doc-card" *ngFor="let doc of dossierModalDocuments">
-            <div class="dossier-doc-head">
-              <div>
-                <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
-                <p>
-                  {{ doc.type_document_detail?.type_document || 'fichier' }}
-                  · {{ doc.statut || 'en attente' }}
-                </p>
+            <section class="candidate-right-content candidate-details-pane">
+              <div class="dossier-summary-grid">
+                <div class="dossier-summary-card">
+                  <span>Moyenne Cursus</span>
+                  <strong>{{
+                    dossierModalData?.score_completude || dossierModalCandidate?.score || '-'
+                  }}</strong>
+                </div>
+                <div class="dossier-summary-card">
+                  <span>Statut Sélection</span>
+                  <strong>{{
+                    dossierModalData?.statut || dossierModalCandidate?.statut || '-'
+                  }}</strong>
+                </div>
+                <div class="dossier-summary-card">
+                  <span>Documents</span>
+                  <strong>{{ dossierModalDocuments.length }}</strong>
+                </div>
               </div>
-              <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
-                {{ doc.statut }}
-              </span>
-            </div>
 
-            <iframe
-              *ngIf="isPdf(doc.fichier_url)"
-              class="dossier-preview"
-              [src]="doc.fichier_url"
-              title="Aperçu dossier"
-            ></iframe>
+              <div class="document-viewer-grid" *ngIf="dossierModalDocuments.length">
+                <article class="dossier-doc-card" *ngFor="let doc of dossierModalDocuments">
+                  <div class="dossier-doc-head">
+                    <div>
+                      <h4>{{ doc.nom || doc.type_document_detail?.description || 'Document' }}</h4>
+                      <p>
+                        {{ doc.type_document_detail?.type_document || 'fichier' }}
+                        · {{ doc.statut || 'en attente' }}
+                      </p>
+                    </div>
+                    <span class="dossier-doc-badge" [class.valid]="doc.statut === 'valide'">
+                      {{ doc.statut }}
+                    </span>
+                  </div>
 
-            <div class="dossier-doc-meta">
-              <div>{{ doc.date_upload ? (doc.date_upload | date: 'dd/MM/yyyy HH:mm') : '-' }}</div>
-              <div>{{ doc.commentaire || 'Aucun commentaire' }}</div>
-            </div>
+                  <iframe
+                    *ngIf="isPdf(doc.fichier_url)"
+                    class="dossier-preview"
+                    [src]="doc.fichier_url"
+                    title="Aperçu dossier"
+                  ></iframe>
 
-            <a
-              *ngIf="doc.fichier_url"
-              class="dossier-doc-link"
-              [href]="doc.fichier_url"
-              target="_blank"
-            >
-              Ouvrir le fichier
-            </a>
-          </article>
-        </div>
+                  <div class="dossier-doc-meta">
+                    <div>
+                      {{ doc.date_upload ? (doc.date_upload | date: 'dd/MM/yyyy HH:mm') : '-' }}
+                    </div>
+                    <div>{{ doc.commentaire || 'Aucun commentaire' }}</div>
+                  </div>
 
-        <div class="dossier-empty" *ngIf="!dossierModalDocuments.length">
-          Aucun document disponible pour ce dossier.
+                  <a
+                    *ngIf="doc.fichier_url"
+                    class="dossier-doc-link"
+                    [href]="doc.fichier_url"
+                    target="_blank"
+                  >
+                    Ouvrir le fichier
+                  </a>
+                </article>
+              </div>
+
+              <div class="dossier-empty" *ngIf="!dossierModalDocuments.length">
+                Aucun document disponible pour ce dossier.
+              </div>
+            </section>
+          </div>
         </div>
       </div>
 

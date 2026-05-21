@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
 import {
   CommissionContextService,
@@ -42,7 +43,7 @@ interface StatistiqueCard {
 @Component({
   selector: 'app-candidatures-ingenieur',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './candidatures-ingenieur.component.html',
   styleUrls: ['./candidatures-ingenieur.component.css'],
   animations: [
@@ -75,6 +76,7 @@ export class CandidaturesIngenieurComponent implements OnInit {
   selectAll: boolean = false;
   viewingSelection: boolean = false;
   viewingList: Candidat[] = [];
+  actionMenuOpenId: number | null = null;
 
   // ========================================
   // LIFECYCLE
@@ -236,6 +238,16 @@ export class CandidaturesIngenieurComponent implements OnInit {
       this.selectionSet.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0;
   }
 
+  isSelected(id: number): boolean {
+    return this.selectionSet.has(id);
+  }
+
+  isAllVisibleSelected(): boolean {
+    return (
+      this.candidatsFiltres.length > 0 && this.selectionSet.size === this.candidatsFiltres.length
+    );
+  }
+
   toggleSelectAll(): void {
     if (this.selectAll) {
       this.selectionSet.clear();
@@ -261,12 +273,30 @@ export class CandidaturesIngenieurComponent implements OnInit {
     this.viewingSelection = true;
     this.viewingList = [c];
     this.currentIndex = 0;
+    this.actionMenuOpenId = null;
   }
 
   fermerConsultation(): void {
     this.viewingSelection = false;
     this.viewingList = [];
     this.currentIndex = 0;
+  }
+
+  openConsultation(c: Candidat): void {
+    this.consulterUn(c);
+  }
+
+  closeConsultation(): void {
+    this.fermerConsultation();
+  }
+
+  toggleActionMenu(candidatId: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.actionMenuOpenId = this.actionMenuOpenId === candidatId ? null : candidatId;
+  }
+
+  onPageClick(): void {
+    this.actionMenuOpenId = null;
   }
 
   get canOpenMassConsultation(): boolean {
@@ -371,6 +401,16 @@ export class CandidaturesIngenieurComponent implements OnInit {
       default:
         return 'badge-attente';
     }
+  }
+
+  getScoreClass(score: number): string {
+    if (score >= 16) return 's-good';
+    if (score >= 13) return 's-mid';
+    return 's-low';
+  }
+
+  getStatusPercent(score: number): number {
+    return Math.max(0, Math.min(100, (score / 20) * 100));
   }
 
   getScoreColor(): string {

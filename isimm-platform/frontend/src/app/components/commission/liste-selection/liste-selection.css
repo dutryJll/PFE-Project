@@ -150,6 +150,118 @@
   flex-wrap: wrap;
 }
 
+.selection-card-header--soft {
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(135deg, #f8fbff 0%, #edf5ff 100%);
+  color: #0f172a;
+  border: 1px solid #dbe3ee;
+  border-bottom: none;
+}
+
+.selection-card-header--soft .selection-card-kicker,
+.selection-card-header--soft h2 {
+  color: #0f172a;
+}
+
+.selection-card-kicker--dark {
+  color: #334155 !important;
+}
+
+.member-avis-panel {
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.member-avis-table-wrap {
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+}
+
+.member-avis-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.member-avis-table th,
+.member-avis-table td {
+  white-space: normal;
+  padding: 12px 14px;
+}
+
+.member-avis-table th:nth-child(1),
+.member-avis-table td:nth-child(1) {
+  width: 18%;
+}
+
+.member-avis-table th:nth-child(2),
+.member-avis-table td:nth-child(2) {
+  width: 24%;
+}
+
+.member-avis-table th:nth-child(3),
+.member-avis-table td:nth-child(3) {
+  width: 14%;
+}
+
+.member-avis-table th:nth-child(4),
+.member-avis-table td:nth-child(4) {
+  width: 30%;
+}
+
+.member-avis-table th:nth-child(5),
+.member-avis-table td:nth-child(5) {
+  width: 14%;
+}
+
+.member-cell {
+  font-weight: 700;
+}
+
+.member-comment-cell {
+  color: #475569;
+  line-height: 1.45;
+}
+
+.member-avis-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.member-avis-favorable {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.member-avis-défavorable,
+.member-avis-defavorable {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.member-avis-en attente,
+.member-avis-en_attente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.btn-refresh-avis {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+}
+
+.btn-top100 {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: none;
+}
+
 .selection-card-body {
   padding: 25px;
   display: flex;
@@ -285,6 +397,121 @@
   align-items: center;
   gap: 14px;
   border-left: 4px solid transparent;
+}
+
+/* Enforced table alignment to avoid ghost columns and clipped dropdowns */
+table.selection-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
+table.selection-table th,
+table.selection-table td {
+  padding: 12px 8px !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  overflow: visible !important;
+}
+.col-checkbox {
+  width: 40px;
+}
+.col-rang {
+  width: 60px;
+  font-weight: bold;
+}
+.col-candidature {
+  width: 140px;
+}
+.col-nom {
+  width: 180px;
+  text-align: left !important;
+}
+.col-specialite {
+  width: 90px;
+}
+.col-moyenne {
+  width: 80px;
+}
+.col-preselection {
+  width: 110px;
+}
+.col-audit {
+  width: 110px;
+}
+.col-statut {
+  width: 140px;
+}
+.col-actions {
+  width: 60px;
+  overflow: visible !important;
+}
+
+/* Ensure table wrappers and scroll containers don't clip dropdowns */
+.table-wrap,
+.table-scroll {
+  overflow: visible !important;
+}
+
+/* Kebab action menu positioning */
+.action-menu-container {
+  position: relative;
+}
+.kebab-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.action-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 9999 !important;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+/* Massive consultation modal cards */
+.massive-modal-dialog,
+.dossier-modal-dialog.massive-consultation-modal {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh;
+}
+.massive-cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.massive-metric-card {
+  background: #ffffff !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 100px;
+}
+.massive-metric-card .card-title {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.massive-metric-card .card-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .summary-copy {
@@ -1504,6 +1731,433 @@
 .table-hdr .export-menu-item:hover {
   background: #f8fafc;
 }
+
+/* ===== Structural overrides: role-safe selection UI ===== */
+.bulk-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+}
+
+.bulk-select-wrap {
+  display: grid;
+  gap: 6px;
+  min-width: 230px;
+}
+
+.bulk-select-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.bulk-select {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid #dbe3ee;
+  background: #fff;
+}
+
+.btn-global-avis {
+  background: linear-gradient(135deg, #1e40af, #1d4ed8);
+  color: #fff;
+  border: none;
+}
+
+.table-hdr {
+  align-items: center;
+}
+
+.table-hdr .tbl-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.table-hdr .export-wrap {
+  position: relative;
+}
+
+.table-hdr .export-menu {
+  min-width: 210px;
+  border-radius: 16px;
+  border: 1px solid #d9e5f3;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  padding: 10px;
+}
+
+.table-hdr .export-menu-item {
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.selection-table {
+  table-layout: fixed;
+}
+
+.selection-table th,
+.selection-table td {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.selection-table th:first-child,
+.selection-table td:first-child,
+.cell-rang {
+  text-align: center;
+}
+
+.cell-rang {
+  font-weight: 700;
+  color: #334155;
+}
+
+.statut-select-selection {
+  background: #fff;
+  color: #0f172a;
+  border-radius: 10px;
+  border: 1px solid #dbe3ee;
+  box-shadow: none;
+}
+
+.action-menu-container {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.kebab-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.kebab-btn:hover {
+  background: #f8fbff;
+  border-color: #bfd4ea;
+}
+
+.global-avis-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.global-avis-modal {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #dbe3ee;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.global-avis-modal-header,
+.global-avis-modal-actions {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.global-avis-modal-body {
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.global-avis-choices {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.global-avis-choice {
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.global-avis-choice.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.massive-consultation-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  height: 85vh;
+  overflow: hidden;
+}
+
+.massive-consultation-modal {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh;
+  margin: 2vh auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.massive-consultation-shell {
+  width: 100%;
+  height: 100%;
+}
+
+.massive-layout-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+
+.candidate-left-sidebar {
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.candidate-right-content {
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.massive-consultation-modal .dossier-summary-grid {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.massive-consultation-modal .dossier-summary-card {
+  background: #fff;
+  border: 1px solid #3b82f6;
+  border-radius: 14px;
+  min-height: 92px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  white-space: normal;
+}
+
+.massive-consultation-modal .massive-layout-grid {
+  width: 100%;
+  height: 100%;
+}
+
+.massive-consultation-modal .dossier-modal-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.massive-consultation-modal .dossier-modal-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.massive-consultation-modal .dossier-summary-card span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.massive-consultation-modal .dossier-summary-card strong {
+  color: #0f172a;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.massive-consultation-modal .document-viewer-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: 18px;
+}
+
+.massive-consultation-modal .dossier-doc-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.massive-consultation-modal .dossier-modal-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.massive-consultation-modal .dossier-preview {
+  min-height: 220px;
+}
+
+.selection-card .table-scroll,
+.selection-card table,
+.selection-card .table-wrap {
+  overflow: visible;
+}
+
+.selection-card .table-scroll {
+  overflow-x: auto;
+}
+
+.selection-table th,
+.selection-table td {
+  white-space: nowrap;
+}
+
+.selection-table th:nth-child(1),
+.selection-table td:nth-child(1) {
+  width: 42px;
+}
+
+.selection-table th:nth-child(2),
+.selection-table td:nth-child(2) {
+  width: 70px;
+}
+
+.selection-table th:nth-child(3),
+.selection-table td:nth-child(3) {
+  width: 155px;
+}
+
+.selection-table th:nth-child(4),
+.selection-table td:nth-child(4) {
+  width: 230px;
+}
+
+.selection-table th:nth-child(5),
+.selection-table td:nth-child(5) {
+  width: 150px;
+}
+
+.selection-table th:nth-child(6),
+.selection-table td:nth-child(6) {
+  width: 150px;
+}
+
+.selection-table th:nth-child(7),
+.selection-table td:nth-child(7) {
+  width: 148px;
+}
+
+.selection-table th:nth-child(8),
+.selection-table td:nth-child(8) {
+  width: 150px;
+}
+
+.selection-table th:nth-child(9),
+.selection-table td:nth-child(9) {
+  width: 170px;
+}
+
+.selection-table th:nth-child(10),
+.selection-table td:nth-child(10) {
+  width: 80px;
+  text-align: center;
+}
+
+.massive-candidate-list {
+  border-right: 1px solid #e2e8f0;
+  padding-right: 12px;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.massive-candidate-list h4 {
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+
+.massive-candidate-item {
+  width: 100%;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.massive-candidate-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.massive-candidate-rank {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.massive-candidate-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.massive-candidate-num {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.candidate-details-pane {
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.document-viewer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.dossier-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+@media (max-width: 1080px) {
+  .massive-consultation-container {
+    grid-template-columns: 1fr;
+    height: auto;
+    max-height: 85vh;
+  }
+
+  .massive-candidate-list {
+    border-right: none;
+    padding-right: 0;
+    max-height: 220px;
+  }
+}
 .btn.btn-pdf,
 .btn.btn-notify {
   padding: 10px 20px;
@@ -2058,6 +2712,116 @@
   .tabs-container {
     flex-direction: column;
   }
+}
+
+/* Final overrides: strict selection layout and massive-only ultra-wide modal */
+.dossier-modal-dialog {
+  max-width: min(1200px, 92vw);
+  width: min(1200px, 92vw);
+}
+
+.massive-consultation-modal {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh;
+  margin: 2vh auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.massive-consultation-modal .massive-layout-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+
+.massive-consultation-modal .candidate-left-sidebar {
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.massive-consultation-modal .candidate-right-content {
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.massive-consultation-modal .dossier-summary-grid {
+  align-items: stretch;
+}
+
+.massive-consultation-modal .dossier-summary-card {
+  background: #ffffff;
+  border: 1px solid #3b82f6;
+  border-radius: 14px;
+  min-height: 112px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.massive-consultation-modal .dossier-summary-card span,
+.massive-consultation-modal .dossier-summary-card strong {
+  overflow-wrap: anywhere;
+}
+
+.massive-consultation-modal .dossier-summary-card span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.massive-consultation-modal .dossier-summary-card strong {
+  font-size: 1.1rem;
+  line-height: 1.25;
+  color: #0f172a;
+}
+
+.selection-table {
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.selection-table th,
+.selection-table td {
+  vertical-align: middle;
+}
+
+.selection-table th:nth-child(8),
+.selection-table td:nth-child(8),
+.selection-table th:nth-child(9),
+.selection-table td:nth-child(9) {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.selection-table th:nth-child(8),
+.selection-table td:nth-child(8) {
+  width: 132px;
+}
+
+.selection-table th:nth-child(9),
+.selection-table td:nth-child(9) {
+  width: 150px;
+}
+
+.selection-table th:nth-child(10),
+.selection-table td:nth-child(10) {
+  width: 72px;
 }
 
 /* Observation field styling */

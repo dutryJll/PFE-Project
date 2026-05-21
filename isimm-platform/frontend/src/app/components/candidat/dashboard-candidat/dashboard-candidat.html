@@ -1480,14 +1480,6 @@
         <div class="section-header section-header-export">
           <h2>Inscription en ligne</h2>
           <div class="download-box">
-            <button
-              type="button"
-              class="btn-secondary btn-validate-modern btn-export-action"
-              (click)="validateMenuSection('inscription', $event)"
-            >
-              <i class="fas fa-check"></i>
-              Valider
-            </button>
             <label for="inscriptionExportFormat">Telecharger en</label>
             <select
               id="inscriptionExportFormat"
@@ -1531,9 +1523,11 @@
             <thead>
               <tr>
                 <th>N° Candidature</th>
-                <th>FORMATION</th>
-                <th>Statut</th>
-                <th>Dépôt</th>
+                <th>Nom &amp; Prénom</th>
+                <th>N° Inscription Universitaire</th>
+                <th>Attestation de Paiement</th>
+                <th>Statut Final</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1545,54 +1539,80 @@
                   <td>
                     <strong>{{ candidature.numero }}</strong>
                   </td>
-                  <td>{{ candidature.master_nom }}</td>
+                  <td>{{ getNomPrenomInscription(candidature) }}</td>
                   <td>
-                    <span class="badge badge-success">Sélectionné</span>
+                    {{ getNumeroInscriptionUniversitaire(candidature) }}
                   </td>
                   <td>
                     <button
-                      class="btn-action"
-                      [ngClass]="isFicheInscriptionDeposee(candidature) ? 'depose' : 'deposer'"
-                      [disabled]="!actionPermissions.depotDossier"
+                      type="button"
+                      class="btn-receipt"
+                      [disabled]="!hasAttestationPaiement(candidature)"
                       (click)="
-                        !isFicheInscriptionDeposee(candidature)
-                          ? ouvrirInscription(candidature, paiementPicker)
+                        hasAttestationPaiement(candidature)
+                          ? openAttestationPaiement(candidature)
                           : null
                       "
                     >
-                      <i
-                        class="fas"
-                        [ngClass]="
-                          isFicheInscriptionDeposee(candidature) ? 'fa-check' : 'fa-file-upload'
-                        "
-                      ></i>
-                      <span *ngIf="!isFicheInscriptionDeposee(candidature)">
-                        Déposer la fiche d'inscription
-                      </span>
-                      <span *ngIf="isFicheInscriptionDeposee(candidature)"> Fiche déposée </span>
+                      <i class="fas fa-file-pdf"></i>
+                      Voir le reçu PDF
                     </button>
-                    <input
-                      #paiementPicker
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      (change)="onFichierPaiementDirectSelected($event, candidature)"
-                      style="display: none"
-                    />
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getStatutFinalInscriptionClass(candidature)">
+                      {{ getStatutFinalInscription(candidature) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="inscription-actions-cell">
+                      <button
+                        *ngIf="canValidateInscription(candidature)"
+                        type="button"
+                        class="btn-validate-inscription"
+                        (click)="validateInscription(candidature)"
+                      >
+                        <i class="fas fa-circle-check"></i>
+                        <span>Valider l'Inscription</span>
+                      </button>
+                      <div class="action-menu-container">
+                        <button
+                          class="kebab-btn"
+                          type="button"
+                          aria-label="Actions"
+                          (click)="
+                            $event.stopPropagation(); toggleInscriptionActionMenu(candidature.id)
+                          "
+                        >
+                          <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div
+                          class="actions-dropdown-menu"
+                          *ngIf="openInscriptionActionMenuId === candidature.id"
+                          (click)="$event.stopPropagation()"
+                        >
+                          <button
+                            type="button"
+                            class="menu-item"
+                            (click)="voirDossierCompletInscription(candidature)"
+                          >
+                            <i class="fas fa-folder-open"></i>
+                            <span>Consulter le dossier complet</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </ng-container>
               <ng-template #noAdmittedCandidatures>
-                <tr class="empty-row">
-                  <td colspan="4">
-                    <div class="inscription-empty-state">
-                      <i class="fas fa-info-circle"></i>
-                      <div>
-                        <strong>Aucune candidature admise à afficher</strong>
-                        <p>
-                          Dès qu'une candidature est sélectionnée, elle apparaîtra ici avec le
-                          bouton de dépôt.
-                        </p>
-                      </div>
+                <tr>
+                  <td colspan="6">
+                    <div class="no-data">
+                      <strong>Aucune candidature admise à afficher</strong>
+                      <p>
+                        Dès qu'une candidature est sélectionnée, elle apparaîtra ici avec le bouton
+                        de dépôt.
+                      </p>
                     </div>
                   </td>
                 </tr>

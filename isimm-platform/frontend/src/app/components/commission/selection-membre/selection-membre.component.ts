@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ListePreselection } from '../liste-preselection/liste-preselection';
+import { ListeSelection } from '../liste-selection/liste-selection';
 
 @Component({
   selector: 'app-selection-membre',
   standalone: true,
-  imports: [CommonModule, ListePreselection],
+  imports: [CommonModule, ListeSelection],
   templateUrl: './selection-membre.component.html',
   styleUrl: './selection-membre.component.css',
 })

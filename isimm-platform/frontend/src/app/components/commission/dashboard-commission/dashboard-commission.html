@@ -440,7 +440,7 @@
               </button>
             </div>
 
-            <div style="overflow-x: auto">
+            <div class="table-responsive reclamations-table-responsive">
               <table>
                 <thead>
                   <tr>
@@ -492,58 +492,116 @@
                         {{ reclamation.details }}
                       </div>
                     </td>
-                    <td>
-                      <div class="kebab-container reclamation-kebab">
+                    <td style="position: relative; overflow: visible !important">
+                      <div
+                        class="kebab-container reclamation-kebab"
+                        style="position: relative; overflow: visible !important"
+                      >
                         <button
                           type="button"
                           class="kebab-btn"
-                          (click)="toggleReclamationActionMenu(reclamation.id)"
+                          (click)="
+                            toggleReclamationActionMenu(reclamation.id); $event.stopPropagation()
+                          "
                           title="Actions"
+                          style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            cursor: pointer;
+                            color: #64748b;
+                            padding: 0 8px;
+                          "
                         >
                           <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <ul class="kebab-menu" *ngIf="isReclamationActionMenuOpen(reclamation.id)">
-                          <li>
-                            <button
-                              type="button"
-                              class="menu-item"
-                              (click)="openReponse(reclamation.id)"
-                            >
-                              <i class="fas fa-reply"></i>
-                              <span>Répondre</span>
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              type="button"
-                              class="menu-item"
-                              (click)="voirDossierAssocieReclamation(reclamation)"
-                            >
-                              <i class="fas fa-folder-open"></i>
-                              <span>Voir dossier</span>
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              type="button"
-                              class="menu-item"
-                              (click)="openScore(reclamation.id)"
-                            >
-                              <i class="fas fa-pen"></i>
-                              <span>Rectifier score</span>
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              type="button"
-                              class="menu-item danger"
-                              (click)="openRejet(reclamation.id)"
-                            >
-                              <i class="fas fa-times"></i>
-                              <span>Rejeter</span>
-                            </button>
-                          </li>
-                        </ul>
+                        <div
+                          class="kebab-menu"
+                          *ngIf="isReclamationActionMenuOpen(reclamation.id)"
+                          style="
+                            position: absolute;
+                            right: 10px;
+                            top: 80%;
+                            z-index: 9999 !important;
+                            background: #ffffff;
+                            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                            border-radius: 8px;
+                            min-width: 180px;
+                            text-align: left;
+                            padding: 6px 0;
+                            overflow: visible !important;
+                          "
+                        >
+                          <button
+                            type="button"
+                            class="menu-item"
+                            (click)="
+                              openConsultationReclamation(reclamation.id); $event.stopPropagation()
+                            "
+                            style="
+                              width: 100%;
+                              background: none;
+                              border: none;
+                              padding: 10px 16px;
+                              text-align: left;
+                              font-size: 13px;
+                              cursor: pointer;
+                              color: #1e293b;
+                              display: flex;
+                              align-items: center;
+                              gap: 8px;
+                            "
+                          >
+                            <i class="fas fa-folder-open"></i>
+                            <span>Consulter Recours</span>
+                          </button>
+                          <button
+                            *ngIf="isResponsable"
+                            type="button"
+                            class="menu-item"
+                            (click)="openReponse(reclamation.id); $event.stopPropagation()"
+                            style="
+                              width: 100%;
+                              background: none;
+                              border: none;
+                              padding: 10px 16px;
+                              text-align: left;
+                              font-size: 13px;
+                              cursor: pointer;
+                              color: #16a34a;
+                              font-weight: 600;
+                              display: flex;
+                              align-items: center;
+                              gap: 8px;
+                            "
+                          >
+                            <i class="fas fa-check"></i>
+                            <span>Accepter le recours</span>
+                          </button>
+                          <button
+                            *ngIf="isResponsable"
+                            type="button"
+                            class="menu-item"
+                            (click)="openRejet(reclamation.id); $event.stopPropagation()"
+                            style="
+                              width: 100%;
+                              background: none;
+                              border: none;
+                              padding: 10px 16px;
+                              text-align: left;
+                              font-size: 13px;
+                              cursor: pointer;
+                              color: #dc2626;
+                              font-weight: 600;
+                              display: flex;
+                              align-items: center;
+                              gap: 8px;
+                            "
+                          >
+                            <i class="fas fa-times"></i>
+                            <span>Refuser le recours</span>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -564,6 +622,442 @@
                 Affichage 1–{{ reclamationsFiltered.length }} sur {{ reclamationsFiltered.length }}
               </div>
               <div class="pag-btns"><button class="pag-btn active" type="button">1</button></div>
+            </div>
+          </div>
+
+          <!-- MODAL CONSULTATION RECOURS -->
+          <div
+            *ngIf="reclamationModalConsultOuvert"
+            class="modal-backdrop-reclamation"
+            (click)="closeReclamationModals(); $event.stopPropagation()"
+            style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.5);
+              z-index: 1000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div
+              class="modal-dialog-reclamation"
+              (click)="$event.stopPropagation()"
+              style="
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 95vw;
+                max-width: 900px;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+              "
+            >
+              <!-- Modal Header -->
+              <div
+                style="
+                  padding: 20px 24px;
+                  border-bottom: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b">
+                  Consultation du Recours
+                </h3>
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #64748b;
+                  "
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+
+              <!-- Modal Body -->
+              <div style="flex: 1; overflow-y: auto; padding: 24px">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px">
+                  <!-- Left: Recourse Text -->
+                  <div>
+                    <h4
+                      style="font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 12px 0"
+                    >
+                      Texte du Recours
+                    </h4>
+                    <p style="font-size: 13px; line-height: 1.6; color: #475569; margin: 0">
+                      {{ reclamationModalData?.details || 'Aucun détail disponible' }}
+                    </p>
+                    <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0" />
+                    <div style="font-size: 12px; color: #64748b">
+                      <p><strong>Candidat:</strong> {{ reclamationModalData?.candidat }}</p>
+                      <p><strong>Master:</strong> {{ reclamationModalData?.master }}</p>
+                      <p>
+                        <strong>Date soumission:</strong>
+                        {{ reclamationModalData?.date | date: 'dd/MM/yyyy' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Right: Attachments -->
+                  <div>
+                    <h4
+                      style="font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 12px 0"
+                    >
+                      Pièces Jointes Originales
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 10px">
+                      <div
+                        *ngIf="reclamationModalData?.pj"
+                        style="
+                          padding: 12px;
+                          background: #f8fafc;
+                          border: 1px solid #e2e8f0;
+                          border-radius: 6px;
+                          display: flex;
+                          align-items: center;
+                          gap: 8px;
+                        "
+                      >
+                        <i class="fas fa-file-pdf" style="color: #dc2626; font-size: 18px"></i>
+                        <span style="font-size: 13px; color: #1e293b">{{
+                          reclamationModalData?.pj
+                        }}</span>
+                      </div>
+                      <div
+                        *ngIf="!reclamationModalData?.pj"
+                        style="
+                          padding: 12px;
+                          background: #f8fafc;
+                          border: 1px dashed #cbd5e1;
+                          border-radius: 6px;
+                          text-align: center;
+                          color: #94a3b8;
+                          font-size: 12px;
+                        "
+                      >
+                        Aucune pièce jointe
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div
+                style="
+                  padding: 16px 24px;
+                  border-top: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: flex-end;
+                  gap: 12px;
+                "
+              >
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    padding: 8px 16px;
+                    background: #f1f5f9;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #475569;
+                  "
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODAL ACCEPTATION RECOURS -->
+          <div
+            *ngIf="reclamationModalAcceptOuvert"
+            class="modal-backdrop-reclamation"
+            (click)="closeReclamationModals(); $event.stopPropagation()"
+            style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.5);
+              z-index: 1000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div
+              class="modal-dialog-reclamation"
+              (click)="$event.stopPropagation()"
+              style="
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 90vw;
+                max-width: 500px;
+              "
+            >
+              <!-- Modal Header -->
+              <div
+                style="
+                  padding: 20px 24px;
+                  border-bottom: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #16a34a">
+                  Confirmation d'Acceptation
+                </h3>
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #64748b;
+                  "
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+
+              <!-- Modal Body -->
+              <div style="padding: 24px">
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #475569">
+                  Êtes-vous sûr d'accepter le recours de
+                  <strong>{{ reclamationModalData?.candidat }}</strong> ?
+                </p>
+                <div
+                  style="
+                    padding: 12px;
+                    background: #f0fdf4;
+                    border: 1px solid #bbf7d0;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: #166534;
+                  "
+                >
+                  ✓ Le candidat sera réintégré dans le classement avec le statut
+                  <strong>"Sélectionnée"</strong> ou <strong>"Présélectionnée"</strong> selon son
+                  profil. Un e-mail automatique d'acceptation lui sera envoyé.
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div
+                style="
+                  padding: 16px 24px;
+                  border-top: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: flex-end;
+                  gap: 12px;
+                "
+              >
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    padding: 8px 16px;
+                    background: #f1f5f9;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #475569;
+                  "
+                >
+                  Annuler
+                </button>
+                <button
+                  (click)="accepterRecours(reclamationModalData?.id)"
+                  type="button"
+                  style="
+                    padding: 8px 16px;
+                    background: #16a34a;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: white;
+                  "
+                >
+                  ✓ Accepter le recours
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODAL REFUS RECOURS -->
+          <div
+            *ngIf="reclamationModalRejetOuvert"
+            class="modal-backdrop-reclamation"
+            (click)="closeReclamationModals(); $event.stopPropagation()"
+            style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.5);
+              z-index: 1000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div
+              class="modal-dialog-reclamation"
+              (click)="$event.stopPropagation()"
+              style="
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 90vw;
+                max-width: 500px;
+              "
+            >
+              <!-- Modal Header -->
+              <div
+                style="
+                  padding: 20px 24px;
+                  border-bottom: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #dc2626">
+                  Confirmation de Refus
+                </h3>
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #64748b;
+                  "
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+
+              <!-- Modal Body -->
+              <div style="padding: 24px">
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #475569">
+                  Refus du recours de <strong>{{ reclamationModalData?.candidat }}</strong>
+                </p>
+                <div style="margin-bottom: 16px">
+                  <label
+                    style="
+                      display: block;
+                      font-size: 13px;
+                      font-weight: 500;
+                      color: #1e293b;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Motif du refus <span style="color: #dc2626">*</span>
+                  </label>
+                  <textarea
+                    [(ngModel)]="reclamationMotifRefus"
+                    placeholder="Veuillez saisir le motif du refus du recours..."
+                    style="
+                      width: 100%;
+                      min-height: 100px;
+                      padding: 10px;
+                      border: 1px solid #cbd5e1;
+                      border-radius: 6px;
+                      font-size: 13px;
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                      resize: vertical;
+                    "
+                  >
+                  </textarea>
+                </div>
+                <div
+                  style="
+                    padding: 12px;
+                    background: #fef2f2;
+                    border: 1px solid #fecaca;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: #991b1b;
+                  "
+                >
+                  ✗ L'état du candidat restera <strong>"Rejetée"</strong>. Un e-mail de refus lui
+                  sera envoyé.
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div
+                style="
+                  padding: 16px 24px;
+                  border-top: 1px solid #e2e8f0;
+                  display: flex;
+                  justify-content: flex-end;
+                  gap: 12px;
+                "
+              >
+                <button
+                  (click)="closeReclamationModals()"
+                  type="button"
+                  style="
+                    padding: 8px 16px;
+                    background: #f1f5f9;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: #475569;
+                  "
+                >
+                  Annuler
+                </button>
+                <button
+                  (click)="refuserRecours(reclamationModalData?.id)"
+                  type="button"
+                  style="
+                    padding: 8px 16px;
+                    background: #dc2626;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: white;
+                  "
+                  [disabled]="!reclamationMotifRefus || reclamationMotifRefus.trim() === ''"
+                >
+                  ✗ Refuser le recours
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1014,8 +1508,107 @@
                 </div>
               </div>
 
+              <div class="modal-wrap" [class.open]="showModalConsultationReclamation">
+                <div class="modal reclamation-consultation-modal">
+                  <div class="modal-hdr">
+                    <div>
+                      <div class="modal-title">Consulter le recours</div>
+                      <div style="font-size: 11px; color: var(--color-text-secondary)">
+                        Réclamation #{{ reclamationConsultationSelectionnee?.id }} ·
+                        {{ reclamationConsultationSelectionnee?.candidat || '' }}
+                      </div>
+                    </div>
+                    <button class="close-btn" type="button" (click)="closeModalReclamation()">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="modal-body reclamation-consultation-body">
+                    <div class="warn-row">
+                      <i class="fas fa-folder-open"></i>
+                      Consultation détaillée du recours et des pièces justificatives initiales.
+                    </div>
+
+                    <div class="consultation-summary-grid">
+                      <article class="consultation-summary-card">
+                        <span>Objet</span>
+                        <strong>{{ reclamationConsultationSelectionnee?.objet }}</strong>
+                      </article>
+                      <article class="consultation-summary-card">
+                        <span>Master concerné</span>
+                        <strong>{{ reclamationConsultationSelectionnee?.master }}</strong>
+                      </article>
+                      <article class="consultation-summary-card">
+                        <span>État</span>
+                        <strong>{{
+                          formatReclamationStatus(
+                            reclamationConsultationSelectionnee?.etat ?? 'en_cours'
+                          )
+                        }}</strong>
+                      </article>
+                    </div>
+
+                    <div class="consultation-detail-box">
+                      <div class="flbl">Texte détaillé du recours</div>
+                      <p>
+                        {{
+                          reclamationConsultationSelectionnee?.details || 'Aucun texte détaillé.'
+                        }}
+                      </p>
+                    </div>
+
+                    <div class="consultation-doc-grid">
+                      <article
+                        class="consultation-doc-card"
+                        *ngFor="let document of getReclamationConsultationDocuments()"
+                      >
+                        <span class="consultation-doc-label">{{ document.label }}</span>
+                        <ng-container *ngIf="!document['url']; else withUrl">
+                          <strong>{{ document.value }}</strong>
+                        </ng-container>
+                        <ng-template #withUrl>
+                          <a
+                            class="btn btn-sec btn-sm"
+                            [href]="document['url']"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Voir
+                          </a>
+                        </ng-template>
+                      </article>
+                    </div>
+                    <div
+                      *ngIf="reclamationConsultationSelectionnee?.pj"
+                      style="margin-top: 0.75rem"
+                    >
+                      <a
+                        class="btn btn-primary btn-sm"
+                        [attr.href]="
+                          '/commission/consulter-candidature/' +
+                          (getReclamationConsultationCandidature()?.id || '')
+                        "
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <i class="fas fa-file-pdf"></i>
+                        Voir les pièces jointes
+                      </a>
+                    </div>
+                  </div>
+                  <div class="modal-ftr">
+                    <button
+                      class="btn btn-sec btn-sm"
+                      type="button"
+                      (click)="closeModalReclamation()"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="modal-wrap" [class.open]="showModalRejetReclamation">
-                <div class="modal" style="max-width: 420px">
+                <div class="modal" style="max-width: 520px">
                   <div class="modal-hdr">
                     <div>
                       <div class="modal-title">Rejeter la réclamation</div>
@@ -1035,28 +1628,12 @@
                       au candidat.
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.3rem">
-                      <div class="flbl">Motif de refus *</div>
-                      <select
-                        class="full-input"
-                        [(ngModel)]="motifRejet"
-                        (ngModelChange)="updateMotif()"
-                      >
-                        <option value="">— Sélectionner un motif —</option>
-                        <option value="infondee">
-                          Réclamation infondée — les notes sont correctes
-                        </option>
-                        <option value="hors-delai">Dépôt hors délai réglementaire</option>
-                        <option value="manque-preuves">Manque de preuves justificatives</option>
-                        <option value="autre">Autre (préciser ci-dessous)</option>
-                      </select>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
-                      <div class="flbl">Détails supplémentaires</div>
+                      <div class="flbl">Motif du refus du recours *</div>
                       <textarea
                         class="full-input"
-                        rows="3"
+                        rows="4"
                         [(ngModel)]="motifRejetDetail"
-                        placeholder="Détaillez le motif de rejet..."
+                        placeholder="Saisissez le motif détaillé du refus du recours..."
                       ></textarea>
                     </div>
                     <div class="info-row">
@@ -1081,12 +1658,13 @@
               </div>
 
               <div class="modal-wrap" [class.open]="showModalReponseReclamation">
-                <div class="modal" style="max-width: 420px">
+                <div class="modal" style="max-width: 620px">
                   <div class="modal-hdr">
                     <div>
-                      <div class="modal-title">Répondre à la réclamation</div>
+                      <div class="modal-title">Accepter le recours</div>
                       <div style="font-size: 11px; color: var(--color-text-secondary)">
-                        Réclamation #{{ reclamationSelectionnee?.id }}
+                        Réclamation #{{ reclamationSelectionnee?.id }} ·
+                        {{ reclamationSelectionnee?.candidat || '' }}
                       </div>
                     </div>
                     <button class="close-btn" type="button" (click)="closeModalReclamation()">
@@ -1094,26 +1672,32 @@
                     </button>
                   </div>
                   <div class="modal-body">
-                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
-                      <div class="flbl">Réponse au candidat *</div>
-                      <textarea
-                        class="full-input"
-                        rows="4"
-                        [(ngModel)]="reponseReclamationText"
-                        placeholder="Rédigez votre réponse officielle..."
-                      ></textarea>
+                    <div class="warn-row">
+                      <i class="fas fa-circle-check"></i>
+                      Cette action réintègre le candidat dans le classement et notifie la décision
+                      d'acceptation par email.
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.3rem">
-                      <div class="flbl">Décision</div>
-                      <select class="full-input">
-                        <option>Réclamation acceptée — score rectifié</option>
-                        <option>Réclamation en cours d'examen</option>
-                        <option>Informations complémentaires demandées</option>
-                      </select>
+                    <div class="consultation-summary-grid">
+                      <article class="consultation-summary-card">
+                        <span>Candidat</span>
+                        <strong>{{ reclamationSelectionnee?.candidat }}</strong>
+                      </article>
+                      <article class="consultation-summary-card">
+                        <span>Master</span>
+                        <strong>{{ reclamationSelectionnee?.master }}</strong>
+                      </article>
+                      <article class="consultation-summary-card">
+                        <span>Recours</span>
+                        <strong>Validé</strong>
+                      </article>
+                    </div>
+                    <div class="consultation-detail-box">
+                      <div class="flbl">Résumé du recours</div>
+                      <p>{{ reclamationSelectionnee?.details }}</p>
                     </div>
                     <div class="info-row">
                       <i class="fas fa-info-circle"></i>
-                      La réponse sera envoyée par email au candidat avec récapitulatif.
+                      L'état du candidat sera mis à jour automatiquement après confirmation.
                     </div>
                   </div>
                   <div class="modal-ftr">
@@ -1125,7 +1709,7 @@
                       Annuler
                     </button>
                     <button class="btn btn-primary btn-sm" type="button" (click)="validerReponse()">
-                      Envoyer réponse
+                      Confirmer l'acceptation
                     </button>
                   </div>
                 </div>
@@ -8289,13 +8873,16 @@
                     (change)="toggleInscriptionAll()"
                   />
                 </th>
-                <th>N°</th>
-                <th>Candidat</th>
+                <th>N° Candidature</th>
+                <th>Nom &amp; Prénom</th>
+                <th>N° Inscription Universitaire</th>
                 <th>CIN</th>
                 <th>Master</th>
+                <th>Attestation de Paiement</th>
                 <th>Dossier</th>
                 <th>Paiement</th>
-                <th>Finalisation</th>
+                <th>Statut Final</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -8317,8 +8904,21 @@
                   <strong>{{ candidate.nom }}</strong>
                   <div class="muted-line">{{ candidate.email }}</div>
                 </td>
+                <td>
+                  <strong>{{ candidate.numero_inscription }}</strong>
+                </td>
                 <td>{{ candidate.cin }}</td>
                 <td>{{ candidate.master }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="insc-receipt-btn"
+                    (click)="openInscriptionReceipt(candidate)"
+                  >
+                    <i class="fas fa-file-pdf"></i>
+                    Voir le reçu PDF
+                  </button>
+                </td>
                 <td>
                   <span class="badge" [ngClass]="getInscriptionDossierClass(candidate.dossier)">{{
                     candidate.dossier
@@ -8330,18 +8930,127 @@
                   }}</span>
                 </td>
                 <td>
-                  <span class="badge" [ngClass]="getInscriptionFinaliseClass(candidate.finalise)">{{
-                    candidate.finalise ? 'Finalisée' : 'À finaliser'
-                  }}</span>
+                  <span
+                    class="badge"
+                    [ngClass]="getInscriptionFinalStatusClass(candidate.statut_final)"
+                  >
+                    {{ getInscriptionFinalStatusLabel(candidate.statut_final) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="insc-action-cell">
+                    <button
+                      *ngIf="isResponsable && candidate.statut_final !== 'inscrite'"
+                      type="button"
+                      class="btn btn-success btn-inscription-validate"
+                      (click)="validateInscription(candidate)"
+                    >
+                      <i class="fas fa-check-circle"></i>
+                      <span>Valider l'Inscription</span>
+                    </button>
+                    <div class="kebab-container inscription-kebab">
+                      <button
+                        type="button"
+                        class="kebab-btn"
+                        (click)="toggleInscriptionActionMenu(candidate.id, $event)"
+                        title="Actions"
+                      >
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                      <ul
+                        class="actions-dropdown-menu"
+                        *ngIf="isInscriptionActionMenuOpen(candidate.id)"
+                      >
+                        <li>
+                          <button
+                            type="button"
+                            class="menu-item"
+                            (click)="openInscriptionReceipt(candidate)"
+                          >
+                            <i class="fas fa-folder-open"></i>
+                            <span>Consulter le Dossier complet</span>
+                          </button>
+                        </li>
+                        <li *ngIf="isResponsable">
+                          <button
+                            type="button"
+                            class="menu-item"
+                            (click)="openInscriptionContact(candidate)"
+                          >
+                            <i class="fas fa-envelope text-primary"></i>
+                            <span>Contacter le candidat</span>
+                          </button>
+                        </li>
+                        <li *ngIf="isResponsable">
+                          <button
+                            type="button"
+                            class="menu-item danger"
+                            (click)="openRejectInscription(candidate)"
+                          >
+                            <i class="fas fa-times text-danger"></i>
+                            <span>Rejeter pour reçu non conforme</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="inscriptionFilteredCandidates.length === 0">
-                <td colspan="8" class="empty-state">
+                <td colspan="11" class="empty-state">
                   Aucune inscription ne correspond aux filtres actifs.
                 </td>
               </tr>
             </tbody>
           </table>
+
+          <div class="modal-wrap" [class.open]="showModalRejectInscription">
+            <div class="modal modal-inscription-reject" (click)="$event.stopPropagation()">
+              <div class="modal-hdr">
+                <div>
+                  <div class="modal-title">Rejeter l'inscription</div>
+                  <div style="font-size: 11px; color: var(--color-text-secondary)">
+                    {{ inscriptionRejectSelectionnee?.num }} ·
+                    {{ inscriptionRejectSelectionnee?.nom }}
+                  </div>
+                </div>
+                <button class="close-btn" type="button" (click)="closeRejectInscriptionModal()">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="warn-row">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Le motif du rejet sera conservé dans le dossier du candidat.
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem">
+                  <div class="flbl">Motif du refus *</div>
+                  <textarea
+                    class="full-input"
+                    rows="4"
+                    [(ngModel)]="motifRejetInscription"
+                    placeholder="Saisissez le motif du rejet de l'inscription..."
+                  ></textarea>
+                </div>
+              </div>
+              <div class="modal-ftr">
+                <button
+                  class="btn btn-sec btn-sm"
+                  type="button"
+                  (click)="closeRejectInscriptionModal()"
+                >
+                  Annuler
+                </button>
+                <button
+                  class="btn btn-danger btn-sm"
+                  type="button"
+                  (click)="confirmRejectInscription()"
+                >
+                  Confirmer le rejet
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="insc-verify-card" *ngIf="inscriptionsVerificationRows.length > 0">

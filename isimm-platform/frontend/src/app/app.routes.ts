@@ -74,6 +74,7 @@ import { GestionCommissionComponent } from './components/admin/gestion-commissio
 
 import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 import { PreselectionDashboardComponent } from './components/commission/preselection-dashboard/preselection-dashboard.component';
+import { SelectionProcessComponent } from './components/commission/selection-process/selection-process.component';
 export const routes: Routes = [
   // ========================================
   // ROUTES PUBLIQUES
@@ -263,6 +264,20 @@ export const routes: Routes = [
   },
   {
     path: 'commission/liste-selection',
+    component: SelectionMembreComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: {
+      roles: ['commission', 'membre'],
+      actions: [
+        'Sélection finale',
+        'Publier liste principale',
+        'Publier liste attente',
+        'Consultation de candidature',
+      ],
+    },
+  },
+  {
+    path: 'responsable/liste-selection',
     component: SelectionResponsableComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: {
@@ -477,6 +492,10 @@ export const routes: Routes = [
   // ========================================
   // ROUTE WILDCARD - ⚠️ TOUJOURS EN DERNIER
   // ========================================
+  {
+    path: 'dev/selection-process',
+    component: SelectionProcessComponent,
+  },
   {
     path: '**',
     redirectTo: '',

@@ -166,6 +166,7 @@ interface Reclamation {
   details: string;
   priorite: 'haut' | 'moyen' | 'bas';
   candidature_id?: number;
+  motif_rejet?: string;
 }
 
 interface DossierOCR {
@@ -207,11 +208,15 @@ interface InscriptionVerificationRow {
 interface InscriptionCandidateRow {
   id: number;
   num: string;
+  numero_inscription: string;
   nom: string;
   cin: string;
   master: string;
   dossier: 'complet' | 'incomplet';
   paiement: 'paye' | 'en_attente' | 'incoherent' | 'absent';
+  receiptPdfUrl: string;
+  recuVerifie: boolean;
+  statut_final: 'attente_paiement' | 'inscrite' | 'rejetee';
   finalise: boolean;
   matchPercent: number;
   email: string;
@@ -840,9 +845,17 @@ export class DashboardCommissionComponent implements OnInit {
   showModalReponseReclamation: boolean = false;
   showModalRectifierScore: boolean = false;
   showModalRejetReclamation: boolean = false;
+  showModalConsultationReclamation: boolean = false;
+  // Nouvelles propriétés pour les modales
+  reclamationModalConsultOuvert: boolean = false;
+  reclamationModalAcceptOuvert: boolean = false;
+  reclamationModalRejetOuvert: boolean = false;
+  reclamationModalData: Reclamation | null = null;
+  reclamationMotifRefus: string = '';
   reclamationSelectionnee: Reclamation | null = null;
   reclamationScoreSelectionnee: Reclamation | null = null;
   reclamationRejetSelectionnee: Reclamation | null = null;
+  reclamationConsultationSelectionnee: Reclamation | null = null;
   currentRejetId: number | null = null;
   reponseReclamationText: string = '';
   scoreRectification: number | null = null;
@@ -1938,9 +1951,13 @@ export class DashboardCommissionComponent implements OnInit {
   inscriptionFilteredCandidates: InscriptionCandidateRow[] = [];
   inscriptionSelectedIds: Set<number> = new Set();
   inscriptionSelectAll: boolean = false;
+  inscriptionActionMenuOpenId: number | null = null;
   inscriptionFileLoaded: boolean = false;
   inscriptionVerified: boolean = false;
   inscriptionExportOpen: boolean = false;
+  showModalRejectInscription: boolean = false;
+  inscriptionRejectSelectionnee: InscriptionCandidateRow | null = null;
+  motifRejetInscription: string = '';
   inscriptionFilters: InscriptionFilters = {
     search: '',
     paiement: 'all',
@@ -3577,7 +3594,11 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     if (view === 'listes') {
-      this.router.navigate(['/commission/liste-selection']);
+      if (this.isResponsable) {
+        this.router.navigate(['/responsable/liste-selection']);
+      } else {
+        this.router.navigate(['/commission/liste-selection']);
+      }
       return;
     }
 
@@ -7403,6 +7424,10 @@ export class DashboardCommissionComponent implements OnInit {
     this.reclamationActionMenuOpen[id] = !this.reclamationActionMenuOpen[id];
   }
 
+  isReclamationResponsableAction(): boolean {
+    return !!this.actionPermissions?.traiterReclamations;
+  }
+
   isReclamationActionMenuOpen(id: number): boolean {
     return !!this.reclamationActionMenuOpen[id];
   }
@@ -7416,15 +7441,103 @@ export class DashboardCommissionComponent implements OnInit {
     this.reclamationActionMenuOpen = {};
   }
 
+  // Nouvelles méthodes pour les modales de consultation, acceptation et refus
+  openConsultationReclamation(id: number): void {
+    const reclamation = this.reclamations.find((item) => item.id === id) || null;
+    if (!reclamation) {
+      return;
+    }
+    this.reclamationModalData = reclamation;
+    this.reclamationModalConsultOuvert = true;
+    this.closeReclamationActionMenu(id);
+  }
+
   openReponse(id: number): void {
     const reclamation = this.reclamations.find((item) => item.id === id) || null;
     if (!reclamation) {
       return;
     }
-    this.reclamationSelectionnee = reclamation;
-    this.reponseReclamationText = reclamation.details;
+    this.reclamationModalData = reclamation;
+    this.reclamationModalAcceptOuvert = true;
     this.closeReclamationActionMenu(id);
-    this.showModalReponseReclamation = true;
+  }
+
+  openRejet(id: number): void {
+    const reclamation = this.reclamations.find((item) => item.id === id) || null;
+    if (!reclamation) {
+      return;
+    }
+    this.reclamationModalData = reclamation;
+    this.reclamationMotifRefus = '';
+    this.reclamationModalRejetOuvert = true;
+    this.closeReclamationActionMenu(id);
+  }
+
+  accepterRecours(id: number | null | undefined): void {
+    if (!id || !this.reclamationModalData) {
+      return;
+    }
+    // Mise à jour de l'état de la réclamation
+    const reclamation = this.reclamations.find((item) => item.id === id);
+    if (reclamation) {
+      reclamation.etat = 'traite';
+      // TODO: Appeler l'API pour mettre à jour la base de données
+      // TODO: Réintégrer le candidat dans le classement
+      // TODO: Envoyer un e-mail automatique d'acceptation
+      console.log('Recours accepté pour la réclamation #' + id);
+      alert('✓ Recours accepté ! Le candidat a été réintégré dans le classement.');
+    }
+    this.closeReclamationModals();
+  }
+
+  refuserRecours(id: number | null | undefined): void {
+    if (!id || !this.reclamationModalData || !this.reclamationMotifRefus.trim()) {
+      alert('Veuillez saisir un motif de refus');
+      return;
+    }
+    // Mise à jour de l'état de la réclamation
+    const reclamation = this.reclamations.find((item) => item.id === id);
+    if (reclamation) {
+      reclamation.etat = 'rejete';
+      // TODO: Appeler l'API pour mettre à jour la base de données
+      // TODO: Envoyer un e-mail automatique de refus avec le motif
+      console.log('Recours refusé pour la réclamation #' + id + ' : ' + this.reclamationMotifRefus);
+      alert('✗ Recours refusé ! Le candidat a reçu la notification.');
+    }
+    this.closeReclamationModals();
+  }
+
+  closeReclamationModals(): void {
+    this.reclamationModalConsultOuvert = false;
+    this.reclamationModalAcceptOuvert = false;
+    this.reclamationModalRejetOuvert = false;
+    this.reclamationModalData = null;
+    this.reclamationMotifRefus = '';
+  }
+
+  private getCandidatureForReclamation(reclamation: Reclamation): Candidature | null {
+    if (typeof reclamation.candidature_id !== 'number') {
+      return null;
+    }
+
+    return this.candidatures.find((item) => item.id === reclamation.candidature_id) || null;
+  }
+
+  private getAcceptedReclamationStatus(candidature: Candidature): 'selectionne' | 'preselectionne' {
+    const currentStatus = (candidature.statut || '').toLowerCase();
+    if (currentStatus === 'preselectionne' || candidature.decision_responsable === 'valide') {
+      return 'preselectionne';
+    }
+
+    return 'selectionne';
+  }
+
+  private reintegrateCandidateAfterReclamationAcceptance(candidature: Candidature): void {
+    const acceptedStatus = this.getAcceptedReclamationStatus(candidature);
+    candidature.statut = acceptedStatus;
+    candidature.decision_responsable = 'valide';
+    candidature.selectionStatut = acceptedStatus === 'preselectionne' ? 'lp' : 'lp';
+    candidature.date_changement_statut = new Date().toISOString();
   }
 
   openScore(id: number): void {
@@ -7440,26 +7553,15 @@ export class DashboardCommissionComponent implements OnInit {
     this.recalcScore();
   }
 
-  openRejet(id: number): void {
-    const reclamation = this.reclamations.find((item) => item.id === id) || null;
-    if (!reclamation) {
-      return;
-    }
-    this.currentRejetId = id;
-    this.reclamationRejetSelectionnee = reclamation;
-    this.motifRejet = '';
-    this.motifRejetDetail = '';
-    this.closeReclamationActionMenu(id);
-    this.showModalRejetReclamation = true;
-  }
-
   closeModalReclamation(): void {
     this.showModalReponseReclamation = false;
     this.showModalRectifierScore = false;
     this.showModalRejetReclamation = false;
+    this.showModalConsultationReclamation = false;
     this.reclamationSelectionnee = null;
     this.reclamationScoreSelectionnee = null;
     this.reclamationRejetSelectionnee = null;
+    this.reclamationConsultationSelectionnee = null;
     this.currentRejetId = null;
     this.reponseReclamationText = '';
     this.scoreRectificationCommentaire = '';
@@ -7506,16 +7608,25 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   validerRejet(): void {
-    if (!this.currentRejetId) {
+    if (!this.reclamationRejetSelectionnee) {
       return;
     }
 
-    const reclamation = this.reclamations.find((item) => item.id === this.currentRejetId);
-    if (reclamation) {
-      reclamation.etat = 'rejete';
+    const reclamation = this.reclamationRejetSelectionnee;
+    reclamation.etat = 'rejete';
+    reclamation.motif_rejet = [this.motifRejetDetail || this.motifRejet]
+      .filter(Boolean)
+      .join(' - ');
+
+    const candidature = this.getCandidatureForReclamation(reclamation);
+    if (candidature) {
+      candidature.selectionStatut = 'refuse';
+      candidature.decision_responsable = 'non_valide';
+      candidature.statut = 'rejete';
+      candidature.date_changement_statut = new Date().toISOString();
     }
 
-    this.showAlertMessage('✅ Réclamation rejetée et candidat notifié.');
+    this.showAlertMessage('✅ Réclamation rejetée et motif enregistré.');
     this.closeModalReclamation();
   }
 
@@ -7525,9 +7636,12 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.reclamationSelectionnee.etat = 'traite';
-    this.reclamationSelectionnee.details =
-      this.reponseReclamationText || this.reclamationSelectionnee.details;
-    this.showAlertMessage('✅ Réponse envoyée au candidat.');
+    const candidature = this.getCandidatureForReclamation(this.reclamationSelectionnee);
+    if (candidature) {
+      this.reintegrateCandidateAfterReclamationAcceptance(candidature);
+    }
+
+    this.showAlertMessage('✅ Recours accepté et candidat réintégré dans le classement.');
     this.closeModalReclamation();
   }
 
@@ -7547,16 +7661,78 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   voirDossierAssocieReclamation(reclamation: Reclamation): void {
-    const candidatureId = reclamation.candidature_id || this.candidatures[0]?.id;
-    if (!candidatureId) {
-      this.showAlertMessage('❌ Dossier associé introuvable pour cette réclamation.');
+    this.reclamationConsultationSelectionnee = reclamation;
+    this.closeReclamationActionMenu();
+    this.showModalConsultationReclamation = true;
+  }
+
+  getReclamationConsultationCandidature(): Candidature | null {
+    if (!this.reclamationConsultationSelectionnee) {
+      return null;
+    }
+
+    return this.getCandidatureForReclamation(this.reclamationConsultationSelectionnee);
+  }
+
+  getReclamationConsultationDocuments(): Array<{
+    label: string;
+    value: string;
+    tone: string;
+    url?: string;
+  }> {
+    const candidature = this.getReclamationConsultationCandidature();
+    if (!candidature) {
+      return [];
+    }
+
+    const docs: Array<{ label: string; value: string; tone: string; url?: string }> = [
+      {
+        label: 'CIN',
+        value: candidature.candidat_cin || 'Non disponible',
+        tone: 'blue',
+      },
+      {
+        label: 'Notes',
+        value: candidature.notes_preinscription || 'Non disponibles',
+        tone: 'green',
+      },
+      {
+        label: 'Texte détaillé du recours',
+        value: this.reclamationConsultationSelectionnee?.details || 'Non disponible',
+        tone: 'orange',
+      },
+    ];
+
+    if (candidature.dossier_id) {
+      docs.push({
+        label: 'Pièces jointes',
+        value: 'Ouvrir le dossier',
+        tone: 'blue',
+        url: `/api/dossiers/${candidature.dossier_id}/download`,
+      });
+    }
+
+    return docs;
+  }
+
+  openReclamationDocument(url: string): void {
+    if (!url) {
+      this.toastService.show('Aucune pièce jointe disponible.', 'warning');
       return;
     }
 
-    this.closeReclamationActionMenu();
-    this.router.navigate(['/consultation-dossier', candidatureId], {
-      queryParams: { source: 'reclamations', reclamation: reclamation.id },
-    });
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  openReclamationDocuments(): void {
+    const candidature = this.getReclamationConsultationCandidature();
+    if (candidature && candidature.dossier_id) {
+      // Navigate to the dossier view in the commission area when possible
+      this.router.navigate(['/commission/consulter-candidature', candidature.id]);
+      return;
+    }
+
+    this.toastService.show('Aucune pièce jointe disponible pour ce dossier.', 'warning');
   }
 
   // ========================================
@@ -8132,11 +8308,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 1,
         num: 'INS-2025-001',
+        numero_inscription: 'UNI-2025-0001',
         nom: 'Salma Ben Youssef',
         cin: '09123456',
         master: 'Master Data Science',
         dossier: 'complet',
         paiement: 'paye',
+        receiptPdfUrl: 'https://example.com/recu-salma.pdf',
+        recuVerifie: true,
+        statut_final: 'inscrite',
         finalise: false,
         matchPercent: 100,
         email: 'salma@example.com',
@@ -8146,11 +8326,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 2,
         num: 'INS-2025-002',
+        numero_inscription: 'UNI-2025-0002',
         nom: 'Yassine Trabelsi',
         cin: '09223344',
         master: 'Master Génie Logiciel',
         dossier: 'complet',
         paiement: 'en_attente',
+        receiptPdfUrl: 'https://example.com/recu-yassine.pdf',
+        recuVerifie: false,
+        statut_final: 'attente_paiement',
         finalise: false,
         matchPercent: 82,
         email: 'yassine@example.com',
@@ -8160,11 +8344,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 3,
         num: 'INS-2025-003',
+        numero_inscription: 'UNI-2025-0003',
         nom: 'Nour Azaiez',
         cin: '09334455',
         master: 'Master Réseaux',
         dossier: 'incomplet',
         paiement: 'incoherent',
+        receiptPdfUrl: 'https://example.com/recu-nour.pdf',
+        recuVerifie: false,
+        statut_final: 'rejetee',
         finalise: false,
         matchPercent: 67,
         email: 'nour@example.com',
@@ -8174,11 +8362,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 4,
         num: 'INS-2025-004',
+        numero_inscription: 'UNI-2025-0004',
         nom: 'Imen Khelifi',
         cin: '09445566',
         master: 'Master Intelligence Artificielle',
         dossier: 'complet',
         paiement: 'paye',
+        receiptPdfUrl: 'https://example.com/recu-imen.pdf',
+        recuVerifie: true,
+        statut_final: 'inscrite',
         finalise: true,
         matchPercent: 100,
         email: 'imen@example.com',
@@ -8188,11 +8380,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 5,
         num: 'INS-2025-005',
+        numero_inscription: 'UNI-2025-0005',
         nom: 'Omar Saidi',
         cin: '09556677',
         master: 'Master Génie Civil',
         dossier: 'complet',
         paiement: 'absent',
+        receiptPdfUrl: 'https://example.com/recu-omar.pdf',
+        recuVerifie: false,
+        statut_final: 'attente_paiement',
         finalise: false,
         matchPercent: 48,
         email: 'omar@example.com',
@@ -8202,11 +8398,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 6,
         num: 'INS-2025-006',
+        numero_inscription: 'UNI-2025-0006',
         nom: 'Meriem Jaziri',
         cin: '09667788',
         master: 'Master Big Data',
         dossier: 'complet',
         paiement: 'paye',
+        receiptPdfUrl: 'https://example.com/recu-meriem.pdf',
+        recuVerifie: true,
+        statut_final: 'attente_paiement',
         finalise: false,
         matchPercent: 100,
         email: 'meriem@example.com',
@@ -8216,11 +8416,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 7,
         num: 'INS-2025-007',
+        numero_inscription: 'UNI-2025-0007',
         nom: 'Anis Ferjani',
         cin: '09778899',
         master: 'Master Sécurité Informatique',
         dossier: 'incomplet',
         paiement: 'en_attente',
+        receiptPdfUrl: 'https://example.com/recu-anis.pdf',
+        recuVerifie: false,
+        statut_final: 'attente_paiement',
         finalise: false,
         matchPercent: 54,
         email: 'anis@example.com',
@@ -8230,11 +8434,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 8,
         num: 'INS-2025-008',
+        numero_inscription: 'UNI-2025-0008',
         nom: 'Rim Hassen',
         cin: '09889900',
         master: 'Master Génie Logiciel',
         dossier: 'complet',
         paiement: 'paye',
+        receiptPdfUrl: 'https://example.com/recu-rim.pdf',
+        recuVerifie: true,
+        statut_final: 'inscrite',
         finalise: false,
         matchPercent: 97,
         email: 'rim@example.com',
@@ -8244,11 +8452,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 9,
         num: 'INS-2025-009',
+        numero_inscription: 'UNI-2025-0009',
         nom: 'Sofiene Brik',
         cin: '09990011',
         master: 'Master Réseaux',
         dossier: 'complet',
         paiement: 'incoherent',
+        receiptPdfUrl: 'https://example.com/recu-sofiene.pdf',
+        recuVerifie: false,
+        statut_final: 'rejetee',
         finalise: false,
         matchPercent: 72,
         email: 'sofiene@example.com',
@@ -8258,11 +8470,15 @@ export class DashboardCommissionComponent implements OnInit {
       {
         id: 10,
         num: 'INS-2025-010',
+        numero_inscription: 'UNI-2025-0010',
         nom: 'Chaima Gharbi',
         cin: '10001122',
         master: 'Master Data Science',
         dossier: 'complet',
         paiement: 'paye',
+        receiptPdfUrl: 'https://example.com/recu-chaima.pdf',
+        recuVerifie: true,
+        statut_final: 'inscrite',
         finalise: false,
         matchPercent: 100,
         email: 'chaima@example.com',
@@ -8395,7 +8611,9 @@ export class DashboardCommissionComponent implements OnInit {
     const absents = this.inscriptionCandidates.filter(
       (candidate) => candidate.paiement === 'absent',
     ).length;
-    const finalised = this.inscriptionCandidates.filter((candidate) => candidate.finalise).length;
+    const finalised = this.inscriptionCandidates.filter(
+      (candidate) => candidate.statut_final === 'inscrite',
+    ).length;
     const validRows = this.inscriptionsVerificationRows.filter(
       (row) => row.verification === 'valide',
     ).length;
@@ -8424,12 +8642,108 @@ export class DashboardCommissionComponent implements OnInit {
     return 'badge-muted';
   }
 
+  getInscriptionFinalStatusLabel(value: InscriptionCandidateRow['statut_final']): string {
+    if (value === 'inscrite') return 'Inscrite';
+    if (value === 'rejetee') return 'Rejetée (Délai dépassé)';
+    return 'En attente de paiement';
+  }
+
+  getInscriptionFinalStatusClass(value: InscriptionCandidateRow['statut_final']): string {
+    if (value === 'inscrite') return 'badge-success';
+    if (value === 'rejetee') return 'badge-danger';
+    return 'badge-warning';
+  }
+
   getInscriptionDossierClass(value: InscriptionCandidateRow['dossier']): string {
     return value === 'complet' ? 'badge-success' : 'badge-warning';
   }
 
   getInscriptionFinaliseClass(value: boolean): string {
     return value ? 'badge-success' : 'badge-muted';
+  }
+
+  openInscriptionContact(candidate: InscriptionCandidateRow): void {
+    this.closeInscriptionActionMenu(candidate.id);
+    window.location.href = `mailto:${candidate.email}?subject=Inscription%20administrative`;
+  }
+
+  toggleInscriptionActionMenu(id: number, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.inscriptionActionMenuOpenId = this.inscriptionActionMenuOpenId === id ? null : id;
+  }
+
+  isInscriptionActionMenuOpen(id: number): boolean {
+    return this.inscriptionActionMenuOpenId === id;
+  }
+
+  closeInscriptionActionMenu(id?: number): void {
+    if (typeof id === 'number' && this.inscriptionActionMenuOpenId === id) {
+      this.inscriptionActionMenuOpenId = null;
+      return;
+    }
+
+    this.inscriptionActionMenuOpenId = null;
+  }
+
+  openInscriptionReceipt(candidate: InscriptionCandidateRow): void {
+    this.closeInscriptionActionMenu(candidate.id);
+    if (candidate.receiptPdfUrl) {
+      window.open(candidate.receiptPdfUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    this.toastService.show('Aucun reçu PDF disponible.', 'warning');
+  }
+
+  validateInscription(candidate: InscriptionCandidateRow): void {
+    const confirmed = window.confirm(
+      "Voulez-vous valider définitivement l'inscription administrative de ce candidat ?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    candidate.statut_final = 'inscrite';
+    candidate.finalise = true;
+    candidate.recuVerifie = true;
+    candidate.observation = 'Inscription administrative validée';
+    this.closeInscriptionActionMenu(candidate.id);
+    this.applyInscriptionFilters();
+    this.updateInscriptionStats();
+    this.toastService.show('Inscription validée et dossier verrouillé.', 'success');
+  }
+
+  openRejectInscription(candidate: InscriptionCandidateRow): void {
+    this.inscriptionRejectSelectionnee = candidate;
+    this.motifRejetInscription = '';
+    this.closeInscriptionActionMenu(candidate.id);
+    this.showModalRejectInscription = true;
+  }
+
+  closeRejectInscriptionModal(): void {
+    this.showModalRejectInscription = false;
+    this.inscriptionRejectSelectionnee = null;
+    this.motifRejetInscription = '';
+  }
+
+  confirmRejectInscription(): void {
+    if (!this.inscriptionRejectSelectionnee) {
+      return;
+    }
+
+    if (!this.motifRejetInscription.trim()) {
+      this.toastService.show('Le motif du rejet est obligatoire.', 'warning');
+      return;
+    }
+
+    this.inscriptionRejectSelectionnee.statut_final = 'rejetee';
+    this.inscriptionRejectSelectionnee.finalise = false;
+    this.inscriptionRejectSelectionnee.observation = this.motifRejetInscription.trim();
+    this.applyInscriptionFilters();
+    this.updateInscriptionStats();
+    this.toastService.show('Inscription rejetée et candidat notifié.', 'success');
+    this.closeRejectInscriptionModal();
   }
 
   getInscriptionProgressPct(): number {
@@ -8518,6 +8832,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     finalisable.forEach((candidate) => {
       candidate.finalise = true;
+      candidate.statut_final = 'inscrite';
       candidate.observation = 'Inscription finalisée';
     });
 

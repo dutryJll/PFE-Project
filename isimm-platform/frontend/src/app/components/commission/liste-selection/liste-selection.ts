@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -71,6 +71,14 @@ interface FinalSelectionFilters {
   hideValides: boolean;
 }
 
+interface CommissionMemberAvis {
+  membre: string;
+  email: string;
+  statut: 'Favorable' | 'Défavorable' | 'En attente';
+  commentaire: string;
+  date: string;
+}
+
 @Component({
   selector: 'app-liste-selection',
   standalone: true,
@@ -79,6 +87,8 @@ interface FinalSelectionFilters {
   styleUrl: './liste-selection.css',
 })
 export class ListeSelection implements OnInit {
+  @Input() spaceMode: 'membre' | 'responsable' = 'responsable';
+
   listePrincipale: Candidat[] = [];
   listeAttente: Candidat[] = [];
   activeTab: 'principale' | 'attente' | 'toutes' = 'principale';
@@ -101,6 +111,7 @@ export class ListeSelection implements OnInit {
   finalSelectionExportOpen: boolean = false;
   finalSelectionConfirmOpen: boolean = false;
   selectionActionMenuOpenId: number | null = null;
+  showGlobalAvisModal = false;
   dossierModalOpen: boolean = false;
   dossierModalLoading: boolean = false;
   dossierModalError = '';
@@ -114,6 +125,29 @@ export class ListeSelection implements OnInit {
   auditDecision: 'conforme' | 'non_conforme' = 'conforme';
   finalSelectionConsultationCandidates: FinalSelectionCandidate[] = [];
   finalSelectionConsultationIndex = 0;
+  commissionMemberAvisRows: CommissionMemberAvis[] = [
+    {
+      membre: 'Dr. Fatma Ben Ali',
+      email: 'fatma.benali@isimm.tn',
+      statut: 'Favorable',
+      commentaire: 'Avis global favorable sur la cohérence des dossiers audités.',
+      date: '2026-05-20T09:30:00',
+    },
+    {
+      membre: 'M. Sami Trabelsi',
+      email: 'sami.trabelsi@isimm.tn',
+      statut: 'Défavorable',
+      commentaire: 'Réserves sur plusieurs dossiers incomplets côté pièces justificatives.',
+      date: '2026-05-20T10:12:00',
+    },
+    {
+      membre: 'Mme Ines Karray',
+      email: 'ines.karray@isimm.tn',
+      statut: 'En attente',
+      commentaire: 'Retour en cours de validation.',
+      date: '2026-05-20T11:05:00',
+    },
+  ];
   finalSelectionToast: { message: string; type: string; visible: boolean } = {
     message: '0 candidats mis a jour',
     type: 't-success',
@@ -156,6 +190,17 @@ export class ListeSelection implements OnInit {
       this.updateFinalSelectionFiltered();
     });
     this.loadListes();
+  }
+
+  get isResponsableSpace(): boolean {
+    return this.spaceMode === 'responsable';
+  }
+
+  get currentCommissionDisplay(): string {
+    if (this.activeCommissionCategory === 'ingenieur') return 'Cycle Ingénieur';
+    if (this.activeCommissionCategory === 'master-ds') return 'Master Data Science';
+    if (this.activeCommissionCategory === 'master-gl') return 'Master Génie Logiciel';
+    return 'Commission active';
   }
 
   loadListes(): void {
@@ -320,6 +365,54 @@ export class ListeSelection implements OnInit {
     setTimeout(() => (this.finalSelectionToast.visible = false), 2500);
   }
 
+  openGlobalAvisModal(): void {
+    this.globalOpinion = '';
+    this.globalComment = '';
+    this.showGlobalAvisModal = true;
+  }
+
+  closeGlobalAvisModal(): void {
+    this.showGlobalAvisModal = false;
+    this.globalOpinion = '';
+    this.globalComment = '';
+  }
+
+  submitMemberGlobalOpinion(): void {
+    if (!this.globalOpinion) {
+      this.showFinalSelectionToast('Veuillez choisir un avis global', 't-error');
+      return;
+    }
+
+    if (!this.globalComment.trim()) {
+      this.showFinalSelectionToast('Le commentaire est obligatoire', 't-error');
+      return;
+    }
+
+    this.showFinalSelectionToast('Avis global de la commission soumis', 't-success');
+    this.closeGlobalAvisModal();
+  }
+
+  getMemberAvisBadgeClass(statut: CommissionMemberAvis['statut']): string {
+    switch (statut) {
+      case 'Favorable':
+        return 'member-avis-favorable';
+      case 'Défavorable':
+        return 'member-avis-defavorable';
+      default:
+        return 'member-avis-en-attente';
+    }
+  }
+
+  refreshCommissionMemberAvis(): void {
+    this.showFinalSelectionToast('Tableau des avis actualisé', 't-success');
+  }
+
+  applyTop100FinalDecision(): void {
+    this.finalSelectionTop100On = true;
+    this.updateFinalSelectionFiltered();
+    this.showFinalSelectionToast('Top 100 appliqué à la sélection filtrée', 't-info');
+  }
+
   scrollToGlobalAvis(): void {
     const section = document.getElementById('avis-global-section');
     section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -380,6 +473,18 @@ export class ListeSelection implements OnInit {
     this.dossierModalLoading = false;
     this.finalSelectionConsultationCandidates = [];
     this.finalSelectionConsultationIndex = 0;
+  }
+
+  focusConsultationCandidate(index: number): void {
+    if (index < 0 || index >= this.finalSelectionConsultationCandidates.length) {
+      return;
+    }
+
+    const candidate = this.finalSelectionConsultationCandidates[index];
+    if (candidate) {
+      this.finalSelectionConsultationIndex = index;
+      this.voirDossierSelection(candidate);
+    }
   }
 
   openAuditModal(candidate: FinalSelectionCandidate): void {
@@ -499,7 +604,7 @@ export class ListeSelection implements OnInit {
     const auditState = this.finalSelectionFilters.auditState;
     const specialite = this.finalSelectionFilters.specialite;
     const hideValides = this.finalSelectionFilters.hideValides;
-    const scope = this.userRole === 'responsable_commission' ? null : this.activeCommissionCategory;
+    const scope = this.isResponsableSpace ? null : this.activeCommissionCategory;
     let rows = this.finalSelectionCandidates.slice();
     rows = rows.filter((candidate) => !scope || candidate.commissionCategory === scope);
     rows = rows.filter((c) => c.score >= scoreMin && c.score <= scoreMax);

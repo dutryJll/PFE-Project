@@ -800,11 +800,13 @@
 
 .insc-table-wrap {
   margin-top: 0.25rem;
+  overflow: visible !important;
 }
 
 .insc-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .insc-table th,
@@ -813,6 +815,8 @@
   border-bottom: 1px solid #edf2f7;
   text-align: left;
   vertical-align: middle;
+  overflow: visible;
+  white-space: normal;
 }
 
 .insc-table th.center,
@@ -831,6 +835,94 @@
 .insc-verify-table td,
 .insc-verify-table th {
   white-space: nowrap;
+}
+
+.insc-receipt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.insc-receipt-btn:hover {
+  background: #dbeafe;
+}
+
+.insc-action-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  position: relative;
+  overflow: visible;
+}
+
+.btn-inscription-validate {
+  padding: 0.55rem 0.85rem;
+  border: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.inscription-kebab {
+  position: relative;
+  overflow: visible;
+}
+
+.actions-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 9999 !important;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  min-width: 220px;
+  display: block;
+  padding: 8px;
+  margin: 8px 0 0;
+}
+
+.actions-dropdown-menu li {
+  list-style: none;
+}
+
+.actions-dropdown-menu .menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.actions-dropdown-menu .menu-item:hover {
+  background: #f8fbff;
+}
+
+.actions-dropdown-menu .menu-item.danger {
+  color: #b42318;
+}
+
+.insc-table-wrap,
+.table-responsive,
+.insc-verify-card,
+.modal-inscription-reject {
+  overflow: visible !important;
+}
+
+.modal-inscription-reject {
+  max-width: 640px;
 }
 
 .badge-success {
@@ -3579,6 +3671,14 @@
   position: relative;
 }
 
+.reclamations-page .table-wrap,
+.reclamations-page .reclamations-list,
+.reclamations-page .reclamations-grid,
+.reclamations-page table,
+.reclamations-page .content-container {
+  overflow: visible !important;
+}
+
 .reclamations-page .action-cell {
   justify-content: flex-end;
 }
@@ -3603,6 +3703,53 @@
   background: #f8fbff;
 }
 
+.reclamations-page .kebab-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.reclamations-page .kebab-menu,
+.reclamations-page .actions-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 9999 !important;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  display: block;
+  overflow: visible;
+}
+
+.reclamations-page .kebab-menu {
+  list-style: none;
+  padding: 8px;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.reclamations-page .kebab-menu .menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.reclamations-page .kebab-menu .menu-item:hover {
+  background: #f8fbff;
+}
+
 .reclamations-page .kebab-menu {
   position: absolute;
   right: 0;
@@ -3618,6 +3765,31 @@
 
 .reclamations-page .kebab-menu li {
   list-style: none;
+}
+
+/* Reclamation dropdown must never be clipped by table containers */
+.reclamations-page .table-responsive,
+.reclamations-page mat-table,
+.reclamations-page table,
+.reclamations-page .reclamations-table-responsive {
+  overflow: visible !important;
+}
+
+.reclamations-page .cdk-virtual-scroll-viewport {
+  overflow: visible !important;
+}
+
+.reclamations-page .actions-dropdown-menu,
+.reclamations-page .kebab-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 9999 !important;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  display: block;
 }
 
 .reclamations-page .menu-item {
@@ -7397,6 +7569,112 @@ a:focus-visible {
 
 .table-responsive {
   overflow-x: auto;
+}
+
+.reclamations-page .table-responsive,
+.reclamations-page table,
+.reclamations-page mat-table,
+.reclamations-page .cdk-virtual-scroll-viewport {
+  overflow: visible !important;
+}
+
+.reclamations-page .kebab-container {
+  position: relative;
+  overflow: visible;
+}
+
+.reclamation-consultation-modal {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh;
+  margin: 2vh auto;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.reclamation-consultation-modal .modal-body {
+  display: grid;
+  gap: 16px;
+}
+
+.reclamation-consultation-modal .consultation-doc-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.reclamation-consultation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+}
+
+.consultation-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.consultation-summary-card,
+.consultation-doc-card {
+  background: #ffffff;
+  border: 1px solid #dbe7ff;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+}
+
+.consultation-summary-card span,
+.consultation-doc-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.consultation-summary-card strong,
+.consultation-doc-card strong {
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.consultation-detail-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.consultation-detail-box p {
+  margin: 10px 0 0;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.consultation-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.consultation-doc-card {
+  min-height: 96px;
+}
+
+.massive-consultation-modal .dossier-summary-card,
+.reclamation-consultation-modal .consultation-summary-card {
+  background: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.massive-consultation-modal .dossier-summary-card,
+.reclamation-consultation-modal .consultation-summary-card {
+  min-height: 96px;
+  justify-content: center;
 }
 
 .membres-table {

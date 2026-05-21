@@ -28,6 +28,8 @@ import autoTable from 'jspdf-autotable';
 interface Candidature {
   id: number;
   numero: string;
+  prenom?: string;
+  nom?: string;
   master_nom: string;
   master?: number;
   master_id?: number;
@@ -43,6 +45,8 @@ interface Candidature {
   classement?: string | number;
   total_candidats?: number;
   statut_inscription?: string;
+  numero_inscription_universitaire?: string;
+  attestation_paiement_url?: string;
   annee_universitaire?: string;
   choix_priorite?: number;
   date_limite_modification?: string;
@@ -357,6 +361,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   };
   selectedCandidatureForInscription: Candidature | null = null;
   openActionMenuId: number | null = null;
+  openInscriptionActionMenuId: number | null = null;
   inscriptionExportFormat: ExportFormat = 'pdf';
   notificationsNonLues = 0;
   isDashboardLoading = true;
@@ -3431,6 +3436,94 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   isFicheInscriptionDeposee(candidature: Candidature): boolean {
     const statutInscription = this.normalizeStatus(candidature.statut_inscription);
     return ['paiement_soumis', 'valide', 'confirme'].includes(statutInscription);
+  }
+
+  getNomPrenomInscription(candidature: Candidature): string {
+    const firstName = this.profileData?.first_name || this.currentUser?.first_name || '';
+    const lastName = this.profileData?.last_name || this.currentUser?.last_name || '';
+    return `${candidature.prenom || firstName} ${candidature.nom || lastName}`.trim() || '-';
+  }
+
+  getNumeroInscriptionUniversitaire(candidature: Candidature): string {
+    return candidature.numero_inscription_universitaire || candidature.numero || '-';
+  }
+
+  getStatutFinalInscription(candidature: Candidature): string {
+    const status = this.normalizeStatus(candidature.statut_inscription || candidature.statut);
+
+    if (['paiement_soumis', 'en_attente', 'soumis'].includes(status)) {
+      return 'En attente de paiement';
+    }
+
+    if (['valide', 'confirme', 'inscrit', 'selectionne', 'admis'].includes(status)) {
+      return 'Inscrite';
+    }
+
+    if (['rejete', 'rejetee', 'non_admis'].includes(status)) {
+      return 'Rejetée (Délai dépassé)';
+    }
+
+    return 'En attente de paiement';
+  }
+
+  getStatutFinalInscriptionClass(candidature: Candidature): string {
+    const label = this.getStatutFinalInscription(candidature);
+    if (label === 'Inscrite') return 'badge-success';
+    if (label.startsWith('Rejetée')) return 'badge-danger';
+    return 'badge-warning';
+  }
+
+  hasAttestationPaiement(candidature: Candidature): boolean {
+    return !!candidature.attestation_paiement_url || this.isFicheInscriptionDeposee(candidature);
+  }
+
+  openAttestationPaiement(candidature: Candidature): void {
+    const url = candidature.attestation_paiement_url || '/assets/docs/sample.pdf';
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  toggleInscriptionActionMenu(candidatureId: number): void {
+    this.openInscriptionActionMenuId =
+      this.openInscriptionActionMenuId === candidatureId ? null : candidatureId;
+  }
+
+  closeInscriptionActionMenu(): void {
+    this.openInscriptionActionMenuId = null;
+  }
+
+  voirDossierCompletInscription(candidature: Candidature): void {
+    this.closeInscriptionActionMenu();
+    this.accederAuDossier(candidature);
+  }
+
+  isInscriptionResponsableSpace(): boolean {
+    return String(this.currentUser?.role || '')
+      .toLowerCase()
+      .includes('responsable');
+  }
+
+  canValidateInscription(candidature: Candidature): boolean {
+    const statut = this.normalizeStatus(candidature.statut_inscription || candidature.statut);
+    return (
+      this.isInscriptionResponsableSpace() && !['inscrit', 'rejete', 'rejetee'].includes(statut)
+    );
+  }
+
+  validateInscription(candidature: Candidature): void {
+    if (!this.canValidateInscription(candidature)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Voulez-vous valider définitivement l'inscription administrative de ce candidat ?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    candidature.statut_inscription = 'inscrit';
+    this.toastService.show('Inscription validée avec succès.', 'success');
   }
 
   get admittedCandidatures(): Candidature[] {

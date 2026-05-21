@@ -49,6 +49,59 @@
   width: 100%;
   border-collapse: collapse;
 }
+
+.table-container,
+.candidatures-table,
+.candidatures-table tbody,
+.candidatures-table thead,
+.candidatures-table tr,
+.candidatures-table td,
+.candidatures-table th {
+  overflow: visible !important;
+}
+
+.table-container {
+  position: relative;
+}
+
+.candidatures-table {
+  table-layout: fixed;
+}
+
+.candidatures-table th,
+.candidatures-table td {
+  white-space: normal;
+}
+
+.candidatures-table th:nth-child(1),
+.candidatures-table td:nth-child(1) {
+  width: 15%;
+}
+
+.candidatures-table th:nth-child(2),
+.candidatures-table td:nth-child(2) {
+  width: 22%;
+}
+
+.candidatures-table th:nth-child(3),
+.candidatures-table td:nth-child(3) {
+  width: 20%;
+}
+
+.candidatures-table th:nth-child(4),
+.candidatures-table td:nth-child(4) {
+  width: 17%;
+}
+
+.candidatures-table th:nth-child(5),
+.candidatures-table td:nth-child(5) {
+  width: 15%;
+}
+
+.candidatures-table th:nth-child(6),
+.candidatures-table td:nth-child(6) {
+  width: 11%;
+}
 .candidatures-table th,
 .candidatures-table td {
   padding: 12px 14px;
@@ -95,6 +148,100 @@
   border: none;
   border-radius: 8px;
   cursor: default;
+}
+
+.btn-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #1d4ed8;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-receipt:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.action-menu-container {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.inscription-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.btn-validate-inscription {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.18);
+}
+
+.btn-validate-inscription:hover {
+  filter: brightness(1.03);
+}
+
+.kebab-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actions-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 9999 !important;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  display: block;
+  border: 1px solid #e2e8f0;
+  padding: 8px;
+}
+
+.actions-dropdown-menu .menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.actions-dropdown-menu .menu-item:hover {
+  background: #f8fbff;
 }
 
 .inscription-empty-state {
