@@ -90,6 +90,8 @@ interface FinalSelectionFilters {
   search: string;
   hideValides: boolean;
   statut: string;
+  dossier: '' | 'valide' | 'invalide';
+  preselOnly: boolean;
 }
 
 interface NotificationItem {
@@ -284,6 +286,9 @@ interface CommissionMember {
   statut: 'actif' | 'inactif';
   date_inscription: string;
   master_rattachement?: string;
+  commentaire?: string;
+  date?: string;
+  avis?: 'favorable' | 'defavorable' | 'attente';
 }
 
 interface UserCommissionOption {
@@ -600,6 +605,195 @@ export class DashboardCommissionComponent implements OnInit {
   bulkConsultationCandidatures: Candidature[] = [];
   bulkConsultationCandidaturesCurrentIndex: number = 0;
   selectedCandidaturesIds: number[] = [];
+
+  // --- OCR Dossier Modal ---
+  showDossierOCRModal: boolean = false;
+  dossierOCRCandidature: Candidature | null = null;
+  dossierOCRActiveTab: string = 'documents';
+  dossierOCRDocumentIndex: number = 0;
+  showOCRPanel: boolean = false;
+
+  ouvrirDossierOCR(c: Candidature): void {
+    this.dossierOCRCandidature = c;
+    this.dossierOCRActiveTab = 'documents';
+    this.dossierOCRDocumentIndex = 0;
+    this.showOCRPanel = false;
+    this.showDossierOCRModal = true;
+  }
+
+  fermerDossierOCR(): void {
+    this.showDossierOCRModal = false;
+    this.dossierOCRCandidature = null;
+  }
+
+  setDossierOCRTab(tab: string): void {
+    this.dossierOCRActiveTab = tab;
+  }
+
+  lancerAnalyseOCRDossier(): void {
+    this.showOCRPanel = true;
+    this.toastService.show('Analyse OCR lancée', 'info');
+  }
+
+  validerDossierOCR(): void {
+    if (!this.dossierOCRCandidature) return;
+    this.updateCandidatureStatus(this.dossierOCRCandidature.id, 'preselectionne');
+    this.toastService.show(`Dossier validé : ${this.dossierOCRCandidature.candidat_nom}`, 'success');
+    this.fermerDossierOCR();
+  }
+
+  rejeterDossierOCR(): void {
+    if (!this.dossierOCRCandidature) return;
+    this.updateCandidatureStatus(this.dossierOCRCandidature.id, 'rejete');
+    this.toastService.show(`Dossier rejeté : ${this.dossierOCRCandidature.candidat_nom}`, 'warning');
+    this.fermerDossierOCR();
+  }
+
+  updateCandidatureStatus(id: number, statut: string): void {
+    this.candidatureService.updateStatus(id, statut).subscribe({
+      next: () => {
+        const idx = this.candidatures.findIndex((c) => c.id === id);
+        if (idx >= 0) this.candidatures[idx].statut = statut;
+        const idxR = this.candidaturesResponsable.findIndex((c) => c.id === id);
+        if (idxR >= 0) this.candidaturesResponsable[idxR].statut = statut;
+      },
+      error: (err: any) => {
+        this.toastService.show(err?.error?.error || 'Erreur mise à jour statut', 'error');
+      },
+    });
+  }
+
+  // --- Consultation Massive Modal ---
+  showConsultationMassiveModal: boolean = false;
+  consultationMassiveCandidates: Candidature[] = [];
+  consultationMassiveIndex: number = 0;
+  consultationMassiveSearch: string = '';
+  showConsultationMassiveOCRPanel: boolean = false;
+
+  get consultationMassiveCurrent(): Candidature | null {
+    return this.consultationMassiveCandidates[this.consultationMassiveIndex] ?? null;
+  }
+
+  get consultationMassiveFiltered(): Candidature[] {
+    const s = this.consultationMassiveSearch.toLowerCase();
+    if (!s) return this.consultationMassiveCandidates;
+    return this.consultationMassiveCandidates.filter(
+      (c) =>
+        c.candidat_nom.toLowerCase().includes(s) ||
+        c.numero.toLowerCase().includes(s),
+    );
+  }
+
+  ouvrirConsultationMassive(candidates: Candidature[]): void {
+    this.consultationMassiveCandidates = candidates;
+    this.consultationMassiveIndex = 0;
+    this.consultationMassiveSearch = '';
+    this.showConsultationMassiveOCRPanel = false;
+    this.showConsultationMassiveModal = true;
+  }
+
+  fermerConsultationMassive(): void {
+    this.showConsultationMassiveModal = false;
+    this.consultationMassiveCandidates = [];
+  }
+
+  consultationMassiveSelectCandidat(index: number): void {
+    this.consultationMassiveIndex = index;
+    this.showConsultationMassiveOCRPanel = false;
+  }
+
+  consultationMassiveSuivant(): void {
+    if (this.consultationMassiveIndex < this.consultationMassiveCandidates.length - 1) {
+      this.consultationMassiveIndex++;
+      this.showConsultationMassiveOCRPanel = false;
+    } else {
+      this.fermerConsultationMassive();
+    }
+  }
+
+  lancerConsultationMassiveOCR(): void {
+    this.showConsultationMassiveOCRPanel = true;
+    this.toastService.show('Analyse OCR lancée pour ce candidat', 'info');
+  }
+
+  // --- Candidatures Master cm-* ---
+  cmSelectedIds: Set<number> = new Set();
+  cmAllSelected: boolean = false;
+
+  get cmCandidatures(): Candidature[] {
+    return this.isResponsable ? this.candidaturesResponsableFiltrees : this.candidaturesFiltrees;
+  }
+
+  get cmStatPreselectionnees(): number {
+    return this.cmCandidatures.filter(
+      (c) => c.statut === 'preselectionne' || c.statut === 'selectionne',
+    ).length;
+  }
+
+  get cmStatRefuses(): number {
+    return this.cmCandidatures.filter((c) => c.statut === 'rejete').length;
+  }
+
+  get cmStatDossiers(): number {
+    return this.cmCandidatures.filter((c) => c.dossier_depose).length;
+  }
+
+  toggleCmSelection(id: number): void {
+    if (this.cmSelectedIds.has(id)) {
+      this.cmSelectedIds.delete(id);
+    } else {
+      this.cmSelectedIds.add(id);
+    }
+    this.cmAllSelected = this.cmSelectedIds.size === this.cmCandidatures.length;
+  }
+
+  toggleAllCmSelection(): void {
+    this.cmAllSelected = !this.cmAllSelected;
+    if (this.cmAllSelected) {
+      this.cmSelectedIds = new Set(this.cmCandidatures.map((c) => c.id));
+    } else {
+      this.cmSelectedIds = new Set();
+    }
+  }
+
+  ouvrirConsultationMassiveCm(): void {
+    const selected =
+      this.cmSelectedIds.size > 0
+        ? this.cmCandidatures.filter((c) => this.cmSelectedIds.has(c.id))
+        : this.cmCandidatures;
+    this.ouvrirConsultationMassive(selected);
+  }
+
+  // --- Candidatures Ingénieur ing-* ---
+  ingSelectedIds: Set<number> = new Set();
+  ingAllSelected: boolean = false;
+
+  toggleIngSelection(id: number): void {
+    if (this.ingSelectedIds.has(id)) {
+      this.ingSelectedIds.delete(id);
+    } else {
+      this.ingSelectedIds.add(id);
+    }
+    this.ingAllSelected = this.ingSelectedIds.size === this.candidaturesIngenieurFiltrees.length;
+  }
+
+  toggleAllIngSelection(): void {
+    this.ingAllSelected = !this.ingAllSelected;
+    if (this.ingAllSelected) {
+      this.ingSelectedIds = new Set(this.candidaturesIngenieurFiltrees.map((c) => c.id));
+    } else {
+      this.ingSelectedIds = new Set();
+    }
+  }
+
+  ouvrirConsultationMassiveIng(): void {
+    const selected =
+      this.ingSelectedIds.size > 0
+        ? this.candidaturesIngenieurFiltrees.filter((c) => this.ingSelectedIds.has(c.id))
+        : this.candidaturesIngenieurFiltrees;
+    this.ouvrirConsultationMassive(selected);
+  }
+
   // --- Candidatures Master (carousel & actions) ---
   candidates: any[] = [
     {
@@ -1053,6 +1247,8 @@ export class DashboardCommissionComponent implements OnInit {
     search: '',
     hideValides: false,
     statut: '',
+    dossier: '',
+    preselOnly: false,
   };
 
   // Filter properties for template binding
@@ -1233,6 +1429,20 @@ export class DashboardCommissionComponent implements OnInit {
       rows = rows.filter((c) => !c.statut);
     }
 
+    if (this.finalSelectionFilters.preselOnly) {
+      rows = rows.filter((c) => c.presel === 'oui');
+    }
+
+    if (this.finalSelectionFilters.dossier === 'valide') {
+      rows = rows.filter((c) => c.presel === 'oui');
+    } else if (this.finalSelectionFilters.dossier === 'invalide') {
+      rows = rows.filter((c) => c.presel !== 'oui');
+    }
+
+    if (this.finalSelectionFilters.statut) {
+      rows = rows.filter((c) => c.statut === this.finalSelectionFilters.statut);
+    }
+
     if (this.finalSelectionTop100On) {
       rows = rows
         .slice()
@@ -1380,6 +1590,8 @@ export class DashboardCommissionComponent implements OnInit {
       search: '',
       hideValides: false,
       statut: '',
+      dossier: '',
+      preselOnly: false,
     };
     this.finalSelectionTop100On = false;
     this.updateFinalSelectionFiltered();
@@ -1591,6 +1803,9 @@ export class DashboardCommissionComponent implements OnInit {
       scoreMax: this.finalSelectionScoreMax,
       search: this.finalSelectionSearchTerm,
       hideValides: this.finalSelectionHideValidated,
+      statut: '',
+      dossier: '',
+      preselOnly: false,
     };
     this.updateFinalSelectionFiltered();
   }
@@ -3703,12 +3918,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     if ((view as string) === 'avis-listes') {
-      return (
-        this.isResponsable ||
-        this.actionPermissions.consultationCandidature ||
-        this.actionPermissions.preselection ||
-        this.actionPermissions.selectionFinale
-      );
+      return true;
     }
 
     if (view === 'valider-dossier') {
@@ -3720,12 +3930,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     if (view === 'listes') {
-      return (
-        this.isResponsable ||
-        this.actionPermissions.consultationCandidature ||
-        this.actionPermissions.preselection ||
-        this.actionPermissions.selectionFinale
-      );
+      return true;
     }
 
     if (view === 'ocr') {
@@ -3773,25 +3978,6 @@ export class DashboardCommissionComponent implements OnInit {
       this.notifyActionBlocked('Fonctionnalité non accessible pour votre rôle.');
       return;
     }
-
-    if (view === 'avis-listes') {
-      if (this.isResponsable) {
-        this.router.navigate(['/commission/decision-collegiale']);
-      } else {
-        this.router.navigate(['/commission/liste-preselection']);
-      }
-      return;
-    }
-
-    if (view === 'listes') {
-      if (this.isResponsable) {
-        this.router.navigate(['/responsable/liste-selection']);
-      } else {
-        this.router.navigate(['/commission/liste-selection']);
-      }
-      return;
-    }
-
     this.switchView(view);
   }
 
@@ -3799,10 +3985,13 @@ export class DashboardCommissionComponent implements OnInit {
     if (this.isResponsable) {
       return this.activeCommissionCategory !== 'ingenieur';
     }
-
     const scope = this.activeCommissionCategory;
     const isMasterScope = !scope || scope === 'master-ds' || scope === 'master-gl';
-    return isMasterScope && (this.isResponsable || this.actionPermissions.consultationCandidature);
+    if (!isMasterScope) return false;
+    return (
+      this.actionPermissions.consultationCandidature ||
+      (Array.isArray(this.availableCommissions) && this.availableCommissions.length > 0)
+    );
   }
 
   canOpenCandidaturesIngenieurMenu(): boolean {
@@ -3850,11 +4039,7 @@ export class DashboardCommissionComponent implements OnInit {
       this.notifyActionBlocked('Fonctionnalité non accessible pour votre rôle.');
       return;
     }
-
-    const targetRoute = this.isResponsable
-      ? '/commission/candidatures-master-responsable'
-      : '/commission/candidatures-master-membre';
-    this.router.navigateByUrl(targetRoute);
+    this.switchView(this.isResponsable ? 'candidatures-responsable' : 'candidatures');
   }
 
   openCandidaturesIngenieurMenu(): void {
@@ -3862,12 +4047,7 @@ export class DashboardCommissionComponent implements OnInit {
       this.notifyActionBlocked('Fonctionnalité non accessible pour votre rôle.');
       return;
     }
-
-    this.filtres.concours = 'ingenieur';
-    const targetRoute = this.isResponsable
-      ? '/commission/candidatures-ingenieur-responsable'
-      : '/commission/candidatures-ingenieur-membre';
-    this.router.navigateByUrl(targetRoute);
+    this.switchView('candidatures-ingenieur');
   }
 
   allerOffreWizard(): void {
@@ -4224,6 +4404,52 @@ export class DashboardCommissionComponent implements OnInit {
   genererPDF(): void {
     this.exportCandidatures('specialite', 'pdf');
     this.generateListOpen = false;
+  }
+
+  genererPDFOfficielISIMM(etape: 'PRESELECTION' | 'SELECTION' = 'PRESELECTION'): void {
+    try {
+      const token = this.authService.getAccessToken();
+      if (!token) {
+        this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+        return;
+      }
+      const masterId = this.activeCommissionId;
+      if (!masterId) {
+        this.toastService.show('Aucune commission active sélectionnée.', 'warning');
+        return;
+      }
+      const specialite = etape === 'SELECTION'
+        ? (this.finalSelectionFilters.specialite !== 'all' ? this.finalSelectionFilters.specialite : '')
+        : (this.filtres?.specialite || '');
+      const annee = this.finalSelectionFilters.session || '2025-2026';
+
+      const params = new URLSearchParams({ etape, master_id: String(masterId), annee });
+      if (specialite) params.append('specialite', specialite);
+
+      const url = `http://localhost:8003/api/candidatures/documents/generer-pdf/?${params}`;
+      this.toastService.show('Génération du PDF officiel ISIMM...', 'info');
+
+      this.http.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      }).subscribe({
+        next: (blob) => {
+          const urlBlob = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = urlBlob;
+          link.download = `ISIMM_${etape}_${annee.replace('/', '-')}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(urlBlob);
+          this.toastService.show('✅ PDF officiel ISIMM généré avec succès', 'success');
+        },
+        error: (err) => {
+          console.error('PDF officiel error:', err);
+          this.toastService.show("❌ Erreur lors de la génération du PDF officiel", 'error');
+        },
+      });
+    } catch (e) {
+      console.error('genererPDFOfficielISIMM error:', e);
+    }
   }
 
   clearSelection(): void {
@@ -6079,6 +6305,14 @@ export class DashboardCommissionComponent implements OnInit {
     this.prsMembreGenerateListOpen = false;
   }
 
+  toggleSelectAllMembreAvis(checked: boolean): void {
+    if (checked) {
+      this.membreAvisSelectedIds = this.getPreselectionMembreFiltered().map(c => c.id);
+    } else {
+      this.clearMembreAvisSelection();
+    }
+  }
+
   togglePrsMembreGenerateListMenu(): void {
     this.prsMembreGenerateListOpen = !this.prsMembreGenerateListOpen;
   }
@@ -6091,8 +6325,8 @@ export class DashboardCommissionComponent implements OnInit {
         String(c.id).includes(search);
       const matchSpec = !this.prsMembreSpecFilter || c.specialite === this.prsMembreSpecFilter;
       const matchType = !this.prsMembreTypeFilter ||
-        (this.prsMembreTypeFilter === 'interne' && c.type_candidat === 'interne') ||
-        (this.prsMembreTypeFilter === 'externe' && c.type_candidat === 'externe');
+        (this.prsMembreTypeFilter === 'interne' && (c as any).type_candidat === 'interne') ||
+        (this.prsMembreTypeFilter === 'externe' && (c as any).type_candidat === 'externe');
       const matchMin = this.prsMembreScoreMin == null || (c.score || 0) >= this.prsMembreScoreMin;
       const matchMax = this.prsMembreScoreMax == null || (c.score || 0) <= this.prsMembreScoreMax;
       return matchSearch && matchSpec && matchType && matchMin && matchMax;
@@ -9585,8 +9819,8 @@ export class DashboardCommissionComponent implements OnInit {
   preselConfirmLoading = false;
   preselectionValidationSuccess = false;
 
-  ouvrirModalValidationPreselection(candidature: Candidature): void {
-    this.candidatureValidationPreselection = candidature;
+  ouvrirModalValidationPreselection(candidature?: Candidature): void {
+    this.candidatureValidationPreselection = candidature ?? null;
     this.preselAvisSelectionne = 'favorable';
     this.preselCommentaire = '';
     this.preselConfirmLoading = false;

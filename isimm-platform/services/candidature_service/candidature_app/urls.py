@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_export
 from .views_parcours import ParcoursAdmissionViewSet
+from . import views_pdf_official
 
 router = DefaultRouter()
 router.register(r'parcours', ParcoursAdmissionViewSet, basename='parcours-admission')
@@ -109,6 +110,10 @@ urlpatterns = router.urls + [
     path('commissions/<int:commission_id>/appliquer-quotas/', views.appliquer_quotas_decision_finale, name='appliquer_quotas_decision_finale'),
     path('<int:candidature_id>/statut/changer/', views.changer_statut_candidature_endpoint, name='changer_statut_candidature'),
     path('<int:candidature_id>/statut/historique/', views.recuperer_historique_statuts_endpoint, name='recuperer_historique_statuts'),
+
+    # ── Générateur PDF officiel ISIMM (GFH FOR 09 v1) ─────────────────────────
+    path('documents/generer-pdf/', views_pdf_official.generer_pdf_officiel, name='generer_pdf_officiel'),
+    path('documents/verifier-liste/', views_pdf_official.verifier_liste, name='verifier_liste'),
 ]
 
 
