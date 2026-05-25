@@ -85,32 +85,39 @@
       </div>
 
       <table class="inscrits-table" *ngIf="!isImporting && inscritsFiltres.length > 0">
+        <colgroup>
+          <col style="width: 140px" />
+          <col style="width: 28%" />
+          <col style="width: 220px" />
+          <col style="width: 240px" />
+          <col style="width: 170px" />
+        </colgroup>
         <thead>
           <tr>
-            <th><input type="checkbox" (change)="toggleSelectAll($event)" /></th>
-            <th>Candidat</th>
-            <th>CIN</th>
-            <th>Email</th>
-            <th>Date Paiement</th>
-            <th>Statut Paiement</th>
-            <th>Actions</th>
+            <th>N° Candidature</th>
+            <th>Nom &amp; Prénom</th>
+            <th>N° Inscription Universitaire</th>
+            <th>Attestation de paiement</th>
+            <th>Statut Final</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let inscrit of inscritsFiltres" [class.selected]="inscrit.selected">
-            <td><input type="checkbox" [(ngModel)]="inscrit.selected" /></td>
-            <td>
-              <div class="candidat-cell">
-                <div class="avatar">{{ inscrit.prenom.charAt(0) }}{{ inscrit.nom.charAt(0) }}</div>
-                <div>
-                  <strong>{{ inscrit.prenom }} {{ inscrit.nom }}</strong>
-                  <small>{{ inscrit.telephone || 'N/A' }}</small>
-                </div>
-              </div>
+            <td class="code-cell">INS-{{ selectedMasterId }}-{{ inscrit.id }}</td>
+            <td class="name-cell">
+              <strong>{{ inscrit.prenom }} {{ inscrit.nom }}</strong>
             </td>
-            <td>{{ inscrit.cin }}</td>
-            <td>{{ inscrit.email }}</td>
-            <td>{{ inscrit.date_paiement | date: 'dd/MM/yyyy' }}</td>
+            <td class="code-cell">{{ inscrit.cin }}</td>
+            <td>
+              <button
+                class="pdf-button"
+                (click)="voirDetails(inscrit)"
+                title="Voir l'attestation PDF"
+              >
+                <i class="fas fa-file-pdf"></i>
+                <span>Voir le PDF</span>
+              </button>
+            </td>
             <td>
               <span
                 class="statut-badge"
@@ -118,11 +125,6 @@
               >
                 {{ getStatutPaiementLabel(inscrit.statut_paiement) }}
               </span>
-            </td>
-            <td>
-              <button class="btn-icon btn-view" (click)="voirDetails(inscrit)" title="Voir détails">
-                <i class="fas fa-eye"></i>
-              </button>
             </td>
           </tr>
         </tbody>

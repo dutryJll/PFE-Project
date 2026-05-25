@@ -1,18 +1,29 @@
 <div class="dashboard-candidat">
   <aside class="sidebar">
     <div class="logo-section">
-      <div class="logo-icon">🎓</div>
-      <span
-        class="ws-indicator"
-        [ngClass]="{
-          online: socketConnectionStatus === ConnectionStatus.CONNECTED,
-          connecting: socketConnectionStatus === ConnectionStatus.CONNECTING,
-          offline: socketConnectionStatus !== ConnectionStatus.CONNECTED,
-        }"
-        [title]="socketConnectionStatus"
-      ></span>
-      <h2>ISIMM</h2>
-      <p class="user-role">Espace Candidat</p>
+      <div class="sidebar-brand-row">
+        <img src="/assets/images/logo-isimm.png" alt="ISIMM" class="sidebar-logo-img" />
+        <div
+          class="sidebar-avatar-mini"
+          (click)="switchView('profil')"
+          title="Mon Profil"
+        >
+          <span class="avatar-role-emoji">🎓</span>
+        </div>
+      </div>
+      <p class="sidebar-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
+      <p class="user-role">
+        Espace Candidat
+        <span
+          class="ws-indicator"
+          [ngClass]="{
+            online: socketConnectionStatus === ConnectionStatus.CONNECTED,
+            connecting: socketConnectionStatus === ConnectionStatus.CONNECTING,
+            offline: socketConnectionStatus !== ConnectionStatus.CONNECTED,
+          }"
+          [title]="socketConnectionStatus"
+        ></span>
+      </p>
     </div>
 
     <nav class="sidebar-nav">
@@ -125,63 +136,58 @@
   </aside>
 
   <main class="main-content">
+    <header class="content-header">
+      <h1 class="content-title">{{ getViewTitle() }}</h1>
+      <div class="header-actions">
+        <span class="header-date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
+        <div class="header-user-chip" (click)="switchView('profil')">
+          <div class="header-avatar">
+            <img *ngIf="currentUser?.avatar_url" [src]="currentUser.avatar_url" alt="" />
+            <span *ngIf="!currentUser?.avatar_url">
+              {{ (currentUser?.first_name || '?')[0] }}{{ (currentUser?.last_name || '?')[0] }}
+            </span>
+          </div>
+          <span class="header-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</span>
+        </div>
+      </div>
+    </header>
+
     <div *ngIf="currentView === 'dashboard'" class="view-content">
-      <div class="alert-bar" id="alert">
-        <svg
-          class="alert-icon"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke-width="1.5"
-          aria-hidden="true"
-        >
-          <path
-            d="M10 2L18 16H2L10 2z"
-            stroke="currentColor"
-            stroke-linejoin="round"
-            stroke-linecap="round"
-            fill="none"
-          ></path>
-          <line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-linecap="round"></line>
-          <circle cx="10" cy="14.5" r="0.6" fill="#854F0B" stroke="none"></circle>
+      <div class="alert-bar" *ngIf="showAlert && nextDeadlineCandidature && !countdown.expired">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <div>
+        <div style="flex:1">
           <div class="countdown-row">
             <div class="cd-cell">
-              <div class="cd-num" id="cd-j">{{ formatNumber(countdown.days) }}</div>
+              <div class="cd-num">{{ formatNumber(countdown.days) }}</div>
               <div class="cd-lbl">Jours</div>
             </div>
             <div class="cd-cell">
-              <div class="cd-num" id="cd-h">{{ formatNumber(countdown.hours) }}</div>
+              <div class="cd-num">{{ formatNumber(countdown.hours) }}</div>
               <div class="cd-lbl">Heures</div>
             </div>
             <div class="cd-cell">
-              <div class="cd-num" id="cd-m">{{ formatNumber(countdown.minutes) }}</div>
+              <div class="cd-num">{{ formatNumber(countdown.minutes) }}</div>
               <div class="cd-lbl">Minutes</div>
             </div>
             <div class="cd-cell">
-              <div class="cd-num" id="cd-s">{{ formatNumber(countdown.seconds) }}</div>
+              <div class="cd-num">{{ formatNumber(countdown.seconds) }}</div>
               <div class="cd-lbl">Secondes</div>
             </div>
           </div>
           <div class="alert-text">
-            Délai limite : <strong>jeudi 12 mars, 23h59 heure de Tunis</strong> — finalisez vos
-            actions avant expiration.
+            Délai dossier — <strong>{{ nextDeadlineCandidature.master_nom }}</strong> :
+            <strong>{{ nextDeadlineCandidature.date_limite_modification | date:'d MMMM yyyy' }}</strong>
+            — finalisez vos actions avant expiration.
           </div>
         </div>
-        <button
-          class="btn-close-alert"
-          onclick="document.getElementById('alert').style.display = 'none'"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <line x1="2" y1="2" x2="10" y2="10"></line>
-            <line x1="10" y1="2" x2="2" y2="10"></line>
+        <button class="btn-close-alert" (click)="showAlert = false" aria-label="Fermer">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="2" y1="2" x2="12" y2="12"></line>
+            <line x1="12" y1="2" x2="2" y2="12"></line>
           </svg>
         </button>
       </div>
@@ -272,36 +278,36 @@
 
         <div class="deadline-card">
           <div class="card-title" style="margin-bottom: 0.6rem">Dates importantes</div>
-          <div class="deadline-row">
-            <div class="dl-left">
-              <div class="dl-dot" style="background: #e24b4a"></div>
-              <div>
-                <div class="dl-name">Dépôt dossier</div>
-                <div class="dl-date">12 mars 2025, 23h59</div>
+
+          <!-- Candidatures with upcoming deadlines -->
+          <ng-container *ngIf="getUpcomingDeadlines().length > 0; else noDeadlines">
+            <div class="deadline-row" *ngFor="let dl of getUpcomingDeadlines()">
+              <div class="dl-left">
+                <div class="dl-dot" [style.background]="dl.color"></div>
+                <div>
+                  <div class="dl-name">{{ dl.label }}</div>
+                  <div class="dl-date">{{ dl.date | date:'d MMMM yyyy, HH:mm' }}</div>
+                </div>
               </div>
+              <span class="dl-badge"
+                [class.dlb-hot]="dl.daysLeft <= 3"
+                [class.dlb-warn]="dl.daysLeft > 3 && dl.daysLeft <= 10"
+                [class.dlb-ok]="dl.daysLeft > 10">
+                {{ dl.daysLeft === 0 ? "Aujourd'hui" : dl.daysLeft + ' j' }}
+              </span>
             </div>
-            <span class="dl-badge dlb-hot">2 jours</span>
-          </div>
-          <div class="deadline-row">
-            <div class="dl-left">
-              <div class="dl-dot" style="background: #ba7517"></div>
-              <div>
-                <div class="dl-name">Résultats présélection</div>
-                <div class="dl-date">25 mars 2025</div>
-              </div>
+          </ng-container>
+
+          <ng-template #noDeadlines>
+            <div class="dl-empty">
+              <svg viewBox="0 0 20 20" fill="none" stroke="#94a3b8" stroke-width="1.5" width="24" height="24">
+                <rect x="2" y="3" width="16" height="15" rx="2"/>
+                <line x1="7" y1="1" x2="7" y2="5"/><line x1="13" y1="1" x2="13" y2="5"/>
+                <line x1="2" y1="8" x2="18" y2="8"/>
+              </svg>
+              <span>Aucune date limite à venir.</span>
             </div>
-            <span class="dl-badge dlb-warn">15 jours</span>
-          </div>
-          <div class="deadline-row">
-            <div class="dl-left">
-              <div class="dl-dot" style="background: #1d9e75"></div>
-              <div>
-                <div class="dl-name">Inscription administrative</div>
-                <div class="dl-date">10 avril 2025</div>
-              </div>
-            </div>
-            <span class="dl-badge dlb-ok">31 jours</span>
-          </div>
+          </ng-template>
         </div>
       </div>
     </div>
@@ -382,20 +388,6 @@
                 />
               </div>
             </div>
-
-            <details class="profile-collapse">
-              <summary>Noms complémentaires</summary>
-              <div class="profile-collapse-body form-row">
-                <div class="form-group">
-                  <label>Nom additionnel</label>
-                  <input type="text" name="additional_name" />
-                </div>
-                <div class="form-group">
-                  <label>Nom préféré</label>
-                  <input type="text" name="preferred_name" />
-                </div>
-              </div>
-            </details>
 
             <details class="profile-collapse">
               <summary>Centres d'intérêt</summary>
@@ -727,11 +719,265 @@
       </div>
     </div>
 
+    <!-- ══ MODAL DÉTAIL PARCOURS ══ -->
+    <div class="offre-detail-overlay" *ngIf="showOffreDetailModal" (click)="fermerDetailModal()">
+      <div class="offre-detail-modal" (click)="$event.stopPropagation()">
+        <div class="offre-detail-header">
+          <div class="offre-detail-header-left">
+            <img src="/assets/images/logo-isimm.png" alt="ISIMM" class="modal-logo" />
+            <div>
+              <p class="modal-institution">Institut Supérieur de l'Informatique et des Mathématiques de Monastir</p>
+              <h2 class="modal-title">{{ selectedOffreDetail?.titre }}</h2>
+            </div>
+          </div>
+          <button class="btn-close-modal" (click)="fermerDetailModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="offre-detail-body">
+
+          <!-- ── MP-GL ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'mpgl'">
+            <div class="parcours-section">
+              <div class="parcours-badge mpgl">Mastère Professionnel — Génie Logiciel (MP-GL)</div>
+              <p class="parcours-intro">La direction de l'ISIMM annonce l'ouverture des candidatures pour l'inscription en première année du Mastère Professionnel en <strong>Génie Logiciel</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-table"></i> Capacités d'accueil & Calendrier</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Capacité totale</th><th>Établissement</th><th>Capacité</th><th>Diplôme requis</th><th>Dates importantes</th></tr></thead>
+                  <tbody>
+                    <tr><td rowspan="2">35</td><td>ISIMM</td><td>30</td><td>Licence en Sciences de l'Informatique</td><td>Inscription en ligne jusqu'au <strong>22 juillet 2025</strong></td></tr>
+                    <tr><td>Autres établissements</td><td>05</td><td>Licence en Sciences de l'Informatique ou Informatique de Gestion</td><td>Annonce présélection : <strong>28 juillet 2025</strong><br/>Dépôt dossier numérique : <strong>28–31 juillet 2025</strong><br/>Admis : <strong>08 août 2025</strong></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Calcul du Score</h3>
+              <div class="score-formula-card">
+                <p class="formula"><strong>Score = M.G + B.N.R + B.S.P</strong></p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">M.G (Moyenne Générale)</span><span class="score-detail">Moyenne des 3 années de Licence : (M1 + M2 + M3) / 3</span></div>
+                  <div class="score-row"><span class="score-component">B.N.R (Bonus Non-Redoublement)</span><span class="score-detail">0 redoublement : +5 pts | 1 redoublement : +3 pts | ≥ 2 : 0 pt</span></div>
+                  <div class="score-row"><span class="score-component">B.S.P (Bonus Session Principale)</span><span class="score-detail">0 rattrapage : +3 pts | 1 rattrapage : +2 pts | ≥ 2 : 0 pt</span></div>
+                </div>
+              </div>
+              <h3 class="section-label"><i class="fas fa-folder-open"></i> Composition du dossier</h3>
+              <ul class="dossier-list">
+                <li><i class="fas fa-check-circle"></i> Formulaire de candidature (joint à l'avis)</li>
+                <li><i class="fas fa-check-circle"></i> Fiche de candidature imprimée et signée</li>
+                <li><i class="fas fa-check-circle"></i> CV d'une page (adresse, tél., e-mail obligatoires)</li>
+                <li><i class="fas fa-check-circle"></i> Copies certifiées de tous les diplômes (Bac inclus)</li>
+                <li><i class="fas fa-check-circle"></i> Relevés de notes de toutes les années universitaires et du Bac</li>
+                <li><i class="fas fa-check-circle"></i> Justificatifs de report ou réorientation (si applicable)</li>
+              </ul>
+              <div class="dossier-note"><i class="fas fa-info-circle"></i> Tous les documents doivent être fusionnés en <strong>un seul fichier PDF</strong>.</div>
+            </div>
+          </ng-container>
+
+          <!-- ── MP-DS ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'mpds'">
+            <div class="parcours-section">
+              <div class="parcours-badge mpds">Mastère Professionnel — Sciences des Données (MP-DS)</div>
+              <p class="parcours-intro">La direction de l'ISIMM annonce l'ouverture des candidatures pour l'inscription en première année du Mastère Professionnel en <strong>Sciences des Données</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-table"></i> Capacités d'accueil & Calendrier</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Capacité totale</th><th>Établissement</th><th>Capacité</th><th>Diplôme requis</th><th>Dates importantes</th></tr></thead>
+                  <tbody>
+                    <tr><td rowspan="4">35</td><td rowspan="2">ISIMM</td><td>10</td><td>Licence en Mathématiques Appliquées (ou équivalent)</td><td>Inscription en ligne jusqu'au <strong>22 juillet 2025</strong></td></tr>
+                    <tr><td>19</td><td>Licence en Sciences de l'Informatique (ou équivalent)</td><td>Présélection : <strong>28 juillet 2025</strong></td></tr>
+                    <tr><td rowspan="2">Autres établissements</td><td>02</td><td>Licence en Mathématiques Appliquées (ou équivalent)</td><td>Dépôt numérique : <strong>28–31 juillet 2025</strong></td></tr>
+                    <tr><td>04</td><td>Licence en Sciences de l'Informatique (ou équivalent)</td><td>Admis : <strong>08 août 2025</strong></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Calcul du Score</h3>
+              <div class="score-formula-card">
+                <p class="formula"><strong>Score = M.G + B.N.R + B.S.P</strong></p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">M.G (Moyenne Générale)</span><span class="score-detail">(M1 + M2 + M3) / 3</span></div>
+                  <div class="score-row"><span class="score-component">B.N.R</span><span class="score-detail">0 redoublement : +5 pts | 1 : +3 pts | ≥ 2 : 0 pt</span></div>
+                  <div class="score-row"><span class="score-component">B.S.P</span><span class="score-detail">0 rattrapage : +3 pts | 1 : +2 pts | ≥ 2 : 0 pt</span></div>
+                </div>
+              </div>
+              <h3 class="section-label"><i class="fas fa-folder-open"></i> Composition du dossier</h3>
+              <ul class="dossier-list">
+                <li><i class="fas fa-check-circle"></i> Formulaire de candidature (joint à l'avis)</li>
+                <li><i class="fas fa-check-circle"></i> Fiche de candidature imprimée et signée</li>
+                <li><i class="fas fa-check-circle"></i> CV d'une page (adresse, tél., e-mail)</li>
+                <li><i class="fas fa-check-circle"></i> Copie certifiée conforme de la CIN ou du passeport</li>
+                <li><i class="fas fa-check-circle"></i> Copies certifiées de tous les diplômes (Bac inclus)</li>
+                <li><i class="fas fa-check-circle"></i> Relevés de notes de toutes les années universitaires et du Bac</li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <!-- ── MP-3I ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'mp3i'">
+            <div class="parcours-section">
+              <div class="parcours-badge mp3i">Mastère Professionnel — Instrumentation Industrielle (MP-3I)</div>
+              <p class="parcours-intro">La direction de l'ISIMM annonce l'ouverture des candidatures pour l'inscription en première année du Mastère Professionnel en <strong>Génie des Instruments Industriels</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-table"></i> Capacités d'accueil & Calendrier</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Capacité totale</th><th>Établissement</th><th>Capacité</th><th>Diplôme requis</th><th>Dates importantes</th></tr></thead>
+                  <tbody>
+                    <tr><td rowspan="4">25</td><td rowspan="3">ISIMM</td><td>08</td><td>Licence EEA – Spécialité MIM</td><td>Inscription jusqu'au <strong>20 juillet 2025</strong></td></tr>
+                    <tr><td>06</td><td>Licence EEA – Spécialité SE</td><td>Présélection : <strong>28 juillet 2025</strong></td></tr>
+                    <tr><td>06</td><td>Licence TIC</td><td>Dépôt dossier : <strong>28–31 juillet 2025</strong></td></tr>
+                    <tr><td>Autres</td><td>05</td><td>Licence Mesures & Instrumentation / EEA / Génie Électrique</td><td>Admis : <strong>08 août 2025</strong></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Calcul du Score</h3>
+              <div class="score-formula-card">
+                <p class="formula"><strong>Score = M.P + M.R + M.C</strong></p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">M.P (Moyenne Pondérée)</span><span class="score-detail">(2×Bac) + (1.5×L1) + (1×L2) + (0.5×L3)</span></div>
+                  <div class="score-row"><span class="score-component">M.R (Malus Redoublement)</span><span class="score-detail">−1 point par redoublement</span></div>
+                  <div class="score-row"><span class="score-component">M.C (Malus Session Contrôle)</span><span class="score-detail">−1 point par réussite en session de contrôle</span></div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ── MR-GL ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'mrgl'">
+            <div class="parcours-section">
+              <div class="parcours-badge mrgl">Mastère Recherche — Génie Logiciel (MR-GL)</div>
+              <p class="parcours-intro">La direction de l'ISIMM annonce l'ouverture des candidatures pour l'inscription en première année du Mastère de Recherche en <strong>Sciences de l'Informatique : Génie Logiciel</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-table"></i> Capacités d'accueil</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Établissement</th><th>Diplôme</th><th>Places</th></tr></thead>
+                  <tbody>
+                    <tr><td rowspan="2">ISIMM (Internes)</td><td>Licence en Informatique</td><td>19</td></tr>
+                    <tr><td>Maîtrise en Informatique</td><td>30</td></tr>
+                    <tr><td rowspan="2">Autres Établissements</td><td>Licence en Informatique ou Informatique de Gestion</td><td>60</td></tr>
+                    <tr><td>Maîtrise en Informatique ou Informatique de Gestion</td><td>02</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Calcul du Score (Titulaires de Licence)</h3>
+              <div class="score-formula-card">
+                <p class="formula"><strong>Score = 1,5×M1 + 2×M2 + M3 + B_NR + B_SP + (M_Bac + N_Math_Bac − 20)/2 + B_L + B_AD</strong></p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">B_NR (Non-Redoublement)</span><span class="score-detail">0 redoublement : +5 | 1 : +1,5 | &gt;1 : 0</span></div>
+                  <div class="score-row"><span class="score-component">B_SP (Session Principale)</span><span class="score-detail">0 contrôle : +3 | 1 : +1 | &gt;1 : 0</span></div>
+                  <div class="score-row"><span class="score-component">B_L (Langue)</span><span class="score-detail">Note Fr Bac ≥ 12 OU Note Ang ≥ 12 OU Certif. B2 : +1</span></div>
+                  <div class="score-row"><span class="score-component">B_AD (Année Diplôme)</span><span class="score-detail">2025/2023 : +4 | 2022/2021/2020 : +2</span></div>
+                </div>
+              </div>
+              <h3 class="section-label"><i class="fas fa-folder-open"></i> Composition du dossier</h3>
+              <ul class="dossier-list">
+                <li><i class="fas fa-check-circle"></i> Demande de candidature au Mastère</li>
+                <li><i class="fas fa-check-circle"></i> Formulaire imprimé depuis le site (signé)</li>
+                <li><i class="fas fa-check-circle"></i> CV d'une page (adresse, tél., e-mail)</li>
+                <li><i class="fas fa-check-circle"></i> Copie de la CIN</li>
+                <li><i class="fas fa-check-circle"></i> Copies certifiées de tous les diplômes (Bac inclus)</li>
+                <li><i class="fas fa-check-circle"></i> Relevés de notes de toutes les années et du Bac</li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <!-- ── MR-MI ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'mrmi'">
+            <div class="parcours-section">
+              <div class="parcours-badge mrmi">Mastère Recherche — Microélectronique & Instrumentation (MR-MI)</div>
+              <p class="parcours-intro">La direction de l'ISIMM annonce l'ouverture des candidatures pour l'inscription en première année du Mastère de Recherche en <strong>Microélectronique et Instrumentation</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-table"></i> Capacités d'accueil</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Année</th><th>Établissement</th><th>Diplôme requis</th><th>Places</th></tr></thead>
+                  <tbody>
+                    <tr><td>M1</td><td>ISIMM (Internes)</td><td>Licence EEA, MIM ou TIC (Réseaux et IoT)</td><td>15</td></tr>
+                    <tr><td>M1</td><td>Autres (Externes)</td><td>Licence Électronique, Automatique ou Mesures & Instrumentation</td><td>08</td></tr>
+                    <tr><td>M2</td><td>ISIMM ou Autres</td><td>Réussite en 1ère année cycle ingénieur (Électronique/Instrumentation)</td><td>03</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Calcul du Score (M1)</h3>
+              <div class="score-formula-card">
+                <p class="formula"><strong>Score = M.P + M.R + M.C</strong></p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">M.P (Moyenne Pondérée)</span><span class="score-detail">(0,5×Bac) + (1×L1) + (1,5×L2) + (2×L3)</span></div>
+                  <div class="score-row"><span class="score-component">M.R (Malus Redoublement)</span><span class="score-detail">−4 pts par redoublement (1 seul toléré)</span></div>
+                  <div class="score-row"><span class="score-component">M.C (Malus Contrôle)</span><span class="score-detail">L1 : −1 | L2 : −1,5 | L3 : −2</span></div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ── ING-GL ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'ing_info_gl'">
+            <div class="parcours-section">
+              <div class="parcours-badge ing-gl">Cycle Ingénieur — Génie Logiciel (ING-GL)</div>
+              <p class="parcours-intro">Concours sur dossiers pour l'entrée en cycle de formation d'ingénieurs à l'ISIMM en spécialité <strong>Génie Logiciel</strong> pour l'année universitaire 2025-2026.</p>
+              <h3 class="section-label"><i class="fas fa-users"></i> Places disponibles</h3>
+              <div class="detail-table-wrap">
+                <table class="detail-table">
+                  <thead><tr><th>Spécialité</th><th>Internes (Prépa ISIMM)</th><th>Externes (Licence Scientifique)</th></tr></thead>
+                  <tbody>
+                    <tr><td>Génie Logiciel (Informatique)</td><td>52</td><td>13</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="section-label"><i class="fas fa-calculator"></i> Critères de sélection</h3>
+              <div class="score-formula-card">
+                <p class="formula-sub"><strong>Étudiants Prépa (Internes) :</strong> Score = M2 + B1 + B2</p>
+                <div class="score-rows">
+                  <div class="score-row"><span class="score-component">B1</span><span class="score-detail">Admis session principale 1ère année : +2 | rattrapage : +1,5</span></div>
+                  <div class="score-row"><span class="score-component">B2</span><span class="score-detail">Admis session principale 2ème année : +2 | rattrapage : +1,5</span></div>
+                </div>
+                <p class="formula-sub mt-2"><strong>Étudiants Licence (Externes) :</strong></p>
+                <p class="formula">Score = 0,5×(2M1+2M2+M3) + 50×(1−R1) + 50×(1−R2)</p>
+              </div>
+              <h3 class="section-label"><i class="fas fa-info-circle"></i> Envoi & Délais</h3>
+              <div class="dossier-note"><i class="fas fa-envelope"></i> Envoi obligatoire par <strong>courrier rapide</strong> à : ISIMM — Route de la Corniche — BP 223 — 5000 Monastir.<br/>Date limite : <strong>Vendredi 8 août 2025</strong> (cachet de la poste).</div>
+            </div>
+          </ng-container>
+
+          <!-- ── ING-EM ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'ing_em'">
+            <div class="parcours-section">
+              <div class="parcours-badge ing-em">Cycle Ingénieur — Électronique / Microélectronique</div>
+              <p class="parcours-intro">Concours sur dossiers pour l'entrée en cycle de formation d'ingénieurs à l'ISIMM en spécialité <strong>Électronique et Microélectronique</strong> pour l'année universitaire 2025-2026.</p>
+              <div class="dossier-note"><i class="fas fa-info-circle"></i> Consultez le site officiel <a href="https://www.isimm.rnu.tn" target="_blank">www.isimm.rnu.tn</a> pour les détails complets de ce parcours.</div>
+            </div>
+          </ng-container>
+
+          <!-- ── Générique ── -->
+          <ng-container *ngIf="currentOffreDetailCode === 'generic'">
+            <div class="parcours-section">
+              <p class="parcours-intro">{{ selectedOffreDetail?.description }}</p>
+              <div *ngIf="selectedOffreDetail?.date_limite" class="dossier-note">
+                <i class="fas fa-calendar-alt"></i> Date limite : <strong>{{ selectedOffreDetail?.date_limite | date: 'dd MMMM yyyy' }}</strong>
+              </div>
+            </div>
+          </ng-container>
+
+        </div>
+
+        <div class="offre-detail-footer">
+          <button type="button" class="btn-outline" (click)="fermerDetailModal()">Fermer</button>
+          <button
+            type="button"
+            class="btn-postuler"
+            [disabled]="!actionPermissions.preinscription || selectedOffreDetail?.statut === 'ferme' || dejaCandidature(selectedOffreDetail?.id || 0)"
+            (click)="postulerOffre(selectedOffreDetail!); fermerDetailModal()"
+          >
+            <i class="fas fa-paper-plane"></i>
+            {{ selectedOffreDetail?.statut === 'ferme' ? 'Fermée' : dejaCandidature(selectedOffreDetail?.id || 0) ? 'Déjà candidaté' : 'Postuler' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div *ngIf="currentView === 'candidatures'" class="view-content">
       <div class="section-card candidatures-shell">
         <div class="candidatures-header">
           <div>
-            <h2>Candidatures</h2>
+            <h2><i class="fas fa-file-alt"></i> Candidatures</h2>
             <p class="candidatures-subtitle">
               Vue segmentée par parcours, avec suivi du statut, dossier et score.
             </p>
@@ -1123,7 +1369,7 @@
     <div *ngIf="currentView === 'mon-dossier'" class="view-content">
       <div class="section-card">
         <div class="section-header-export">
-          <h2>Dossiers de candidature</h2>
+          <h2><i class="fas fa-folder-open"></i> Dossiers de candidature</h2>
           <button
             type="button"
             class="btn-secondary"
@@ -1478,9 +1724,9 @@
     <div *ngIf="currentView === 'inscription'" class="view-content">
       <div class="section-card">
         <div class="section-header section-header-export">
-          <h2>Inscription en ligne</h2>
+          <h2><i class="fas fa-user-plus"></i> Inscription en ligne</h2>
           <div class="download-box">
-            <label for="inscriptionExportFormat">Telecharger en</label>
+            <label for="inscriptionExportFormat">Télécharger en</label>
             <select
               id="inscriptionExportFormat"
               class="export-select btn-export-select"
@@ -1495,16 +1741,40 @@
               class="btn-download btn-download-modern btn-export-action"
               (click)="exportInscriptionsEnLigne()"
             >
-              <i class="fas fa-download"></i> Telecharger
+              <i class="fas fa-download"></i> Télécharger
             </button>
           </div>
         </div>
+
+        <!-- Workflow stepper -->
+        <div class="insc-workflow-stepper">
+          <div class="insc-step insc-step--done">
+            <div class="insc-step-circle"><i class="fas fa-star"></i></div>
+            <div class="insc-step-label">Sélectionné</div>
+          </div>
+          <div class="insc-step-connector insc-step-connector--done"></div>
+          <div class="insc-step insc-step--active">
+            <div class="insc-step-circle"><i class="fas fa-pen-to-square"></i></div>
+            <div class="insc-step-label">Inscription en ligne</div>
+          </div>
+          <div class="insc-step-connector"></div>
+          <div class="insc-step">
+            <div class="insc-step-circle"><i class="fas fa-credit-card"></i></div>
+            <div class="insc-step-label">Paiement</div>
+          </div>
+          <div class="insc-step-connector"></div>
+          <div class="insc-step">
+            <div class="insc-step-circle"><i class="fas fa-circle-check"></i></div>
+            <div class="insc-step-label">Confirmé</div>
+          </div>
+        </div>
+
         <div class="inscription-banner">
           <div class="inscription-banner-text">
             <h3>Félicitations — Vous avez été sélectionné !</h3>
             <p>
-              Procédez à votre inscription sur la plateforme officielle, puis déposez la fiche
-              d'inscription dans le tableau ci-dessous.
+              Procédez à votre inscription sur la plateforme officielle, puis saisissez votre
+              numéro d'inscription et déposez votre justificatif de paiement.
             </p>
           </div>
           <div class="inscription-banner-actions">
@@ -1525,7 +1795,7 @@
                 <th>N° Candidature</th>
                 <th>Nom &amp; Prénom</th>
                 <th>N° Inscription Universitaire</th>
-                <th>Attestation de Paiement</th>
+                <th>Saisir N° Inscription</th>
                 <th>Statut Final</th>
                 <th>Actions</th>
               </tr>
@@ -1544,19 +1814,18 @@
                     {{ getNumeroInscriptionUniversitaire(candidature) }}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      class="btn-receipt"
-                      [disabled]="!hasAttestationPaiement(candidature)"
-                      (click)="
-                        hasAttestationPaiement(candidature)
-                          ? openAttestationPaiement(candidature)
-                          : null
-                      "
-                    >
-                      <i class="fas fa-file-pdf"></i>
-                      Voir le reçu PDF
-                    </button>
+                    <input
+                      type="text"
+                      class="inscription-number-field"
+                      [name]="'numero_inscription_' + candidature.id"
+                      [(ngModel)]="candidature.numero_inscription_universitaire"
+                      (blur)="syncNumeroInscriptionUniversitaire(candidature)"
+                      placeholder="26-999-ABC"
+                      autocomplete="off"
+                    />
+                    <small class="inscription-number-help">
+                      Saisir votre N° d'inscription universitaire (ex: 26-999-ABC)
+                    </small>
                   </td>
                   <td>
                     <span class="badge" [ngClass]="getStatutFinalInscriptionClass(candidature)">
@@ -1944,7 +2213,11 @@
 
     <div *ngIf="currentView === 'suivi'" class="view-content">
       <div class="section-card">
-        <h2>Suivi de candidature</h2>
+        <div class="candidatures-header">
+          <div class="page-eyebrow">Mon Espace · Candidature</div>
+          <h2><i class="fas fa-route"></i> Suivi de candidature</h2>
+          <p class="subtitle">Suivez l'avancement de chacune de vos candidatures en temps réel.</p>
+        </div>
         <div *ngIf="isWorkflowMockMode" class="simulation-banner">
           Mode simulation actif: 4 scenarios de test sont affiches (avec etats en rouge).
         </div>
@@ -1995,7 +2268,11 @@
 
     <div *ngIf="currentView === 'historique'" class="view-content">
       <div class="section-card historique-shell">
-        <h2>Historique des candidatures</h2>
+        <div class="candidatures-header">
+          <div class="page-eyebrow">Mon Espace · Candidature</div>
+          <h2><i class="fas fa-history"></i> Historique des candidatures</h2>
+          <p class="subtitle">Consultez l'ensemble de vos candidatures passées et leurs résultats.</p>
+        </div>
 
         <div class="historique-kpis">
           <div class="kpi-card">
@@ -2102,7 +2379,7 @@
 
     <div *ngIf="currentView === 'reclamations'" class="view-content">
       <div class="section-card">
-        <h2>Réclamation</h2>
+        <h2><i class="fas fa-exclamation-circle"></i> Réclamations</h2>
         <button
           class="btn-nouvelle-reclamation"
           *ngIf="actionPermissions.deposerReclamation"
@@ -2147,7 +2424,7 @@
     <div *ngIf="currentView === 'notifications'" class="view-content">
       <div class="section-card">
         <div class="candidatures-header">
-          <h2>Notifications</h2>
+          <h2><i class="fas fa-bell"></i> Notifications</h2>
           <p class="subtitle">Toutes vos alertes de preinscription, candidature et reclamation.</p>
           <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
         </div>
@@ -2910,7 +3187,7 @@
               </div>
               <div class="wz-field">
                 <label
-                  ><i class="fas fa-calendar-check"></i> Année d'obtention
+                  ><i class="fas fa-calendar-check"></i> Année d'obtention du dernier diplôme
                   <span class="req">*</span></label
                 >
                 <input

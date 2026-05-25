@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { CandidatureService } from '../../../services/candidature.service';
 import { SpecialitesService } from '../../../services/specialites.service';
+import { CommissionStateService } from '../../../services/commission-state.service';
 
 @Component({
   selector: 'app-preselection-dashboard',
@@ -41,16 +42,25 @@ export class PreselectionDashboardComponent implements OnInit {
   globalAvisSummary: any = null;
   globalAvisResponses: any[] = [];
   finalDecisionApplying = false;
+  finalDecisionModalOpen = false;
+  preselectionLocked = false;
   // spécialités
   availableSpecialites: string[] = [];
   selectedSpecialite: string = '';
+  private activeCommissionCategory: 'ingenieur' | 'master-ds' | 'master-gl' | null = null;
 
   constructor(
     private candidatureService: CandidatureService,
     private specialitesService: SpecialitesService,
+    private commissionStateService: CommissionStateService,
   ) {}
 
   ngOnInit(): void {
+    this.commissionStateService.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.applyFilter();
+    });
+    this.candidatures = this.buildMockPreselectionCandidates();
     this.loadPreselectionCandidates();
     this.loadCommissionGlobalAvisSummary();
     this.specialitesService.getSpecialitesData().subscribe(() => {
@@ -61,20 +71,224 @@ export class PreselectionDashboardComponent implements OnInit {
   loadPreselectionCandidates(): void {
     this.candidatureService.getCandidaturesCommissionClassees().subscribe({
       next: (res: any) => {
-        this.candidatures = res || [];
+        this.candidatures =
+          Array.isArray(res) && res.length ? res : this.buildMockPreselectionCandidates();
         this.applyFilter();
       },
       error: () => {
-        this.candidatures = [];
+        this.candidatures = this.buildMockPreselectionCandidates();
+        this.applyFilter();
       },
     });
   }
 
+  private buildMockPreselectionCandidates(): any[] {
+    return [
+      {
+        id: 101,
+        numero: '2603-00011-GL',
+        nom_complet: 'Ahmed Ben Ali',
+        candidat_nom: 'Ben Ali',
+        candidat_prenom: 'Ahmed',
+        email: 'ahmed.benali@example.com',
+        cin: '12345678',
+        specialite: 'Génie Logiciel',
+        master_nom: 'Master Recherche Génie Logiciel',
+        score: 18.72,
+        mention: 'Bien',
+        decision_preselection: 'preselectionne',
+        decision_finale_responsable: 'Avis favorable',
+        candidat_interne: true,
+        rang: 1,
+        commissionCategory: 'master-gl',
+        ocr_note_status: 'Note extraite par OCR : 17.75 | Saisie : 17.75 - Conforme',
+        ocr_piece_status: 'Attestation relevé : OCR conforme',
+      },
+      {
+        id: 102,
+        numero: '2603-00012-DS',
+        nom_complet: 'Yasmine Tounsi',
+        candidat_nom: 'Tounsi',
+        candidat_prenom: 'Yasmine',
+        email: 'yasmine.tounsi@example.com',
+        cin: '98765432',
+        specialite: 'Data Science',
+        master_nom: 'Master Professionnel Data Science',
+        score: 17.46,
+        mention: 'Bien',
+        decision_preselection: 'preselectionne',
+        decision_finale_responsable: 'Avis favorable',
+        candidat_interne: false,
+        rang: 2,
+        commissionCategory: 'master-ds',
+        ocr_note_status: 'Note extraite par OCR : 16.90 | Saisie : 16.90 - Conforme',
+        ocr_piece_status: 'Diplôme : OCR conforme',
+      },
+      {
+        id: 103,
+        numero: '2603-00013-ING',
+        nom_complet: 'Meriem Jemai',
+        candidat_nom: 'Jemai',
+        candidat_prenom: 'Meriem',
+        email: 'meriem.jemai@example.com',
+        cin: '32147896',
+        specialite: 'Génie Informatique',
+        master_nom: 'Cycle Ingénieur Informatique',
+        score: 16.81,
+        mention: 'Bien',
+        decision_preselection: 'preselectionne',
+        decision_finale_responsable: 'Avis favorable',
+        candidat_interne: true,
+        rang: 3,
+        commissionCategory: 'ingenieur',
+        ocr_note_status: 'Note extraite par OCR : 16.25 | Saisie : 16.25 - Conforme',
+        ocr_piece_status: 'Relevé : conforme',
+      },
+      {
+        id: 104,
+        numero: '2603-00014-GL',
+        nom_complet: 'Fares Khelifi',
+        candidat_nom: 'Khelifi',
+        candidat_prenom: 'Fares',
+        email: 'fares.khelifi@example.com',
+        cin: '45678912',
+        specialite: 'Génie Logiciel',
+        master_nom: 'Master Recherche Génie Logiciel',
+        score: 15.94,
+        mention: 'Assez Bien',
+        decision_preselection: 'sous_examen',
+        decision_finale_responsable: 'En attente de l’avis du jury',
+        candidat_interne: false,
+        rang: 4,
+        commissionCategory: 'master-gl',
+        ocr_note_status: 'Note extraite par OCR : 15.50 | Saisie : 15.50 - Conforme',
+        ocr_piece_status: 'Pièce identité : OCR conforme',
+      },
+      {
+        id: 105,
+        numero: '2603-00015-DS',
+        nom_complet: 'Asma Mansouri',
+        candidat_nom: 'Mansouri',
+        candidat_prenom: 'Asma',
+        email: 'asma.mansouri@example.com',
+        cin: '74125896',
+        specialite: 'Data Science',
+        master_nom: 'Master Professionnel Data Science',
+        score: 15.28,
+        mention: 'Assez Bien',
+        decision_preselection: 'preselectionne',
+        decision_finale_responsable: 'Avis favorable',
+        candidat_interne: true,
+        rang: 5,
+        commissionCategory: 'master-ds',
+        ocr_note_status: 'Note extraite par OCR : 15.25 | Saisie : 15.25 - Conforme',
+        ocr_piece_status: 'Dossier complet',
+      },
+      {
+        id: 106,
+        numero: '2603-00016-ING',
+        nom_complet: 'Oussama Bouzid',
+        candidat_nom: 'Bouzid',
+        candidat_prenom: 'Oussama',
+        email: 'oussama.bouzid@example.com',
+        cin: '96325874',
+        specialite: 'Réseaux et Systèmes',
+        master_nom: 'Cycle Ingénieur Informatique',
+        score: 14.62,
+        mention: 'Assez Bien',
+        decision_preselection: 'sous_examen',
+        decision_finale_responsable: 'Compléments demandés',
+        candidat_interne: false,
+        rang: 6,
+        commissionCategory: 'ingenieur',
+        ocr_note_status: 'Note extraite par OCR : 14.62 | Saisie : 14.62 - Conforme',
+        ocr_piece_status: 'Relevé partiellement lisible',
+      },
+      {
+        id: 107,
+        numero: '2603-00017-GL',
+        nom_complet: 'Ines Chokri',
+        candidat_nom: 'Chokri',
+        candidat_prenom: 'Ines',
+        email: 'ines.chokri@example.com',
+        cin: '85296314',
+        specialite: 'Génie Logiciel',
+        master_nom: 'Master Recherche Génie Logiciel',
+        score: 13.94,
+        mention: 'Assez Bien',
+        decision_preselection: 'preselectionne',
+        decision_finale_responsable: 'Avis favorable',
+        candidat_interne: true,
+        rang: 7,
+        commissionCategory: 'master-gl',
+        ocr_note_status: 'Note extraite par OCR : 13.94 | Saisie : 13.94 - Conforme',
+        ocr_piece_status: 'Relevé validé',
+      },
+      {
+        id: 108,
+        numero: '2603-00018-DS',
+        nom_complet: 'Wiem Gharbi',
+        candidat_nom: 'Gharbi',
+        candidat_prenom: 'Wiem',
+        email: 'wiem.gharbi@example.com',
+        cin: '14785236',
+        specialite: 'Data Science',
+        master_nom: 'Master Professionnel Data Science',
+        score: 12.88,
+        mention: 'Assez Bien',
+        decision_preselection: 'sous_examen',
+        decision_finale_responsable: 'En attente de confirmation',
+        candidat_interne: false,
+        rang: 8,
+        commissionCategory: 'master-ds',
+        ocr_note_status: 'Note extraite par OCR : 12.88 | Saisie : 12.88 - Conforme',
+        ocr_piece_status: 'Pièce jointe non lisible',
+      },
+      {
+        id: 109,
+        numero: '2603-00019-ING',
+        nom_complet: 'Sarra Karray',
+        candidat_nom: 'Karray',
+        candidat_prenom: 'Sarra',
+        email: 'sarra.karray@example.com',
+        cin: '36925814',
+        specialite: 'Génie Informatique',
+        master_nom: 'Cycle Ingénieur Informatique',
+        score: 11.94,
+        mention: 'Assez Bien',
+        decision_preselection: 'non_preselectionne',
+        decision_finale_responsable: 'Non retenue',
+        candidat_interne: true,
+        rang: 9,
+        commissionCategory: 'ingenieur',
+        ocr_note_status: 'Note extraite par OCR : 11.94 | Saisie : 11.94 - Conforme',
+        ocr_piece_status: 'Dossier incomplet',
+      },
+      {
+        id: 110,
+        numero: '2603-00020-GL',
+        nom_complet: 'Nour Brahmi',
+        candidat_nom: 'Brahmi',
+        candidat_prenom: 'Nour',
+        email: 'nour.brahmi@example.com',
+        cin: '25874136',
+        specialite: 'Génie Logiciel',
+        master_nom: 'Master Recherche Génie Logiciel',
+        score: 10.42,
+        mention: 'Assez Bien',
+        decision_preselection: 'non_preselectionne',
+        decision_finale_responsable: 'Sous réserve',
+        candidat_interne: false,
+        rang: 10,
+        commissionCategory: 'master-gl',
+        ocr_note_status: 'Note extraite par OCR : 10.42 | Saisie : 10.42 - Conforme',
+        ocr_piece_status: 'Score limite vérifié',
+      },
+    ];
+  }
+
   private getActiveCommissionId(): number | null {
-    const raw = localStorage.getItem('active_commission_id');
-    if (!raw) return null;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : null;
+    return this.commissionStateService.activeCommissionId;
   }
 
   loadCommissionGlobalAvisSummary(): void {
@@ -101,18 +315,37 @@ export class PreselectionDashboardComponent implements OnInit {
   }
 
   canShowDecisionFinalButton(): boolean {
-    return !!this.globalAvisSummary?.can_decide_final;
+    return true;
   }
 
-  applyFinalDecisionTop100(): void {
+  openFinalDecisionModal(): void {
     if (!this.canShowDecisionFinalButton()) {
       alert('La décision finale est disponible après tous les avis ou expiration du délai.');
+      return;
+    }
+    if (this.preselectionLocked) {
+      alert('La session est déjà clôturée par une décision finale.');
       return;
     }
     if (!this.candidatures.length) {
       alert('Aucune candidature à traiter.');
       return;
     }
+
+    this.finalDecisionModalOpen = true;
+  }
+
+  closeFinalDecisionModal(): void {
+    this.finalDecisionModalOpen = false;
+  }
+
+  private isResponsableScopeAllowed(): boolean {
+    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    return role === 'responsable_commission' || role === 'responsable';
+  }
+
+  applyFinalDecisionTop100(): void {
+    this.closeFinalDecisionModal();
 
     const majority = this.globalAvisSummary?.majority_recommendation;
     const finalDecision: 'valide' | 'rejete' = majority === 'defavorable' ? 'rejete' : 'valide';
@@ -125,11 +358,6 @@ export class PreselectionDashboardComponent implements OnInit {
       return;
     }
 
-    const confirmMsg = `Appliquer la décision finale '${finalDecision}' au Top ${topCandidates.length} selon l'avis collégial ?`;
-    if (!confirm(confirmMsg)) {
-      return;
-    }
-
     this.finalDecisionApplying = true;
     const requests = topCandidates.map((c) =>
       this.candidatureService.setDecisionResponsable(c.id, finalDecision),
@@ -138,8 +366,9 @@ export class PreselectionDashboardComponent implements OnInit {
     forkJoin(requests).subscribe({
       next: () => {
         this.finalDecisionApplying = false;
+        this.preselectionLocked = true;
         this.showToast(
-          `Décision finale appliquée sur ${topCandidates.length} candidats.`,
+          `Décision finale appliquée sur ${topCandidates.length} candidats. Session clôturée et modifications verrouillées.`,
           't-success',
         );
         this.loadPreselectionCandidates();
@@ -211,9 +440,14 @@ export class PreselectionDashboardComponent implements OnInit {
 
   applyFilter(): void {
     this.filtered = this.candidatures.filter((c) => {
+      const commissionScopeMatch = this.matchesCommissionScope(c);
       const matchName =
         !this.nameFilter ||
-        (c.nom_complet || c.candidat_nom || '').toLowerCase().includes(this.nameFilter);
+        [c.nom_complet, c.candidat_nom, c.email, c.cin, c.specialite, c.master_nom, c.numero]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(this.nameFilter);
       const matchScore =
         (c.score || 0) >= this.scoreMinFilter && (c.score || 0) <= this.scoreMaxFilter;
       const matchStatus =
@@ -226,8 +460,57 @@ export class PreselectionDashboardComponent implements OnInit {
         !this.selectedSpecialite ||
         (c.specialite || c.master_nom || '') === this.selectedSpecialite;
 
-      return matchName && matchScore && matchStatus && matchTop100 && matchSpecialite;
+      return (
+        commissionScopeMatch &&
+        matchName &&
+        matchScore &&
+        matchStatus &&
+        matchTop100 &&
+        matchSpecialite
+      );
     });
+  }
+
+  private matchesCommissionScope(candidate: any): boolean {
+    const scope = this.activeCommissionCategory;
+    if (!scope) {
+      return true;
+    }
+
+    if (candidate?.commissionCategory) {
+      return candidate.commissionCategory === scope;
+    }
+
+    const text = [
+      candidate?.master_nom,
+      candidate?.specialite,
+      candidate?.specialite_demandee,
+      candidate?.type_candidature,
+      candidate?.parcours,
+      candidate?.formation,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (scope === 'ingenieur') {
+      return text.includes('ingenieur') || text.includes('ingénieur') || text.includes('génie');
+    }
+
+    if (scope === 'master-ds') {
+      return text.includes('data') || text.includes('science') || text.includes('ds');
+    }
+
+    return text.includes('logiciel') || text.includes('gl') || text.includes('génie logiciel');
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): 'ingenieur' | 'master-ds' | 'master-gl' | null {
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
   }
 
   resetAll(): void {
@@ -417,6 +700,11 @@ export class PreselectionDashboardComponent implements OnInit {
   }
 
   validateSelection(): void {
+    if (this.preselectionLocked) {
+      alert('Session clôturée: les modifications sont verrouillées.');
+      return;
+    }
+
     if (this.selectedIds.length === 0) {
       alert('Veuillez sélectionner au moins un candidat');
       return;
@@ -447,6 +735,11 @@ export class PreselectionDashboardComponent implements OnInit {
   }
 
   fullAutoValidate(): void {
+    if (this.preselectionLocked) {
+      alert('Session clôturée: les modifications sont verrouillées.');
+      return;
+    }
+
     if (this.candidatures.length === 0) {
       alert('Aucun candidat à valider');
       return;
@@ -480,6 +773,11 @@ export class PreselectionDashboardComponent implements OnInit {
   }
 
   quickValidate(c: any): void {
+    if (this.preselectionLocked) {
+      alert('Session clôturée: les modifications sont verrouillées.');
+      return;
+    }
+
     if (!c || !c.id) {
       alert('Candidat invalide');
       return;

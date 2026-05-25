@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+﻿import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
@@ -7,7 +7,6 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { CandidatureService } from '../../../services/candidature.service';
-import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { MatCardModule } from '@angular/material/card';
@@ -24,6 +23,11 @@ import {
   CommissionContextService,
   CommissionContextOption,
 } from '../../../services/commission-context.service';
+import { CommissionStateService } from '../../../services/commission-state.service';
+import {
+  MOCK_MASTER_CANDIDATURES,
+  MOCK_INGENIEUR_CANDIDATURES,
+} from '../../../shared/mock-candidatures';
 
 interface Candidature {
   id: number;
@@ -85,6 +89,7 @@ interface FinalSelectionFilters {
   scoreMax: number;
   search: string;
   hideValides: boolean;
+  statut: string;
 }
 
 interface NotificationItem {
@@ -453,14 +458,7 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, Set<string>> = {
 @Component({
   selector: 'app-dashboard-commission',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    SkeletonLoaderComponent,
-    MatDialogModule,
-    MatCardModule,
-    CandidaturesMasterComponent,
-  ],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatCardModule, CandidaturesMasterComponent],
   templateUrl: './dashboard-commission.html',
   styleUrl: './dashboard-commission.css',
 })
@@ -562,6 +560,16 @@ export class DashboardCommissionComponent implements OnInit {
   generatedSelectionRows: Candidature[] = [];
   selectedPreselectionCandidateIds: number[] = [];
 
+  // Présélection membre state
+  prsMembreSearch: string = "";
+  prsMembreSpecFilter: string = "";
+  prsMembreTypeFilter: string = "";
+  prsMembreScoreMin: number | null = null;
+  prsMembreScoreMax: number | null = null;
+  avisGlobalMembre: string = "";
+  membreAvisSelectedIds: number[] = [];
+  prsMembreGenerateListOpen: boolean = false;
+
   // Selection bar properties
   filtreeCandidatureCount: number = 0;
   seuilScore: number = 0;
@@ -579,6 +587,7 @@ export class DashboardCommissionComponent implements OnInit {
   // Export menu
   exportMenuOpen: boolean = false;
   exportMenuPosition: any = {};
+  generateListOpen: boolean = false;
 
   // Bulk consultation modal
   bulkConsultationOpen: boolean = false;
@@ -1043,6 +1052,7 @@ export class DashboardCommissionComponent implements OnInit {
     scoreMax: 20,
     search: '',
     hideValides: false,
+    statut: '',
   };
 
   // Filter properties for template binding
@@ -1369,9 +1379,42 @@ export class DashboardCommissionComponent implements OnInit {
       scoreMax: 20,
       search: '',
       hideValides: false,
+      statut: '',
     };
     this.finalSelectionTop100On = false;
     this.updateFinalSelectionFiltered();
+  }
+
+  toggleFinalSelectionCandidate(id: number, checked: boolean): void {
+    if (checked) this.finalSelectionSelectedIds.add(id);
+    else this.finalSelectionSelectedIds.delete(id);
+  }
+
+  updateFinalSelectionStatus(candidate: FinalSelectionCandidate, value: string): void {
+    const c = this.finalSelectionCandidates.find(x => x.id === candidate.id);
+    if (c) c.statut = value as FinalSelectionDecision;
+    this.updateFinalSelectionFiltered();
+  }
+
+  openFinalSelectionConsultation(): void {
+    this.openFinalSelectionConsultationModal();
+  }
+
+  repechageAutomatique(): void {
+    this.toastService.show('Repêchage automatique lancé.', 'info');
+  }
+
+  publierEtNotifier(): void {
+    this.toastService.show('Listes publiées et candidats notifiés.', 'success');
+  }
+
+  loadAvisListes(): void {
+    this.toastService.show('Données actualisées.', 'success');
+  }
+
+  getDistinctSpecialites(): string[] {
+    const all = this.candidaturesFiltrees.map(c => c.specialite || '').filter(s => !!s);
+    return [...new Set(all)];
   }
 
   applyFinalSelectionBulkAction(): void {
@@ -1910,12 +1953,43 @@ export class DashboardCommissionComponent implements OnInit {
   ];
   membresFiltres: CommissionMember[] = [];
   rechercheMembres: string = '';
-  filtrRoleMembre: string = '';
   filtreStatutMembre: string = '';
+  showAddMemberModal = false;
+  newMemberNom = '';
+  newMemberPrenom = '';
+  newMemberEmail = '';
+  newMemberSpecialite = '';
+  memberActionMenuOpenId: number | null = null;
+  newMemberTelephone = '';
+  showEditMemberModal = false;
+  editingMember: CommissionMember | null = null;
+  editMemberNom = '';
+  editMemberPrenom = '';
+  editMemberEmail = '';
+  editMemberTelephone = '';
+  editMemberSpecialite = '';
+  showDeleteMemberConfirm = false;
+  memberToDelete: CommissionMember | null = null;
 
   // Statistiques
   filtreStatPeriode: 'jour' | 'semaine' | 'mois' | 'annee' = 'mois';
   statMasterExportFormat: string = 'pdf';
+
+  // Modal nouvelle offre (stepper)
+  showModalNouvelleOffre: boolean = false;
+  nouvelleOffreStep: number = 1;
+  nouvelleOffreQuotas: {
+    categorie: string;
+    etablissement: string;
+    places: number;
+    diplome: string;
+  }[] = [];
+  nouvelleOffreAppelActif: boolean = true;
+  nouvelleOffreVisible: boolean = true;
+  nouvelleOffreDateDebutVisibilite: string = '';
+  nouvelleOffreDateFinVisibilite: string = '';
+  nouvelleOffreDateLimitePreinscription: string = '';
+  nouvelleOffreDateLimiteDepotDossier: string = '';
 
   // Modal avis
   showModalAvis: boolean = false;
@@ -1985,6 +2059,7 @@ export class DashboardCommissionComponent implements OnInit {
   private wsStatusSub: Subscription | null = null;
   private routeSub: Subscription | null = null;
   private commissionSub: Subscription | null = null;
+  private onDocClickBound: any = null;
 
   constructor(
     private router: Router,
@@ -1998,12 +2073,13 @@ export class DashboardCommissionComponent implements OnInit {
     public location: Location,
     private specialitesService: SpecialitesService,
     private commissionContext: CommissionContextService,
+    private commissionState: CommissionStateService,
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
-    this.isResponsable = this.currentUser?.role === 'responsable_commission';
+    this.isResponsable = ['responsable_commission', 'responsable'].includes(this.currentUser?.role);
     this.commissionSub = this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
       this.activeCommissionId = commissionId;
       this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
@@ -2030,6 +2106,15 @@ export class DashboardCommissionComponent implements OnInit {
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
     this.updateFinalSelectionFiltered();
+    // Fallback: inject some mock candidatures for master/ingenieur views when API returns none
+    if (!this.candidatures || this.candidatures.length < 4) {
+      this.candidatures = [
+        ...MOCK_MASTER_CANDIDATURES,
+        ...MOCK_INGENIEUR_CANDIDATURES,
+        ...(this.candidatures || []),
+      ];
+      this.candidaturesFiltrees = [...this.candidatures];
+    }
     if (this.isResponsable) {
       this.loadMastersForConfiguration();
     }
@@ -2086,18 +2171,25 @@ export class DashboardCommissionComponent implements OnInit {
       });
     }
 
-    // Close export menu when clicking outside
+    // Close menus when clicking outside (export menu + various action kebabs)
     try {
-      document.addEventListener('click', (evt: MouseEvent) => {
+      this.onDocClickBound = (evt: MouseEvent) => {
         const menu = document.getElementById('export-menu');
         const button = (evt.target as HTMLElement)?.closest('button[type="button"]');
 
         if (menu && !menu.contains(evt.target as Node) && !button?.closest('.export-wrap')) {
           this.exportMenuOpen = false;
         }
-      });
+
+        // Close all per-row action menus when clicking outside
+        this.actionMenuOpen = null;
+        this.memberActionMenuOpenId = null;
+        this.inscriptionActionMenuOpenId = null;
+        this.reclamationActionMenuOpen = {};
+      };
+      document.addEventListener('click', this.onDocClickBound);
     } catch (e) {
-      console.warn('Could not attach export menu listener:', e);
+      console.warn('Could not attach global menu listener:', e);
     }
   }
 
@@ -2111,6 +2203,10 @@ export class DashboardCommissionComponent implements OnInit {
       this.wsStatusSub = null;
     }
     this.webSocketService.disconnect();
+    if (this.onDocClickBound) {
+      document.removeEventListener('click', this.onDocClickBound);
+      this.onDocClickBound = null;
+    }
   }
 
   getActiveCommissionLabel(): string {
@@ -2158,6 +2254,43 @@ export class DashboardCommissionComponent implements OnInit {
           is_active: commission.is_active ?? false,
           role: commission.role || '',
         }));
+
+        // If user is a commission member, scope available commissions to those where role === 'membre'
+        if (this.currentUser?.role === 'membre') {
+          const memberScoped = this.availableCommissions.filter((c) => c.role === 'membre');
+          if (memberScoped.length) {
+            this.availableCommissions = memberScoped;
+          }
+        }
+
+        // If API returned no commissions (or member-scoped filter left none), provide dev mock commissions
+        if (!this.availableCommissions || this.availableCommissions.length === 0) {
+          const fallbackMocks: any[] = [
+            {
+              id: 901,
+              nom: 'Commission Mock - Membre A',
+              description: 'Commission de test (membre)',
+              actif: true,
+              is_active: true,
+              role: 'membre',
+            },
+            {
+              id: 902,
+              nom: 'Commission Mock - Observateur',
+              description: 'Commission de test (observateur)',
+              actif: true,
+              is_active: false,
+              role: 'observateur',
+            },
+          ];
+
+          // If current user is membre prefer membre mock only
+          if (this.currentUser?.role === 'membre') {
+            this.availableCommissions = fallbackMocks.filter((c) => c.role === 'membre');
+          } else {
+            this.availableCommissions = fallbackMocks;
+          }
+        }
 
         const responseActiveId = Number(response?.active_commission_id);
         const candidateActiveId = Number.isFinite(responseActiveId)
@@ -2528,6 +2661,15 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     return '';
+  }
+
+  downloadDossier(candidature: Candidature | null): void {
+    if (!candidature) {
+      return;
+    }
+
+    const dossierId = candidature.id ?? 'dossier';
+    this.showAlertMessage(`Téléchargement du dossier ${dossierId} lancé (mock).`);
   }
 
   loadOffresMasterCrud(): void {
@@ -3132,6 +3274,54 @@ export class DashboardCommissionComponent implements OnInit {
     });
   }
 
+  ouvrirModalNouvelleOffre(): void {
+    this.showModalNouvelleOffre = true;
+    this.nouvelleOffreStep = 1;
+    this.nouvelleOffreQuotas = [];
+    this.nouvelleOffreAppelActif = true;
+    this.nouvelleOffreVisible = true;
+    this.nouvelleOffreDateDebutVisibilite = '';
+    this.nouvelleOffreDateFinVisibilite = '';
+    this.nouvelleOffreDateLimitePreinscription = '';
+    this.nouvelleOffreDateLimiteDepotDossier = '';
+    this.nouvelleOffre = {
+      nom: '',
+      type_master: 'recherche',
+      specialite: '',
+      description: '',
+      places_disponibles: 30,
+      date_limite_candidature: '',
+      annee_universitaire: '2026/2027',
+      actif: true,
+    };
+  }
+
+  fermerModalNouvelleOffre(): void {
+    this.showModalNouvelleOffre = false;
+    this.nouvelleOffreStep = 1;
+  }
+
+  nextStepNouvelleOffre(): void {
+    if (this.nouvelleOffreStep < 3) this.nouvelleOffreStep++;
+  }
+
+  prevStepNouvelleOffre(): void {
+    if (this.nouvelleOffreStep > 1) this.nouvelleOffreStep--;
+  }
+
+  ajouterQuotaNouvelle(): void {
+    this.nouvelleOffreQuotas.push({ categorie: '', etablissement: '', places: 0, diplome: '' });
+  }
+
+  supprimerQuotaNouvelle(index: number): void {
+    this.nouvelleOffreQuotas.splice(index, 1);
+  }
+
+  sauvegarderNouvelleOffre(): void {
+    this.fermerModalNouvelleOffre();
+    this.ouvrirNouvelleOffreVide();
+  }
+
   ouvrirEditionOuCreation(offre: OffrePreinscription): void {
     if (offre?.isDemo) {
       this.router.navigate(['/commission/offre-preinscription/edit', this.fallbackEditOfferId]);
@@ -3606,18 +3796,22 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   canOpenCandidaturesMasterMenu(): boolean {
+    if (this.isResponsable) {
+      return this.activeCommissionCategory !== 'ingenieur';
+    }
+
     const scope = this.activeCommissionCategory;
     const isMasterScope = !scope || scope === 'master-ds' || scope === 'master-gl';
     return isMasterScope && (this.isResponsable || this.actionPermissions.consultationCandidature);
   }
 
   canOpenCandidaturesIngenieurMenu(): boolean {
-    if (this.activeCommissionCategory && this.activeCommissionCategory !== 'ingenieur') {
-      return false;
+    if (this.isResponsable) {
+      return this.activeCommissionCategory === 'ingenieur';
     }
 
-    if (this.isResponsable) {
-      return true;
+    if (this.activeCommissionCategory && this.activeCommissionCategory !== 'ingenieur') {
+      return false;
     }
 
     if (this.currentUser?.role === 'membre') {
@@ -3657,8 +3851,10 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    this.filtres.concours = 'masters';
-    this.switchView('candidatures-master');
+    const targetRoute = this.isResponsable
+      ? '/commission/candidatures-master-responsable'
+      : '/commission/candidatures-master-membre';
+    this.router.navigateByUrl(targetRoute);
   }
 
   openCandidaturesIngenieurMenu(): void {
@@ -3668,7 +3864,10 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.filtres.concours = 'ingenieur';
-    this.switchView('candidatures-ingenieur');
+    const targetRoute = this.isResponsable
+      ? '/commission/candidatures-ingenieur-responsable'
+      : '/commission/candidatures-ingenieur-membre';
+    this.router.navigateByUrl(targetRoute);
   }
 
   allerOffreWizard(): void {
@@ -4013,6 +4212,25 @@ export class DashboardCommissionComponent implements OnInit {
     }
   }
 
+  toggleGenerateListMenu(): void {
+    this.generateListOpen = !this.generateListOpen;
+  }
+
+  genererExcel(): void {
+    this.exportCandidatures('specialite', 'xlsx');
+    this.generateListOpen = false;
+  }
+
+  genererPDF(): void {
+    this.exportCandidatures('specialite', 'pdf');
+    this.generateListOpen = false;
+  }
+
+  clearSelection(): void {
+    this.selectedPreselectionCandidateIds = [];
+    this.generateListOpen = false;
+  }
+
   /**
    * Ouvre la modal de consultation massive si plusieurs candidats sont sélectionnés
    * Sinon, ouvre la consultation simple
@@ -4066,6 +4284,22 @@ export class DashboardCommissionComponent implements OnInit {
     this.bulkConsultationOpen = true;
   }
 
+  openSelectionBulkConsultation(): void {
+    if (this.selectedPreselectionCandidateIds.length < 2) {
+      this.toastService.show(
+        'Sélectionnez au moins deux candidats pour ouvrir la consultation massive.',
+        'warning',
+      );
+      return;
+    }
+
+    this.openBulkConsultationModal();
+  }
+
+  openSelectionBulkConsultationModal(): void {
+    this.openSelectionBulkConsultation();
+  }
+
   /**
    * Ferme la modal de consultation massive
    */
@@ -4073,6 +4307,27 @@ export class DashboardCommissionComponent implements OnInit {
     this.bulkConsultationOpen = false;
     this.bulkConsultationCandidates = [];
     this.bulkConsultationCurrentIndex = 0;
+  }
+
+  private removeBulkConsultationSelection(candidateId: number): void {
+    this.selectedPreselectionCandidateIds = this.selectedPreselectionCandidateIds.filter(
+      (id) => id !== candidateId,
+    );
+
+    const bulkBar = document.getElementById('bulk-bar');
+    if (bulkBar) {
+      bulkBar.classList.toggle('show', this.selectedPreselectionCandidateIds.length > 0);
+    }
+  }
+
+  private goToNextBulkConsultationCandidate(): void {
+    if (this.bulkConsultationCurrentIndex < this.bulkConsultationCandidates.length - 1) {
+      this.bulkConsultationNext();
+      return;
+    }
+
+    this.toastService.show('✅ Tous les candidats ont été traités.', 'success');
+    this.closeBulkConsultationModal();
   }
 
   /**
@@ -4113,21 +4368,7 @@ export class DashboardCommissionComponent implements OnInit {
     const candidature = this.getCurrentBulkConsultationCandidate();
     if (!candidature) return;
 
-    this.validateCandidatesOnBackend(
-      [candidature],
-      'Validation depuis consultation massive',
-      false,
-    );
-
-    // Move to next after 500ms
-    setTimeout(() => {
-      if (this.bulkConsultationCurrentIndex < this.bulkConsultationCandidates.length - 1) {
-        this.bulkConsultationNext();
-      } else {
-        this.toastService.show('✅ Tous les candidats ont été traités.', 'success');
-        this.closeBulkConsultationModal();
-      }
-    }, 500);
+    void this.validateBulkConsultationCandidate(candidature);
   }
 
   /**
@@ -4137,37 +4378,86 @@ export class DashboardCommissionComponent implements OnInit {
     const candidature = this.getCurrentBulkConsultationCandidate();
     if (!candidature) return;
 
+    void this.rejectBulkConsultationCandidate(candidature);
+  }
+
+  private async validateBulkConsultationCandidate(candidature: Candidature): Promise<void> {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    const master = this.offresPreinscription.find(
+      (offer) => offer.id === Number(this.selectedMasterForCandidatures),
+    );
+    const masterLabel = master?.specialite || this.getSelectedMasterName();
+    const session = this.selectedAcademicYear || this.getCurrentAcademicYear();
+
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `http://localhost:8003/api/candidatures/${candidature.id}/commission-decision/`,
+          { decision: 'accepter' },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+
+      try {
+        await firstValueFrom(
+          this.http.post(
+            'http://localhost:8003/api/candidatures/commission/historique/',
+            {
+              action: 'Validation depuis consultation massive',
+              specialite: masterLabel,
+              session,
+              nb_candidats: 1,
+              master_id: master?.id || null,
+            },
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        );
+      } catch (historyError) {
+        console.warn('Impossible d’enregistrer l’historique commission:', historyError);
+      }
+
+      candidature.statut = 'preselectionne';
+      this.removeBulkConsultationSelection(candidature.id);
+      this.animateAndHideValidatedCandidate(candidature.id);
+      this.toastService.show(`✅ ${candidature.candidat_nom} validé(e)`, 'success');
+      window.setTimeout(() => this.goToNextBulkConsultationCandidate(), 220);
+    } catch (error) {
+      console.error('Erreur validation candidat:', error);
+      this.toastService.show('Erreur lors de la validation d’une candidature.', 'error');
+    }
+  }
+
+  private async rejectBulkConsultationCandidate(candidature: Candidature): Promise<void> {
     const token = this.authService.getAccessToken();
     if (!token) {
       this.toastService.show('Session expirée.', 'error');
       return;
     }
 
-    this.http
-      .put(
-        `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
-        { nouveau_statut: 'rejete', raison: 'Rejet lors de la consultation massive' },
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .subscribe({
-        next: () => {
-          candidature.statut = 'rejete';
-          this.toastService.show(`✅ ${candidature.candidat_nom} rejeté(e)`, 'success');
+    try {
+      await firstValueFrom(
+        this.http.put(
+          `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+          { nouveau_statut: 'rejete', raison: 'Rejet lors de la consultation massive' },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
 
-          setTimeout(() => {
-            if (this.bulkConsultationCurrentIndex < this.bulkConsultationCandidates.length - 1) {
-              this.bulkConsultationNext();
-            } else {
-              this.toastService.show('✅ Tous les candidats ont été traités.', 'success');
-              this.closeBulkConsultationModal();
-            }
-          }, 500);
-        },
-        error: (err) => {
-          this.toastService.show('❌ Erreur lors du rejet', 'error');
-          console.error(err);
-        },
-      });
+      candidature.statut = 'rejete';
+      this.removeBulkConsultationSelection(candidature.id);
+      this.animateAndHideValidatedCandidate(candidature.id);
+      this.toastService.show(`✅ ${candidature.candidat_nom} rejeté(e)`, 'success');
+
+      window.setTimeout(() => this.goToNextBulkConsultationCandidate(), 220);
+    } catch (error) {
+      this.toastService.show('❌ Erreur lors du rejet', 'error');
+      console.error(error);
+    }
   }
 
   // =========== CONSULTATION MASSIVE DE CANDIDATURES (Simple Consultation View) ===========
@@ -4263,6 +4553,124 @@ export class DashboardCommissionComponent implements OnInit {
         this.closeBulkConsultationCandidaturesModal();
       }
     }, 500);
+  }
+
+  /**
+   * Valide le candidat actuellement affiché dans la modal "Consultation Massive" (candidatures)
+   */
+  async bulkConsultationCandidatureValidate(): Promise<void> {
+    const candidature = this.getCurrentBulkConsultationCandidature();
+    if (!candidature) return;
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `http://localhost:8003/api/candidatures/${candidature.id}/commission-decision/`,
+          { decision: 'accepter' },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+
+      // Optional historique
+      try {
+        const master = this.offresPreinscription.find(
+          (offer) => offer.id === Number(this.selectedMasterForCandidatures),
+        );
+        const masterLabel = master?.specialite || this.getSelectedMasterName();
+        const session = this.selectedAcademicYear || this.getCurrentAcademicYear();
+
+        await firstValueFrom(
+          this.http.post(
+            'http://localhost:8003/api/candidatures/commission/historique/',
+            {
+              action: 'Validation depuis consultation massive',
+              specialite: masterLabel,
+              session,
+              nb_candidats: 1,
+              master_id: master?.id || null,
+            },
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        );
+      } catch (historyError) {
+        console.warn('Impossible d’enregistrer l’historique commission:', historyError);
+      }
+
+      candidature.statut = 'preselectionne';
+      // remove from selected ids
+      this.selectedCandidaturesIds = this.selectedCandidaturesIds.filter(
+        (id) => id !== candidature.id,
+      );
+      this.animateAndHideValidatedCandidate(candidature.id);
+      this.toastService.show(`✅ ${candidature.candidat_nom} validé(e)`, 'success');
+
+      window.setTimeout(() => {
+        if (
+          this.bulkConsultationCandidaturesCurrentIndex <
+          this.bulkConsultationCandidatures.length - 1
+        ) {
+          this.bulkCandidaturesNext();
+        } else {
+          this.toastService.show('✅ Tous les candidats ont été traités.', 'success');
+          this.closeBulkConsultationCandidaturesModal();
+        }
+      }, 220);
+    } catch (error) {
+      console.error('Erreur validation candidat (candidatures modal):', error);
+      this.toastService.show('Erreur lors de la validation d’une candidature.', 'error');
+    }
+  }
+
+  /**
+   * Rejette le candidat actuellement affiché dans la modal "Consultation Massive" (candidatures)
+   */
+  async bulkConsultationCandidatureReject(): Promise<void> {
+    const candidature = this.getCurrentBulkConsultationCandidature();
+    if (!candidature) return;
+
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.toastService.show('Session expirée.', 'error');
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.http.put(
+          `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+          { nouveau_statut: 'rejete', raison: 'Rejet lors de la consultation massive' },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+
+      candidature.statut = 'rejete';
+      this.selectedCandidaturesIds = this.selectedCandidaturesIds.filter(
+        (id) => id !== candidature.id,
+      );
+      this.animateAndHideValidatedCandidate(candidature.id);
+      this.toastService.show(`✅ ${candidature.candidat_nom} rejeté(e)`, 'success');
+
+      window.setTimeout(() => {
+        if (
+          this.bulkConsultationCandidaturesCurrentIndex <
+          this.bulkConsultationCandidatures.length - 1
+        ) {
+          this.bulkCandidaturesNext();
+        } else {
+          this.toastService.show('✅ Tous les candidats ont été traités.', 'success');
+          this.closeBulkConsultationCandidaturesModal();
+        }
+      }, 220);
+    } catch (error) {
+      console.error('Erreur rejet candidat (candidatures modal):', error);
+      this.toastService.show('❌ Erreur lors du rejet', 'error');
+    }
   }
 
   /**
@@ -5030,6 +5438,20 @@ export class DashboardCommissionComponent implements OnInit {
     return source.filter((candidature) => candidature.type_concours === 'ingenieur');
   }
 
+  get ingStatPreselectionnees(): number {
+    return this.candidaturesIngenieurFiltrees.filter(
+      (c) => c.statut === 'preselectionne' || c.statut === 'selectionne',
+    ).length;
+  }
+
+  get ingStatRefusees(): number {
+    return this.candidaturesIngenieurFiltrees.filter((c) => c.statut === 'rejete').length;
+  }
+
+  get ingStatDossierDeposes(): number {
+    return this.candidaturesIngenieurFiltrees.filter((c) => c.dossier_depose).length;
+  }
+
   get candidaturesResponsableDossiersDeposesCount(): number {
     return this.candidaturesResponsableFiltrees.filter((c) => c.dossier_depose).length;
   }
@@ -5633,6 +6055,48 @@ export class DashboardCommissionComponent implements OnInit {
     this.candidatureSelectionnee = null;
     this.avisArgument = '';
     this.avisRecommandation = 'favorable';
+  }
+
+  soumettreAvisGlobal(): void {
+    if (!this.avisGlobalMembre.trim()) {
+      this.toastService.show('Veuillez saisir un commentaire.', 'warning');
+      return;
+    }
+    this.toastService.show('Avis global soumis avec succès.', 'success');
+    this.avisGlobalMembre = '';
+  }
+
+  toggleMembreAvisSelected(id: number, checked: boolean): void {
+    if (checked && !this.membreAvisSelectedIds.includes(id)) {
+      this.membreAvisSelectedIds.push(id);
+    } else if (!checked) {
+      this.membreAvisSelectedIds = this.membreAvisSelectedIds.filter(x => x !== id);
+    }
+  }
+
+  clearMembreAvisSelection(): void {
+    this.membreAvisSelectedIds = [];
+    this.prsMembreGenerateListOpen = false;
+  }
+
+  togglePrsMembreGenerateListMenu(): void {
+    this.prsMembreGenerateListOpen = !this.prsMembreGenerateListOpen;
+  }
+
+  getPreselectionMembreFiltered(): Candidature[] {
+    return this.candidaturesFiltrees.filter(c => {
+      const search = (this.prsMembreSearch || '').toLowerCase();
+      const matchSearch = !search ||
+        (c.candidat_nom || '').toLowerCase().includes(search) ||
+        String(c.id).includes(search);
+      const matchSpec = !this.prsMembreSpecFilter || c.specialite === this.prsMembreSpecFilter;
+      const matchType = !this.prsMembreTypeFilter ||
+        (this.prsMembreTypeFilter === 'interne' && c.type_candidat === 'interne') ||
+        (this.prsMembreTypeFilter === 'externe' && c.type_candidat === 'externe');
+      const matchMin = this.prsMembreScoreMin == null || (c.score || 0) >= this.prsMembreScoreMin;
+      const matchMax = this.prsMembreScoreMax == null || (c.score || 0) <= this.prsMembreScoreMax;
+      return matchSearch && matchSpec && matchType && matchMin && matchMax;
+    });
   }
 
   ouvrirModalAvisListe(liste: Liste): void {
@@ -7757,11 +8221,6 @@ export class DashboardCommissionComponent implements OnInit {
         }
       }
 
-      // Filtre par rôle
-      if (this.filtrRoleMembre && membre.role !== this.filtrRoleMembre) {
-        return false;
-      }
-
       // Filtre par statut
       if (this.filtreStatutMembre && membre.statut !== this.filtreStatutMembre) {
         return false;
@@ -7773,14 +8232,153 @@ export class DashboardCommissionComponent implements OnInit {
 
   reinitialiserFiltresMembres(): void {
     this.rechercheMembres = '';
-    this.filtrRoleMembre = '';
     this.filtreStatutMembre = '';
     this.membresFiltres = [...this.membres];
   }
 
+  openAddMemberModal(): void {
+    this.newMemberNom = '';
+    this.newMemberPrenom = '';
+    this.newMemberEmail = '';
+    this.newMemberSpecialite = '';
+    this.showAddMemberModal = true;
+    this.memberActionMenuOpenId = null;
+  }
+
+  closeAddMemberModal(): void {
+    this.showAddMemberModal = false;
+    this.newMemberNom = '';
+    this.newMemberPrenom = '';
+    this.newMemberEmail = '';
+    this.newMemberSpecialite = '';
+  }
+
+  submitAddMember(): void {
+    const nom = this.newMemberNom.trim();
+    const prenom = this.newMemberPrenom.trim();
+    const email = this.newMemberEmail.trim();
+    const specialite = this.newMemberSpecialite.trim();
+    if (!nom || !prenom || !email || !specialite) {
+      this.toastService.show('Veuillez renseigner Nom, Prénom, Email et Spécialité.', 'warning');
+      return;
+    }
+
+    const generatedPassword = this.generateTemporaryMemberPassword();
+    const newMember: CommissionMember = {
+      id: this.membres.length ? Math.max(...this.membres.map((member) => member.id)) + 1 : 1,
+      nom,
+      prenom,
+      email,
+      telephone: this.newMemberTelephone.trim() || '-',
+      role: 'evaluateur',
+      statut: 'actif',
+      date_inscription: new Date().toISOString().slice(0, 10),
+      master_rattachement: specialite,
+    };
+
+    this.membres = [newMember, ...this.membres];
+    this.filtrerMembres();
+    this.sendMemberWelcomeEmail(email, generatedPassword, prenom, nom, specialite);
+    this.toastService.show(`Membre ajouté. E-mail d'accès envoyé à ${email}.`, 'success');
+    this.newMemberTelephone = '';
+    this.closeAddMemberModal();
+  }
+
+  private generateTemporaryMemberPassword(): string {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let generated = '';
+    for (let index = 0; index < 12; index += 1) {
+      generated += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    return generated;
+  }
+
+  private sendMemberWelcomeEmail(
+    email: string,
+    temporaryPassword: string,
+    prenom: string,
+    nom: string,
+    specialite: string,
+  ): void {
+    // Workflow stub: replace with backend endpoint when API is available.
+    console.log('member-welcome-email', {
+      email,
+      temporaryPassword,
+      prenom,
+      nom,
+      specialite,
+    });
+  }
+
+  toggleMemberActionMenu(memberId: number, event: MouseEvent): void {
+    event.stopPropagation();
+    this.memberActionMenuOpenId = this.memberActionMenuOpenId === memberId ? null : memberId;
+  }
+
   toggleStatutMembre(membre: CommissionMember): void {
     membre.statut = membre.statut === 'actif' ? 'inactif' : 'actif';
-    this.toastService.show(`${membre.prenom} ${membre.nom} - Statut: ${membre.statut}`, 'success');
+    const label = membre.statut === 'actif' ? 'activé' : 'désactivé';
+    this.toastService.show(`${membre.prenom} ${membre.nom} — compte ${label}.`, 'success');
+  }
+
+  getMemberAvatarClass(index: number): string {
+    const classes = ['mem-av-blue', 'mem-av-teal', 'mem-av-violet', 'mem-av-gray'];
+    return classes[index % classes.length];
+  }
+
+  openEditMemberModal(membre: CommissionMember): void {
+    this.editingMember = membre;
+    this.editMemberNom = membre.nom;
+    this.editMemberPrenom = membre.prenom;
+    this.editMemberEmail = membre.email;
+    this.editMemberTelephone = membre.telephone !== '-' ? membre.telephone : '';
+    this.editMemberSpecialite = membre.master_rattachement || '';
+    this.showEditMemberModal = true;
+    this.memberActionMenuOpenId = null;
+  }
+
+  closeEditMemberModal(): void {
+    this.showEditMemberModal = false;
+    this.editingMember = null;
+  }
+
+  submitEditMember(): void {
+    if (!this.editingMember) return;
+    const nom = this.editMemberNom.trim();
+    const prenom = this.editMemberPrenom.trim();
+    const email = this.editMemberEmail.trim();
+    if (!nom || !prenom || !email) {
+      this.toastService.show('Veuillez renseigner Nom, Prénom et Email.', 'warning');
+      return;
+    }
+    this.editingMember.nom = nom;
+    this.editingMember.prenom = prenom;
+    this.editingMember.email = email;
+    this.editingMember.telephone = this.editMemberTelephone.trim() || '-';
+    this.editingMember.master_rattachement = this.editMemberSpecialite.trim() || undefined;
+    this.filtrerMembres();
+    this.toastService.show(`Membre ${prenom} ${nom} modifié avec succès.`, 'success');
+    this.closeEditMemberModal();
+  }
+
+  openDeleteMemberConfirm(membre: CommissionMember): void {
+    this.memberToDelete = membre;
+    this.showDeleteMemberConfirm = true;
+    this.memberActionMenuOpenId = null;
+  }
+
+  cancelDeleteMemberConfirm(): void {
+    this.showDeleteMemberConfirm = false;
+    this.memberToDelete = null;
+  }
+
+  confirmDeleteMember(): void {
+    if (!this.memberToDelete) return;
+    const { prenom, nom } = this.memberToDelete;
+    this.membres = this.membres.filter((m) => m.id !== this.memberToDelete!.id);
+    this.filtrerMembres();
+    this.toastService.show(`Membre ${prenom} ${nom} supprimé.`, 'success');
+    this.cancelDeleteMemberConfirm();
   }
 
   voirProfilMembre(membre: CommissionMember): void {

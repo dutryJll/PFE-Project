@@ -4,7 +4,12 @@ from datetime import timedelta
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from .models import Candidature, Notification
-from .emails import envoyer_email_changement_statut, envoyer_rappel_deadline_j3
+from .emails import (
+    envoyer_email_changement_statut,
+    envoyer_rappel_deadline_j3,
+    envoyer_email_preselection_admis,
+    envoyer_email_preselection_refuse,
+)
 from .notifications import (
     envoyer_rappels_j3_preinscription,
     envoyer_rappels_j1_depot_dossier,
@@ -277,3 +282,217 @@ def synchroniser_notifications_systeme_tous():
             logger.exception("Erreur synchronisation notifications système pour user=%s", user.id)
 
     return {'status': 'success', 'users_processed': processed}
+
+
+@shared_task
+def cloture_preselection_worker(commission_id):
+    """
+    Déclenché quand le Responsable valide la présélection (Session_Preselection_Cloturee).
+    Pour chaque candidature de la commission :
+      - présélectionné  → email avec instructions dossier + notification WS personnelle
+      - rejeté          → email de refus poli + notification WS personnelle
+    Puis envoie une notification globale de clôture.
+    """
+    from .models import Commission, Candidature
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    from django.utils import timezone as tz
+
+    channel_layer = get_channel_layer()
+    now = tz.now().isoformat()
+
+    try:
+        commission = Commission.objects.select_related('master').get(id=commission_id)
+    except Commission.DoesNotExist:
+        logger.error("cloture_preselection_worker: commission %s introuvable", commission_id)
+        return {'status': 'error', 'reason': 'commission_not_found'}
+
+    candidatures = Candidature.objects.select_related('candidat', 'master').filter(
+        master=commission.master,
+        statut__in=['preselectionne', 'rejete'],
+    )
+
+    emails_admis = 0
+    emails_refuses = 0
+    ws_sent = 0
+    errors = 0
+
+    for cand in candidatures:
+        user_group = f'user_{cand.candidat_id}'
+
+        # Email selon le statut
+        try:
+            if cand.statut == 'preselectionne':
+                envoyer_email_preselection_admis(cand)
+                emails_admis += 1
+            elif cand.statut == 'rejete':
+                envoyer_email_preselection_refuse(cand)
+                emails_refuses += 1
+        except Exception:
+            logger.exception(
+                "Erreur email clôture présélection candidature=%s", cand.numero
+            )
+            errors += 1
+
+        # Notification WebSocket sur le canal personnel du candidat
+        try:
+            async_to_sync(channel_layer.group_send)(
+                user_group,
+                {
+                    'type': 'candidature_status_changed',
+                    'candidature_id': cand.id,
+                    'candidate_user_id': cand.candidat_id,
+                    'new_status': cand.statut,
+                    'updated_at': now,
+                },
+            )
+            ws_sent += 1
+        except Exception:
+            logger.exception(
+                "Erreur WS clôture présélection candidature=%s", cand.numero
+            )
+            errors += 1
+
+    # Notification globale de clôture de session
+    try:
+        async_to_sync(channel_layer.group_send)(
+            'candidatures_updates',
+            {
+                'type': 'preselection_closed',
+                'commission_id': commission_id,
+                'message': (
+                    f"La session de présélection pour {commission.master.nom} a été clôturée."
+                    if commission.master
+                    else "La session de présélection a été clôturée."
+                ),
+                'timestamp': now,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Erreur WS notification globale clôture commission=%s", commission_id
+        )
+        errors += 1
+
+    result = {
+        'commission_id': commission_id,
+        'emails_admis': emails_admis,
+        'emails_refuses': emails_refuses,
+        'ws_sent': ws_sent,
+        'errors': errors,
+    }
+    logger.info("cloture_preselection_worker terminé: %s", result)
+    return result
+
+
+@shared_task
+def appliquer_decision_finale_quotas(commission_id):
+    """
+    Applique la décision finale basée sur les quotas LP/LA de la ConfigurationAppel.
+    Classe les candidatures présélectionnées par score décroissant :
+      - Top quota_lp  → statut 'selectionne'  (liste principale)
+      - Suivants quota_la → statut 'en_attente' (liste d'attente)
+      - Reste          → statut 'rejete'
+    Puis envoie une notification WS globale et les emails correspondants.
+    """
+    from .models import Commission, Candidature, ConfigurationAppel
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    from django.utils import timezone as tz
+    from django.db import transaction
+
+    channel_layer = get_channel_layer()
+    now = tz.now().isoformat()
+
+    try:
+        commission = Commission.objects.select_related('master').get(id=commission_id)
+    except Commission.DoesNotExist:
+        logger.error("appliquer_decision_finale_quotas: commission %s introuvable", commission_id)
+        return {'status': 'error', 'reason': 'commission_not_found'}
+
+    master = commission.master
+    if not master:
+        logger.error("appliquer_decision_finale_quotas: commission %s sans master", commission_id)
+        return {'status': 'error', 'reason': 'no_master'}
+
+    try:
+        config = master.configuration
+    except ConfigurationAppel.DoesNotExist:
+        logger.error(
+            "appliquer_decision_finale_quotas: aucune ConfigurationAppel pour master %s", master.id
+        )
+        return {'status': 'error', 'reason': 'no_configuration'}
+
+    quota_lp = config.quota_lp or 0
+    quota_la = config.quota_la or 0
+
+    # Candidatures présélectionnées avec dossier déposé, classées par score
+    candidatures = list(
+        Candidature.objects.select_related('candidat', 'master')
+        .filter(master=master, statut='preselectionne')
+        .order_by('-score', 'date_soumission')
+    )
+
+    selectionnes = 0
+    en_attente = 0
+    refuses = 0
+    errors = 0
+
+    with transaction.atomic():
+        for i, cand in enumerate(candidatures):
+            if i < quota_lp:
+                nouveau_statut = 'selectionne'
+                selectionnes += 1
+            elif i < quota_lp + quota_la:
+                nouveau_statut = 'en_attente'
+                en_attente += 1
+            else:
+                nouveau_statut = 'rejete'
+                refuses += 1
+
+            if cand.statut != nouveau_statut:
+                cand.statut = nouveau_statut
+                cand.date_changement_statut = tz.now()
+                cand.save(update_fields=['statut', 'date_changement_statut'])
+
+            # Email
+            try:
+                if nouveau_statut == 'selectionne':
+                    envoyer_email_changement_statut(cand, 'preselectionne', 'selectionne')
+                elif nouveau_statut == 'rejete':
+                    envoyer_email_preselection_refuse(cand)
+            except Exception:
+                logger.exception(
+                    "Erreur email décision finale candidature=%s", cand.numero
+                )
+                errors += 1
+
+            # Notification WS personnelle
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{cand.candidat_id}',
+                    {
+                        'type': 'candidature_status_changed',
+                        'candidature_id': cand.id,
+                        'candidate_user_id': cand.candidat_id,
+                        'new_status': nouveau_statut,
+                        'updated_at': now,
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "Erreur WS décision finale candidature=%s", cand.numero
+                )
+                errors += 1
+
+    result = {
+        'commission_id': commission_id,
+        'quota_lp': quota_lp,
+        'quota_la': quota_la,
+        'selectionnes': selectionnes,
+        'en_attente': en_attente,
+        'refuses': refuses,
+        'errors': errors,
+    }
+    logger.info("appliquer_decision_finale_quotas terminé: %s", result)
+    return result

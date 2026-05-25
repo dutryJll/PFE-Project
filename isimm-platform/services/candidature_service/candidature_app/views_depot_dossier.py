@@ -50,7 +50,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             commission__master_id=candidature.master_id,
         ).exists()
     
-    @action(detail=False, methods=['get'], url_path='requetes/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['get'], url_path='requetes/(?P<candidature_id>\\d+)')
     def types_documents_requis(self, request, candidature_id=None):
         """Obtenir les types de documents requis pour une candidature"""
         candidature = get_object_or_404(Candidature, pk=candidature_id, candidat=request.user)
@@ -65,7 +65,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             'nombre_requis': types_docs.filter(obligatoire=True).count()
         })
     
-    @action(detail=False, methods=['post'], url_path='upload/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['post'], url_path='upload/(?P<candidature_id>\\d+)')
     def upload_document(self, request, candidature_id=None):
         """Uploader un document pour une candidature"""
         candidature = get_object_or_404(Candidature, pk=candidature_id, candidat=request.user)
@@ -104,7 +104,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['get'], url_path='dossier/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['get'], url_path='dossier/(?P<candidature_id>\\d+)')
     def consulter_dossier(self, request, candidature_id=None):
         """Consulter l'état du dossier"""
         candidature = get_object_or_404(Candidature, pk=candidature_id, candidat=request.user)
@@ -115,7 +115,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path='commission-dossier/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['get'], url_path='commission-dossier/(?P<candidature_id>\\d+)')
     def consulter_dossier_commission(self, request, candidature_id=None):
         """Consulter un dossier en lecture seule depuis la commission."""
         candidature = get_object_or_404(Candidature.objects.select_related('candidat', 'master'), pk=candidature_id)
@@ -142,7 +142,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             },
         })
     
-    @action(detail=False, methods=['post'], url_path='soumettre/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['post'], url_path='soumettre/(?P<candidature_id>\\d+)')
     def soumettre_dossier(self, request, candidature_id=None):
         """Soumettre/finalisé le dossier"""
         candidature = get_object_or_404(Candidature, pk=candidature_id, candidat=request.user)
@@ -193,7 +193,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             }
         })
     
-    @action(detail=False, methods=['put'], url_path='ajuster/(?P<candidature_id>\d+)')
+    @action(detail=False, methods=['put'], url_path='ajuster/(?P<candidature_id>\\d+)')
     def ajuster_dossier(self, request, candidature_id=None):
         """Ajuster le dossier avant déadline"""
         candidature = get_object_or_404(Candidature, pk=candidature_id, candidat=request.user)
@@ -230,7 +230,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             'dossier': DetailedDossierSerializer(dossier).data
         })
     
-    @action(detail=False, methods=['delete'], url_path='document/(?P<document_id>\d+)')
+    @action(detail=False, methods=['delete'], url_path='document/(?P<document_id>\\d+)')
     def supprimer_document(self, request, document_id=None):
         """Supprimer un document du dossier"""
         document = get_object_or_404(Document, pk=document_id)

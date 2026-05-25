@@ -183,6 +183,14 @@
               <td>
                 <div class="action-menu-container">
                   <button
+                    type="button"
+                    class="btn btn-primary"
+                    style="margin-right: 8px"
+                    (click)="ouvrirAvisCandidat(candidat)"
+                  >
+                    Donner avis
+                  </button>
+                  <button
                     class="kebab-btn"
                     type="button"
                     aria-label="Actions"
@@ -330,6 +338,59 @@
       <div class="global-avis-actions">
         <button class="btn btn-sec" type="button" (click)="closeAvisModal()">Annuler</button>
         <button class="btn btn-primary" type="button" (click)="saveAvis()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="avis-modal-backdrop" *ngIf="showGlobalAvisModal" (click)="closeGlobalAvisModal()">
+    <div class="avis-modal" (click)="$event.stopPropagation()">
+      <div class="avis-modal-header">
+        <h3>Donner avis global</h3>
+        <button class="avis-modal-close" type="button" (click)="closeGlobalAvisModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="avis-modal-subtitle">
+        {{ globalAvisSummary?.favorables || 0 }} favorables /
+        {{ globalAvisSummary?.defavorables || 0 }} défavorables sur
+        {{ globalAvisSummary?.total || 0 }} candidats visibles
+      </p>
+
+      <div class="global-avis-choices">
+        <label>
+          <input
+            type="radio"
+            name="globalAvisStatut"
+            value="favorable"
+            [(ngModel)]="globalAvisStatut"
+          />
+          Favorable
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="globalAvisStatut"
+            value="defavorable"
+            [(ngModel)]="globalAvisStatut"
+          />
+          Défavorable
+        </label>
+      </div>
+
+      <textarea
+        class="form-control"
+        rows="4"
+        [(ngModel)]="globalAvisCommentaire"
+        placeholder="Commentaire global..."
+        [required]="globalAvisStatut === 'defavorable'"
+      ></textarea>
+
+      <div class="global-avis-actions">
+        <button class="btn btn-sec" type="button" (click)="closeGlobalAvisModal()">Annuler</button>
+        <button class="btn btn-primary" type="button" (click)="submitGlobalAvis()">
+          Enregistrer
+        </button>
       </div>
     </div>
   </div>

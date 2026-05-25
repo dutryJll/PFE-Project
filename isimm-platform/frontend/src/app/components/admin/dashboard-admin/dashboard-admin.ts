@@ -5,7 +5,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
-import { SkeletonLoaderComponent } from '../../shared/skeleton-loader/skeleton-loader.component';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -46,6 +45,8 @@ interface Utilisateur {
 interface OffreIngenieur {
   id: number;
   titre: string;
+  type: string;
+  type_display: string;
   specialite: string;
   places: number;
   date_limite: string;
@@ -157,7 +158,7 @@ function normalizeActionLabel(value: string): string {
 @Component({
   selector: 'app-dashboard-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, SkeletonLoaderComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard-admin.html',
   styleUrl: './dashboard-admin.css',
 })
@@ -849,13 +850,54 @@ export class DashboardAdminComponent implements OnInit {
         this.mastersList = [
           {
             id: 1,
-            nom: 'Master Recherche Génie Logiciel',
-            type: 'recherche',
-            description: 'Formation en recherche en génie logiciel',
+            nom: 'MP-GL - Génie Logiciel',
+            type: 'professionnel',
+            description: 'Master professionnel orienté conception et industrialisation logicielle.',
             places: 30,
-            date_limite: '2026-03-30',
+            date_limite: '2026-05-31',
             statut: 'ouvert',
             specialite: 'Informatique',
+          },
+          {
+            id: 2,
+            nom: 'MP-DS - Data Science',
+            type: 'professionnel',
+            description: 'Master professionnel pour la donnée, l’IA et l’analyse avancée.',
+            places: 28,
+            date_limite: '2026-06-05',
+            statut: 'ouvert',
+            specialite: 'Data Science',
+          },
+          {
+            id: 3,
+            nom: 'MP-3I - Intelligence Industrielle',
+            type: 'professionnel',
+            description: 'Préinscription dédiée aux systèmes intelligents et à l’automatisation.',
+            places: 24,
+            date_limite: '2026-06-10',
+            statut: 'ouvert',
+            specialite: 'Industrie 4.0',
+          },
+          {
+            id: 4,
+            nom: 'MR-GL - Génie Logiciel',
+            type: 'recherche',
+            description: 'Formation en recherche sur l’ingénierie logicielle et les architectures.',
+            places: 20,
+            date_limite: '2026-06-15',
+            statut: 'ouvert',
+            specialite: 'Informatique',
+          },
+          {
+            id: 5,
+            nom: 'MR-Micro - Micro-électronique',
+            type: 'recherche',
+            description:
+              'Master recherche centré sur les circuits, capteurs et systèmes embarqués.',
+            places: 18,
+            date_limite: '2026-06-20',
+            statut: 'ouvert',
+            specialite: 'Électronique',
           },
         ];
 
@@ -1419,6 +1461,7 @@ export class DashboardAdminComponent implements OnInit {
     const rows: ExportRow[] = this.offresIngenieurList.map((o) => ({
       id: o.id,
       titre: o.titre,
+      type: o.type_display,
       specialite: o.specialite,
       places: o.places,
       date_limite: o.date_limite,
@@ -1634,6 +1677,12 @@ export class DashboardAdminComponent implements OnInit {
             id: c.id,
             backend_id: c.id,
             titre: c.nom,
+            type: c.type_concours || c.type_cycle || c.type || 'cycle_ingenieur',
+            type_display:
+              c.type_concours_display ||
+              c.type_cycle_display ||
+              c.type_display ||
+              'Cycle Ingénieur',
             specialite: c.conditions_admission?.specialite || c.description || 'Cycle Ingénieur',
             places: c.places_disponibles,
             date_limite: c.date_cloture,
@@ -1656,12 +1705,50 @@ export class DashboardAdminComponent implements OnInit {
           this.offresIngenieurList = [
             {
               id: 1,
-              titre: "Concours d'accès - Cycle Ingénieur Génie Logiciel",
+              titre: 'Cycle Ingénieur - Informatique / Génie Logiciel',
+              type: 'cycle_ingenieur',
+              type_display: 'Cycle Ingénieur',
               specialite: 'Génie Logiciel',
-              places: 50,
-              date_limite: '2026-05-31',
+              places: 60,
+              date_limite: '2026-06-15',
               statut: 'ouvert',
-              description: 'Concours national pour les titulaires de licence en informatique.',
+              description:
+                'Préinscription ouverte pour les profils Informatique et Génie Logiciel.',
+            },
+            {
+              id: 2,
+              titre: 'Cycle Ingénieur - Data Science / IA',
+              type: 'cycle_ingenieur',
+              type_display: 'Cycle Ingénieur',
+              specialite: 'Data Science',
+              places: 45,
+              date_limite: '2026-06-18',
+              statut: 'ouvert',
+              description: 'Parcours orienté intelligence artificielle, données et analytique.',
+            },
+            {
+              id: 3,
+              titre: 'Cycle Ingénieur - Réseaux & Sécurité',
+              type: 'cycle_ingenieur',
+              type_display: 'Cycle Ingénieur',
+              specialite: 'Réseaux et Sécurité',
+              places: 40,
+              date_limite: '2026-06-22',
+              statut: 'ferme',
+              description:
+                'Admission sur dossier pour les profils réseaux, cybersécurité et systèmes.',
+            },
+            {
+              id: 4,
+              titre: 'Cycle Ingénieur - Systèmes Embarqués & IoT',
+              type: 'cycle_ingenieur',
+              type_display: 'Cycle Ingénieur',
+              specialite: 'Systèmes embarqués',
+              places: 35,
+              date_limite: '2026-06-25',
+              statut: 'ouvert',
+              description:
+                'Préinscription pour les candidats orientés électronique, IoT et embarqué.',
             },
           ];
 
@@ -1679,21 +1766,47 @@ export class DashboardAdminComponent implements OnInit {
     this.offresIngenieurList = [
       {
         id: 1,
-        titre: "Concours d'accès - Cycle Ingénieur Génie Logiciel",
+        titre: 'Cycle Ingénieur - Informatique / Génie Logiciel',
+        type: 'cycle_ingenieur',
+        type_display: 'Cycle Ingénieur',
         specialite: 'Génie Logiciel',
-        places: 50,
-        date_limite: '2026-05-31',
+        places: 60,
+        date_limite: '2026-06-15',
         statut: 'ouvert',
-        description: 'Concours national pour les titulaires de licence en informatique.',
+        description: 'Préinscription ouverte pour les profils Informatique et Génie Logiciel.',
       },
       {
         id: 2,
-        titre: "Concours d'accès - Cycle Ingénieur Data & IA",
-        specialite: 'Data & IA',
-        places: 35,
-        date_limite: '2026-06-05',
+        titre: 'Cycle Ingénieur - Data Science / IA',
+        type: 'cycle_ingenieur',
+        type_display: 'Cycle Ingénieur',
+        specialite: 'Data Science',
+        places: 45,
+        date_limite: '2026-06-18',
+        statut: 'ouvert',
+        description: 'Parcours orienté intelligence artificielle, données et analytique.',
+      },
+      {
+        id: 3,
+        titre: 'Cycle Ingénieur - Réseaux & Sécurité',
+        type: 'cycle_ingenieur',
+        type_display: 'Cycle Ingénieur',
+        specialite: 'Réseaux et Sécurité',
+        places: 40,
+        date_limite: '2026-06-22',
         statut: 'ferme',
-        description: 'Admission sur dossier et entretien pour parcours Data Science.',
+        description: 'Admission sur dossier pour les profils réseaux, cybersécurité et systèmes.',
+      },
+      {
+        id: 4,
+        titre: 'Cycle Ingénieur - Systèmes Embarqués & IoT',
+        type: 'cycle_ingenieur',
+        type_display: 'Cycle Ingénieur',
+        specialite: 'Systèmes embarqués',
+        places: 35,
+        date_limite: '2026-06-25',
+        statut: 'ouvert',
+        description: 'Préinscription pour les candidats orientés électronique, IoT et embarqué.',
       },
     ];
   }
@@ -2515,7 +2628,7 @@ export class DashboardAdminComponent implements OnInit {
 
     const content = lines.join('\n');
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const filename = `isimm-metrics-${this.reportPeriod}-${now.toISOString().slice(0,10)}.txt`;
+    const filename = `isimm-metrics-${this.reportPeriod}-${now.toISOString().slice(0, 10)}.txt`;
 
     // Trigger download
     if (window.navigator && (window.navigator as any).msSaveOrOpenBlob) {

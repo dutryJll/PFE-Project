@@ -67,10 +67,10 @@
         <button class="btn btn-teal" (click)="loadCommissionGlobalAvisSummary()">Actualiser</button>
         <button
           class="btn btn-primary"
-          [disabled]="!canShowDecisionFinalButton() || finalDecisionApplying"
-          (click)="applyFinalDecisionTop100()"
+          [disabled]="finalDecisionApplying || preselectionLocked"
+          (click)="openFinalDecisionModal()"
         >
-          {{ finalDecisionApplying ? 'Application...' : 'Décision Finale (Top 100)' }}
+          {{ finalDecisionApplying ? 'Application...' : 'Décision Finale' }}
         </button>
       </div>
     </div>
@@ -121,11 +121,11 @@
   <div class="filter-card">
     <div class="fg">
       <div>
-        <div class="flbl">Recherche par nom</div>
+        <div class="flbl">Recherche globale</div>
         <input
           type="text"
           class="finput"
-          placeholder="Nom du candidat..."
+          placeholder="Nom, email, CIN, spécialité..."
           (input)="filterByName($event)"
         />
       </div>
@@ -235,7 +235,19 @@
       </div>
     </div>
     <div style="overflow-x: auto">
-      <table>
+      <table class="preselection-table">
+        <colgroup>
+          <col style="width: 42px" />
+          <col style="width: 70px" />
+          <col style="width: 100px" />
+          <col style="width: 24%" />
+          <col style="width: 22%" />
+          <col style="width: 14%" />
+          <col style="width: 12%" />
+          <col style="width: 12%" />
+          <col style="width: 12%" />
+          <col style="width: 110px" />
+        </colgroup>
         <thead>
           <tr>
             <th><input type="checkbox" id="check-all" (change)="toggleAll($event)" /></th>
@@ -304,6 +316,45 @@
         <button class="pag-btn active">1</button>
         <button class="pag-btn">&gt;</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal"
+  *ngIf="finalDecisionModalOpen"
+  style="
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 120;
+  "
+  (click)="closeFinalDecisionModal()"
+>
+  <div
+    class="modal-content"
+    style="
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+    "
+    (click)="$event.stopPropagation()"
+  >
+    <h3 style="margin-bottom: 12px; color: #185fa5">Confirmer la décision finale</h3>
+    <p style="margin-bottom: 10px; color: #334155">
+      Cette action applique la décision collégiale sur le Top 100, clôture la session active,
+      verrouille les modifications et prépare l'export final.
+    </p>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px">
+      <button class="btn btn-sec" (click)="closeFinalDecisionModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="applyFinalDecisionTop100()">Confirmer</button>
     </div>
   </div>
 </div>

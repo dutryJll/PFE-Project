@@ -69,9 +69,10 @@
                 font-size: 13px;
                 cursor: pointer;
               "
-              (click)="applyTop100FinalDecision()"
+              (click)="openFinalDecisionModal()"
+              [disabled]="finalSelectionLocked"
             >
-              Décision Finale (Top 100)
+              Décision Finale
             </button>
           </div>
         </div>
@@ -258,16 +259,16 @@
             </div>
 
             <div class="filter-chip">
-              <div class="flbl">État audit</div>
+              <div class="flbl">Dossier</div>
               <select
                 class="finput"
                 [(ngModel)]="finalSelectionFilters.auditState"
                 (change)="updateFinalSelectionFiltered()"
               >
                 <option value="all">Tous</option>
-                <option value="en_attente">En attente d'examen</option>
-                <option value="conforme">Conforme</option>
-                <option value="non_conforme">Non conforme</option>
+                <option value="en_attente">En attente</option>
+                <option value="conforme">Valide</option>
+                <option value="non_conforme">Non valide</option>
               </select>
             </div>
 
@@ -323,6 +324,14 @@
             </div>
 
             <div class="filter-chip filter-chip--actions">
+              <label class="check-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="finalSelectionFilters.showOnlyPresel"
+                  (change)="updateFinalSelectionFiltered()"
+                />
+                Présélectionnés uniquement
+              </label>
               <label class="check-label" (click)="toggleFinalSelectionTop100()"
                 ><div class="toggle" [class.on]="finalSelectionTop100On"></div>
                 Top 100 par score</label
@@ -413,7 +422,19 @@
               <div class="tbl-actions"></div>
             </div>
             <div class="table-scroll">
-              <table class="selection-table">
+              <table class="selection-table final-selection-table">
+                <colgroup>
+                  <col class="col-checkbox" />
+                  <col class="col-rang" />
+                  <col class="col-candidature" />
+                  <col class="col-nom" />
+                  <col class="col-specialite" />
+                  <col class="col-moyenne" />
+                  <col class="col-preselection" />
+                  <col class="col-audit" />
+                  <col class="col-statut" />
+                  <col class="col-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th class="col-checkbox" style="width: 34px">
@@ -429,7 +450,7 @@
                     <th class="col-specialite">Spécialité Demandée</th>
                     <th class="col-moyenne" style="min-width: 130px">Moyenne Cursus</th>
                     <th class="col-preselection">Décision Présélection</th>
-                    <th class="col-audit">État Audit</th>
+                    <th class="col-audit">Dossier (Valide/Non valide)</th>
                     <th class="col-statut" style="min-width: 148px">Statut Sélection</th>
                     <th class="col-actions">Actions</th>
                   </tr>
@@ -485,7 +506,7 @@
                       <span
                         *ngIf="candidate.auditState === 'conforme'"
                         class="status-pill status-pill--ok"
-                        >Conforme</span
+                        >✓ Valide</span
                       >
                       <span
                         *ngIf="candidate.auditState === 'en_attente'"
@@ -495,7 +516,7 @@
                       <span
                         *ngIf="candidate.auditState === 'non_conforme'"
                         class="status-pill status-pill--danger"
-                        >Non conforme</span
+                        >✕ Non valide</span
                       >
                     </td>
                     <td class="col-statut">
@@ -607,6 +628,35 @@
       </div>
 
       <!-- Publish modal -->
+      <div
+        class="publish-modal-backdrop"
+        *ngIf="finalDecisionModalOpen"
+        (click)="closeFinalDecisionModal()"
+      >
+        <div class="publish-modal" (click)="$event.stopPropagation()">
+          <div class="publish-modal-header">
+            <h3>Confirmer la décision finale</h3>
+            <button class="btn-close" type="button" (click)="closeFinalDecisionModal()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="publish-modal-body">
+            <p class="publish-summary">
+              Cette action va clôturer la session en appliquant automatiquement les quotas LP/LA,
+              verrouiller les modifications et préparer l'export final.
+            </p>
+          </div>
+          <div class="publish-modal-actions">
+            <button class="btn btn-sec" type="button" (click)="closeFinalDecisionModal()">
+              Annuler
+            </button>
+            <button class="btn btn-primary" type="button" (click)="confirmFinalDecisionWorkflow()">
+              Confirmer la décision
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div
         class="publish-modal-backdrop"
         *ngIf="finalSelectionConfirmOpen"
@@ -792,31 +842,6 @@
         </button>
       </div>
 
-      <div class="dossier-modal-navigation" *ngIf="finalSelectionConsultationCandidates.length > 1">
-        <button
-          type="button"
-          class="btn btn-sec"
-          (click)="prevFinalSelectionConsultation()"
-          [disabled]="finalSelectionConsultationIndex === 0"
-        >
-          Précédent
-        </button>
-        <span>
-          {{ finalSelectionConsultationIndex + 1 }} /
-          {{ finalSelectionConsultationCandidates.length }}
-        </span>
-        <button
-          type="button"
-          class="btn btn-sec"
-          (click)="nextFinalSelectionConsultation()"
-          [disabled]="
-            finalSelectionConsultationIndex >= finalSelectionConsultationCandidates.length - 1
-          "
-        >
-          Suivant
-        </button>
-      </div>
-
       <div class="dossier-modal-body" *ngIf="dossierModalLoading">
         <div class="dossier-loading">
           <i class="fas fa-spinner fa-spin"></i>
@@ -849,6 +874,48 @@
             </aside>
 
             <section class="candidate-right-content candidate-details-pane">
+              <div class="massive-dossier-toolbar">
+                <div class="massive-dossier-title">
+                  <span class="massive-dossier-kicker">Dossier actif</span>
+                  <h4>{{ dossierModalCandidate?.prenom }} {{ dossierModalCandidate?.nom }}</h4>
+                  <p>
+                    {{ dossierModalData?.master_nom || dossierModalCandidate?.spec }}
+                    <span *ngIf="dossierModalData?.candidature_numero">
+                      · {{ dossierModalData.candidature_numero }}</span
+                    >
+                  </p>
+                </div>
+
+                <div
+                  class="massive-dossier-navigation"
+                  *ngIf="finalSelectionConsultationCandidates.length > 1"
+                >
+                  <span class="massive-dossier-counter">
+                    Dossier {{ finalSelectionConsultationIndex + 1 }} /
+                    {{ finalSelectionConsultationCandidates.length }}
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-sec"
+                    (click)="prevFinalSelectionConsultation()"
+                    [disabled]="finalSelectionConsultationIndex === 0"
+                  >
+                    ◀ Précédent
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sec"
+                    (click)="nextFinalSelectionConsultation()"
+                    [disabled]="
+                      finalSelectionConsultationIndex >=
+                      finalSelectionConsultationCandidates.length - 1
+                    "
+                  >
+                    Suivant ▶
+                  </button>
+                </div>
+              </div>
+
               <div class="dossier-summary-grid">
                 <div class="dossier-summary-card">
                   <span>Moyenne Cursus</span>

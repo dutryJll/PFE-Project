@@ -6,6 +6,7 @@ import {
   CommissionContextOption,
   CommissionContextService,
 } from '../../../services/commission-context.service';
+import { CandidatureService } from '../../../services/candidature.service';
 import { ToastService } from '../../../services/toast.service';
 
 type CandidatStatus = 'Présélectionné' | 'En attente' | 'Refusé';
@@ -56,6 +57,7 @@ export class ListePreselection implements OnInit {
   currentCommissionType = 'Mastère';
   currentCommissionProfile: CommissionProfile = 'master-mp-gl';
   private activeCommissionCategory: CommissionContextOption['category'] | null = null;
+  private onDocClickBound: any = null;
 
   // Pagination
   pageSize = 10;
@@ -75,6 +77,7 @@ export class ListePreselection implements OnInit {
   globalAvisStatut: 'favorable' | 'defavorable' = 'favorable';
   globalAvisCommentaire = '';
   globalAvisSummary: { favorables: number; defavorables: number; total: number } | null = null;
+  private activeCommissionId: number | null = null;
 
   readonly specialitesByProfile: Record<CommissionProfile, string[]> = {
     'master-mp-gl': ["Licence en Sciences de l'Informatique", 'Licence en Informatique de Gestion'],
@@ -95,6 +98,7 @@ export class ListePreselection implements OnInit {
 
   constructor(
     private commissionContext: CommissionContextService,
+    private candidatureService: CandidatureService,
     private toastService: ToastService,
   ) {}
 
@@ -102,12 +106,22 @@ export class ListePreselection implements OnInit {
     this.candidats = this.buildMockCandidats();
 
     this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionId = commissionId;
       this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
       this.syncCommissionProfile(commissionId);
       this.appliquerFiltres();
     });
 
     this.appliquerFiltres();
+  }
+
+  ngAfterViewInit(): void {
+    this.onDocClickBound = () => (this.actionMenuOpenId = null);
+    document.addEventListener('click', this.onDocClickBound);
+  }
+
+  ngOnDestroy(): void {
+    if (this.onDocClickBound) document.removeEventListener('click', this.onDocClickBound);
   }
 
   get availableSpecialites(): string[] {
@@ -303,10 +317,29 @@ export class ListePreselection implements OnInit {
       return;
     }
 
-    this.avisCandidate.statut = this.avisStatut === 'favorable' ? 'Présélectionné' : 'Refusé';
-    this.avisCandidate.commentaire = this.avisCommentaire;
-    this.closeAvisModal();
-    this.appliquerFiltres();
+    const commissionIdRaw = localStorage.getItem('active_commission_id');
+    const commissionId = commissionIdRaw ? Number(commissionIdRaw) : undefined;
+
+    this.candidatureService
+      .submitAvis(this.avisCandidate.id, {
+        avis: this.avisStatut === 'favorable',
+        argument: this.avisCommentaire.trim(),
+        commission_id: commissionId,
+      })
+      .subscribe({
+        next: (response) => {
+          this.avisCandidate!.statut =
+            this.avisStatut === 'favorable' ? 'Présélectionné' : 'Refusé';
+          this.avisCandidate!.commentaire = this.avisCommentaire;
+          this.toastService.show(response?.message || 'Avis enregistré avec succès.', 'success');
+          this.closeAvisModal();
+          this.appliquerFiltres();
+        },
+        error: (error) => {
+          const message = error?.error?.error || 'Erreur lors de l’enregistrement de l’avis.';
+          this.toastService.show(message, 'error');
+        },
+      });
   }
 
   toggleActionMenu(candidateId: number, event?: Event): void {
@@ -353,8 +386,28 @@ export class ListePreselection implements OnInit {
       return;
     }
 
-    this.toastService.show('Avis global soumis (démo).', 'success');
-    this.closeGlobalAvisModal();
+    const commissionId = this.activeCommissionId;
+    if (commissionId === null) {
+      this.toastService.show('Aucune commission active sélectionnée.', 'error');
+      return;
+    }
+
+    this.candidatureService
+      .submitGlobalAvis(commissionId, {
+        statut: this.globalAvisStatut,
+        commentaire: this.globalAvisCommentaire.trim(),
+        is_global: true,
+      })
+      .subscribe({
+        next: (response) => {
+          this.toastService.show(response?.message || 'Avis global soumis avec succès.', 'success');
+          this.closeGlobalAvisModal();
+        },
+        error: (error) => {
+          const message = error?.error?.error || 'Erreur lors de la soumission de l’avis global.';
+          this.toastService.show(message, 'error');
+        },
+      });
   }
 
   private matchCommissionScope(candidat: Candidat): boolean {

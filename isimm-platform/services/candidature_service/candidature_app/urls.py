@@ -105,6 +105,8 @@ urlpatterns = router.urls + [
     path('commissions/<int:commission_id>/members/<int:membre_id>/delete/', views.commission_remove_member, name='commission_remove_member'),
     path('commissions/<int:commission_id>/appel-avis/', views.send_appel_avis, name='send_appel_avis'),
     path('commissions/<int:commission_id>/avis-global/', views.commission_avis_global, name='commission_avis_global'),
+    path('commissions/<int:commission_id>/valider-preselection/', views.valider_preselection_commission, name='valider_preselection_commission'),
+    path('commissions/<int:commission_id>/appliquer-quotas/', views.appliquer_quotas_decision_finale, name='appliquer_quotas_decision_finale'),
     path('<int:candidature_id>/statut/changer/', views.changer_statut_candidature_endpoint, name='changer_statut_candidature'),
     path('<int:candidature_id>/statut/historique/', views.recuperer_historique_statuts_endpoint, name='recuperer_historique_statuts'),
 ]

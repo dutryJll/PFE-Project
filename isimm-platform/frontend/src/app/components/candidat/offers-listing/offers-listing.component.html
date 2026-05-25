@@ -1,139 +1,259 @@
-<div class="offers-container">
-  <div class="offers-header">
-    <h1>Offres disponibles</h1>
-    <button mat-icon-button (click)="loadAvailableOffers()" matTooltip="Actualiser les offres">
-      <mat-icon>refresh</mat-icon>
+<div class="offers-page">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div class="offers-page-header">
+    <div>
+      <h1 class="offers-title">Offres de Préinscription</h1>
+      <p class="offers-subtitle">Candidatez au programme qui correspond à votre profil pour l'année universitaire 2025-2026</p>
+    </div>
+    <button class="btn-refresh" (click)="loadAvailableOffers()" title="Actualiser">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10a6 6 0 1 0 1-3.2"/><path d="M4 4v3h3"/></svg>
     </button>
   </div>
 
-  <!-- Loading State -->
+  <!-- ── Filters ─────────────────────────────────────────── -->
+  <div class="filter-bar">
+    <button class="filter-pill" [class.active]="filterType === 'all'" (click)="onFilterChange('all')">
+      Tous les programmes
+    </button>
+    <button class="filter-pill" [class.active]="filterType === 'master'" (click)="onFilterChange('master')">
+      Mastères
+    </button>
+    <button class="filter-pill" [class.active]="filterType === 'ingenieur'" (click)="onFilterChange('ingenieur')">
+      Cycle Ingénieur
+    </button>
+  </div>
+
+  <!-- ── Loading ─────────────────────────────────────────── -->
   <div *ngIf="isLoading" class="loading-state">
     <mat-spinner diameter="40"></mat-spinner>
-    <p>Chargement des offres...</p>
+    <p>Chargement des offres disponibles…</p>
   </div>
 
-  <!-- Error State -->
-  <div *ngIf="errorMessage && !isLoading" class="error-message">
-    <mat-icon>error_outline</mat-icon>
+  <!-- ── Error ──────────────────────────────────────────── -->
+  <div *ngIf="errorMessage && !isLoading" class="error-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" width="32" height="32">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
     <p>{{ errorMessage }}</p>
+    <button class="btn-retry" (click)="loadAvailableOffers()">Réessayer</button>
   </div>
 
-  <!-- Filters -->
-  <div *ngIf="!isLoading && offers.length > 0" class="filters-section">
-    <div class="filter-group">
-      <label>Type de Master:</label>
-      <div class="filter-buttons">
-        <button
-          mat-stroked-button
-          [class.active]="filterType === 'all'"
-          (click)="onFilterTypeChange('all')"
-        >
-          Tous
-        </button>
-        <button
-          *ngFor="let type of getUniqueTypes()"
-          mat-stroked-button
-          [class.active]="filterType === type"
-          (click)="onFilterTypeChange(type)"
-        >
-          {{ type }}
-        </button>
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label>Spécialité:</label>
-      <div class="filter-buttons">
-        <button
-          mat-stroked-button
-          [class.active]="filterSpecialite === 'all'"
-          (click)="onFilterSpecialiteChange('all')"
-        >
-          Toutes
-        </button>
-        <button
-          *ngFor="let spec of getUniqueSpecialites()"
-          mat-stroked-button
-          [class.active]="filterSpecialite === spec"
-          (click)="onFilterSpecialiteChange(spec)"
-        >
-          {{ spec }}
-        </button>
-      </div>
-
-      <!-- mobile / compact: select fallback -->
-      <div class="filter-select-compact">
-        <select [(ngModel)]="filterSpecialite" (change)="applyFilters()">
-          <option value="all">Toutes</option>
-          <option *ngFor="let s of getUniqueSpecialites()" [value]="s">{{ s }}</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <!-- Offers Grid -->
+  <!-- ── Cards Grid ─────────────────────────────────────── -->
   <div *ngIf="!isLoading && filteredOffers.length > 0" class="offers-grid">
-    <mat-card *ngFor="let offer of filteredOffers" class="offer-card">
-      <mat-card-header>
-        <h2>{{ offer.master_nom }}</h2>
-      </mat-card-header>
+    <div *ngFor="let offer of filteredOffers" class="offer-card" [class]="getColorClass(offer)">
 
-      <mat-card-content>
-        <div class="offer-details">
-          <div class="detail-item">
-            <strong>Spécialité:</strong>
-            <span>{{ offer.specialite }}</span>
-          </div>
+      <div class="card-top">
+        <div class="card-badges">
+          <span class="badge-code">{{ getCode(offer) }}</span>
+          <span class="badge-type" *ngIf="offer.type === 'cycle_ingenieur'">Cycle Ingénieur</span>
+          <span class="badge-type" *ngIf="offer.type !== 'cycle_ingenieur'">Master</span>
+        </div>
+        <span class="badge-applied" *ngIf="offer.already_applied">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M6.5 12L2 7.5l1.4-1.4L6.5 9.2 12.6 3 14 4.4z"/></svg>
+          Déjà postulé
+        </span>
+      </div>
 
-          <div class="detail-item">
-            <strong>Type:</strong>
-            <mat-chip>{{ offer.type }}</mat-chip>
-          </div>
+      <div class="card-body">
+        <h2 class="card-title">{{ offer.master_nom }}</h2>
+        <p class="card-specialite" *ngIf="offer.specialite">{{ offer.specialite }}</p>
 
-          <div class="detail-item" *ngIf="offer.date_limite">
-            <strong>Délai:</strong>
-            <div [ngClass]="{ 'approaching-deadline': isDeadlineApproaching(offer.date_limite) }">
-              {{ daysRemainingText(offer.date_limite) }}
-            </div>
-          </div>
-
-          <div class="detail-item" *ngIf="offer.already_applied">
-            <mat-chip color="accent">Déjà postulé</mat-chip>
+        <div class="card-meta">
+          <div class="meta-item" *ngIf="offer.date_limite">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+              <rect x="1" y="2" width="14" height="13" rx="2"/><line x1="5" y1="1" x2="5" y2="4"/><line x1="11" y1="1" x2="11" y2="4"/><line x1="1" y1="7" x2="15" y2="7"/>
+            </svg>
+            <span [class.text-urgent]="isUrgent(offer.date_limite)" [class.text-expired]="daysRemaining(offer.date_limite) < 0">
+              {{ daysLabel(offer.date_limite) }}
+            </span>
           </div>
         </div>
-      </mat-card-content>
+      </div>
 
-      <mat-card-actions>
-        <ng-container *ngIf="offer.already_applied; else canApply">
-          <button
-            mat-stroked-button
-            color="accent"
-            [routerLink]="['/candidat/candidature/modifier']"
-            [queryParams]="{ masterId: offer.master_id }"
-          >
-            <mat-icon>edit</mat-icon>
-            Voir / Modifier
-          </button>
-        </ng-container>
-        <ng-template #canApply>
-          <button mat-raised-button color="primary" (click)="applyNow(offer)">
-            <mat-icon>send</mat-icon>
-            Postuler maintenant
-          </button>
-        </ng-template>
-      </mat-card-actions>
-    </mat-card>
+      <div class="card-actions">
+        <button class="btn-details" (click)="openDetails(offer)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14">
+            <circle cx="8" cy="8" r="7"/><line x1="8" y1="7" x2="8" y2="11"/><line x1="8" y1="5" x2="8.01" y2="5"/>
+          </svg>
+          Détails
+        </button>
+        <button class="btn-postuler" (click)="applyNow(offer)" [class.applied]="offer.already_applied">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14">
+            <path d="M2 12L7 2l3 6 2-2 2 6H2z" *ngIf="!offer.already_applied"/>
+            <path d="M2.5 8l3 3L13.5 4" *ngIf="offer.already_applied"/>
+          </svg>
+          {{ offer.already_applied ? 'Voir candidature' : 'Postuler' }}
+        </button>
+      </div>
+
+    </div>
   </div>
 
-  <!-- Empty State -->
-  <div *ngIf="!isLoading && filteredOffers.length === 0" class="empty-state">
-    <mat-icon>folder_open</mat-icon>
-    <p>
-      {{
-        offers.length === 0
-          ? 'Aucune offre disponible pour le moment'
-          : 'Aucune offre ne correspond à vos filtres'
-      }}
-    </p>
+  <!-- ── Empty State ────────────────────────────────────── -->
+  <div *ngIf="!isLoading && filteredOffers.length === 0 && !errorMessage" class="empty-state">
+    <svg viewBox="0 0 64 64" fill="none" stroke="#94a3b8" stroke-width="2" width="64" height="64">
+      <rect x="8" y="12" width="48" height="40" rx="4"/><line x1="20" y1="26" x2="44" y2="26"/><line x1="20" y1="34" x2="36" y2="34"/>
+    </svg>
+    <p>{{ offers.length === 0 ? 'Aucune offre disponible pour le moment.' : 'Aucune offre ne correspond au filtre sélectionné.' }}</p>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL DÉTAILS PROGRAMME
+═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-panel" [class]="selectedProgramData?.colorClass" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div>
+        <span class="modal-code">{{ selectedProgramData?.code }}</span>
+        <h2 class="modal-title">{{ selectedProgramData?.title }}</h2>
+        <p class="modal-subtitle">{{ selectedProgramData?.subtitle }} — Année universitaire 2025-2026</p>
+      </div>
+      <button class="modal-close" (click)="closeModal()" aria-label="Fermer">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+          <line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Tabs -->
+    <div class="modal-tabs">
+      <button class="modal-tab" [class.active]="activeModalTab === 'programme'" (click)="setTab('programme')">
+        Programme & Calendrier
+      </button>
+      <button class="modal-tab" [class.active]="activeModalTab === 'dossier'" (click)="setTab('dossier')">
+        Composition du dossier
+      </button>
+      <button class="modal-tab" [class.active]="activeModalTab === 'score'" (click)="setTab('score')">
+        Calcul du score
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Tab: Programme & Calendrier -->
+      <div *ngIf="activeModalTab === 'programme'">
+        <div class="modal-section">
+          <h3 class="modal-section-title">Capacités d'accueil</h3>
+          <div class="capacity-header-row">
+            <span>Établissement</span>
+            <span>Type de diplôme requis</span>
+            <span>Places</span>
+          </div>
+          <div class="capacity-row" *ngFor="let c of selectedProgramData?.capacite">
+            <span class="cap-etab">{{ c.etablissement }}</span>
+            <span class="cap-diplome">{{ c.typesDiplome }}</span>
+            <span class="cap-places">{{ c.places }}</span>
+          </div>
+          <div class="capacity-total">
+            <span>Capacité totale</span>
+            <span>{{ selectedProgramData?.totalPlaces }} places</span>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h3 class="modal-section-title">Calendrier</h3>
+          <div class="timeline">
+            <div class="timeline-item" *ngFor="let item of selectedProgramData?.calendrier; let i = index">
+              <div class="timeline-dot" [class]="'dot-' + i"></div>
+              <div class="timeline-content">
+                <div class="timeline-event">{{ item.event }}</div>
+                <div class="timeline-date">{{ item.date }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-section" *ngIf="selectedProgramData?.remarques?.length">
+          <h3 class="modal-section-title">Remarques importantes</h3>
+          <ol class="remarques-list">
+            <li *ngFor="let r of selectedProgramData?.remarques">{{ r }}</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Tab: Dossier -->
+      <div *ngIf="activeModalTab === 'dossier'">
+        <div class="modal-section">
+          <h3 class="modal-section-title">Composition du dossier de candidature</h3>
+          <p class="dossier-note">
+            Tous les documents demandés doivent être fusionnés en un seul fichier PDF.
+          </p>
+          <ol class="dossier-list">
+            <li *ngFor="let doc of selectedProgramData?.dossier; let i = index">
+              <span class="dossier-num">{{ i + 1 }}</span>
+              <span>{{ doc }}</span>
+            </li>
+          </ol>
+          <div class="dossier-tool">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+              <path d="M2 14V5l4-4h8v13H2z"/><path d="M6 1v4H2"/>
+            </svg>
+            Outil de fusion PDF recommandé :
+            <strong>www.pdf2go.com/fr/fusionner-pdf</strong>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h3 class="modal-section-title">Modalités d'inscription (2 étapes)</h3>
+          <div class="steps-list">
+            <div class="step-item">
+              <div class="step-num">1</div>
+              <div>
+                <strong>Inscription en ligne obligatoire</strong>
+                <p>Inscription sur le site web de l'ISIMM via le formulaire électronique. Les candidats seront classés par ordre de mérite selon leur Score.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">2</div>
+              <div>
+                <strong>Dépôt du dossier numérique</strong>
+                <p>Les candidats retenus sur la liste préliminaire doivent envoyer leur dossier complet via le site de l'Institut.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Score -->
+      <div *ngIf="activeModalTab === 'score'">
+        <div class="modal-section">
+          <h3 class="modal-section-title">Formule de calcul du score</h3>
+          <div class="score-formula-box">
+            {{ selectedProgramData?.scoreFormula }}
+          </div>
+        </div>
+        <div class="modal-section">
+          <h3 class="modal-section-title">Composantes du score</h3>
+          <div class="score-table">
+            <div class="score-header">
+              <span>Composante</span>
+              <span>Détails / Calcul</span>
+            </div>
+            <div class="score-row" *ngFor="let detail of selectedProgramData?.scoreDetails">
+              <span class="score-comp">{{ detail.composante }}</span>
+              <span class="score-formula-text">{{ detail.formule }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <button class="btn-modal-close" (click)="closeModal()">Fermer</button>
+      <button class="btn-modal-postuler" (click)="applyNow(selectedOffer!); closeModal()" *ngIf="selectedOffer && !selectedOffer.already_applied">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <path d="M2 12L7 2l3 6 2-2 2 6H2z"/>
+        </svg>
+        Postuler maintenant
+      </button>
+    </div>
+
   </div>
 </div>

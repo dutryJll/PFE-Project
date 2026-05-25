@@ -1,6 +1,6 @@
 <div style="position: relative">
   <div style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: center">
-    <button class="btn btn-sec btn-sm" (click)="retourOffreList()">
+    <button type="button" class="btn btn-sec btn-sm" (click)="retourOffreList()">
       <i class="fas fa-arrow-left" style="margin-right: 0.4rem"></i>
       Retour
     </button>
@@ -106,13 +106,13 @@
           </div>
         </div>
         <div class="nav-footer">
-          <button class="btn btn-sec btn-sm" (click)="goStep(1)">
+          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(1)">
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M7 2L3 5l4 3"></path>
             </svg>
             Précédent
           </button>
-          <button class="btn btn-primary btn-primary-large" (click)="goStep(3)">
+          <button type="button" class="btn btn-primary btn-primary-large" (click)="goStep(3)">
             Suivant
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M3 2l4 3-4 3"></path>
@@ -175,7 +175,7 @@
             margin-top: 0.5rem;
           "
         >
-          <button class="btn btn-sec btn-sm" (click)="addQuota()">
+          <button type="button" class="btn btn-sec btn-sm" (click)="addQuota()">
             <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
               <line x1="6" y1="2" x2="6" y2="10"></line>
               <line x1="2" y1="6" x2="10" y2="6"></line>
@@ -191,21 +191,20 @@
           </div>
         </div>
         <div class="nav-footer">
-          <button class="btn btn-sec btn-sm" (click)="goStep(2)">
+          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(2)">
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M7 2L3 5l4 3"></path>
             </svg>
             Précédent
           </button>
           <div style="display: flex; gap: 0.5rem">
-            <button class="btn btn-amber btn-sm" (click)="togglePreview()">
+            <button class="btn btn-primary btn-sm" type="button" (click)="publierOffre()">
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
-                <ellipse cx="6" cy="6" rx="5" ry="3.5"></ellipse>
-                <circle cx="6" cy="6" r="1.5"></circle>
+                <path d="M1 6l4-4 4 4M5 2v8"></path>
               </svg>
-              Aperçu candidat
+              Publier maintenant
             </button>
-            <button class="btn btn-teal btn-sm" (click)="enregistrer()">
+            <button class="btn btn-teal btn-sm" type="button" (click)="enregistrer()">
               <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4">
                 <path d="M2 6l3 3 5-5"></path>
               </svg>

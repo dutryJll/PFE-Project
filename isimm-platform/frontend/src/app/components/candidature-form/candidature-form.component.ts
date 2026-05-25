@@ -123,45 +123,57 @@ export class CandidatureFormComponent implements OnInit {
     { code: 'autre', label: 'Autre' },
   ];
 
+  specialiteDiplomeOptionsMpgl: string[] = [
+    "Licence en Sciences de l'Informatique Génie Logiciel",
+    'Informatique de Gestion (uniquement)',
+    "Génie Logiciel et Systèmes d'Information",
+    'Licence Appliquée en Développement des Systèmes Informatiques',
+    'Big Data et Analyse de Données',
+    'Business Computing',
+  ];
+
   specialiteDiplomeOptionsMrgl: string[] = [
-    "Licence en Sciences de l'Informatique (Génie Logiciel / Systèmes d'Information)",
-    'Licence en Mathématiques Appliquées (ou équivalent)',
-    "Licence en Informatique de Gestion (Systèmes d'Information / Business Intelligence)",
-    'Licence en Informatique (autres spécialités compatibles)',
+    'Licence en Informatique',
+    'Maîtrise en Informatique',
+    'Licence en Informatique ou Informatique de Gestion',
+    'Maîtrise en Informatique ou Informatique de Gestion',
   ];
 
   specialiteDiplomeOptionsMpds: string[] = [
-    'Licence en Mathématiques Appliquées (ou équivalent)',
-    'Licence en Statistique / Science des Données / Actuariat',
-    'Licence en Informatique (avec option data / statistiques)',
-    "Licence en Sciences de l'Informatique (analyse de données / IA)",
+    'Licence en Mathématiques Appliquées — spécialité Statistique de l\'Environnement',
+    'Mathématiques Appliquées — spécialité Science des Données',
+    'Mathématiques et Applications',
+    "Licence en Sciences de l'Informatique Génie Logiciel",
+    'Informatique de Gestion (uniquement)',
+    "Génie Logiciel et Systèmes d'Information",
+    'Licence Appliquée en Développement des Systèmes Informatiques',
+    'Big Data et Analyse de Données',
+    'Business Computing',
   ];
 
   specialiteDiplomeOptionsMrmi: string[] = [
-    'Licence en Electronique / EEA / MIM (Electronique, Systèmes Embarqués, Métrologie)',
-    'Licence en Mesures et Instrumentation / Automatique',
-    'Licence en Télécommunications / Réseaux / IoT',
-    'Réussite en 1ère année du cycle ingénieur (Électronique / Instrumentation) ou équivalent',
+    'Licence en EEA, MIM (Électronique, Systèmes Embarqués, Métrologie) ou TIC (Réseaux et IoT)',
+    'Licence en Électronique, Automatique ou Mesures et Instrumentation',
+    "Réussite en 1ère année du cycle ingénieur (Électronique / Instrumentation) ou équivalent",
   ];
 
   specialiteDiplomeOptionsMp3i: string[] = [
-    'Licence en Électronique, Électrotechnique et Automatique (MIM/SE)',
-    'Licence en Génie Électrique (spécialité Automatique / Électronique)',
-    "Licence en Technologies de l'Information et de la Communication (TIC) orientée systèmes embarqués",
+    'Licence en Électronique, Électrotechnique et Automatique (MIM)',
+    'Licence en Électronique, Électrotechnique et Automatique (SE)',
+    "Licence en Technologies de l'Information et de la Communication (TIC)",
     'Licence en Mesures et Instrumentation',
-    'Licence en EEA (Automatique et Informatique Industrielle / Mesures et Métrologie)',
-    'Licence en Informatique (si orientée systèmes embarqués / embarqué temps réel)',
+    'Licence en EEA (Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie)',
+    'Licence en Génie Électrique (Spécialité Automatique et Informatique Industrielle)',
   ];
 
   specialiteDiplomeOptionsIngenieur: string[] = [
-    "Licence en Sciences de l'Informatique (Génie Logiciel et Systèmes d'Information)",
-    'Licence en Mathématiques et Informatique (ou diplôme équivalent)',
-    'Cycle préparatoire intégré (ou équivalent reconnu)',
-    'Autre diplôme équivalent pertinent (cas par cas)',
+    'Génie Logiciel (Informatique)',
+    "Diplôme en Ingénierie Système d'Information",
+    'Diplôme en Ingénierie Système Informatique',
   ];
 
-  natureDiplomeOptions: string[] = ['Licence', 'Maitrise'];
-  natureDiplomeOptionsIngenieur: string[] = ['Licence', 'Cycle ingénieur'];
+  natureDiplomeOptions: string[] = ['Licence', 'Licence Ancien Régime', 'Maîtrise'];
+  natureDiplomeOptionsIngenieur: string[] = ['Licence', 'Licence Ancien Régime', 'Cycle ingénieur'];
   typeLicenceOptions: string[] = ['Licence Nationale', 'Licence Ancien Régime'];
   ouiNonOptions: string[] = ['Oui', 'Non'];
   sessionOptions: string[] = ['Principale', 'Contrôle'];
@@ -358,6 +370,10 @@ export class CandidatureFormComponent implements OnInit {
       return this.specialiteDiplomeOptionsIngenieur;
     }
 
+    if (this.masterParcours === 'mpgl') {
+      return this.specialiteDiplomeOptionsMpgl;
+    }
+
     if (this.masterParcours === 'mrmi') {
       return this.specialiteDiplomeOptionsMrmi;
     }
@@ -371,6 +387,17 @@ export class CandidatureFormComponent implements OnInit {
     }
 
     return this.specialiteDiplomeOptionsMrgl;
+  }
+
+  onNatureCandidatureChange(value: string): void {
+    this.formData.natureCandidature = value;
+    if (value === 'Étudiant ISIMM') {
+      this.formData.etablissementUniversitaireOrigine = 'ISIMM';
+      this.formData.etablissementExterne = '';
+      this.formData.specialiteExterne = '';
+    } else {
+      this.formData.etablissementUniversitaireOrigine = '';
+    }
   }
 
   getNatureDiplomeOptions(): string[] {
@@ -490,6 +517,7 @@ export class CandidatureFormComponent implements OnInit {
         this.formData.specialiteBac.trim() !== '' &&
         this.formData.anneeBac !== '' &&
         this.formData.moyenneBacSessionPrincipale !== null &&
+        this.formData.natureCandidature.trim() !== '' &&
         this.formData.etablissementUniversitaireOrigine.trim() !== '' &&
         this.formData.specialiteDiplomeObtenu.trim() !== '' &&
         this.formData.anneeObtentionDernierDiplome !== '' &&
@@ -521,7 +549,6 @@ export class CandidatureFormComponent implements OnInit {
         this.formData.sessionReussite1ereAnnee.trim() !== '' &&
         this.formData.moyenne2emeAnnee !== null &&
         this.formData.sessionReussite2emeAnnee.trim() !== '' &&
-        this.formData.natureCandidature.trim() !== '' &&
         this.hasValue(this.formData.nombreAnneesRedoublement);
 
       if (!requiredAcademicFields || !this.validateScoresRange()) {

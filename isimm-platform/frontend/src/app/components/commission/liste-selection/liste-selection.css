@@ -520,6 +520,56 @@ table.selection-table td {
   gap: 4px;
 }
 
+/* Improve modal centering and layout to avoid large white gaps on the right */
+.dossier-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1050;
+}
+
+.dossier-modal-dialog {
+  margin: 0 auto;
+}
+
+.dossier-modal-dialog.massive-consultation-modal {
+  width: min(1200px, 96vw) !important;
+  max-width: 1200px !important;
+  height: 90vh;
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.3);
+}
+
+.massive-consultation-modal .massive-layout-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+.massive-consultation-modal .candidate-left-sidebar {
+  max-height: calc(90vh - 220px);
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.massive-consultation-modal .candidate-right-content {
+  overflow: auto;
+  min-height: 0;
+}
+
+.massive-consultation-modal .dossier-preview {
+  width: 100%;
+  height: 420px;
+}
+
 .summary-card:nth-child(1) {
   border-left-color: #185fa5;
 }
@@ -534,6 +584,39 @@ table.selection-table td {
 
 .summary-card:nth-child(4) {
   border-left-color: #8b5cf6;
+}
+
+.final-selection-table {
+  table-layout: fixed !important;
+}
+
+.final-selection-table th,
+.final-selection-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.final-selection-table td.col-nom,
+.final-selection-table th.col-nom {
+  text-align: left !important;
+}
+
+.final-selection-table td.col-checkbox,
+.final-selection-table th.col-checkbox,
+.final-selection-table td.col-rang,
+.final-selection-table th.col-rang,
+.final-selection-table td.col-moyenne,
+.final-selection-table th.col-moyenne,
+.final-selection-table td.col-preselection,
+.final-selection-table th.col-preselection,
+.final-selection-table td.col-audit,
+.final-selection-table th.col-audit,
+.final-selection-table td.col-statut,
+.final-selection-table th.col-statut,
+.final-selection-table td.col-actions,
+.final-selection-table th.col-actions {
+  text-align: center !important;
 }
 .sicon {
   width: 44px;
@@ -1922,6 +2005,7 @@ table.selection-table td {
 .massive-consultation-shell {
   width: 100%;
   height: 100%;
+  background: #f8fafc;
 }
 
 .massive-layout-grid {
@@ -1930,6 +2014,7 @@ table.selection-table td {
   width: 100%;
   height: 100%;
   gap: 0;
+  min-height: 0;
 }
 
 .candidate-left-sidebar {
@@ -1942,6 +2027,8 @@ table.selection-table td {
 .candidate-right-content {
   overflow-y: auto;
   padding: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  min-width: 0;
 }
 
 .massive-consultation-modal .dossier-summary-grid {
@@ -2014,6 +2101,74 @@ table.selection-table td {
   min-height: 220px;
 }
 
+.massive-consultation-modal .candidate-details-pane {
+  min-width: 0;
+}
+
+.massive-consultation-modal .candidate-right-content {
+  display: grid;
+  gap: 18px;
+}
+
+.massive-consultation-modal .document-viewer-grid {
+  align-items: stretch;
+}
+
+.massive-consultation-modal .dossier-doc-card {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+/* Final override: keep the massive consultation dialog as a true split view. */
+.massive-consultation-modal.dossier-modal-dialog,
+.dossier-modal-dialog.massive-consultation-modal {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh !important;
+}
+
+.massive-consultation-modal .dossier-modal-content,
+.massive-consultation-modal .dossier-modal-body,
+.massive-consultation-modal .massive-consultation-shell {
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.massive-consultation-modal .massive-layout-grid {
+  display: grid !important;
+  grid-template-columns: 360px minmax(0, 1fr) !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.massive-consultation-modal .candidate-left-sidebar {
+  flex: 0 0 360px !important;
+  max-width: 360px !important;
+  min-width: 320px !important;
+  border-right: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+}
+
+.massive-consultation-modal .candidate-right-content {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+}
+
+.massive-consultation-modal .candidate-details-pane {
+  min-width: 0 !important;
+}
+
+.massive-consultation-modal .dossier-preview {
+  min-height: 220px !important;
+  background: #ffffff !important;
+}
+
 .selection-card .table-scroll,
 .selection-card table,
 .selection-card .table-wrap {
@@ -2078,6 +2233,58 @@ table.selection-table td {
 .selection-table td:nth-child(10) {
   width: 80px;
   text-align: center;
+}
+.dossier-modal-dialog.massive-consultation-modal {
+  width: 96vw !important;
+  max-width: 96vw !important;
+  height: 90vh;
+  max-height: 90vh;
+}
+.massive-consultation-modal .massive-layout-grid {
+  gap: 16px;
+}
+.massive-consultation-modal .dossier-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.massive-consultation-modal .dossier-summary-card,
+.massive-consultation-modal .dossier-doc-card,
+.massive-consultation-modal .dossier-preview {
+  background: #ffffff;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 12px !important;
+}
+.massive-consultation-modal .dossier-summary-card {
+  padding: 16px !important;
+  min-height: 110px;
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 220px;
+}
+.massive-consultation-modal .dossier-summary-card span,
+.massive-consultation-modal .dossier-summary-card strong {
+  text-align: center;
+}
+.massive-consultation-modal .massive-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.massive-consultation-modal .massive-metric-card {
+  background: #ffffff !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px;
+  flex: 1 1 240px;
 }
 
 .massive-candidate-list {
@@ -2739,6 +2946,7 @@ table.selection-table td {
   width: 100%;
   height: 100%;
   gap: 0;
+  align-items: stretch;
 }
 
 .massive-consultation-modal .candidate-left-sidebar {
@@ -2751,6 +2959,30 @@ table.selection-table td {
 .massive-consultation-modal .candidate-right-content {
   overflow-y: auto;
   padding: 24px;
+}
+
+.massive-consultation-modal .massive-layout-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+}
+
+.massive-consultation-modal .candidate-left-sidebar {
+  flex: 0 0 360px !important;
+  max-width: 360px !important;
+  min-width: 320px !important;
+}
+
+.massive-consultation-modal .candidate-right-content {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.massive-consultation-modal .dossier-modal-content,
+.massive-consultation-modal .dossier-modal-body,
+.massive-consultation-modal .massive-consultation-shell {
+  min-height: 0 !important;
 }
 
 .massive-consultation-modal .dossier-summary-grid {
@@ -2775,6 +3007,122 @@ table.selection-table td {
 .massive-consultation-modal .dossier-summary-card span,
 .massive-consultation-modal .dossier-summary-card strong {
   overflow-wrap: anywhere;
+}
+
+/* Final modal override: centered overlay, no blank white page strip */
+.dossier-modal-backdrop.modal-backdrop.show {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.58);
+  z-index: 2000;
+}
+
+.dossier-modal-backdrop .dossier-modal-dialog.massive-consultation-modal {
+  width: 90vw !important;
+  max-width: 90vw !important;
+  height: 85vh !important;
+  margin: 0 !important;
+  display: flex;
+}
+
+.dossier-modal-backdrop .dossier-modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dossier-modal-backdrop .dossier-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dossier-modal-backdrop .massive-consultation-shell {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.dossier-modal-backdrop .massive-layout-grid {
+  display: grid !important;
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr) !important;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
+.dossier-modal-backdrop .candidate-left-sidebar {
+  overflow-y: auto;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.dossier-modal-backdrop .candidate-right-content {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dossier-modal-backdrop .candidate-details-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.dossier-modal-backdrop .massive-dossier-toolbar {
+  flex: 0 0 auto;
+}
+
+.dossier-modal-backdrop .document-viewer-grid {
+  min-height: 0;
+}
+
+.dossier-modal-backdrop .massive-consultation-shell {
+  background: #f8fbff !important;
+}
+
+.dossier-modal-backdrop .massive-layout-grid {
+  grid-template-columns: minmax(340px, 380px) minmax(0, 1fr) !important;
+  align-items: start !important;
+}
+
+.dossier-modal-backdrop .candidate-right-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 18px !important;
+  padding: 24px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+}
+
+.dossier-modal-backdrop .candidate-details-pane,
+.dossier-modal-backdrop .massive-dossier-toolbar,
+.dossier-modal-backdrop .dossier-summary-grid,
+.dossier-modal-backdrop .document-viewer-grid,
+.dossier-modal-backdrop .dossier-empty {
+  width: 100%;
+}
+
+.dossier-modal-backdrop .massive-dossier-toolbar {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 16px;
+}
+
+.dossier-modal-backdrop .candidate-details-pane {
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.dossier-modal-backdrop .dossier-summary-grid {
+  align-items: stretch;
 }
 
 .massive-consultation-modal .dossier-summary-card span {

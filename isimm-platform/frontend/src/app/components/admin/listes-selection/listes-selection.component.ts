@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
+import { PdfExportService } from '../../../services/pdf-export.service';
 
 interface Candidat {
   id: number;
@@ -134,6 +135,7 @@ export class ListesSelectionComponent implements OnInit {
     private router: Router,
     private http: HttpClient,
     private authService: AuthService,
+    private pdfExport: PdfExportService,
   ) {}
 
   ngOnInit(): void {
@@ -305,7 +307,35 @@ export class ListesSelectionComponent implements OnInit {
   }
 
   exporterTout(): void {
-    alert('Exporter toutes les listes');
+    const sectionId =
+      this.ongletActif === 'attente' ? 'liste-attente-section' : 'liste-principale-section';
+    const section = document.getElementById(sectionId);
+    if (!section) {
+      alert('❌ Section à exporter introuvable');
+      return;
+    }
+
+    void this.pdfExport.generatePdfFromElement(section, {
+      filename: `liste-selection-${this.ongletActif}.pdf`,
+      embedQr: true,
+      verificationUrl: `${window.location.origin}/verify-pv`,
+    });
+  }
+
+  exporterListePdf(type: 'attente' | 'principale'): void {
+    const section = document.getElementById(
+      type === 'attente' ? 'liste-attente-section' : 'liste-principale-section',
+    );
+    if (!section) {
+      alert('❌ Section à exporter introuvable');
+      return;
+    }
+
+    void this.pdfExport.generatePdfFromElement(section, {
+      filename: `liste-${type}.pdf`,
+      embedQr: true,
+      verificationUrl: `${window.location.origin}/verify-pv`,
+    });
   }
 
   publierListe(): void {

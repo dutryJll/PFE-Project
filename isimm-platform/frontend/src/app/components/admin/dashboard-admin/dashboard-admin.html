@@ -2,10 +2,12 @@
   <!-- ✅ MENU LATÉRAL -->
   <aside class="sidebar">
     <div class="logo-section">
-      <div class="logo-icon" aria-hidden="true">
-        <img [src]="adminLogoSrc" (error)="onAdminLogoError()" alt="Université de Monastir" />
+      <div class="sidebar-brand-row">
+        <img src="/assets/images/logo-isimm.png" alt="ISIMM" class="sidebar-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <span class="sidebar-logo-fallback">ISIMM</span>
+        <span class="sidebar-role-badge" title="Administrateur">🛡️</span>
       </div>
-      <h2>ISIMM</h2>
+      <p class="sidebar-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
       <p class="user-role">Espace Administrateur</p>
     </div>
 
@@ -444,68 +446,15 @@
       <div class="section-card">
         <div class="section-header">
           <h2>🛤️ Parcours Ingénieur</h2>
-          <button class="btn-primary" (click)="ajouterOffreIngenieur()">
+          <button type="button" class="btn-primary" (click)="ajouterOffreIngenieur()">
             <i class="fas fa-plus"></i> Ajouter un parcours
           </button>
         </div>
 
         <p class="admin-site-subtitle">
-          Gérez les Parcours Ingénieur: ajout, modification, ouverture/fermeture et suppression.
-          Chaque parcours enregistré apparaît ensuite côté responsable.
+          Gérez les parcours Ingénieur dans un tableau unique, synchronisé et cohérent avec le rendu
+          Master.
         </p>
-
-        <div class="section-card" style="margin-bottom: 1rem">
-          <div class="section-header">
-            <h3>Synchronisation vers espace responsable (Parcours Ingénieur)</h3>
-            <button class="btn-secondary" (click)="loadOffresResponsableSync()">Actualiser</button>
-          </div>
-          <p class="admin-site-subtitle">
-            Ces parcours apparaissent dans le champ "Offre concernée" de l'espace responsable.
-          </p>
-          <div *ngIf="isLoadingOffresResponsableSync" class="reglement-loading">
-            <app-skeleton-loader variant="table" [rows]="4"></app-skeleton-loader>
-          </div>
-          <div *ngIf="offresResponsableSyncMessage" class="reglement-message">
-            {{ offresResponsableSyncMessage }}
-          </div>
-          <div class="table-container" *ngIf="!isLoadingOffresResponsableSync">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Offre</th>
-                  <th>Spécialité</th>
-                  <th>Places</th>
-                  <th>Date limite</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let offre of getOffresResponsableSyncByType('cycle_ingenieur')">
-                  <td>
-                    <strong>{{ offre.titre }}</strong>
-                  </td>
-                  <td>{{ offre.specialite }}</td>
-                  <td>{{ offre.places }}</td>
-                  <td>{{ offre.date_limite | date: 'dd/MM/yyyy' }}</td>
-                  <td>
-                    <span
-                      class="status-badge"
-                      [class.ouvert]="offre.statut === 'ouvert'"
-                      [class.ferme]="offre.statut === 'ferme'"
-                    >
-                      {{ offre.statut === 'ouvert' ? 'Ouvert' : 'Fermé' }}
-                    </span>
-                  </td>
-                </tr>
-                <tr *ngIf="getOffresResponsableSyncByType('cycle_ingenieur').length === 0">
-                  <td colspan="5" class="empty-candidatures-row">
-                    Aucun Parcours Ingénieur synchronisé pour le moment.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <div class="users-toolbar">
           <div class="download-box">
@@ -516,7 +465,11 @@
               <option value="ods">OpenDocument Spreadsheet (.ods)</option>
               <option value="pdf">Portable Document Format (PDF)</option>
             </select>
-            <button class="btn-primary btn-download" (click)="downloadOffresIngenieurFile()">
+            <button
+              type="button"
+              class="btn-primary btn-download"
+              (click)="downloadOffresIngenieurFile()"
+            >
               Download
             </button>
           </div>
@@ -526,8 +479,8 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Offre</th>
-                <th>Spécialité</th>
+                <th>Nom du Master</th>
+                <th>Type</th>
                 <th>Places</th>
                 <th>Date limite</th>
                 <th>Statut</th>
@@ -540,34 +493,65 @@
                   <strong>{{ offre.titre }}</strong>
                   <div class="offer-subtext">{{ offre.description }}</div>
                 </td>
-                <td>{{ offre.specialite }}</td>
+                <td>
+                  <span class="type-badge" [class]="offre.type">{{ offre.type_display }}</span>
+                </td>
                 <td>{{ offre.places }}</td>
                 <td>{{ offre.date_limite | date: 'dd/MM/yyyy' }}</td>
                 <td>
-                  <span
-                    class="status-badge"
-                    [class.ouvert]="offre.statut === 'ouvert'"
-                    [class.ferme]="offre.statut === 'ferme'"
-                  >
-                    {{ offre.statut === 'ouvert' ? 'Ouvert' : 'Fermé' }}
-                  </span>
+                  <span class="status-badge" [class]="offre.statut">{{
+                    offre.statut === 'ouvert' ? 'Ouvert' : 'Fermé'
+                  }}</span>
                 </td>
                 <td>
-                  <button
-                    class="btn-action voir"
-                    [title]="
-                      offre.statut === 'ouvert' ? 'Fermer le parcours' : 'Ouvrir le parcours'
-                    "
-                    (click)="toggleStatutOffreIngenieur(offre)"
-                  >
-                    <i class="fas fa-toggle-on"></i>
-                  </button>
-                  <button class="btn-action modifier" (click)="modifierOffreIngenieur(offre)">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn-action supprimer" (click)="supprimerOffreIngenieur(offre)">
-                    <i class="fas fa-trash"></i>
-                  </button>
+                  <div class="kebab-container">
+                    <button
+                      type="button"
+                      class="kebab-btn"
+                      (click)="toggleActionMenu(offre.id)"
+                      title="Actions"
+                    >
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="kebab-menu" *ngIf="isActionMenuOpen(offre.id)">
+                      <li>
+                        <button
+                          type="button"
+                          class="menu-item"
+                          (click)="toggleStatutOffreIngenieur(offre); toggleActionMenu(offre.id)"
+                        >
+                          <i class="fas fa-toggle-on"></i>
+                          <span>
+                            {{
+                              offre.statut === 'ouvert'
+                                ? 'Fermer le parcours'
+                                : 'Ouvrir le parcours'
+                            }}
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          class="menu-item"
+                          (click)="modifierOffreIngenieur(offre); toggleActionMenu(offre.id)"
+                        >
+                          <i class="fas fa-edit"></i>
+                          <span>Modifier</span>
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          class="menu-item danger"
+                          (click)="supprimerOffreIngenieur(offre); toggleActionMenu(offre.id)"
+                        >
+                          <i class="fas fa-trash"></i>
+                          <span>Supprimer</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -956,7 +940,11 @@
               Exporter données Excel
             </button>
 
-            <button class="btn-outline" (click)="exporterMetricsTxt()" title="Exporter métriques au format .txt">
+            <button
+              class="btn-outline"
+              (click)="exporterMetricsTxt()"
+              title="Exporter métriques au format .txt"
+            >
               <i class="fas fa-file-alt"></i>
               Exporter métriques (.txt)
             </button>
@@ -1064,20 +1052,6 @@
               <label>Téléphone</label>
               <input type="tel" [(ngModel)]="profileData.phone" name="phone" />
             </div>
-
-            <details class="profile-collapse">
-              <summary>Noms complémentaires</summary>
-              <div class="profile-collapse-body form-row">
-                <div class="form-group">
-                  <label>Nom additionnel</label>
-                  <input type="text" name="additional_name" />
-                </div>
-                <div class="form-group">
-                  <label>Nom préféré</label>
-                  <input type="text" name="preferred_name" />
-                </div>
-              </div>
-            </details>
 
             <details class="profile-collapse">
               <summary>Centres d'intérêt</summary>

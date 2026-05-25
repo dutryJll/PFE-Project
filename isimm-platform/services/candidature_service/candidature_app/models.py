@@ -161,6 +161,16 @@ class ConfigurationAppel(models.Model):
     capacite_liste_attente = models.IntegerField(default=50)
     capacite_interne = models.IntegerField(default=0)
     capacite_externe = models.IntegerField(default=0)
+
+    # Quotas pour la décision finale automatique
+    quota_lp = models.IntegerField(
+        default=0,
+        help_text="Nombre de places en Liste Principale (admis directs)"
+    )
+    quota_la = models.IntegerField(
+        default=0,
+        help_text="Nombre de places en Liste d'Attente"
+    )
     document_officiel_pdf = models.FileField(upload_to='offres/', null=True, blank=True)
     contenu_offre_edite = models.JSONField(default=dict, blank=True)
     est_cache = models.BooleanField(default=False)
@@ -237,10 +247,34 @@ class Candidature(models.Model):
         ('selectionne', 'Sélectionné/Admis'),
         ('inscrit', 'Inscrit')
     ]
-    
+
+    NATURE_CANDIDATURE_CHOICES = [
+        ('isimm', 'Étudiant ISIMM'),
+        ('externe', 'Étudiant Externe'),
+    ]
+
     numero = models.CharField(max_length=50, unique=True, blank=True)
     candidat = models.ForeignKey(User, on_delete=models.CASCADE, related_name='candidatures')
     master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='candidatures')
+
+    # Interne (ISIMM) ou Externe — détermine INT/EXT dans le numéro de candidature
+    nature_candidature = models.CharField(
+        max_length=10, choices=NATURE_CANDIDATURE_CHOICES, default='externe'
+    )
+
+    # Détection fraude : True si le score soumis par le front diffère du score recalculé backend
+    flag_fraude = models.BooleanField(default=False)
+    score_soumis_front = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+
+    # Champs OCR pour comparaison note extraite vs note saisie candidat
+    note_extraite_ocr = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="Moyenne extraite automatiquement depuis le PDF du dossier (OCR)"
+    )
+    note_saisie_candidat = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="Moyenne déclarée par le candidat dans le formulaire de préinscription"
+    )
     
     statut = models.CharField(max_length=30, choices=STATUT_CHOICES, default='soumis')
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -568,24 +602,32 @@ class Candidature(models.Model):
         return result
     
     def generer_numero_candidature(self):
+        """
+        Format : {YYMM}-{INT|EXT}-{00001}-{FILIÈRE}
+        Exemples :
+          - Interne MPGL  → 2603-INT-00001-GL
+          - Externe MRGL  → 2603-EXT-00001-MRGL
+          - Ingénieur     → 2603-INT-00001-ING
+        """
         now = timezone.now()
         annee = str(now.year)[-2:]
         mois = f"{now.month:02d}"
-        
-        # Déterminer le type (Master ou Ingénieur)
-        if hasattr(self, 'concours') and self.concours:
-            # Si c'est un concours ingénieur
-            type_prefix = "ING"
+
+        # Déterminer INT ou EXT selon la nature déclarée
+        type_candidat = 'INT' if getattr(self, 'nature_candidature', 'externe') == 'isimm' else 'EXT'
+
+        # Déterminer le code filière
+        if getattr(self, 'concours', None):
+            filiere_code = "ING"
         else:
-            # Si c'est un master
-            master_nom = self.master.nom.upper()
-            type_prefix = self._generer_abreviation(master_nom)
-        
+            master_nom = self.master.nom.upper() if self.master else ''
+            filiere_code = self._generer_abreviation(master_nom)
+
         prefix = f"{annee}{mois}"
         count = Candidature.objects.filter(numero__startswith=prefix).count() + 1
         compteur = f"{count:05d}"
-        
-        return f"{prefix}-{compteur}-{type_prefix}"
+
+        return f"{prefix}-{type_candidat}-{compteur}-{filiere_code}"
     
     def _generer_abreviation(self, nom_master):
         mots_ignores = {'master', 'de', 'des', 'et', 'en', 'pour', 'la', 'le'}
@@ -724,7 +766,7 @@ class AvisSelection(models.Model):
                 name='unique_global_avis_selection',
             ),
             models.CheckConstraint(
-                check=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
+                condition=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
                 name='avis_selection_commentaire_required_if_defavorable',
             ),
         ]

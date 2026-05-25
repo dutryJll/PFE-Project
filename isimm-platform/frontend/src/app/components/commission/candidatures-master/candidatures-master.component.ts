@@ -1,21 +1,23 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import {
   CommissionContextService,
   CommissionContextOption,
 } from '../../../services/commission-context.service';
+import { PdfExportService } from '../../../services/pdf-export.service';
 
 interface PieceJustificative {
   nom: string;
   statut: 'ok' | 'missing';
 }
 
-type MasterStatus = 'Validé' | 'En attente' | 'Rejeté';
+type MasterStatus = 'Présélectionné' | 'Refusé';
 
 interface Candidat {
   id: number;
+  numeroCandidature: string;
   nom: string;
   master: string;
   score: number;
@@ -31,14 +33,14 @@ interface Candidat {
 interface StatistiqueCard {
   label: string;
   nombre: number;
-  couleur: string;
+  theme: 'blue' | 'green' | 'amber' | 'red';
   icon: string;
 }
 
 @Component({
   selector: 'app-candidatures-master',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './candidatures-master.component.html',
   styleUrls: ['./candidatures-master.component.css'],
 })
@@ -49,7 +51,8 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   candidatsList: Candidat[] = [];
   candidatsFiltres: Candidat[] = [];
   selectedIds: number[] = [];
-  actionMenuOpenId: number | null = null;
+  activeKebab: number | null = null;
+  generateListOpen = false;
 
   selectedCommissionId: number | null = null;
   private activeCommissionCategory: CommissionContextOption['category'] | null = null;
@@ -63,22 +66,39 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   consultationModalOpen = false;
   consultationCandidates: Candidat[] = [];
   consultationIndex = 0;
+  // consultation UI state
+  activeConsultationTab: 'details' | 'documents' | 'timeline' = 'details';
+  timelineEntries: Array<{ date: string; author: string; note: string }> = [];
+  newTimelineNote = '';
 
   avisModalOpen = false;
   avisCandidate: Candidat | null = null;
-  avisStatut: MasterStatus = 'Validé';
+  avisStatut: MasterStatus = 'Présélectionné';
   avisCommentaire = '';
 
-  constructor(private commissionContext: CommissionContextService) {}
+  constructor(
+    private commissionContext: CommissionContextService,
+    private router: Router,
+    private pdfExport: PdfExportService,
+  ) {}
+
+  private onDocumentClickBound: any = null;
 
   ngOnInit(): void {
+    this.selectedCommissionId = this.activeCommissionId;
     this.candidatsList = this.buildMockCandidates();
     this.rebuildDerivedLists();
-    this.selectedCommissionId = this.activeCommissionId;
-    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
-      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
-      this.appliquerFiltres();
-    });
+  }
+
+  ngAfterViewInit(): void {
+    this.onDocumentClickBound = () => (this.activeKebab = null);
+    document.addEventListener('click', this.onDocumentClickBound);
+  }
+
+  ngOnDestroy(): void {
+    if (this.onDocumentClickBound) {
+      document.removeEventListener('click', this.onDocumentClickBound);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -93,30 +113,31 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
 
   private buildMockCandidates(): Candidat[] {
     const base: Array<[string, string, string, number, 'Complet' | 'Incomplet', MasterStatus]> = [
-      ['Amira', 'Ben Salah', 'GL', 18.7, 'Complet', 'Validé'],
-      ['Yassine', 'Trabelsi', 'DSI', 17.9, 'Complet', 'Validé'],
-      ['Meriem', 'Khaldi', 'TI', 17.1, 'Complet', 'Validé'],
-      ['Omar', 'Jaziri', 'RS', 16.2, 'Complet', 'Validé'],
-      ['Nour', 'Cherif', 'GL', 15.8, 'Complet', 'En attente'],
-      ['Mahdi', 'Bouzid', 'DSI', 15.1, 'Incomplet', 'En attente'],
-      ['Salma', 'Haddad', 'TI', 14.6, 'Incomplet', 'En attente'],
-      ['Anis', 'Gharbi', 'RS', 14.1, 'Complet', 'En attente'],
-      ['Asma', 'Masmoudi', 'GL', 13.8, 'Incomplet', 'Rejeté'],
-      ['Riadh', 'Hamdi', 'DSI', 13.2, 'Incomplet', 'Rejeté'],
-      ['Wiem', 'Sassi', 'TI', 12.9, 'Complet', 'Rejeté'],
-      ['Hassen', 'Mnif', 'RS', 12.4, 'Incomplet', 'Rejeté'],
-      ['Nesrine', 'Brahmi', 'GL', 18.2, 'Complet', 'Validé'],
-      ['Sami', 'Ammar', 'DSI', 17.4, 'Complet', 'Validé'],
-      ['Imen', 'Ben Youssef', 'TI', 16.8, 'Complet', 'Validé'],
-      ['Fares', 'Ouertani', 'RS', 15.6, 'Incomplet', 'En attente'],
-      ['Rania', 'Sfar', 'GL', 14.9, 'Complet', 'En attente'],
-      ['Mehdi', 'Zidi', 'DSI', 13.6, 'Incomplet', 'Rejeté'],
-      ['Ines', 'Karray', 'TI', 18.0, 'Complet', 'Validé'],
-      ['Bassem', 'Mansouri', 'RS', 12.2, 'Incomplet', 'Rejeté'],
+      ['Amira', 'Ben Salah', 'GL', 18.7, 'Complet', 'Présélectionné'],
+      ['Yassine', 'Trabelsi', 'DSI', 17.9, 'Complet', 'Présélectionné'],
+      ['Meriem', 'Khaldi', 'TI', 17.1, 'Complet', 'Présélectionné'],
+      ['Omar', 'Jaziri', 'RS', 16.2, 'Complet', 'Présélectionné'],
+      ['Nour', 'Cherif', 'GL', 15.8, 'Complet', 'Présélectionné'],
+      ['Mahdi', 'Bouzid', 'DSI', 15.1, 'Incomplet', 'Présélectionné'],
+      ['Salma', 'Haddad', 'TI', 14.6, 'Incomplet', 'Refusé'],
+      ['Anis', 'Gharbi', 'RS', 14.1, 'Complet', 'Refusé'],
+      ['Asma', 'Masmoudi', 'GL', 13.8, 'Incomplet', 'Refusé'],
+      ['Riadh', 'Hamdi', 'DSI', 13.2, 'Incomplet', 'Refusé'],
+      ['Wiem', 'Sassi', 'TI', 12.9, 'Complet', 'Refusé'],
+      ['Hassen', 'Mnif', 'RS', 12.4, 'Incomplet', 'Refusé'],
+      ['Nesrine', 'Brahmi', 'GL', 18.2, 'Complet', 'Présélectionné'],
+      ['Sami', 'Ammar', 'DSI', 17.4, 'Complet', 'Présélectionné'],
+      ['Imen', 'Ben Youssef', 'TI', 16.8, 'Complet', 'Présélectionné'],
+      ['Fares', 'Ouertani', 'RS', 15.6, 'Incomplet', 'Présélectionné'],
+      ['Rania', 'Sfar', 'GL', 14.9, 'Complet', 'Refusé'],
+      ['Mehdi', 'Zidi', 'DSI', 13.6, 'Incomplet', 'Refusé'],
+      ['Ines', 'Karray', 'TI', 18.0, 'Complet', 'Présélectionné'],
+      ['Bassem', 'Mansouri', 'RS', 12.2, 'Incomplet', 'Refusé'],
     ];
 
     return base.map((item, index) => ({
       id: index + 1,
+      numeroCandidature: `2603-${String(index + 1).padStart(5, '0')}-${item[2]}`,
       nom: `${item[0]} ${item[1]}`,
       master: `Master ${item[2]}`,
       score: item[3],
@@ -166,9 +187,12 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
       const matchesStatus = !this.filtreStatut || candidat.statut === this.filtreStatut;
       const matchesSearch =
         !search ||
+        candidat.numeroCandidature.toLowerCase().includes(search) ||
         candidat.nom.toLowerCase().includes(search) ||
         candidat.email.toLowerCase().includes(search) ||
-        candidat.cin.toLowerCase().includes(search);
+        candidat.cin.toLowerCase().includes(search) ||
+        candidat.master.toLowerCase().includes(search) ||
+        candidat.statut.toLowerCase().includes(search);
       return (
         matchesCommission && matchesYear && matchesSpecialite && matchesStatus && matchesSearch
       );
@@ -226,6 +250,21 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     );
   }
 
+  toggleGenerateListMenu(): void {
+    this.generateListOpen = !this.generateListOpen;
+  }
+
+  genererListe(mode: 'all' | 'selection'): void {
+    const count = mode === 'all' ? this.candidatsFiltres.length : this.selectedCandidates.length;
+    window.alert(`Génération de la liste (${mode}) — ${count} éléments`);
+    this.generateListOpen = false;
+  }
+
+  telechargerZIP(): void {
+    const count = this.selectedCandidates.length || this.candidatsFiltres.length;
+    window.alert(`Téléchargement ZIP lancé pour ${count} candidature(s)`);
+  }
+
   get selectedCandidates(): Candidat[] {
     return this.candidatsFiltres.filter((candidat) => this.isSelected(candidat.id));
   }
@@ -246,10 +285,10 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   }
 
   openConsultation(candidate: Candidat): void {
-    this.consultationCandidates = [candidate];
-    this.consultationIndex = 0;
-    this.consultationModalOpen = true;
     this.closeActionMenu();
+    this.router.navigate(['/commission/dossier', candidate.id], {
+      queryParams: { source: 'commission', type: 'master' },
+    });
   }
 
   openAvis(candidate: Candidat): void {
@@ -297,16 +336,52 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     this.avisModalOpen = false;
     this.avisCandidate = null;
     this.avisCommentaire = '';
-    this.avisStatut = 'Validé';
+    this.avisStatut = 'Présélectionné';
+  }
+
+  massValider(): void {
+    this.selectedCandidates.forEach((c) => {
+      c.statut = 'Présélectionné';
+    });
+    this.clearSelection();
+    this.appliquerFiltres();
+  }
+
+  clearSelection(): void {
+    this.selectedIds = [];
+  }
+
+  // Consultation UI helpers
+  switchConsultationTab(tab: 'details' | 'documents' | 'timeline'): void {
+    this.activeConsultationTab = tab;
+  }
+
+  validateDocument(pieceName: string): void {
+    this.showToast(`Validation du document: ${pieceName}`);
+  }
+
+  addTimelineNote(): void {
+    if (!this.newTimelineNote.trim()) return;
+    this.timelineEntries.unshift({
+      date: new Date().toISOString(),
+      author: 'Vous',
+      note: this.newTimelineNote.trim(),
+    });
+    this.newTimelineNote = '';
+    this.showToast('Entrée ajoutée à la timeline');
   }
 
   toggleActionMenu(candidateId: number, event?: Event): void {
     event?.stopPropagation();
-    this.actionMenuOpenId = this.actionMenuOpenId === candidateId ? null : candidateId;
+    this.activeKebab = this.activeKebab === candidateId ? null : candidateId;
   }
 
   closeActionMenu(): void {
-    this.actionMenuOpenId = null;
+    this.activeKebab = null;
+  }
+
+  onTableClick(): void {
+    this.closeActionMenu();
   }
 
   onPageClick(): void {
@@ -318,39 +393,193 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
       {
         label: 'Total candidatures',
         nombre: this.candidatsList.length,
-        couleur: '#2563eb',
-        icon: '👥',
+        theme: 'blue',
+        icon: 'fas fa-folder-open',
       },
       {
-        label: 'Validés',
-        nombre: this.candidatsList.filter((candidat) => candidat.statut === 'Validé').length,
-        couleur: '#16a34a',
-        icon: '✓',
+        label: 'Présélectionnés',
+        nombre: this.candidatsList.filter((c) => c.statut === 'Présélectionné').length,
+        theme: 'green',
+        icon: 'fas fa-circle-check',
       },
       {
-        label: 'En attente',
-        nombre: this.candidatsList.filter((candidat) => candidat.statut === 'En attente').length,
-        couleur: '#d97706',
-        icon: '⏳',
+        label: 'Refusés',
+        nombre: this.candidatsList.filter((c) => c.statut === 'Refusé').length,
+        theme: 'red',
+        icon: 'fas fa-xmark',
       },
       {
-        label: 'Rejetés',
-        nombre: this.candidatsList.filter((candidat) => candidat.statut === 'Rejeté').length,
-        couleur: '#ef4444',
-        icon: '✕',
+        label: 'Dossiers complets',
+        nombre: this.candidatsList.filter((c) => c.etatDossier === 'Complet').length,
+        theme: 'amber',
+        icon: 'fas fa-folder-check',
       },
     ];
   }
 
   getStatutBadgeClass(statut: MasterStatus): string {
-    switch (statut) {
-      case 'Validé':
-        return 'status-badge status-badge--valid';
-      case 'Rejeté':
-        return 'status-badge status-badge--reject';
-      default:
-        return 'status-badge status-badge--pending';
+    const s = (statut || '').toString().toLowerCase();
+    // normalize and map to visual classes
+    if (
+      [
+        'validé',
+        'validé',
+        'admis',
+        'preselectionne',
+        'pre-sélectionné',
+        'pre-selectionne',
+        'preselectionné',
+        'preselectionné',
+        'préselectionné',
+        'préselectionne',
+        'preselectionne',
+      ].includes(s) ||
+      s.includes('valid')
+    ) {
+      return 'status-pill status-pill--ok';
     }
+    if (['rejeté', 'rejete', 'rejete', 'rejet', 'rejeté'].includes(s) || s.includes('rej')) {
+      return 'status-pill status-pill--danger';
+    }
+    if (
+      ['en attente', 'sous_examen', 'sous-examen', 'en_attente', 'en_attente_dossier'].includes(
+        s,
+      ) ||
+      s.includes('attente') ||
+      s.includes('examen')
+    ) {
+      return 'status-pill status-pill--warn';
+    }
+    if (['soumis', 'dossier_depose', 'dossier déposé', 'dossier_deposé'].includes(s)) {
+      return 'status-pill status-pill--info';
+    }
+    if (['inscrit', 'inscription'].includes(s)) {
+      return 'status-pill status-pill--ok';
+    }
+    // fallback
+    return 'status-pill status-pill--info';
+  }
+
+  // -------------------------
+  // Dossier consultation helpers (skeletons)
+  // -------------------------
+  toggleDoc(docName: string): void {
+    this.showToast(`Basculer document: ${docName}`);
+  }
+
+  validerDoc(docName: string): void {
+    this.showToast(`Valider le document: ${docName}`);
+  }
+
+  updateProgress(percent: number): void {
+    this.showToast(`Progression mise à jour: ${percent}%`);
+  }
+
+  addToTimeline(entry: string): void {
+    this.showToast(`Ajout timeline: ${entry}`);
+  }
+
+  priseDecision(decision: string): void {
+    this.showToast(`Décision prise: ${decision}`);
+  }
+
+  switchTab(tab: string): void {
+    this.showToast(`Onglet: ${tab}`);
+  }
+
+  showToast(message: string): void {
+    // simple UI feedback for now
+    window.alert(message);
+  }
+
+  // Export helpers
+  genererExcel(): void {
+    // Try to use global XLSX if available (lib present in app), otherwise fallback to CSV
+    const data = this.candidatsFiltres.map((c) => ({
+      numeroCandidature: c.numeroCandidature,
+      nom: c.nom,
+      master: c.master,
+      score: c.score,
+      statut: c.statut,
+      etatDossier: c.etatDossier,
+      email: c.email,
+      cin: c.cin,
+      dateCandidature: c.dateCandidature,
+    }));
+
+    const XLSX = (window as any).XLSX;
+    if (XLSX && typeof XLSX.utils !== 'undefined') {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Candidatures');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'candidatures.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    // Fallback CSV
+    const headers = Object.keys(data[0] || {});
+    const csvRows = [headers.join(',')];
+    for (const row of data) {
+      const vals = headers.map((h) => {
+        const v = (row as any)[h] ?? '';
+        return '"' + String(v).replace(/"/g, '""') + '"';
+      });
+      csvRows.push(vals.join(','));
+    }
+    const csv = csvRows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'candidatures.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  genererPDF(): void {
+    // Try to use html2canvas + jsPDF when available, otherwise fallback to print
+    const jsPDF = (window as any).jsPDF;
+    const html2canvas = (window as any).html2canvas || (window as any).html2canvas;
+
+    const table = document.querySelector('.selection-table');
+    if (!table) {
+      this.showToast('Aucun tableau trouvé pour exporter en PDF.');
+      return;
+    }
+
+    if (html2canvas && jsPDF) {
+      html2canvas(table as HTMLElement, { scale: 2 }).then((canvas: HTMLCanvasElement) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = (pdf as any).getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('candidatures.pdf');
+      });
+      return;
+    }
+
+    // Fallback: open printable window
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write('<html><head><title>Export PDF</title>');
+    w.document.write(
+      '<style>table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}</style>',
+    );
+    w.document.write('</head><body>');
+    w.document.write((table as HTMLElement).outerHTML);
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    w.print();
   }
 
   getScoreClass(score: number): string {
@@ -361,5 +590,12 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
 
   getStatusPercent(score: number): number {
     return Math.min(100, Math.max(0, (score / 20) * 100));
+  }
+
+  getSpecialiteBadgeLabel(master: string): string {
+    if (master.includes('GL')) return 'GL';
+    if (master.includes('DSI')) return 'DSI';
+    if (master.includes('TI')) return 'TI';
+    return master.replace('Master ', '').toUpperCase();
   }
 }

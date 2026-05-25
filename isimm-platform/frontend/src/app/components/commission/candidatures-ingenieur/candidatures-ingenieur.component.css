@@ -7,3 +7,21 @@
 .candidatures-master-page .summary-icon {
   font-size: 20px;
 }
+.selection-table--ingenieur .col-nom,
+.selection-table--ingenieur .name-cell {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.selection-table--ingenieur .col-actions {
+  position: relative;
+  overflow: visible !important;
+}
+
+.selection-table--ingenieur .action-menu-container {
+  overflow: visible !important;
+}
+
+.selection-table--ingenieur .action-menu-dropdown {
+  min-width: 190px;
+}

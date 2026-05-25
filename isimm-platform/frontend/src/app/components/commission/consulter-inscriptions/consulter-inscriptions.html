@@ -1,10 +1,69 @@
-<div class="consulter-inscriptions">
-  <h2>Inscriptions</h2>
-  <div class="filters">
-    <label>Spécialité</label>
-    <select [(ngModel)]="selectedSpecialite">
-      <option value="">Toutes</option>
-      <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
-    </select>
+<div class="inscriptions-page">
+  <div class="inscriptions-header">
+    <div>
+      <div class="eyebrow">Commission / Inscription en ligne</div>
+      <h2>Inscriptions</h2>
+      <p>
+        Les dossiers affichés suivent la commission active et les données mockées de démonstration.
+      </p>
+    </div>
+    <div class="count-pill">{{ inscriptionsFiltrees.length }} dossier(s)</div>
+  </div>
+
+  <div class="filters-card">
+    <div class="filters-grid">
+      <div class="field">
+        <label>Recherche</label>
+        <input
+          type="text"
+          [(ngModel)]="recherche"
+          (input)="applyFilters()"
+          placeholder="Nom, email ou matricule"
+        />
+      </div>
+      <div class="field">
+        <label>Spécialité</label>
+        <select [(ngModel)]="selectedSpecialite" (change)="applyFilters()">
+          <option value="">Toutes</option>
+          <option *ngFor="let s of availableSpecialites" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Candidat</th>
+          <th>Spécialité</th>
+          <th>Matricule</th>
+          <th>Date dépôt</th>
+          <th>Paiement</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let inscription of inscriptionsFiltrees">
+          <td>
+            <div class="candidate-name">{{ inscription.candidat }}</div>
+            <div class="candidate-mail">{{ inscription.email }}</div>
+          </td>
+          <td>{{ inscription.specialite }}</td>
+          <td>{{ inscription.matricule }}</td>
+          <td>{{ inscription.dateDepot }}</td>
+          <td>
+            <span class="status-pill" [ngClass]="getPaiementClass(inscription.paiement)">
+              {{ inscription.paiement }}</span
+            >
+          </td>
+          <td>
+            <span class="status-pill" [ngClass]="getStatusClass(inscription.statut)">
+              {{ inscription.statut }}</span
+            >
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>

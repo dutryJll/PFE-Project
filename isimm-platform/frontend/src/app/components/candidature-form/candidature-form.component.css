@@ -599,6 +599,63 @@
   color: var(--text-primary);
 }
 
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.radio-group-inline {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.radio-option-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 14px;
+  border: 2px solid var(--field-border);
+  background: var(--field-bg);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+  flex: 1;
+  min-width: 170px;
+}
+
+.radio-option-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.13);
+}
+
+.radio-option-card.selected {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.18);
+}
+
+.radio-option-card input[type='radio'] {
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+}
+
+.radio-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mt-2 {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
 .password-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

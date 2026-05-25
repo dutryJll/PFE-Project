@@ -70,6 +70,23 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">N° d'inscription universitaire</label>
+        <input
+          type="text"
+          class="form-control registration-number-input"
+          [(ngModel)]="userData.numero_inscription_universitaire"
+          name="numero_inscription_universitaire"
+          placeholder="Saisir votre N° d'inscription universitaire (ex: 26-999-ABC)..."
+          autocomplete="off"
+          required
+        />
+        <small class="form-text">
+          Ce numéro sera synchronisé avec votre dossier administratif et visible côté
+          administration.
+        </small>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Mot de passe</label>
         <input
           type="password"

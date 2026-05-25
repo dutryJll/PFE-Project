@@ -60,6 +60,10 @@ import { ManageResponsablesComponent } from './components/admin/manage-responsab
 // ========================================
 import { DashboardCommissionComponent } from './components/commission/dashboard-commission/dashboard-commission';
 import { ConsulterCandidaturesComponent as ConsulterCandidaturesCommissionComponent } from './components/commission/consulter-candidatures/consulter-candidatures';
+import { CandidaturesMasterResponsableComponent } from './components/commission/candidatures-master-responsable/candidatures-master-responsable.component';
+import { CandidaturesMasterMembreComponent } from './components/commission/candidatures-master-membre/candidatures-master-membre.component';
+import { CandidaturesIngenieurResponsableComponent } from './components/commission/candidatures-ingenieur-responsable/candidatures-ingenieur-responsable.component';
+import { CandidaturesIngenieurMembreComponent } from './components/commission/candidatures-ingenieur-membre/candidatures-ingenieur-membre.component';
 import { PreparerPreselection } from './components/commission/preparer-preselection/preparer-preselection';
 import { SelectionMembreComponent } from './components/commission/selection-membre/selection-membre.component';
 import { SelectionResponsableComponent } from './components/commission/selection-responsable/selection-responsable.component';
@@ -75,6 +79,7 @@ import { GestionCommissionComponent } from './components/admin/gestion-commissio
 import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 import { PreselectionDashboardComponent } from './components/commission/preselection-dashboard/preselection-dashboard.component';
 import { SelectionProcessComponent } from './components/commission/selection-process/selection-process.component';
+import { ListePreselection } from './components/commission/liste-preselection/liste-preselection';
 export const routes: Routes = [
   // ========================================
   // ROUTES PUBLIQUES
@@ -242,6 +247,30 @@ export const routes: Routes = [
     data: { roles: ['responsable_commission'] },
   },
   {
+    path: 'commission/candidatures-master-responsable',
+    component: CandidaturesMasterResponsableComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
+  {
+    path: 'commission/candidatures-master-membre',
+    component: CandidaturesMasterMembreComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['commission', 'membre'] },
+  },
+  {
+    path: 'commission/candidatures-ingenieur-responsable',
+    component: CandidaturesIngenieurResponsableComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission'] },
+  },
+  {
+    path: 'commission/candidatures-ingenieur-membre',
+    component: CandidaturesIngenieurMembreComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['commission', 'membre'] },
+  },
+  {
     path: 'commission/dossiers',
     component: ListeDossiersComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
@@ -252,7 +281,7 @@ export const routes: Routes = [
   },
   {
     path: 'commission/liste-preselection',
-    component: SelectionMembreComponent,
+    component: ListePreselection,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['commission', 'responsable_commission', 'membre'] },
   },

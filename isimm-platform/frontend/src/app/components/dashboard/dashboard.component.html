@@ -30,6 +30,13 @@
       <a [routerLink]="['/choisir-candidature']" class="nav-item"> <span>🎓</span> Candidater </a>
       <a [routerLink]="['/profile']" class="nav-item"> <span>👤</span> Mon Profil </a>
       <a
+        *ngIf="currentUser?.role === 'membre'"
+        [routerLink]="['/mes-commissions']"
+        class="nav-item"
+      >
+        <span>🏛️</span> Mes Commissions
+      </a>
+      <a
         class="nav-item"
         [class.active]="currentView === 'notifications'"
         (click)="switchView('notifications')"

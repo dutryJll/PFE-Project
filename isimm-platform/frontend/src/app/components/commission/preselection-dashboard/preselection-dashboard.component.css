@@ -10,22 +10,22 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
 }
 
 /* stat cards */
 .stat-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.6rem;
+  gap: 0.85rem;
 }
 
 .scard {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-  padding: 0.85rem 1rem;
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  padding: 0.95rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -34,7 +34,7 @@
 .sicon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,25 +62,28 @@
 }
 
 .snum {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 1.8rem;
+  font-weight: 800;
   color: var(--color-text-primary, #1f2937);
   line-height: 1;
 }
 
 .slbl {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary, #6b7280);
   margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
 }
 
 /* quota */
 .quota-card {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-  padding: 0.85rem 1rem;
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  padding: 1rem;
 }
 
 .quota-top {
@@ -127,10 +130,10 @@
 
 .avis-global-card {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-  padding: 0.9rem 1rem;
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  padding: 1rem;
 }
 
 .avis-global-head {
@@ -171,10 +174,10 @@
 /* filters */
 .filter-card {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-  padding: 0.85rem 1rem;
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  padding: 1rem;
 }
 
 .fg {
@@ -198,12 +201,12 @@
 
 .finput {
   width: 100%;
-  padding: 0.38rem 0.5rem;
-  border: 0.5px solid var(--color-border-secondary, #d1d5db);
-  border-radius: var(--border-radius-md, 8px);
-  background: var(--color-background-primary, #fff);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #d7e4f3;
+  border-radius: 12px;
+  background: #fff;
   color: var(--color-text-primary, #1f2937);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .finput:focus {
@@ -459,9 +462,9 @@
 /* table */
 .table-wrap {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   overflow: hidden;
 }
 
@@ -485,24 +488,50 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  table-layout: fixed;
 }
 
 th {
   background: var(--color-background-secondary, #f3f4f6);
-  padding: 0.5rem 0.6rem;
+  padding: 0.7rem 0.6rem;
   text-align: left;
   color: var(--color-text-secondary, #6b7280);
-  font-weight: 500;
+  font-weight: 700;
   border-bottom: 0.5px solid var(--color-border-tertiary, #e5e7eb);
   font-size: 11px;
   white-space: nowrap;
 }
 
 td {
-  padding: 0.45rem 0.6rem;
+  padding: 0.65rem 0.6rem;
   border-bottom: 0.5px solid var(--color-border-tertiary, #e5e7eb);
   color: var(--color-text-primary, #1f2937);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preselection-table th:nth-child(1),
+.preselection-table td:nth-child(1),
+.preselection-table th:nth-child(2),
+.preselection-table td:nth-child(2),
+.preselection-table th:nth-child(6),
+.preselection-table td:nth-child(6),
+.preselection-table th:nth-child(7),
+.preselection-table td:nth-child(7),
+.preselection-table th:nth-child(8),
+.preselection-table td:nth-child(8),
+.preselection-table th:nth-child(9),
+.preselection-table td:nth-child(9),
+.preselection-table th:nth-child(10),
+.preselection-table td:nth-child(10) {
+  text-align: center;
+}
+
+.preselection-table td:nth-child(4),
+.preselection-table td:nth-child(5) {
+  text-align: left;
 }
 
 tr:last-child td {
@@ -529,6 +558,7 @@ tr.lu td:first-child {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  min-width: 120px;
 }
 
 .score-val {

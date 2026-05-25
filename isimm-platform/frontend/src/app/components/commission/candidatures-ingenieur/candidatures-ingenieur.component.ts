@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
 import {
   CommissionContextService,
@@ -19,11 +19,12 @@ interface PieceJustificative {
 interface Candidat {
   id: number;
   nom: string;
+  numeroCandidature: string;
   numeroInscription: string;
   specialite: string;
   score: number;
   etat_dossier: 'Complet' | 'Incomplet';
-  statut: 'En attente' | 'Admis' | 'Rejeté';
+  statut: 'Présélectionné' | 'Refusé';
   pieces: PieceJustificative[];
   email?: string;
   cin?: string;
@@ -33,7 +34,7 @@ interface Candidat {
 interface StatistiqueCard {
   label: string;
   nombre: number;
-  couleur: string;
+  theme: 'blue' | 'green' | 'amber' | 'red';
   icon: string;
 }
 
@@ -76,12 +77,20 @@ export class CandidaturesIngenieurComponent implements OnInit {
   selectAll: boolean = false;
   viewingSelection: boolean = false;
   viewingList: Candidat[] = [];
-  actionMenuOpenId: number | null = null;
+  activeKebab: number | null = null;
+  // consultation UI
+  activeConsultationTab: 'details' | 'documents' | 'timeline' = 'details';
+  timelineEntries: Array<{ date: string; author: string; note: string }> = [];
+  newTimelineNote = '';
+  generateListOpen = false;
 
   // ========================================
   // LIFECYCLE
   // ========================================
-  constructor(private commissionContext: CommissionContextService) {}
+  constructor(
+    private commissionContext: CommissionContextService,
+    private router: Router,
+  ) {}
 
   ngOnInit(): void {
     this.candidatsList = this.buildMockCandidates();
@@ -100,40 +109,39 @@ export class CandidaturesIngenieurComponent implements OnInit {
       [
         string,
         string,
-        'Génie Logiciel' | 'Informatique Industrielle' | 'Réseaux',
+        'GL' | 'TI' | 'DSI',
         number,
         'Complet' | 'Incomplet',
-        'En attente' | 'Admis' | 'Rejeté',
+        'Présélectionné' | 'Refusé',
       ]
     > = [
-      ['Amina', 'Boucher', 'Génie Logiciel', 17.8, 'Complet', 'En attente'],
-      ['Riyad', 'Khalil', 'Informatique Industrielle', 15.8, 'Incomplet', 'En attente'],
-      ['Nadia', 'Mansour', 'Réseaux', 18.5, 'Complet', 'Admis'],
-      ['Issam', 'Ould', 'Génie Logiciel', 14.1, 'Incomplet', 'En attente'],
-      ['Meriem', 'Sassi', 'Informatique Industrielle', 16.4, 'Complet', 'Admis'],
-      ['Yassine', 'Ben Amor', 'Réseaux', 13.8, 'Incomplet', 'Rejeté'],
-      ['Sara', 'Brahmi', 'Génie Logiciel', 18.2, 'Complet', 'Admis'],
-      ['Anis', 'Gharbi', 'Informatique Industrielle', 12.9, 'Incomplet', 'Rejeté'],
-      ['Wiem', 'Karray', 'Réseaux', 15.3, 'Complet', 'En attente'],
-      ['Omar', 'Jaziri', 'Génie Logiciel', 17.1, 'Complet', 'Admis'],
-      ['Asma', 'Masmoudi', 'Informatique Industrielle', 14.7, 'Incomplet', 'En attente'],
-      ['Bassem', 'Mansouri', 'Réseaux', 11.8, 'Incomplet', 'Rejeté'],
-      ['Ines', 'Khelifi', 'Génie Logiciel', 16.9, 'Complet', 'Admis'],
-      ['Fares', 'Haddad', 'Informatique Industrielle', 15.1, 'Complet', 'En attente'],
-      ['Nour', 'Miled', 'Réseaux', 18.7, 'Complet', 'Admis'],
-      ['Mehdi', 'Zidi', 'Génie Logiciel', 13.4, 'Incomplet', 'Rejeté'],
-      ['Rania', 'Trabelsi', 'Informatique Industrielle', 16.1, 'Complet', 'Admis'],
-      ['Khalil', 'Hamdi', 'Réseaux', 14.3, 'Incomplet', 'En attente'],
-      ['Lina', 'Ben Youssef', 'Génie Logiciel', 17.4, 'Complet', 'Admis'],
-      ['Sami', 'Ouertani', 'Informatique Industrielle', 12.6, 'Incomplet', 'Rejeté'],
+      ['Amina', 'Boucher', 'GL', 17.8, 'Complet', 'Présélectionné'],
+      ['Riyad', 'Khalil', 'TI', 15.8, 'Incomplet', 'Présélectionné'],
+      ['Nadia', 'Mansour', 'DSI', 18.5, 'Complet', 'Présélectionné'],
+      ['Issam', 'Ould', 'GL', 14.1, 'Incomplet', 'Présélectionné'],
+      ['Meriem', 'Sassi', 'TI', 16.4, 'Complet', 'Présélectionné'],
+      ['Yassine', 'Ben Amor', 'DSI', 13.8, 'Incomplet', 'Refusé'],
+      ['Sara', 'Brahmi', 'GL', 18.2, 'Complet', 'Présélectionné'],
+      ['Anis', 'Gharbi', 'TI', 12.9, 'Incomplet', 'Refusé'],
+      ['Wiem', 'Karray', 'DSI', 15.3, 'Complet', 'Présélectionné'],
+      ['Omar', 'Jaziri', 'GL', 17.1, 'Complet', 'Présélectionné'],
+      ['Asma', 'Masmoudi', 'TI', 14.7, 'Incomplet', 'Présélectionné'],
+      ['Bassem', 'Mansouri', 'DSI', 11.8, 'Incomplet', 'Refusé'],
+      ['Ines', 'Khelifi', 'GL', 16.9, 'Complet', 'Présélectionné'],
+      ['Fares', 'Haddad', 'TI', 15.1, 'Complet', 'Présélectionné'],
+      ['Nour', 'Miled', 'DSI', 18.7, 'Complet', 'Présélectionné'],
+      ['Mehdi', 'Zidi', 'GL', 13.4, 'Incomplet', 'Refusé'],
+      ['Rania', 'Trabelsi', 'TI', 16.1, 'Complet', 'Présélectionné'],
+      ['Khalil', 'Hamdi', 'DSI', 14.3, 'Incomplet', 'Refusé'],
+      ['Lina', 'Ben Youssef', 'GL', 17.4, 'Complet', 'Présélectionné'],
+      ['Sami', 'Ouertani', 'TI', 12.6, 'Incomplet', 'Refusé'],
     ];
 
     return base.map((item, index) => ({
       id: index + 1,
       nom: `${item[0]} ${item[1]}`,
-      numeroInscription: `2603-${String(index + 21).padStart(5, '0')}-ING-${
-        item[2] === 'Génie Logiciel' ? 'GL' : item[2] === 'Informatique Industrielle' ? 'II' : 'RES'
-      }`,
+      numeroCandidature: `2603-${String(index + 1).padStart(5, '0')}-${item[2]}`,
+      numeroInscription: `2603-${String(index + 21).padStart(5, '0')}-ING-${item[2]}`,
       specialite: item[2],
       score: item[3],
       etat_dossier: item[4],
@@ -173,16 +181,29 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // ========================================
   accepterCandidat(): void {
     if (this.candidatActuel) {
-      this.candidatActuel.statut = 'Admis';
+      this.candidatActuel.statut = 'Présélectionné';
       this.nextCandidat();
     }
   }
 
   refuserCandidat(): void {
     if (this.candidatActuel) {
-      this.candidatActuel.statut = 'Rejeté';
+      this.candidatActuel.statut = 'Refusé';
       this.nextCandidat();
     }
+  }
+
+  massValider(): void {
+    this.candidatsFiltres
+      .filter((c) => this.selectionSet.has(c.id))
+      .forEach((c) => { c.statut = 'Présélectionné'; });
+    this.clearSelection();
+    this.appliquerFiltres();
+  }
+
+  clearSelection(): void {
+    this.selectionSet.clear();
+    this.selectAll = false;
   }
 
   // ========================================
@@ -208,7 +229,11 @@ export class CandidaturesIngenieurComponent implements OnInit {
         (c) =>
           c.nom.toLowerCase().includes(terme) ||
           c.email?.toLowerCase().includes(terme) ||
-          c.cin?.includes(terme),
+          c.cin?.includes(terme) ||
+          c.numeroCandidature?.toLowerCase().includes(terme) ||
+          c.numeroInscription?.toLowerCase().includes(terme) ||
+          c.specialite?.toLowerCase().includes(terme) ||
+          c.etat_dossier?.toLowerCase().includes(terme),
       );
     }
 
@@ -248,6 +273,111 @@ export class CandidaturesIngenieurComponent implements OnInit {
     );
   }
 
+  toggleGenerateListMenu(): void {
+    this.generateListOpen = !this.generateListOpen;
+  }
+
+  genererListe(mode: 'all' | 'selection'): void {
+    const count =
+      mode === 'all'
+        ? this.candidatsFiltres.length
+        : this.viewingSelection
+          ? this.viewingList.length
+          : this.candidatsFiltres.filter((c) => this.selectionSet.has(c.id)).length;
+    window.alert(`Génération de la liste (${mode}) — ${count} éléments`);
+    this.generateListOpen = false;
+  }
+
+  telechargerZIP(): void {
+    const count = this.selectionSet.size || this.candidatsFiltres.length;
+    window.alert(`Téléchargement ZIP lancé pour ${count} candidature(s)`);
+  }
+
+  // showToast utility
+  showToast(message: string): void {
+    window.alert(message);
+  }
+
+  // Export helpers
+  genererExcel(): void {
+    const data = this.candidatsFiltres.map((c) => ({
+      numeroCandidature: c.numeroCandidature,
+      nom: c.nom,
+      specialite: c.specialite,
+      score: c.score,
+      statut: c.statut,
+      etatDossier: c.etat_dossier,
+      email: c.email,
+      cin: c.cin,
+      dateCandidature: c.date_candidature,
+    }));
+    const XLSX = (window as any).XLSX;
+    if (XLSX && typeof XLSX.utils !== 'undefined') {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Candidatures');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'candidatures.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    const headers = Object.keys(data[0] || {});
+    const csvRows = [headers.join(',')];
+    for (const row of data) {
+      const vals = headers.map(
+        (h) => '"' + String((row as any)[h] ?? '').replace(/"/g, '""') + '"',
+      );
+      csvRows.push(vals.join(','));
+    }
+    const csv = csvRows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'candidatures.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  genererPDF(): void {
+    const jsPDF = (window as any).jsPDF;
+    const html2canvas = (window as any).html2canvas || (window as any).html2canvas;
+    const table = document.querySelector('.selection-table');
+    if (!table) {
+      this.showToast('Aucun tableau trouvé pour exporter en PDF.');
+      return;
+    }
+    if (html2canvas && jsPDF) {
+      html2canvas(table as HTMLElement, { scale: 2 }).then((canvas: HTMLCanvasElement) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = (pdf as any).getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('candidatures.pdf');
+      });
+      return;
+    }
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write('<html><head><title>Export PDF</title>');
+    w.document.write(
+      '<style>table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}</style>',
+    );
+    w.document.write('</head><body>');
+    w.document.write((table as HTMLElement).outerHTML);
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    w.print();
+  }
+
   toggleSelectAll(): void {
     if (this.selectAll) {
       this.selectionSet.clear();
@@ -273,7 +403,7 @@ export class CandidaturesIngenieurComponent implements OnInit {
     this.viewingSelection = true;
     this.viewingList = [c];
     this.currentIndex = 0;
-    this.actionMenuOpenId = null;
+    this.activeKebab = null;
   }
 
   fermerConsultation(): void {
@@ -283,7 +413,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   openConsultation(c: Candidat): void {
-    this.consulterUn(c);
+    this.activeKebab = null;
+    this.router.navigate(['/commission/dossier', c.id], {
+      queryParams: { source: 'commission', type: 'ingenieur' },
+    });
   }
 
   closeConsultation(): void {
@@ -292,11 +425,11 @@ export class CandidaturesIngenieurComponent implements OnInit {
 
   toggleActionMenu(candidatId: number, event: MouseEvent): void {
     event.stopPropagation();
-    this.actionMenuOpenId = this.actionMenuOpenId === candidatId ? null : candidatId;
+    this.activeKebab = this.activeKebab === candidatId ? null : candidatId;
   }
 
   onPageClick(): void {
-    this.actionMenuOpenId = null;
+    this.activeKebab = null;
   }
 
   get canOpenMassConsultation(): boolean {
@@ -327,28 +460,28 @@ export class CandidaturesIngenieurComponent implements OnInit {
   get statistiques(): StatistiqueCard[] {
     return [
       {
-        label: 'Total Ingénieurs',
+        label: 'Total candidatures',
         nombre: this.candidatsFiltres.length,
-        couleur: '#8b5cf6',
-        icon: '📋',
+        theme: 'blue',
+        icon: 'fas fa-folder-open',
       },
       {
-        label: 'Dossiers Complets',
+        label: 'Présélectionnés',
+        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Présélectionné').length,
+        theme: 'green',
+        icon: 'fas fa-circle-check',
+      },
+      {
+        label: 'Refusés',
+        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Refusé').length,
+        theme: 'red',
+        icon: 'fas fa-xmark',
+      },
+      {
+        label: 'Dossiers complets',
         nombre: this.candidatsFiltres.filter((c) => c.etat_dossier === 'Complet').length,
-        couleur: '#22C55E',
-        icon: '✓',
-      },
-      {
-        label: 'À Vérifier',
-        nombre: this.candidatsFiltres.filter((c) => c.statut === 'En attente').length,
-        couleur: '#F59E0B',
-        icon: '⏳',
-      },
-      {
-        label: 'Rejetés',
-        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Rejeté').length,
-        couleur: '#EF4444',
-        icon: '✕',
+        theme: 'amber',
+        icon: 'fas fa-folder-check',
       },
     ];
   }
@@ -393,14 +526,9 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   getStatutBadgeClass(statut: string): string {
-    switch (statut) {
-      case 'Admis':
-        return 'badge-admis';
-      case 'Rejeté':
-        return 'badge-rejete';
-      default:
-        return 'badge-attente';
-    }
+    if (statut === 'Présélectionné') return 'status-pill status-pill--ok';
+    if (statut === 'Refusé') return 'status-pill status-pill--danger';
+    return 'status-pill status-pill--info';
   }
 
   getScoreClass(score: number): string {
@@ -413,6 +541,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
     return Math.max(0, Math.min(100, (score / 20) * 100));
   }
 
+  getSpecialiteBadgeLabel(specialite: string): string {
+    return specialite;
+  }
+
   getScoreColor(): string {
     const score = this.candidatActuel?.score || 0;
     if (score >= 16) return '#22C55E';
@@ -421,10 +553,26 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   getStatutBoutons(): { accepter: boolean; refuser: boolean } {
-    const statut = this.candidatActuel?.statut;
-    return {
-      accepter: statut === 'En attente',
-      refuser: statut === 'En attente',
-    };
+    return { accepter: true, refuser: true };
+  }
+
+  // Consultation helpers
+  toggleDoc(docName: string): void {
+    this.showToast(`Basculer document: ${docName}`);
+  }
+
+  validateDocument(docName: string): void {
+    this.showToast(`Validation du document: ${docName}`);
+  }
+
+  addTimelineNote(): void {
+    if (!this.newTimelineNote || !this.newTimelineNote.trim()) return;
+    this.timelineEntries.unshift({
+      date: new Date().toISOString(),
+      author: 'Vous',
+      note: this.newTimelineNote.trim(),
+    });
+    this.newTimelineNote = '';
+    this.showToast('Entrée ajoutée à la timeline');
   }
 }

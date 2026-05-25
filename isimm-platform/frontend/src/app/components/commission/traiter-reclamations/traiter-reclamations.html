@@ -42,10 +42,10 @@
           <td>
             <button
               class="btn-accepter"
-              (click)="ouvrirModalAccepter(reclamation)"
+              (click)="traiterReclamation(reclamation)"
               *ngIf="reclamation.statut === 'en_attente'"
             >
-              ✅ Accepter
+              ✅ Traiter
             </button>
             <button
               class="btn-rejeter"

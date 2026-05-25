@@ -631,6 +631,7 @@ def create_candidature(request):
     etablissement_origine = request.data.get('etablissement_origine')
     diplome_reference = request.data.get('diplome_reference')
     diplomes = request.data.get('diplomes')
+    score_soumis_front = request.data.get('score_soumis_front')
 
     if isinstance(academic_data, dict):
         def _as_float(value, default=0.0):
@@ -838,7 +839,21 @@ def create_candidature(request):
                     score = parcours.calculer_score(candidature)
                     if score is not None:
                         candidature.score = score
-                        candidature.save(update_fields=['score', 'updated_at'])
+                        # Fraude detection: compare submitted score vs backend-calculated score
+                        if score_soumis_front is not None:
+                            try:
+                                submitted = float(score_soumis_front)
+                                backend = float(score)
+                                if abs(submitted - backend) > 0.01:
+                                    candidature.flag_fraude = True
+                                    logger.warning(
+                                        "Flag fraude candidature=%s: soumis=%.3f backend=%.3f",
+                                        candidature.id, submitted, backend,
+                                    )
+                            except (TypeError, ValueError):
+                                pass
+                        candidature.score_soumis_front = score_soumis_front
+                        candidature.save(update_fields=['score', 'flag_fraude', 'score_soumis_front', 'updated_at'])
                 except Exception:
                     # Don't block submission on scoring errors
                     logger.exception('Erreur lors du calcul dynamique du score pour la candidature %s', candidature.id)
@@ -2315,6 +2330,71 @@ def set_decision_finale_responsable(request, candidature_id):
     )
 
     return Response({'success': True, 'decision': decision}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def valider_preselection_commission(request, commission_id):
+    """
+    Déclenche la clôture de la session de présélection pour une commission.
+    Réservé au Responsable. Enfile la tâche Celery asynchrone qui envoie
+    les emails et les notifications WebSocket à chaque candidat concerné.
+    """
+    if getattr(request.user, 'role', None) not in ['responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusée'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        commission = Commission.objects.select_related('master').get(id=commission_id)
+    except Commission.DoesNotExist:
+        return Response({'error': 'Commission non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+    from .tasks import cloture_preselection_worker
+    cloture_preselection_worker.delay(commission_id)
+
+    return Response(
+        {
+            'success': True,
+            'message': (
+                f"Session de présélection clôturée pour {commission.master.nom}. "
+                "Les candidats seront notifiés par email et en temps réel."
+                if commission.master
+                else "Session de présélection clôturée. Les candidats seront notifiés."
+            ),
+        },
+        status=status.HTTP_202_ACCEPTED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def appliquer_quotas_decision_finale(request, commission_id):
+    """
+    Applique la décision finale basée sur les quotas LP/LA définis dans la ConfigurationAppel.
+    Classe les candidats présélectionnés par score et assigne le statut définitif.
+    Réservé au Responsable.
+    """
+    if getattr(request.user, 'role', None) not in ['responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusée'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        commission = Commission.objects.select_related('master').get(id=commission_id)
+    except Commission.DoesNotExist:
+        return Response({'error': 'Commission non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+    from .tasks import appliquer_decision_finale_quotas
+    appliquer_decision_finale_quotas.delay(commission_id)
+
+    return Response(
+        {
+            'success': True,
+            'message': (
+                f"Décision finale en cours de traitement pour {commission.master.nom}."
+                if commission.master
+                else "Décision finale en cours de traitement."
+            ),
+        },
+        status=status.HTTP_202_ACCEPTED,
+    )
 
 
 @api_view(['GET'])

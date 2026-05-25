@@ -26,6 +26,14 @@ interface TimelineItem {
   tone: 'blue' | 'green' | 'gray';
 }
 
+interface CursusRow {
+  level: 'Bac' | 'L1' | 'L2' | 'L3';
+  moyennePrincipale: string;
+  moyenneRattrapage: string;
+  mention: string;
+  session: 'Principale' | 'Rattrapage';
+}
+
 @Component({
   selector: 'app-consultation-dossier',
   standalone: true,
@@ -47,8 +55,40 @@ export class ConsultationDossierComponent implements OnInit {
   decisionNote = 'Validez tous les documents avant de prendre une décision finale.';
   decisionResult = '';
   decisionResultClass = '';
-  activeTab: 'docs' | 'history' | 'notes' = 'docs';
+  activeTab: 'general' | 'cursus' | 'documents' | 'history' = 'general';
   consultationBackLabel = 'Retour';
+  timelineDraft = '';
+
+  cursusRows: CursusRow[] = [
+    {
+      level: 'Bac',
+      moyennePrincipale: '15.20',
+      moyenneRattrapage: '-',
+      mention: 'Bien',
+      session: 'Principale',
+    },
+    {
+      level: 'L1',
+      moyennePrincipale: '14.80',
+      moyenneRattrapage: '15.10',
+      mention: 'Bien',
+      session: 'Principale',
+    },
+    {
+      level: 'L2',
+      moyennePrincipale: '13.90',
+      moyenneRattrapage: '14.40',
+      mention: 'Assez Bien',
+      session: 'Rattrapage',
+    },
+    {
+      level: 'L3',
+      moyennePrincipale: '16.10',
+      moyenneRattrapage: '-',
+      mention: 'Très Bien',
+      session: 'Principale',
+    },
+  ];
 
   candidat: any = null;
   documents: DossierDocument[] = [];
@@ -311,8 +351,37 @@ export class ConsultationDossierComponent implements OnInit {
     this.showToast(message, 't-info');
   }
 
-  switchTab(tab: 'docs' | 'history' | 'notes'): void {
+  switchTab(tab: 'general' | 'cursus' | 'documents' | 'history'): void {
     this.activeTab = tab;
+  }
+
+  getDocumentChipClass(status: DossierDocument['status']): string {
+    return status === 'valid'
+      ? 'chip-valid'
+      : status === 'rejected'
+        ? 'chip-rejected'
+        : 'chip-pending';
+  }
+
+  getDocumentStatusLabel(status: DossierDocument['status']): string {
+    return status === 'valid' ? 'Conforme' : status === 'rejected' ? 'Rejeté' : 'En attente';
+  }
+
+  addTimelineComment(): void {
+    if (!this.timelineDraft.trim()) return;
+    this.timeline = [
+      {
+        title: 'Commentaire ajouté',
+        subtitle: this.timelineDraft.trim(),
+        time:
+          new Date().toLocaleDateString('fr-FR') +
+          ' — ' +
+          new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        tone: 'gray',
+      },
+      ...this.timeline,
+    ];
+    this.timelineDraft = '';
   }
 
   toggleDoc(docId: string): void {

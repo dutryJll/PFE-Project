@@ -10,6 +10,7 @@ import {
   CommissionContextService,
   CommissionContextOption,
 } from '../../../services/commission-context.service';
+import { PdfExportService } from '../../../services/pdf-export.service';
 
 interface Candidat {
   id: number;
@@ -69,6 +70,7 @@ interface FinalSelectionFilters {
   scoreMax: number;
   search: string;
   hideValides: boolean;
+  showOnlyPresel: boolean;
 }
 
 interface CommissionMemberAvis {
@@ -107,6 +109,8 @@ export class ListeSelection implements OnInit {
   finalSelectionFiltered: FinalSelectionCandidate[] = [];
   finalSelectionSelectedIds: Set<number> = new Set();
   finalSelectionTop100On: boolean = false;
+  finalSelectionLocked = false;
+  finalDecisionModalOpen = false;
   finalSelectionBulkAction: FinalSelectionDecision = '';
   finalSelectionExportOpen: boolean = false;
   finalSelectionConfirmOpen: boolean = false;
@@ -164,6 +168,7 @@ export class ListeSelection implements OnInit {
     scoreMax: 20,
     search: '',
     hideValides: false,
+    showOnlyPresel: true,
   };
 
   // Avis global
@@ -173,12 +178,14 @@ export class ListeSelection implements OnInit {
   userRole: string | null = null;
   showDossierButton = false;
   private activeCommissionCategory: CommissionContextOption['category'] | null = null;
+  private onDocClickBound: any = null;
 
   constructor(
     private router: Router,
     private authService: AuthService,
     private dialog: MatDialog,
     private commissionContext: CommissionContextService,
+    private pdfExport: PdfExportService,
   ) {}
 
   ngOnInit(): void {
@@ -190,6 +197,15 @@ export class ListeSelection implements OnInit {
       this.updateFinalSelectionFiltered();
     });
     this.loadListes();
+  }
+
+  ngAfterViewInit(): void {
+    this.onDocClickBound = () => (this.selectionActionMenuOpenId = null);
+    document.addEventListener('click', this.onDocClickBound);
+  }
+
+  ngOnDestroy(): void {
+    if (this.onDocClickBound) document.removeEventListener('click', this.onDocClickBound);
   }
 
   get isResponsableSpace(): boolean {
@@ -205,6 +221,9 @@ export class ListeSelection implements OnInit {
 
   loadListes(): void {
     this.finalSelectionCandidates = this.buildMockFinalSelectionCandidates();
+    this.finalSelectionSelectedIds = new Set(
+      this.finalSelectionCandidates.slice(0, 10).map((candidate) => candidate.id),
+    );
     this.updateFinalSelectionFiltered();
   }
 
@@ -407,10 +426,48 @@ export class ListeSelection implements OnInit {
     this.showFinalSelectionToast('Tableau des avis actualisé', 't-success');
   }
 
-  applyTop100FinalDecision(): void {
-    this.finalSelectionTop100On = true;
+  openFinalDecisionModal(): void {
+    if (!this.isResponsableSpace) {
+      return;
+    }
+
+    this.finalDecisionModalOpen = true;
+  }
+
+  closeFinalDecisionModal(): void {
+    this.finalDecisionModalOpen = false;
+  }
+
+  confirmFinalDecisionWorkflow(): void {
+    const scope = this.activeCommissionCategory;
+    const targetCandidates = this.finalSelectionCandidates
+      .filter((candidate) => !scope || candidate.commissionCategory === scope)
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+    const lpCount = this.finalSelectionQuotaLpTotal;
+    const laCount = this.finalSelectionQuotaLaTotal;
+    targetCandidates.forEach((candidate, index) => {
+      if (index < lpCount) {
+        candidate.statut = 'lp';
+        return;
+      }
+
+      if (index < lpCount + laCount) {
+        candidate.statut = 'la';
+        return;
+      }
+
+      candidate.statut = 'refuse';
+    });
+
+    this.finalSelectionLocked = true;
+    this.finalSelectionSelectedIds.clear();
     this.updateFinalSelectionFiltered();
-    this.showFinalSelectionToast('Top 100 appliqué à la sélection filtrée', 't-info');
+    this.closeFinalDecisionModal();
+    this.showFinalSelectionToast(
+      'Décision finale appliquée: LP/LA clôturées, session verrouillée et export prêt.',
+      't-success',
+    );
   }
 
   scrollToGlobalAvis(): void {
@@ -423,7 +480,7 @@ export class ListeSelection implements OnInit {
   }
 
   voirDossier(id: number): void {
-    this.router.navigate(['/consultation-dossier', id], {
+    this.router.navigate(['/commission/dossier', id], {
       queryParams: { source: 'selection' },
     });
   }
@@ -557,9 +614,27 @@ export class ListeSelection implements OnInit {
     );
   }
 
-  generateFinalPv(): void {
+  async generateFinalPv(): Promise<void> {
     this.finalSelectionExportOpen = false;
-    this.showFinalSelectionToast('Génération du PV final lancée', 't-info');
+
+    const pvId = this.buildFinalSelectionPvId();
+    const rows = this.getFinalSelectionExportRows();
+    const exportHost = this.createFinalSelectionExportHost(rows, pvId);
+
+    try {
+      await this.pdfExport.generatePdfFromElement(exportHost, {
+        filename: this.buildFinalSelectionFilename(),
+        embedQr: true,
+        verificationBaseUrl: `${window.location.origin}/api/public/verifier-pv`,
+        verificationId: pvId,
+      });
+      this.showFinalSelectionToast('PV final généré avec QR de vérification', 't-success');
+    } catch (error) {
+      console.error('Erreur génération PV final', error);
+      this.showFinalSelectionToast('Impossible de générer le PV final', 't-error');
+    } finally {
+      exportHost.remove();
+    }
   }
 
   notifyAndPublish(): void {
@@ -607,6 +682,7 @@ export class ListeSelection implements OnInit {
     const scope = this.isResponsableSpace ? null : this.activeCommissionCategory;
     let rows = this.finalSelectionCandidates.slice();
     rows = rows.filter((candidate) => !scope || candidate.commissionCategory === scope);
+    if (this.finalSelectionFilters.showOnlyPresel) rows = rows.filter((c) => c.presel === 'oui');
     rows = rows.filter((c) => c.score >= scoreMin && c.score <= scoreMax);
     if (search)
       rows = rows.filter(
@@ -774,12 +850,18 @@ export class ListeSelection implements OnInit {
       scoreMax: 20,
       search: '',
       hideValides: false,
+      showOnlyPresel: true,
     };
     this.finalSelectionTop100On = false;
     this.updateFinalSelectionFiltered();
   }
 
   applyFinalSelectionBulkAction(): void {
+    if (this.finalSelectionLocked) {
+      this.showFinalSelectionToast('Session verrouillée après décision finale.', 't-info');
+      return;
+    }
+
     if (!this.finalSelectionBulkAction) return;
     const selectedIds = Array.from(this.finalSelectionSelectedIds);
     selectedIds.forEach((id) => {
@@ -817,13 +899,120 @@ export class ListeSelection implements OnInit {
       't-success',
     );
   }
-  finalSelectionExportPdf(): void {
-    this.finalSelectionExportOpen = false;
-    this.showFinalSelectionToast('Generation du PV final (demo)', 't-info');
+  async finalSelectionExportPdf(): Promise<void> {
+    await this.generateFinalPv();
   }
   finalSelectionExportExcel(): void {
     this.finalSelectionExportOpen = false;
     this.showFinalSelectionToast('Export Excel (demo)', 't-info');
+  }
+
+  private buildFinalSelectionPvId(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID();
+    }
+
+    return `pv-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  }
+
+  private buildFinalSelectionFilename(): string {
+    const commissionLabel = (this.currentCommissionDisplay || 'commission').replace(/\s+/g, '-');
+    return `pv-final-${commissionLabel.toLowerCase()}.pdf`;
+  }
+
+  private getFinalSelectionExportRows(): FinalSelectionCandidate[] {
+    const selectedRows = this.finalSelectionFiltered.filter((candidate) =>
+      this.finalSelectionSelectedIds.has(candidate.id),
+    );
+
+    if (selectedRows.length > 0) {
+      return selectedRows;
+    }
+
+    return this.finalSelectionFiltered.slice(0, 20);
+  }
+
+  private createFinalSelectionExportHost(
+    rows: FinalSelectionCandidate[],
+    pvId: string,
+  ): HTMLElement {
+    const host = document.createElement('div');
+    host.style.position = 'fixed';
+    host.style.left = '-10000px';
+    host.style.top = '0';
+    host.style.width = '1180px';
+    host.style.background = '#ffffff';
+    host.style.padding = '28px';
+    host.style.color = '#0f172a';
+    host.style.fontFamily = 'Arial, sans-serif';
+
+    const verificationUrl = `${window.location.origin}/api/public/verifier-pv?id=${encodeURIComponent(pvId)}`;
+    host.innerHTML = `
+      <section style="border:1px solid #dbe3ee;border-radius:18px;padding:24px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;">PV officiel de sélection</div>
+            <h1 style="margin:6px 0 8px;font-size:24px;line-height:1.2;color:#0f172a;">${this.currentCommissionDisplay}</h1>
+            <div style="color:#475569;font-size:14px;">Sélection finale publiée le ${new Date().toLocaleString('fr-FR')}</div>
+          </div>
+          <div style="text-align:right;max-width:260px;">
+            <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Référence PV</div>
+            <div style="margin-top:6px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #dbe3ee;font-weight:700;word-break:break-all;">${pvId}</div>
+            <div style="margin-top:8px;font-size:11px;color:#64748b;word-break:break-all;">${verificationUrl}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+          <div style="border:1px solid #dbe3ee;border-radius:14px;padding:14px;background:#f8fbff;">
+            <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">Total candidats</div>
+            <div style="margin-top:6px;font-size:22px;font-weight:800;">${this.finalSelectionCandidates.length}</div>
+          </div>
+          <div style="border:1px solid #dbe3ee;border-radius:14px;padding:14px;background:#f8fbff;">
+            <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">LP</div>
+            <div style="margin-top:6px;font-size:22px;font-weight:800;">${this.getFinalSelectionLpCount()}</div>
+          </div>
+          <div style="border:1px solid #dbe3ee;border-radius:14px;padding:14px;background:#f8fbff;">
+            <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">LA</div>
+            <div style="margin-top:6px;font-size:22px;font-weight:800;">${this.getFinalSelectionLaCount()}</div>
+          </div>
+          <div style="border:1px solid #dbe3ee;border-radius:14px;padding:14px;background:#f8fbff;">
+            <div style="font-size:12px;color:#64748b;text-transform:uppercase;font-weight:700;">Refusés</div>
+            <div style="margin-top:6px;font-size:22px;font-weight:800;">${this.getFinalSelectionRefuseCount()}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <thead>
+            <tr style="background:#0f172a;color:#fff;">
+              <th style="padding:10px;text-align:left;width:8%;">Rang</th>
+              <th style="padding:10px;text-align:left;width:18%;">N°</th>
+              <th style="padding:10px;text-align:left;width:26%;">Candidat</th>
+              <th style="padding:10px;text-align:left;width:14%;">Spécialité</th>
+              <th style="padding:10px;text-align:center;width:12%;">Score</th>
+              <th style="padding:10px;text-align:center;width:11%;">Présel.</th>
+              <th style="padding:10px;text-align:center;width:11%;">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map(
+                (candidate, index) => `
+              <tr style="border-bottom:1px solid #e2e8f0;background:${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                <td style="padding:10px;">${candidate.rang}</td>
+                <td style="padding:10px;word-break:break-all;">${candidate.num}</td>
+                <td style="padding:10px;">${candidate.prenom} ${candidate.nom}</td>
+                <td style="padding:10px;">${candidate.spec}</td>
+                <td style="padding:10px;text-align:center;font-weight:700;">${candidate.score.toFixed(1)}</td>
+                <td style="padding:10px;text-align:center;">${candidate.presel.toUpperCase()}</td>
+                <td style="padding:10px;text-align:center;">${candidate.statut.toUpperCase()}</td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </section>
+    `;
+
+    document.body.appendChild(host);
+    return host;
   }
 
   private showFinalSelectionToast(message: string, type: string): void {

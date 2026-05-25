@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { SpecialitesService } from '../../../services/specialites.service';
+import { CommissionStateService } from '../../../services/commission-state.service';
 
 interface Reclamation {
   id: number;
@@ -12,6 +13,7 @@ interface Reclamation {
   candidat_email: string;
   master_id: number;
   master_nom: string;
+  commissionCategory: 'ingenieur' | 'master-ds' | 'master-gl';
   objet: string;
   motif: string;
   date: string;
@@ -49,13 +51,19 @@ export class TraiterReclamationsComponent implements OnInit {
   motifRejet: string = '';
   prolongerDelai: boolean = false;
   nouvelleDeadline: string = '';
+  private activeCommissionCategory: 'ingenieur' | 'master-ds' | 'master-gl' | null = null;
 
   constructor(
     private router: Router,
     private specialitesService: SpecialitesService,
+    private commissionStateService: CommissionStateService,
   ) {}
 
   ngOnInit(): void {
+    this.commissionStateService.activeCommissionId$.subscribe((commissionId) => {
+      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
+      this.filtrerReclamations();
+    });
     this.loadMasters();
     this.specialitesService.getSpecialitesData().subscribe((data) => {
       this.availableSpecialites = this.specialitesService.getAllSpecialties();
@@ -75,6 +83,7 @@ export class TraiterReclamationsComponent implements OnInit {
       { id: 1, nom: 'Master Recherche Génie Logiciel' },
       { id: 2, nom: 'Master Professionnel Data Science' },
       { id: 3, nom: 'Master Recherche Microélectronique' },
+      { id: 4, nom: 'Cycle Ingénieur Génie Logiciel' },
     ];
   }
 
@@ -92,6 +101,7 @@ export class TraiterReclamationsComponent implements OnInit {
         candidat_email: 'ahmed@example.com',
         master_id: 1,
         master_nom: 'Master Recherche Génie Logiciel',
+        commissionCategory: 'master-gl',
         objet: 'Erreur dans le calcul du score',
         motif:
           'Le score affiché ne correspond pas à mes notes. Mes relevés montrent une moyenne de 16.5 mais le score calculé est de 15.2. Je demande une révision.',
@@ -107,6 +117,7 @@ export class TraiterReclamationsComponent implements OnInit {
         candidat_email: 'fatma@example.com',
         master_id: 2,
         master_nom: 'Master Professionnel Data Science',
+        commissionCategory: 'master-ds',
         objet: 'Document rejeté par erreur',
         motif:
           'Mon diplôme a été rejeté avec la mention "tampon manquant" alors que le tampon est clairement visible sur le document. Je demande une révision.',
@@ -122,6 +133,7 @@ export class TraiterReclamationsComponent implements OnInit {
         candidat_email: 'mohamed@example.com',
         master_id: 1,
         master_nom: 'Master Recherche Génie Logiciel',
+        commissionCategory: 'master-gl',
         objet: 'Problème technique lors du dépôt',
         motif:
           "Le système a planté lors du dépôt de mes documents. Certains documents n'ont pas été uploadés correctement.",
@@ -138,8 +150,9 @@ export class TraiterReclamationsComponent implements OnInit {
         candidat_prenom: 'Sarra',
         candidat_nom: 'Mansouri',
         candidat_email: 'sarra@example.com',
-        master_id: 3,
-        master_nom: 'Master Recherche Microélectronique',
+        master_id: 4,
+        master_nom: 'Cycle Ingénieur Génie Logiciel',
+        commissionCategory: 'ingenieur',
         objet: 'Contestation du rejet',
         motif:
           'Ma candidature a été rejetée sans motif clair. Je demande des explications détaillées.',
@@ -152,12 +165,13 @@ export class TraiterReclamationsComponent implements OnInit {
       },
     ];
 
-    this.reclamationsFiltrees = [...this.reclamations];
+    this.filtrerReclamations();
     console.log('✅ Réclamations chargées:', this.reclamations.length);
   }
 
   filtrerReclamations(): void {
     this.reclamationsFiltrees = this.reclamations.filter((r) => {
+      const matchCommission = this.matchesCommissionScope(r);
       const matchRecherche =
         !this.recherche ||
         r.candidat_prenom.toLowerCase().includes(this.recherche.toLowerCase()) ||
@@ -170,8 +184,26 @@ export class TraiterReclamationsComponent implements OnInit {
       const matchMaster = !this.filtreMaster || r.master_id.toString() === this.filtreMaster;
       const matchSpecialite = !this.selectedSpecialite || r.master_nom === this.selectedSpecialite;
 
-      return matchRecherche && matchStatut && matchMaster && matchSpecialite;
+      return matchCommission && matchRecherche && matchStatut && matchMaster && matchSpecialite;
     });
+  }
+
+  private matchesCommissionScope(reclamation: Reclamation): boolean {
+    const scope = this.activeCommissionCategory;
+    if (!scope) {
+      return true;
+    }
+
+    return reclamation.commissionCategory === scope;
+  }
+
+  private getCommissionCategoryFromId(
+    commissionId: number | null,
+  ): 'ingenieur' | 'master-ds' | 'master-gl' | null {
+    if (commissionId === 1) return 'ingenieur';
+    if (commissionId === 2) return 'master-ds';
+    if (commissionId === 3) return 'master-gl';
+    return null;
   }
 
   resetFiltres(): void {
@@ -268,6 +300,10 @@ export class TraiterReclamationsComponent implements OnInit {
 
     alert('Réclamation rejetée.\nUn email a été envoyé au candidat.');
     this.fermerModal();
+  }
+
+  traiterReclamation(reclamation: Reclamation): void {
+    this.ouvrirModalAccepter(reclamation);
   }
 
   voirDossier(reclamation: Reclamation): void {

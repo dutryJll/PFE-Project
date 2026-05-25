@@ -390,6 +390,141 @@
   flex-direction: column;
   gap: 0;
 }
+
+.dossier-shell-modern {
+  gap: 1rem;
+}
+
+.dossier-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dossier-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.hero-score.compact {
+  min-width: 92px;
+}
+
+.dossier-tabs {
+  margin-bottom: 0.9rem;
+}
+
+.compact-head h3 {
+  font-size: 15px;
+}
+
+.dossier-table-wrap {
+  overflow-x: auto;
+}
+
+.dossier-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dossier-table th,
+.dossier-table td {
+  padding: 0.8rem 0.85rem;
+  border-bottom: 1px solid var(--color-border-tertiary);
+  text-align: left;
+}
+
+.dossier-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.doc-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.doc-chip-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--color-border-tertiary);
+  background: #fcfeff;
+}
+
+.doc-chip-card strong {
+  display: block;
+  font-size: 13px;
+}
+
+.doc-chip-card p {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.doc-chip-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chip-valid {
+  background: #daf5ef;
+  color: #0f6e56;
+}
+
+.chip-pending {
+  background: #fff4d8;
+  color: #854f0b;
+}
+
+.chip-rejected {
+  background: #fcebeb;
+  color: #a32d2d;
+}
+
+.timeline-new-note {
+  margin-top: 0.9rem;
+}
+
+.timeline-actions {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modern-timeline .tl-item {
+  align-items: flex-start;
+}
+
+.modern-timeline .tl-dot {
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 768px) {
+  .dossier-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dossier-table th,
+  .dossier-table td {
+    padding: 0.65rem 0.55rem;
+  }
+}
 .tl-item {
   display: flex;
   gap: 0.65rem;

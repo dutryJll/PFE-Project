@@ -20,45 +20,19 @@ import {
 export class AppComponent implements OnInit {
   title = 'frontend';
 
-  commissions: CommissionContextOption[] = [];
-  commissionsLoading = false;
-  activeCommissionId: number | null = null;
-  showGlobalCommissionSelector = false;
-
   constructor(
     public themeService: ThemeService,
     private candidatureService: CandidatureService,
-    private authService: AuthService,
-    private router: Router,
+    public authService: AuthService,
+    public router: Router,
     private commissionContext: CommissionContextService,
   ) {}
 
   ngOnInit(): void {
-    this.updateGlobalCommissionVisibility(this.router.url);
-    this.router.events.subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        this.updateGlobalCommissionVisibility(event.urlAfterRedirects || event.url);
-      }
-    });
     this.loadMyCommissions();
-    this.commissionContext.activeCommissionId$.subscribe((value) => {
-      this.activeCommissionId = value;
-    });
-  }
-
-  private updateGlobalCommissionVisibility(url: string): void {
-    const cleanUrl = (url || '').split('?')[0].split('#')[0];
-    const isPublicRoute =
-      cleanUrl === '/' ||
-      cleanUrl === '' ||
-      cleanUrl.startsWith('/login') ||
-      cleanUrl.startsWith('/candidat') ||
-      cleanUrl.startsWith('/accueil');
-    this.showGlobalCommissionSelector = !isPublicRoute && cleanUrl.startsWith('/commission');
   }
 
   loadMyCommissions(): void {
-    this.commissionsLoading = true;
     this.candidatureService.getMyCommissions().subscribe(
       (res: any) => {
         const apiCommissions = Array.isArray(res?.commissions) ? res.commissions : [];
@@ -74,35 +48,22 @@ export class AppComponent implements OnInit {
             }))
           : this.commissionContext.commissions;
 
-        this.commissions = normalized;
         this.commissionContext.setCommissions(normalized);
         const responseActiveId = Number(res?.active_commission_id);
         const fallbackActiveId =
           this.commissionContext.activeCommissionId || normalized[0]?.id || null;
-        this.activeCommissionId = Number.isFinite(responseActiveId)
+        const activeCommissionId = Number.isFinite(responseActiveId)
           ? responseActiveId
           : fallbackActiveId;
-        this.commissionContext.setActiveCommissionId(this.activeCommissionId);
-        this.commissionsLoading = false;
+        this.commissionContext.setActiveCommissionId(activeCommissionId);
       },
       (err) => {
-        this.commissionsLoading = false;
-        this.commissions = this.commissionContext.commissions;
-        if (!this.activeCommissionId && this.commissions.length) {
-          this.activeCommissionId = this.commissions[0].id;
-          this.commissionContext.setActiveCommissionId(this.activeCommissionId);
+        const fallbackCommissions = this.commissionContext.commissions;
+        if (!this.commissionContext.activeCommissionId && fallbackCommissions.length) {
+          this.commissionContext.setActiveCommissionId(fallbackCommissions[0].id);
         }
       },
     );
-  }
-
-  onCommissionChange(value: string | number | null): void {
-    if (value === null || value === '') {
-      this.commissionContext.setActiveCommissionId(null);
-      return;
-    }
-
-    this.commissionContext.setActiveCommissionId(Number(value));
   }
 
   toggleTheme(): void {

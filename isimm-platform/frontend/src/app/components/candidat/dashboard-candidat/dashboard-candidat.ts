@@ -46,6 +46,7 @@ interface Candidature {
   total_candidats?: number;
   statut_inscription?: string;
   numero_inscription_universitaire?: string;
+  numero_inscription?: string;
   attestation_paiement_url?: string;
   annee_universitaire?: string;
   choix_priorite?: number;
@@ -285,8 +286,24 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   currentView: CandidatView = 'dashboard';
   currentDate: Date = new Date();
-  private readonly deadlineDate = new Date('2026-03-12T23:59:59');
   candidatureTabIndex: number = 0;
+
+  /** The next upcoming candidature with a future date_limite_modification. Drives the countdown. */
+  get nextDeadlineCandidature(): Candidature | null {
+    const now = Date.now();
+    const upcoming = (this.mesCandidatures || [])
+      .filter((c) => c.date_limite_modification && new Date(c.date_limite_modification).getTime() > now)
+      .sort((a, b) => new Date(a.date_limite_modification!).getTime() - new Date(b.date_limite_modification!).getTime());
+    return upcoming[0] ?? null;
+  }
+
+  private get deadlineDate(): Date {
+    const next = this.nextDeadlineCandidature;
+    if (next?.date_limite_modification) {
+      return new Date(next.date_limite_modification);
+    }
+    return new Date(Date.now() - 1000);
+  }
 
   // ── Nouvelles propriétés ──
   dragOverDocId: number | null = null;
@@ -362,6 +379,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   selectedCandidatureForInscription: Candidature | null = null;
   openActionMenuId: number | null = null;
   openInscriptionActionMenuId: number | null = null;
+  savingInscriptionNumberId: number | null = null;
   inscriptionExportFormat: ExportFormat = 'pdf';
   notificationsNonLues = 0;
   isDashboardLoading = true;
@@ -385,6 +403,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   ];
   wizardOffre: Offre | null = null;
   selectedOffreDetail: Offre | null = null;
+  showOffreDetailModal = false;
+  currentOffreDetailCode: string | null = null;
 
   // Real-time score calculation from backend
   wizardComputedScoreBackend: number | null = null;
@@ -560,6 +580,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       classement: '3',
       total_candidats: 45,
       statut_inscription: 'en_attente',
+      numero_inscription_universitaire: '26-999-ABC',
     },
     {
       id: 2,
@@ -1146,6 +1167,24 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   formatNumber(n: number): string {
     const v = Math.max(0, Math.floor(n || 0));
     return v < 10 ? `0${v}` : String(v);
+  }
+
+  getUpcomingDeadlines(): Array<{ label: string; date: Date; daysLeft: number; color: string }> {
+    const now = Date.now();
+    const COLORS = ['#e24b4a', '#ba7517', '#1d9e75', '#3b82f6', '#8b5cf6'];
+    const results: Array<{ label: string; date: Date; daysLeft: number; color: string }> = [];
+
+    (this.mesCandidatures || []).forEach((c) => {
+      if (c.date_limite_modification) {
+        const d = new Date(c.date_limite_modification);
+        const daysLeft = Math.max(0, Math.floor((d.getTime() - now) / 86400000));
+        if (d.getTime() > now) {
+          results.push({ label: 'Dépôt dossier — ' + c.master_nom, date: d, daysLeft, color: COLORS[0] });
+        }
+      }
+    });
+
+    return results.sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 4);
   }
 
   private stopCountdownClock(): void {
@@ -1753,6 +1792,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
             jours_restants: item.jours_restants ?? 0,
             peut_modifier: item.peut_modifier ?? false,
             statut_inscription: item.statut_inscription ?? '',
+            numero_inscription_universitaire:
+              item.numero_inscription_universitaire ?? item.numero_inscription ?? '',
+            attestation_paiement_url: item.attestation_paiement_url ?? '',
             motif_rejet: item.motif_rejet ?? '',
             historique_statut: Array.isArray(item.historique_statut)
               ? item.historique_statut
@@ -3340,6 +3382,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         date_depot_dossier: today,
         dossier_depose: true,
         statut_inscription: 'non_confirme',
+        numero_inscription_universitaire: '26-111-AAA',
         motif_rejet: 'Paiement non valide sur inscription en ligne',
       },
       {
@@ -3379,6 +3422,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         dossier_depose: true,
         date_depot_dossier: today,
         statut_inscription: 'en_attente',
+        numero_inscription_universitaire: '26-222-BBB',
         motif_rejet: 'non admis',
       },
     ];
@@ -3446,6 +3490,45 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   getNumeroInscriptionUniversitaire(candidature: Candidature): string {
     return candidature.numero_inscription_universitaire || candidature.numero || '-';
+  }
+
+  syncNumeroInscriptionUniversitaire(candidature: Candidature): void {
+    const numero = (candidature.numero_inscription_universitaire || '').trim();
+    if (!numero) {
+      this.toastService.show('Le numéro d’inscription universitaire est requis.', 'error');
+      return;
+    }
+
+    this.savingInscriptionNumberId = candidature.id;
+    this.candidatureService
+      .updateCandidature(candidature.id, {
+        numero_inscription_universitaire: numero,
+        statut_inscription: candidature.statut_inscription || 'en_attente',
+      })
+      .subscribe({
+        next: (response: any) => {
+          candidature.numero_inscription_universitaire =
+            response?.numero_inscription_universitaire || numero;
+          this.mesCandidatures = this.mesCandidatures.map((item) =>
+            item.id === candidature.id
+              ? {
+                  ...item,
+                  numero_inscription_universitaire: candidature.numero_inscription_universitaire,
+                }
+              : item,
+          );
+          this.toastService.show('Numéro d’inscription synchronisé avec succès.', 'success');
+          this.savingInscriptionNumberId = null;
+        },
+        error: (error) => {
+          console.error('Erreur synchronisation numéro inscription:', error);
+          this.toastService.show(
+            'Synchronisation non confirmée côté serveur, valeur conservée localement.',
+            'warning',
+          );
+          this.savingInscriptionNumberId = null;
+        },
+      });
   }
 
   getStatutFinalInscription(candidature: Candidature): string {
@@ -4054,14 +4137,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   ouvrirDetailOffre(offre: Offre): void {
     const code = this.getPreinscriptionDetailCode(offre);
-    if (!code) {
-      this.toastService.show('Aucun detail configure pour cette offre.', 'warning');
-      return;
-    }
+    this.currentOffreDetailCode = code || 'generic';
+    this.selectedOffreDetail = offre;
+    this.showOffreDetailModal = true;
+  }
 
-    this.router.navigate(['/preinscription/detail', code], {
-      queryParams: { offerId: offre.id },
-    });
+  fermerDetailModal(): void {
+    this.showOffreDetailModal = false;
+    this.currentOffreDetailCode = null;
   }
 
   canOpenOffreDetail(offre: Offre): boolean {

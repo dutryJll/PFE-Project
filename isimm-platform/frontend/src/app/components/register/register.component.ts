@@ -17,6 +17,7 @@ export class RegisterComponent {
     last_name: '',
     email: '',
     username: '',
+    numero_inscription_universitaire: '',
     password: '',
     password2: '',
     role: 'candidat',
@@ -29,21 +30,20 @@ export class RegisterComponent {
   constructor(
     private authService: AuthService,
     private router: Router,
-  ) {
-  }
+  ) {}
 
   onRegister() {
-
     // Validation
     if (
       !this.userData.first_name ||
       !this.userData.last_name ||
       !this.userData.email ||
       !this.userData.username ||
+      !this.userData.numero_inscription_universitaire ||
       !this.userData.password ||
       !this.userData.password2
     ) {
-      this.errorMessage = 'Veuillez remplir tous les champs';
+      this.errorMessage = 'Veuillez remplir tous les champs, y compris le numéro d’inscription';
       return;
     }
 

@@ -187,42 +187,54 @@
 .inscrits-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .inscrits-table th {
   background: #f8fafc;
-  padding: 1.2rem;
-  text-align: left;
+  padding: 12px 8px;
+  text-align: center;
   font-weight: 700;
   color: #475569;
   border-bottom: 2px solid #e2e8f0;
 }
 
 .inscrits-table td {
-  padding: 1.2rem;
+  padding: 12px 8px;
   border-bottom: 1px solid #f1f5f9;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .inscrits-table tr:hover {
   background: #f8fafc;
 }
 
-.candidat-cell {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.name-cell {
+  text-align: left;
 }
 
-.avatar {
-  width: 45px;
-  height: 45px;
-  background: linear-gradient(135deg, #3b82f6, #1e40af);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
+.code-cell {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pdf-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #dbeafe;
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  color: #1d4ed8;
+  border-radius: 12px;
+  padding: 0.7rem 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pdf-button i {
+  font-size: 1.05rem;
 }
 
 .badge {
@@ -280,6 +292,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  justify-content: center;
+  min-width: 120px;
 }
 
 .statut-badge.statut-en_attente {

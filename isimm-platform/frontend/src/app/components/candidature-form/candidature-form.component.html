@@ -162,13 +162,39 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label>Etablissement universitaire d'origine *</label>
+          <div class="form-group full-width">
+            <label>Établissement d'origine *</label>
+            <div class="radio-group-inline">
+              <label class="radio-option-card" [class.selected]="formData.natureCandidature === 'Étudiant ISIMM'">
+                <input
+                  type="radio"
+                  [(ngModel)]="formData.natureCandidature"
+                  name="natureCandidature"
+                  value="Étudiant ISIMM"
+                  (change)="onNatureCandidatureChange('Étudiant ISIMM')"
+                />
+                <span class="radio-icon">🎓</span>
+                <span>Étudiant ISIMM</span>
+              </label>
+              <label class="radio-option-card" [class.selected]="formData.natureCandidature === 'Étudiant Externe'">
+                <input
+                  type="radio"
+                  [(ngModel)]="formData.natureCandidature"
+                  name="natureCandidature"
+                  value="Étudiant Externe"
+                  (change)="onNatureCandidatureChange('Étudiant Externe')"
+                />
+                <span class="radio-icon">🏫</span>
+                <span>Étudiant Externe</span>
+              </label>
+            </div>
             <input
+              *ngIf="isEtudiantExterneSelected()"
               type="text"
               [(ngModel)]="formData.etablissementUniversitaireOrigine"
               name="etablissementUniversitaireOrigine"
-              placeholder="Ex: ISIMM"
+              placeholder="Nom de l'établissement externe"
+              class="mt-2"
               required
             />
           </div>
@@ -425,29 +451,8 @@
             />
           </div>
 
-          <div class="form-group">
-            <label>Nature de candidature *</label>
-            <select [(ngModel)]="formData.natureCandidature" name="natureCandidature" required>
-              <option value="">Sélectionner</option>
-              <option *ngFor="let option of natureCandidatureOptions" [value]="option">
-                {{ option }}
-              </option>
-            </select>
-          </div>
-
           <div class="form-group" *ngIf="isEtudiantExterneSelected()">
-            <label>Etablissement de l'étudiant externe *</label>
-            <input
-              type="text"
-              [(ngModel)]="formData.etablissementExterne"
-              name="etablissementExterne"
-              placeholder="Nom de l'établissement"
-              required
-            />
-          </div>
-
-          <div class="form-group" *ngIf="isEtudiantExterneSelected()">
-            <label>Spécialité de l'étudiant externe *</label>
+            <label>Spécialité (étudiant externe) *</label>
             <input
               type="text"
               [(ngModel)]="formData.specialiteExterne"
@@ -458,7 +463,7 @@
           </div>
 
           <div class="form-group">
-            <label>Nombre d'années de redoublement *</label>
+            <label>Nb années de redoublement *</label>
             <input
               type="number"
               [(ngModel)]="formData.nombreAnneesRedoublement"
