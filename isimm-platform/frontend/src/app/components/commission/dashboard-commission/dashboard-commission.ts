@@ -543,6 +543,7 @@ export class DashboardCommissionComponent implements OnInit {
   filtreConcours: 'actuel' | 'ancien' = 'actuel';
   filtreSpecialiteActive: string = '';
   filtreStatut: string = '';
+  filtreSpecialiteCandidature: string = '';
   typeListe: 'preselection' | 'selection' = 'preselection';
 
   // Filtres avancés
@@ -554,7 +555,86 @@ export class DashboardCommissionComponent implements OnInit {
     scoreMin: null,
     scoreMax: null,
     etablissement: '',
+    specialite: '',
   };
+
+  // Mapping spécialités par parcours (matrice restrictive officielle ISIMM)
+  readonly specialiteParParcours: Record<string, string[]> = {
+    'MPGL': [
+      'Licence en Sciences de l\'Informatique génie logiciel',
+      'Informatique de Gestion',
+      'Génie logiciel et systèmes d\'information',
+      'Génie logiciel',
+      'Licence appliquée en développement des systèmes informatiques',
+      'Big data et Analyse de données',
+      'Business Computing',
+    ],
+    'MPDS': [
+      'Licence en Mathématiques Appliquées',
+      'Mathématique appliquée spécialité statistique de l\'environnement',
+      'Mathématiques et applications',
+      'Licence en Sciences de l\'Informatique génie logiciel',
+      'Informatique de Gestion',
+      'Génie logiciel et systèmes d\'information',
+      'Génie logiciel',
+      'Licence appliquée en développement des systèmes informatiques',
+      'Big data et Analyse de données',
+      'Business Computing',
+    ],
+    'MP3I': [
+      'Licence en Électronique, Électrotechnique et Automatique (MIM)',
+      'Licence en Électronique, Électrotechnique et Automatique (SE)',
+      'Licence en Technologies de l\'Information et de la Communication (TIC)',
+      'Licence en Mesures et Instrumentation',
+      'Licence en EEA (Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie)',
+      'Licence en Génie Électrique (Spécialité Automatique et Informatique Industrielle)',
+    ],
+    'MRGL': [
+      'Licence en Informatique : Maîtrise en Informatique',
+      'Licence en Informatique ou Informatique de Gestion',
+      'Maîtrise en Informatique ou Informatique de Gestion',
+      'Mastère Recherche en micro-électronique et instrumentation',
+      'Licence en EEA, MIM (Électronique, Systèmes Embarqués, Métrologie) ou TIC (Réseaux et IoT)',
+      'Licence en Électronique, Automatique ou Mesures et Instrumentation',
+      'Réussite en 1ère année du cycle ingénieur (Électronique/Instrumentation) ou équivalent',
+    ],
+    'ING': [
+      'Génie Logiciel (Informatique)',
+      'Diplôme en ingénierie système d\'information',
+      'Diplôme en ingénierie système informatique',
+    ],
+  };
+
+  // Détecte le code parcours depuis le nom du master
+  private detectParcoursCode(masterNom: string): string {
+    const n = (masterNom || '').toLowerCase();
+    if (n.includes('3i') || n.includes('instrumentation')) return 'MP3I';
+    if (n.includes('recherche') && n.includes('gl')) return 'MRGL';
+    if (n.includes('recherche') && n.includes('logiciel')) return 'MRGL';
+    if (n.includes('data science') || n.includes('mpds') || n.includes('sciences de données')) return 'MPDS';
+    if (n.includes('génie logiciel') || n.includes('mpgl') || n.includes('genie logiciel')) return 'MPGL';
+    if (n.includes('ingénieur') || n.includes('ingenieur') || n.includes('cycle ing')) return 'ING';
+    return '';
+  }
+
+  // Retourne les options de spécialités pour le master actuellement sélectionné
+  get specialiteOptionsForCurrentMaster(): string[] {
+    let masterNom = '';
+    if (this.isCurrentView('candidatures-ingenieur') || this.isCurrentView('concours-ingenieur')) {
+      return this.specialiteParParcours['ING'] || [];
+    }
+    if (this.selectedMasterForCandidatures && this.selectedMasterForCandidatures !== 'all') {
+      const m = this.masterOptions.find(
+        (mo) => Number(mo.id) === Number(this.selectedMasterForCandidatures),
+      );
+      masterNom = m?.nom || '';
+    } else if (this.activeCommissionId) {
+      const m = this.masterOptions.find((mo) => Number(mo.id) === Number(this.activeCommissionId));
+      masterNom = m?.nom || '';
+    }
+    const code = this.detectParcoursCode(masterNom);
+    return code ? (this.specialiteParParcours[code] || []) : [];
+  }
   filtreAnneeUniversitaire: 'courante' | 'precedente' | 'toutes' = 'courante';
   filtrePorteeOffres: 'specialite' | 'toutes_ouvertes' = 'specialite';
   preselectionDecisionFilter: '' | 'valide' | 'non_valide' = '';
@@ -6105,6 +6185,11 @@ export class DashboardCommissionComponent implements OnInit {
           if (!candidateEtab.includes(etablissement)) {
             return false;
           }
+        }
+
+        const specFilter = (this.filtres.specialite || this.filtreSpecialiteCandidature || '').trim();
+        if (specFilter && (candidature.specialite || '').toLowerCase() !== specFilter.toLowerCase()) {
+          return false;
         }
 
         return true;

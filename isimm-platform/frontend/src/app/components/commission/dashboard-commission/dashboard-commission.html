@@ -1358,7 +1358,12 @@
             <option value="all">Toutes spécialités</option>
             <option *ngFor="let m of masterOptions" [value]="m.id">{{ m.nom }}</option>
           </select>
-          <button class="cm-btn-reset" type="button" (click)="resetFiltresResponsable()">
+          <select class="cm-select" [(ngModel)]="filtres.specialite" (ngModelChange)="appliquerFiltresResponsable()"
+            *ngIf="specialiteOptionsForCurrentMaster.length > 0">
+            <option value="">Toutes spécialités diplôme</option>
+            <option *ngFor="let s of specialiteOptionsForCurrentMaster" [value]="s">{{ s }}</option>
+          </select>
+          <button class="cm-btn-reset" type="button" (click)="filtres.specialite=''; resetFiltresResponsable()">
             <i class="fas fa-undo"></i> Réinitialiser
           </button>
         </div>
@@ -1518,7 +1523,14 @@
                 <option value="selectionne">Sélectionné</option>
               </select>
             </div>
-            <button class="ing-btn-reset" type="button" (click)="resetFiltresResponsable()">
+            <div class="ing-filter-group" *ngIf="specialiteOptionsForCurrentMaster.length > 0">
+              <span class="ing-filter-label">Spécialité diplôme</span>
+              <select class="ing-filter-select" [(ngModel)]="filtres.specialite" (change)="appliquerFiltresResponsable()">
+                <option value="">Toutes</option>
+                <option *ngFor="let s of specialiteOptionsForCurrentMaster" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+            <button class="ing-btn-reset" type="button" (click)="filtres.specialite=''; resetFiltresResponsable()">
               <i class="fas fa-redo-alt"></i> Réinitialiser
             </button>
           </div>
@@ -2150,9 +2162,18 @@
               <div class="prs-toggle" [class.on]="top100Enabled"></div>
               <span>Top 100 par score</span>
             </div>
-            <button class="prs-btn-reset" type="button" (click)="resetFilters()">
+            <button class="prs-btn-reset" type="button" (click)="filtreSpecialiteCandidature=''; resetFilters()">
               <i class="fas fa-redo-alt"></i> Réinitialiser
             </button>
+          </div>
+          <!-- Filtre spécialité diplôme (dynamique selon parcours) -->
+          <div class="prs-filters-row2" *ngIf="specialiteOptionsForCurrentMaster.length > 0" style="margin-top:8px">
+            <div class="prs-flbl" style="white-space:nowrap">Spécialité diplôme :</div>
+            <select class="prs-finput" [(ngModel)]="filtreSpecialiteCandidature" (change)="appliquerFiltresResponsable()"
+              style="flex:1;max-width:400px">
+              <option value="">Toutes les spécialités</option>
+              <option *ngFor="let s of specialiteOptionsForCurrentMaster" [value]="s">{{ s }}</option>
+            </select>
           </div>
         </div>
 
@@ -2231,8 +2252,8 @@
                     </span>
                   </td>
                   <td>
-                    <button class="prs-btn-voir-avis" type="button" (click)="ouvrirModalAvis(c)">
-                      Voir avis
+                    <button class="prs-btn-voir-avis" type="button" (click)="ouvrirDossierOCR(c)">
+                      <i class="fas fa-eye"></i> Consulter dossier
                     </button>
                   </td>
                   <td>
@@ -2303,8 +2324,8 @@
             <div class="prs-float-dd-item" (click)="genererExcel()">
               <i class="fas fa-file-excel" style="color:#10B981"></i> Format Excel (.xlsx)
             </div>
-            <div class="prs-float-dd-item" (click)="genererPDF()">
-              <i class="fas fa-file-pdf" style="color:#A32D2D"></i> Format PDF ISIMM + QR Code
+            <div class="prs-float-dd-item" (click)="genererPDFOfficielISIMM('PRESELECTION')">
+              <i class="fas fa-file-pdf" style="color:#A32D2D"></i> Format PDF officiel ISIMM (GFH FOR 09)
             </div>
           </div>
         </div>
@@ -2503,7 +2524,9 @@
                     </span>
                   </td>
                   <td style="display:flex;gap:6px">
-                    <button class="prsm-btn-avis" type="button" (click)="ouvrirModalAvis(c)">Donner avis</button>
+                    <button class="prsm-btn-avis" type="button" (click)="ouvrirDossierOCR(c)">
+                      <i class="fas fa-eye"></i> Consulter dossier
+                    </button>
                     <button class="prsm-btn-icon" type="button" (click)="voirDossier(c)">
                       <i class="fas fa-ellipsis-v"></i>
                     </button>
