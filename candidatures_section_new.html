@@ -1,0 +1,276 @@
+    <div *ngIf="currentView === 'candidatures'" class="view-content">
+      <div class="cc-shell">
+
+        <!-- Page header -->
+        <div class="cc-page-header">
+          <div>
+            <div class="cc-eyebrow">Mon Espace · Candidatures</div>
+            <h2 class="cc-page-title"><i class="fas fa-file-alt"></i> Mes Candidatures</h2>
+            <p class="cc-page-sub">Vue segmentée par parcours, avec suivi du statut, dossier et score.</p>
+          </div>
+          <button class="cc-btn-new" *ngIf="actionPermissions.preinscription" (click)="nouvelleCandidature()">
+            <i class="fas fa-plus"></i> Nouvelle candidature
+          </button>
+        </div>
+
+        <!-- Stats row -->
+        <div class="cc-stats-row">
+          <div class="cc-stat-card">
+            <div class="cc-stat-bar cc-bar-blue"></div>
+            <div><div class="cc-stat-val">{{ candidatureTotalCount }}</div><div class="cc-stat-lbl">Total</div></div>
+          </div>
+          <div class="cc-stat-card">
+            <div class="cc-stat-bar cc-bar-warn"></div>
+            <div><div class="cc-stat-val cc-val-warn">{{ candidaturePendingCount }}</div><div class="cc-stat-lbl">En attente</div></div>
+          </div>
+          <div class="cc-stat-card">
+            <div class="cc-stat-bar cc-bar-ok"></div>
+            <div><div class="cc-stat-val cc-val-ok">{{ candidatureValidatedCount }}</div><div class="cc-stat-lbl">Validées</div></div>
+          </div>
+        </div>
+
+        <!-- Type tabs -->
+        <div class="cc-type-tabs">
+          <button class="cc-type-tab" [class.active]="candidatureTabIndex === 0" (click)="candidatureTabIndex = 0">
+            Master <span class="cc-tab-count">{{ candidaturesMaster().length }}</span>
+          </button>
+          <button class="cc-type-tab" [class.active]="candidatureTabIndex === 1" (click)="candidatureTabIndex = 1">
+            Ingénieur <span class="cc-tab-count">{{ candidaturesIngenieur().length }}</span>
+          </button>
+        </div>
+
+        <!-- Filter bar + view toggle -->
+        <div class="cc-filter-bar">
+          <span class="cc-filter-label">Année universitaire</span>
+          <select class="cc-filter-select" [(ngModel)]="selectedAcademicYear">
+            <option value="">Toutes les années</option>
+            <option *ngFor="let year of candidaturesYears" [value]="year">{{ year }}</option>
+          </select>
+          <button class="cc-btn-reset" type="button" (click)="selectedAcademicYear = ''">↺ Réinitialiser</button>
+          <div class="cc-view-toggle">
+            <button class="cc-view-btn" type="button" [class.active]="candidatureViewMode === 'cards'" (click)="candidatureViewMode = 'cards'" title="Vue cartes">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
+                <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
+              </svg>
+            </button>
+            <button class="cc-view-btn" type="button" [class.active]="candidatureViewMode === 'table'" (click)="candidatureViewMode = 'table'" title="Vue tableau">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6">
+                <rect x="1" y="1" width="12" height="12" rx="1"/>
+                <line x1="1" y1="5" x2="13" y2="5"/><line x1="1" y1="9" x2="13" y2="9"/>
+                <line x1="5" y1="1" x2="5" y2="13"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- === CARDS VIEW === -->
+        <ng-container *ngIf="candidatureViewMode === 'cards'">
+
+          <!-- Master cards -->
+          <div *ngIf="candidatureTabIndex === 0">
+            <div *ngIf="candidaturesMaster().length === 0" class="cc-empty">
+              <i class="fas fa-folder-open cc-empty-icon"></i>
+              <div class="cc-empty-title">Aucune candidature Master</div>
+              <div class="cc-empty-sub">Vous n'avez pas encore soumis de candidature pour ce parcours.</div>
+            </div>
+            <div *ngFor="let candidature of candidaturesMaster()" class="cc-cand-card"
+              [class.cc-card-warn]="hasMissingPieces(candidature)">
+              <div class="cc-cand-head">
+                <div>
+                  <span class="cc-type-badge cc-badge-master">MASTER</span>
+                  <div class="cc-cand-title">{{ candidature.master_nom }}</div>
+                  <div class="cc-cand-chips">
+                    <span class="cc-chip cc-chip-year"><i class="fas fa-calendar-alt"></i> {{ candidature.annee_universitaire || currentAcademicYear() }}</span>
+                    <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
+                  </div>
+                </div>
+                <span class="cc-alert-pill" *ngIf="hasMissingPieces(candidature)">
+                  <i class="fas fa-exclamation-triangle"></i> Pièces manquantes
+                </span>
+              </div>
+              <div class="status-stepper">
+                <div class="status-step"
+                  *ngFor="let step of getCandidatureStatusStepper(candidature); let si = index"
+                  [class.done]="si < getCandidatureStatusIndex(candidature)"
+                  [class.current]="si === getCandidatureStatusIndex(candidature)">
+                  <span class="status-step-dot">
+                    <i class="fas fa-check" *ngIf="si < getCandidatureStatusIndex(candidature)" style="font-size:9px"></i>
+                    <span *ngIf="si >= getCandidatureStatusIndex(candidature)">{{ si + 1 }}</span>
+                  </span>
+                  <span class="status-step-label">{{ step }}</span>
+                </div>
+              </div>
+              <div class="cc-cand-grid">
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-hashtag"></i> N° Candidature</div>
+                  <div class="cc-grid-val cc-mono">{{ candidature.numero }}</div>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-calendar"></i> Date soumission</div>
+                  <div class="cc-grid-val">{{ candidature.date_soumission | date:'dd/MM/yyyy' }}</div>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-folder-open"></i> Dépôt dossier</div>
+                  <div class="cc-grid-val" [class.cc-val-danger]="hasMissingPieces(candidature)">
+                    {{ candidature.dossier_depose ? '✓ Complet' : 'Incomplet' }}
+                  </div>
+                  <button type="button" class="cc-link" *ngIf="actionPermissions.depotDossier" (click)="ouvrirDepotDossier(candidature)">Voir les pièces</button>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-medal"></i> Score &amp; Classement</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span class="cc-score-bubble" [class.filled]="candidature.score">{{ candidature.score || '–' }}</span>
+                    <span style="font-size:12px;color:#64748B">{{ candidature.classement || '–' }}/{{ candidature.total_candidats || '–' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cc-cand-footer">
+                <span class="cc-foot-note" [class.warn]="hasMissingPieces(candidature)">
+                  {{ hasMissingPieces(candidature) ? '⚠ Dossier à compléter avant validation' : 'Dossier en cours de traitement' }}
+                </span>
+                <div class="cc-cand-actions">
+                  <button type="button" class="cc-act-btn cc-act-recap" (click)="voirRecapitulatif(candidature)"><i class="fas fa-file-alt"></i> Récapitulatif</button>
+                  <button type="button" class="cc-act-btn cc-act-edit"
+                    [class.disabled]="!canModifyCandidature(candidature)"
+                    [disabled]="!canModifyCandidature(candidature)"
+                    (click)="modifierCandidature(candidature)">
+                    <i class="fas fa-pen"></i> {{ canModifyCandidature(candidature) ? 'Modifier' : 'Expiré' }}
+                  </button>
+                  <button type="button" class="cc-act-btn cc-act-follow" (click)="suivreCandidature(candidature)"><i class="fas fa-chart-line"></i> Suivre</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ingénieur cards -->
+          <div *ngIf="candidatureTabIndex === 1">
+            <div *ngIf="candidaturesIngenieur().length === 0" class="cc-empty">
+              <i class="fas fa-folder-open cc-empty-icon"></i>
+              <div class="cc-empty-title">Aucune candidature Ingénieur</div>
+              <div class="cc-empty-sub">Vous n'avez pas encore soumis de candidature pour ce parcours.</div>
+            </div>
+            <div *ngFor="let candidature of candidaturesIngenieur()" class="cc-cand-card"
+              [class.cc-card-warn]="hasMissingPieces(candidature)">
+              <div class="cc-cand-head">
+                <div>
+                  <span class="cc-type-badge cc-badge-ing">INGÉNIEUR</span>
+                  <div class="cc-cand-title">{{ candidature.master_nom }}</div>
+                  <div class="cc-cand-chips">
+                    <span class="cc-chip cc-chip-year"><i class="fas fa-calendar-alt"></i> {{ candidature.annee_universitaire || currentAcademicYear() }}</span>
+                    <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
+                  </div>
+                </div>
+                <span class="cc-alert-pill" *ngIf="hasMissingPieces(candidature)"><i class="fas fa-exclamation-triangle"></i> Pièces manquantes</span>
+              </div>
+              <div class="status-stepper">
+                <div class="status-step" *ngFor="let step of getCandidatureStatusStepper(candidature); let si = index"
+                  [class.done]="si < getCandidatureStatusIndex(candidature)"
+                  [class.current]="si === getCandidatureStatusIndex(candidature)">
+                  <span class="status-step-dot">
+                    <i class="fas fa-check" *ngIf="si < getCandidatureStatusIndex(candidature)" style="font-size:9px"></i>
+                    <span *ngIf="si >= getCandidatureStatusIndex(candidature)">{{ si + 1 }}</span>
+                  </span>
+                  <span class="status-step-label">{{ step }}</span>
+                </div>
+              </div>
+              <div class="cc-cand-grid">
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-hashtag"></i> N° Candidature</div>
+                  <div class="cc-grid-val cc-mono">{{ candidature.numero }}</div>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-calendar"></i> Date soumission</div>
+                  <div class="cc-grid-val">{{ candidature.date_soumission | date:'dd/MM/yyyy' }}</div>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-folder-open"></i> Dépôt dossier</div>
+                  <div class="cc-grid-val" [class.cc-val-danger]="hasMissingPieces(candidature)">{{ candidature.dossier_depose ? '✓ Complet' : 'Incomplet' }}</div>
+                  <button type="button" class="cc-link" *ngIf="actionPermissions.depotDossier" (click)="ouvrirDepotDossier(candidature)">Voir les pièces</button>
+                </div>
+                <div class="cc-grid-cell">
+                  <div class="cc-grid-lbl"><i class="fas fa-medal"></i> Score &amp; Classement</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span class="cc-score-bubble" [class.filled]="candidature.score">{{ candidature.score || '–' }}</span>
+                    <span style="font-size:12px;color:#64748B">{{ candidature.classement || '–' }}/{{ candidature.total_candidats || '–' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cc-cand-footer">
+                <span class="cc-foot-note" [class.warn]="hasMissingPieces(candidature)">
+                  {{ hasMissingPieces(candidature) ? '⚠ Dossier à compléter avant validation' : 'Dossier en cours de traitement' }}
+                </span>
+                <div class="cc-cand-actions">
+                  <button type="button" class="cc-act-btn cc-act-recap" (click)="voirRecapitulatif(candidature)"><i class="fas fa-file-alt"></i> Récapitulatif</button>
+                  <button type="button" class="cc-act-btn cc-act-edit"
+                    [class.disabled]="!canModifyCandidature(candidature)"
+                    [disabled]="!canModifyCandidature(candidature)"
+                    (click)="modifierCandidature(candidature)">
+                    <i class="fas fa-pen"></i> {{ canModifyCandidature(candidature) ? 'Modifier' : 'Expiré' }}
+                  </button>
+                  <button type="button" class="cc-act-btn cc-act-follow" (click)="suivreCandidature(candidature)"><i class="fas fa-chart-line"></i> Suivre</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- === TABLE VIEW === -->
+        <div *ngIf="candidatureViewMode === 'table'" class="cc-table-outer">
+          <table class="cc-table">
+            <thead>
+              <tr>
+                <th>Parcours</th>
+                <th>N° Candidature</th>
+                <th>Année</th>
+                <th>Date</th>
+                <th>Étape</th>
+                <th>Dossier</th>
+                <th>Score</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let candidature of (candidatureTabIndex === 0 ? candidaturesMaster() : candidaturesIngenieur())">
+                <tr>
+                  <td>
+                    <div class="cc-tbl-type" [class.cc-ttype-master]="candidatureTabIndex === 0" [class.cc-ttype-ing]="candidatureTabIndex === 1">
+                      {{ candidatureTabIndex === 0 ? 'MASTER' : 'INGÉNIEUR' }}
+                    </div>
+                    <div class="cc-tbl-name">{{ candidature.master_nom }}</div>
+                  </td>
+                  <td><span class="cc-tbl-num">{{ candidature.numero }}</span></td>
+                  <td><span class="cc-tbl-year">{{ candidature.annee_universitaire || currentAcademicYear() }}</span></td>
+                  <td style="font-size:12px;color:#64748B;font-family:monospace">{{ candidature.date_soumission | date:'dd/MM/yyyy' }}</td>
+                  <td><span class="cc-step-tag">Étape {{ getCandidatureStatusIndex(candidature) + 1 }}/{{ getCandidatureStatusStepper(candidature).length }}</span></td>
+                  <td>
+                    <span [class.cc-dos-ok]="candidature.dossier_depose" [class.cc-dos-ko]="!candidature.dossier_depose">
+                      {{ candidature.dossier_depose ? '✓ Complet' : 'Incomplet' }}
+                    </span>
+                  </td>
+                  <td style="text-align:center">
+                    <span class="cc-score-sm" [class.filled]="candidature.score">{{ candidature.score || '–' }}</span>
+                  </td>
+                  <td>
+                    <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
+                  </td>
+                  <td>
+                    <div class="cc-tbl-actions">
+                      <button type="button" class="cc-tbl-btn cc-tbl-recap" (click)="voirRecapitulatif(candidature)" title="Récapitulatif"><i class="fas fa-file-alt"></i></button>
+                      <button type="button" class="cc-tbl-btn cc-tbl-follow" (click)="suivreCandidature(candidature)" title="Suivre"><i class="fas fa-chart-line"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+              <tr *ngIf="(candidatureTabIndex === 0 ? candidaturesMaster() : candidaturesIngenieur()).length === 0">
+                <td colspan="9" class="cc-tbl-empty">Aucune candidature à afficher.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+

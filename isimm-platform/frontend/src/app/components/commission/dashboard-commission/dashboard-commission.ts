@@ -54,6 +54,7 @@ interface Candidature {
   annee_universitaire?: string;
   notes_preinscription?: string;
   decision_responsable?: 'valide' | 'non_valide' | '';
+  dossier_valide?: 'valide' | 'non_valide' | '';
   date_soumission?: string;
   date_changement_statut?: string;
   classement?: string | number;
@@ -219,6 +220,7 @@ interface InscriptionCandidateRow {
   nom: string;
   cin: string;
   master: string;
+  specialite?: string;
   dossier: 'complet' | 'incomplet';
   paiement: 'paye' | 'en_attente' | 'incoherent' | 'absent';
   receiptPdfUrl: string;
@@ -426,6 +428,7 @@ interface NouvelleOffreForm {
   date_limite_candidature: string;
   annee_universitaire: string;
   actif: boolean;
+  document_officiel_pdf_url?: string | null;
 }
 
 interface OffreEditForm extends NouvelleOffreForm {
@@ -550,6 +553,7 @@ export class DashboardCommissionComponent implements OnInit {
   filtres: any = {
     concours: '',
     statut: '',
+    session: '',
     parcours: '',
     recherche: '',
     scoreMin: null,
@@ -655,6 +659,10 @@ export class DashboardCommissionComponent implements OnInit {
   membreAvisSelectedIds: number[] = [];
   prsMembreGenerateListOpen: boolean = false;
 
+  // Membre sélection bulk selection
+  membreSelectionSelectedIds: Set<number> = new Set();
+  membreSelGenListOpen: boolean = false;
+
   // Selection bar properties
   filtreeCandidatureCount: number = 0;
   seuilScore: number = 0;
@@ -701,6 +709,27 @@ export class DashboardCommissionComponent implements OnInit {
     this.showDossierOCRModal = true;
   }
 
+  ouvrirDossierOCRById(id: number): void {
+    const fromSel = this.finalSelectionCandidates?.find((x) => x.id === id);
+    if (fromSel) {
+      const fake: Candidature = {
+        id: fromSel.id,
+        numero: fromSel.num,
+        candidat_nom: fromSel.nom,
+        candidat_email: '',
+        specialite: fromSel.spec,
+        score: fromSel.score,
+        dossier_depose: true,
+        statut: fromSel.statut,
+      };
+      this.ouvrirDossierOCR(fake);
+      return;
+    }
+    const c = this.candidatures?.find((x) => x.id === id)
+      || this.selectionCandidates?.find((x) => x.id === id);
+    if (c) this.ouvrirDossierOCR(c);
+  }
+
   fermerDossierOCR(): void {
     this.showDossierOCRModal = false;
     this.dossierOCRCandidature = null;
@@ -741,6 +770,32 @@ export class DashboardCommissionComponent implements OnInit {
         this.toastService.show(err?.error?.error || 'Erreur mise à jour statut', 'error');
       },
     });
+  }
+
+  updateDossierValidite(c: Candidature, val: 'valide' | 'non_valide' | ''): void {
+    c.dossier_valide = val;
+    if (val === 'valide') {
+      this.updateCandidatureStatus(c.id, 'preselectionne');
+    } else if (val === 'non_valide') {
+      this.updateCandidatureStatus(c.id, 'rejete');
+    }
+  }
+
+  togglePrsKebab(id: number): void {
+    this.prsKebabOpenId = this.prsKebabOpenId === id ? 0 : id;
+  }
+
+  updateReclamationEtat(id: number, etat: string): void {
+    const rec = this.reclamations.find((r) => r.id === id);
+    if (rec) rec.etat = etat as Reclamation['etat'];
+    this.http
+      .patch(`/api/reclamations/${id}/`, { etat }, {
+        headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` },
+      })
+      .subscribe({
+        next: () => this.toastService.show('État réclamation mis à jour.', 'success'),
+        error: () => this.toastService.show('Erreur mise à jour réclamation.', 'error'),
+      });
   }
 
   // --- Consultation Massive Modal ---
@@ -1305,6 +1360,15 @@ export class DashboardCommissionComponent implements OnInit {
   finalSelectionTop100On: boolean = false;
   finalSelectionBulkAction: FinalSelectionDecision = '';
   finalSelectionExportOpen: boolean = false;
+  cmGenerateListOpen: boolean = false;
+  ingGenerateListOpen: boolean = false;
+  selGenerateListOpen: boolean = false;
+  ins2ExportOpen: boolean = false;
+  prsmGenerateListOpen: boolean = false;
+  prsmFloatGenOpen: boolean = false;
+  prsKebabOpenId: number = 0;
+  nouvelleOfrePdfSigneNom: string = '';
+  nouvelleOfrePdfSigneFile: File | null = null;
   finalSelectionConfirmOpen: boolean = false;
   finalSelectionConfirmTitle: string = '';
   finalSelectionConfirmMessage: string = '';
@@ -1312,6 +1376,16 @@ export class DashboardCommissionComponent implements OnInit {
   finalSelectionConsultationIds: number[] = [];
   finalSelectionConsultationCandidates: FinalSelectionCandidate[] = [];
   finalSelectionConsultationCurrentIndex: number = 0;
+
+  // Consultation Massive OCR (unified modal)
+  massiveOCROpen: boolean = false;
+  massiveOCRCandidates: any[] = [];
+  massiveOCRCurrentIndex: number = 0;
+  massiveOCRTitle: string = 'Consultation massive';
+  massiveOCROCRDone: { [key: string]: boolean } = {};
+  massiveOCRDecisions: { [key: number]: 'approve' | 'reject' | 'hold' } = {};
+  massiveOCRComments: { [key: number]: string } = {};
+  massiveOCRSearchFilter: string = '';
   finalSelectionToast: { message: string; type: string; visible: boolean } = {
     message: '0 candidats mis a jour',
     type: 't-success',
@@ -1426,6 +1500,10 @@ export class DashboardCommissionComponent implements OnInit {
 
   getVisibleCandidaturesForTable(): Candidature[] {
     let rows = (this.candidaturesFiltrees || []).slice();
+    // In présélection responsable view, show only préselectionné candidates
+    if (this.currentView === 'avis-listes' && this.isResponsable) {
+      rows = rows.filter((r) => r.statut === 'preselectionne');
+    }
     if (this.selectedCandidatureType !== 'all') {
       rows = rows.filter((row) => {
         const isExternal = this.isExternalCandidate(row);
@@ -1689,7 +1767,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   openFinalSelectionConsultation(): void {
-    this.openFinalSelectionConsultationModal();
+    this.openFinalSelMassiveOCR();
   }
 
   repechageAutomatique(): void {
@@ -1922,6 +2000,24 @@ export class DashboardCommissionComponent implements OnInit {
     return rows.length > 0 && rows.every((row) => this.finalSelectionSelectedIds.has(row.id));
   }
 
+  toggleAllFinalSelection(checked: boolean): void {
+    if (checked) {
+      this.finalSelectionFiltered.forEach((row) => this.finalSelectionSelectedIds.add(row.id));
+    } else {
+      this.finalSelectionSelectedIds.clear();
+    }
+  }
+
+  bulkValidateSelection(): void {
+    if (this.finalSelectionSelectedIds.size === 0) return;
+    this.finalSelectionSelectedIds.forEach((id) => {
+      const c = this.finalSelectionFiltered.find((r) => r.id === id);
+      if (c) c.statut = 'lp';
+    });
+    this.toastService.show(`${this.finalSelectionSelectedIds.size} candidat(s) validé(s).`, 'success');
+    this.finalSelectionSelectedIds.clear();
+  }
+
   // Missing export/action methods
   generateFinalSelectionPV(): void {
     this.showFinalSelectionToast('Generation du PV final...', 't-info');
@@ -2074,7 +2170,7 @@ export class DashboardCommissionComponent implements OnInit {
       try {
         await firstValueFrom(
           this.http.post(
-            `http://localhost:8003/api/candidatures/${candidate.id}/commission-decision/`,
+            `/api/candidatures/${candidate.id}/commission-decision/`,
             { decision: 'accepter' },
             { headers: { Authorization: `Bearer ${token}` } },
           ),
@@ -2090,7 +2186,7 @@ export class DashboardCommissionComponent implements OnInit {
     try {
       await firstValueFrom(
         this.http.post(
-          'http://localhost:8003/api/candidatures/commission/historique/',
+          '/api/candidatures/commission/historique/',
           {
             action: actionLabel,
             specialite: masterLabel,
@@ -2291,6 +2387,24 @@ export class DashboardCommissionComponent implements OnInit {
   candidatureSelectionnee: Candidature | null = null;
   avisArgument: string = '';
   avisRecommandation: 'favorable' | 'defavorable' = 'favorable';
+  avisDecisionFinale: string = '';
+
+  get avisFavorablesCount(): number {
+    const id = this.candidatureSelectionnee?.id;
+    if (!id) return 0;
+    return (this.candidatureVotes[id] || []).filter(v => v.recommandation === 'favorable').length;
+  }
+
+  get avisTotal(): number {
+    const id = this.candidatureSelectionnee?.id;
+    if (!id) return 0;
+    return (this.candidatureVotes[id] || []).length;
+  }
+
+  rappelerMembre(): void {
+    const nom = this.candidatureSelectionnee?.candidat_nom || 'ce candidat';
+    this.toastService.show(`Rappel envoyé aux membres pour ${nom}`, 'info');
+  }
   showModalConsultation: boolean = false;
   candidatureConsultationSelectionnee: Candidature | null = null;
   showModalAvisListe: boolean = false;
@@ -2672,7 +2786,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .get<NotificationItem[]>('http://localhost:8003/api/candidatures/mes-notifications/', {
+      .get<NotificationItem[]>('/api/candidatures/mes-notifications/', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -2696,7 +2810,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/notifications/${notificationId}/mark-read/`,
+        `/api/candidatures/notifications/${notificationId}/mark-read/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -2721,7 +2835,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        'http://localhost:8003/api/candidatures/notifications/mark-all-read/',
+        '/api/candidatures/notifications/mark-all-read/',
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -2851,7 +2965,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   loadMastersForConfiguration(): void {
-    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/').subscribe({
+    this.http.get<any[]>('/api/candidatures/masters/').subscribe({
       next: (masters) => {
         this.masterOptions = (masters || []).map((m) => ({ id: Number(m.id), nom: m.nom }));
         if (!this.selectedConfigMasterId && this.masterOptions.length > 0) {
@@ -2891,7 +3005,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .get<OffrePreinscription[]>(
-        'http://localhost:8003/api/candidatures/offres-inscription-responsable/',
+        '/api/candidatures/offres-inscription-responsable/',
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -2986,7 +3100,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     const query = params.toString();
-    const endpoint = `http://localhost:8003/api/candidatures/offres-master/${query ? `?${query}` : ''}`;
+    const endpoint = `/api/candidatures/offres-master/${query ? `?${query}` : ''}`;
 
     this.http
       .get<OffreMasterCrudItem[]>(endpoint, {
@@ -3085,7 +3199,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .post<OffreMasterCrudItem>('http://localhost:8003/api/candidatures/offres-master/', payload, {
+      .post<OffreMasterCrudItem>('/api/candidatures/offres-master/', payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -3119,7 +3233,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .put<OffreMasterCrudItem>(
-        `http://localhost:8003/api/candidatures/offres-master/${offreId}/`,
+        `/api/candidatures/offres-master/${offreId}/`,
         payload,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -3155,7 +3269,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .delete(`http://localhost:8003/api/candidatures/offres-master/${offre.id}/`, {
+      .delete(`/api/candidatures/offres-master/${offre.id}/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -3259,7 +3373,7 @@ export class DashboardCommissionComponent implements OnInit {
       params.set('master_id', String(masterId));
     }
 
-    const apiUrl = `http://localhost:8003/api/candidatures/responsable/candidatures/?${params.toString()}`;
+    const apiUrl = `/api/candidatures/responsable/candidatures/?${params.toString()}`;
     console.log('[LoadCandidaturesResponsable] Fetching from:', apiUrl);
 
     this.http
@@ -3329,7 +3443,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.http
       .get<
         ResponsibleNotificationItem[]
-      >('http://localhost:8003/api/candidatures/responsable/notifications/', { headers: { Authorization: `Bearer ${token}` } })
+      >('/api/candidatures/responsable/notifications/', { headers: { Authorization: `Bearer ${token}` } })
       .subscribe({
         next: (data) => {
           this.responsibleNotifications = data || [];
@@ -3357,7 +3471,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.configLoading = true;
 
     this.http
-      .get<any>(`http://localhost:8003/api/candidatures/configuration/${masterId}/`, {
+      .get<any>(`/api/candidatures/configuration/${masterId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -3421,7 +3535,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .put(
-        `http://localhost:8003/api/candidatures/configuration/${this.selectedConfigMasterId}/`,
+        `/api/candidatures/configuration/${this.selectedConfigMasterId}/`,
         payload,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -3434,7 +3548,7 @@ export class DashboardCommissionComponent implements OnInit {
         },
         error: () => {
           this.http
-            .post('http://localhost:8003/api/candidatures/configuration/', payload, {
+            .post('/api/candidatures/configuration/', payload, {
               headers: { Authorization: `Bearer ${token}` },
             })
             .subscribe({
@@ -3484,7 +3598,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.creationOffreLoading = true;
 
     this.http
-      .post<any>('http://localhost:8003/api/candidatures/masters/admin/', this.nouvelleOffre, {
+      .post<any>('/api/candidatures/masters/admin/', this.nouvelleOffre, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -3548,6 +3662,18 @@ export class DashboardCommissionComponent implements OnInit {
     };
     this.selectedConfigMasterId = offre.id;
     this.onConfigMasterChange();
+  }
+
+  ouvrirModalEditionOffre(offre: OffrePreinscription): void {
+    this.ouvrirPageEditionOffre(offre);
+  }
+
+  onOfrePdfSigne(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) return;
+    this.nouvelleOfrePdfSigneFile = file;
+    this.nouvelleOfrePdfSigneNom = file.name;
   }
 
   ouvrirPageEditionOffre(offre: OffrePreinscription): void {
@@ -3652,7 +3778,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/configuration/${this.selectedOffreId}/document-pdf/`,
+        `/api/candidatures/configuration/${this.selectedOffreId}/document-pdf/`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -3684,7 +3810,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .put(
-        `http://localhost:8003/api/candidatures/configuration/${offre.id}/`,
+        `/api/candidatures/configuration/${offre.id}/`,
         {
           master: offre.id,
           est_cache: hidden,
@@ -3752,7 +3878,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .put(
-        `http://localhost:8003/api/candidatures/masters/${offre.id}/`,
+        `/api/candidatures/masters/${offre.id}/`,
         {
           nom: offre.titre,
           type_master: offre.sous_type,
@@ -3804,7 +3930,7 @@ export class DashboardCommissionComponent implements OnInit {
     };
 
     this.http
-      .put(`http://localhost:8003/api/candidatures/masters/${this.selectedOffreId}/`, payload, {
+      .put(`/api/candidatures/masters/${this.selectedOffreId}/`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -3862,7 +3988,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/configuration/${this.selectedConfigMasterId}/document-pdf/`,
+        `/api/candidatures/configuration/${this.selectedConfigMasterId}/document-pdf/`,
         formData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -4442,7 +4568,7 @@ export class DashboardCommissionComponent implements OnInit {
         params.append('specialite', specialite);
       }
 
-      const url = `http://localhost:8003/api/candidatures/export/?${params.toString()}`;
+      const url = `/api/candidatures/export/?${params.toString()}`;
 
       this.http
         .get(url, {
@@ -4486,16 +4612,22 @@ export class DashboardCommissionComponent implements OnInit {
     this.generateListOpen = false;
   }
 
-  genererPDFOfficielISIMM(etape: 'PRESELECTION' | 'SELECTION' = 'PRESELECTION'): void {
+  genererExcelCandidatures(type: 'master' | 'ingenieur'): void {
+    this.exportCandidatures('master', 'xlsx');
+  }
+
+  genererPDFOfficielISIMM(etape: 'PRESELECTION' | 'SELECTION' | 'MASTER' | 'INGENIEUR' = 'PRESELECTION'): void {
+    this.generateListOpen = false;
     try {
       const token = this.authService.getAccessToken();
       if (!token) {
         this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
         return;
       }
-      const masterId = this.activeCommissionId;
+      const masterId = this.activeCommissionId
+        ?? (Number.isFinite(Number(this.selectedMasterForCandidatures)) ? Number(this.selectedMasterForCandidatures) : null);
       if (!masterId) {
-        this.toastService.show('Aucune commission active sélectionnée.', 'warning');
+        this.toastService.show('Veuillez sélectionner une commission avant de générer le PDF.', 'warning');
         return;
       }
       const specialite = etape === 'SELECTION'
@@ -4506,7 +4638,7 @@ export class DashboardCommissionComponent implements OnInit {
       const params = new URLSearchParams({ etape, master_id: String(masterId), annee });
       if (specialite) params.append('specialite', specialite);
 
-      const url = `http://localhost:8003/api/candidatures/documents/generer-pdf/?${params}`;
+      const url = `/api/candidatures/documents/generer-pdf/?${params}`;
       this.toastService.show('Génération du PDF officiel ISIMM...', 'info');
 
       this.http.get(url, {
@@ -4603,7 +4735,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   openSelectionBulkConsultationModal(): void {
-    this.openSelectionBulkConsultation();
+    this.openPrsSelectionMassiveOCR();
   }
 
   /**
@@ -4703,7 +4835,7 @@ export class DashboardCommissionComponent implements OnInit {
     try {
       await firstValueFrom(
         this.http.post(
-          `http://localhost:8003/api/candidatures/${candidature.id}/commission-decision/`,
+          `/api/candidatures/${candidature.id}/commission-decision/`,
           { decision: 'accepter' },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
@@ -4712,7 +4844,7 @@ export class DashboardCommissionComponent implements OnInit {
       try {
         await firstValueFrom(
           this.http.post(
-            'http://localhost:8003/api/candidatures/commission/historique/',
+            '/api/candidatures/commission/historique/',
             {
               action: 'Validation depuis consultation massive',
               specialite: masterLabel,
@@ -4748,7 +4880,7 @@ export class DashboardCommissionComponent implements OnInit {
     try {
       await firstValueFrom(
         this.http.put(
-          `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+          `/api/candidatures/${candidature.id}/changer-statut/`,
           { nouveau_statut: 'rejete', raison: 'Rejet lors de la consultation massive' },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
@@ -4877,7 +5009,7 @@ export class DashboardCommissionComponent implements OnInit {
     try {
       await firstValueFrom(
         this.http.post(
-          `http://localhost:8003/api/candidatures/${candidature.id}/commission-decision/`,
+          `/api/candidatures/${candidature.id}/commission-decision/`,
           { decision: 'accepter' },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
@@ -4893,7 +5025,7 @@ export class DashboardCommissionComponent implements OnInit {
 
         await firstValueFrom(
           this.http.post(
-            'http://localhost:8003/api/candidatures/commission/historique/',
+            '/api/candidatures/commission/historique/',
             {
               action: 'Validation depuis consultation massive',
               specialite: masterLabel,
@@ -4949,7 +5081,7 @@ export class DashboardCommissionComponent implements OnInit {
     try {
       await firstValueFrom(
         this.http.put(
-          `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+          `/api/candidatures/${candidature.id}/changer-statut/`,
           { nouveau_statut: 'rejete', raison: 'Rejet lors de la consultation massive' },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
@@ -4977,6 +5109,137 @@ export class DashboardCommissionComponent implements OnInit {
       console.error('Erreur rejet candidat (candidatures modal):', error);
       this.toastService.show('❌ Erreur lors du rejet', 'error');
     }
+  }
+
+  // =========== CONSULTATION MASSIVE OCR (Unified Modal) ===========
+
+  openMassiveOCR(candidates: any[], title: string = 'Consultation massive'): void {
+    if (!candidates || candidates.length === 0) {
+      this.toastService.show('Sélectionnez au moins un candidat.', 'warning');
+      return;
+    }
+    this.massiveOCRCandidates = candidates;
+    this.massiveOCRCurrentIndex = 0;
+    this.massiveOCRTitle = title;
+    this.massiveOCROCRDone = {};
+    this.massiveOCRDecisions = {};
+    this.massiveOCRComments = {};
+    this.massiveOCRSearchFilter = '';
+    this.massiveOCROpen = true;
+  }
+
+  closeMassiveOCR(): void {
+    this.massiveOCROpen = false;
+  }
+
+  getMassiveOCRCurrentCandidate(): any {
+    return this.massiveOCRCandidates[this.massiveOCRCurrentIndex] || null;
+  }
+
+  getMassiveOCRFilteredList(): any[] {
+    if (!this.massiveOCRSearchFilter) return this.massiveOCRCandidates;
+    const f = this.massiveOCRSearchFilter.toLowerCase();
+    return this.massiveOCRCandidates.filter(c =>
+      (c.candidat_nom || c.nom || '').toLowerCase().includes(f) ||
+      (c.numero || c.num || '').toLowerCase().includes(f)
+    );
+  }
+
+  massiveOCRPrev(): void {
+    if (this.massiveOCRCurrentIndex > 0) this.massiveOCRCurrentIndex--;
+  }
+
+  massiveOCRNext(): void {
+    if (this.massiveOCRCurrentIndex < this.massiveOCRCandidates.length - 1) this.massiveOCRCurrentIndex++;
+  }
+
+  massiveOCRSaveAndNext(): void {
+    this.toastService.show('Modifications enregistrées', 'success');
+    if (this.massiveOCRCurrentIndex < this.massiveOCRCandidates.length - 1) {
+      this.massiveOCRCurrentIndex++;
+    } else {
+      this.toastService.show('Dernier dossier — consultation terminée', 'info');
+    }
+  }
+
+  decideMassiveOCRCandidate(decision: 'approve' | 'reject' | 'hold'): void {
+    const c = this.getMassiveOCRCurrentCandidate();
+    if (!c) return;
+    this.massiveOCRDecisions[c.id] = decision;
+    const labels = { approve: 'Dossier validé', reject: 'Dossier rejeté', hold: 'Mis en attente' };
+    const types = { approve: 'success', reject: 'error', hold: 'info' };
+    this.toastService.show(labels[decision], types[decision] as any);
+  }
+
+  getMassiveOCRDecision(id: number): 'approve' | 'reject' | 'hold' | null {
+    return this.massiveOCRDecisions[id] || null;
+  }
+
+  lancerOCRMassifCandidat(candId: number): void {
+    const key = `${candId}_all`;
+    this.massiveOCROCRDone[key] = true;
+    this.toastService.show('Analyse OCR lancée pour ce dossier', 'info');
+  }
+
+  isOCRDoneForCandidat(candId: number): boolean {
+    return !!this.massiveOCROCRDone[`${candId}_all`];
+  }
+
+  openPrsSelectionMassiveOCR(): void {
+    const ids = this.selectedPreselectionCandidateIds;
+    if (ids.length === 0) {
+      this.toastService.show('Sélectionnez au moins un candidat.', 'warning');
+      return;
+    }
+    const candidates = this.getVisibleCandidaturesForTable().filter(c => ids.includes(Number(c.id)));
+    this.openMassiveOCR(candidates, 'Consultation massive — Présélection');
+  }
+
+  openFinalSelMassiveOCR(): void {
+    const ids = Array.from(this.finalSelectionSelectedIds);
+    const candidates = this.finalSelectionFiltered.filter(c => ids.includes(c.id));
+    this.openMassiveOCR(candidates, 'Consultation massive — Sélection finale');
+  }
+
+  // =========== MEMBRE SÉLECTION BULK ===========
+
+  toggleSelectionMembre(id: number, checked: boolean): void {
+    if (checked) this.membreSelectionSelectedIds.add(id);
+    else this.membreSelectionSelectedIds.delete(id);
+  }
+
+  toggleAllSelectionMembre(checked: boolean): void {
+    if (checked) {
+      this.finalSelectionFiltered.forEach(c => this.membreSelectionSelectedIds.add(c.id));
+    } else {
+      this.membreSelectionSelectedIds.clear();
+    }
+  }
+
+  isAllSelectionMembreSelected(): boolean {
+    return this.finalSelectionFiltered.length > 0 &&
+      this.finalSelectionFiltered.every(c => this.membreSelectionSelectedIds.has(c.id));
+  }
+
+  openMassiveOCRMembre(): void {
+    const ids = Array.from(this.membreSelectionSelectedIds);
+    const candidates = this.finalSelectionFiltered.filter(c => ids.includes(c.id));
+    this.openMassiveOCR(candidates, 'Consultation massive — Sélection (Membre)');
+  }
+
+  clearSelectionMembre(): void {
+    this.membreSelectionSelectedIds.clear();
+  }
+
+  validateAllSelectionMembre(): void {
+    const ids = Array.from(this.membreSelectionSelectedIds);
+    if (!ids.length) return;
+    ids.forEach(id => {
+      const c = this.finalSelectionFiltered.find(x => x.id === id);
+      if (c) c.statut = 'lp';
+    });
+    this.toastService.show(`${ids.length} candidat(s) validé(s)`, 'success');
+    this.clearSelectionMembre();
   }
 
   /**
@@ -5054,7 +5317,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.toastService.show('Préparation du ZIP... Veuillez patienter', 'info');
 
     this.http
-      .get(`http://localhost:8003/api/candidatures/download-zip/?ids=${candidatureIds}`, {
+      .get(`/api/candidatures/download-zip/?ids=${candidatureIds}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       })
@@ -5254,7 +5517,7 @@ export class DashboardCommissionComponent implements OnInit {
     const token = this.authService.getAccessToken();
 
     this.http
-      .get(`http://localhost:8003/api/candidatures/${candidature.id}/telecharger-dossier/`, {
+      .get(`/api/candidatures/${candidature.id}/telecharger-dossier/`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       })
@@ -5295,7 +5558,7 @@ export class DashboardCommissionComponent implements OnInit {
         success?: boolean;
         score?: number;
       }>(
-        `http://localhost:8003/api/candidatures/${candidature.id}/calculer-score/`,
+        `/api/candidatures/${candidature.id}/calculer-score/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -5361,7 +5624,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/${candidature.id}/rejeter/`,
+        `/api/candidatures/${candidature.id}/rejeter/`,
         { motif: motif },
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -5407,7 +5670,7 @@ export class DashboardCommissionComponent implements OnInit {
     const token = this.authService.getAccessToken();
     this.http
       .post<any>(
-        `http://localhost:8003/api/candidatures/master/${masterId}/generer-listes/`,
+        `/api/candidatures/master/${masterId}/generer-listes/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -5457,7 +5720,7 @@ export class DashboardCommissionComponent implements OnInit {
     const token = this.authService.getAccessToken();
 
     this.http
-      .get(`http://localhost:8003/api/deliberations/${pv.id}/export-pdf/`, {
+      .get(`/api/deliberations/${pv.id}/export-pdf/`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       })
@@ -5491,7 +5754,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/deliberations/${pv.id}/publier/`,
+        `/api/deliberations/${pv.id}/publier/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -5865,7 +6128,7 @@ export class DashboardCommissionComponent implements OnInit {
         candidature?: Candidature;
         message?: string;
       }>(
-        `http://localhost:8003/api/candidatures/${candidature.id}/update-status/`,
+        `/api/candidatures/${candidature.id}/update-status/`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
@@ -6404,6 +6667,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   getPreselectionMembreFiltered(): Candidature[] {
     return this.candidaturesFiltrees.filter(c => {
+      if (c.statut !== 'preselectionne') return false;
       const search = (this.prsMembreSearch || '').toLowerCase();
       const matchSearch = !search ||
         (c.candidat_nom || '').toLowerCase().includes(search) ||
@@ -6948,7 +7212,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .get<ListeGenerationApiPayload>(
-        `http://localhost:8003/api/candidatures/master/${masterId}/liste-admission-recente/`,
+        `/api/candidatures/master/${masterId}/liste-admission-recente/`,
         { headers: { Authorization: `Bearer ${token}` } },
       )
       .subscribe({
@@ -6998,7 +7262,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post<ListeGenerationApiPayload>(
-        `http://localhost:8003/api/candidatures/master/${masterId}/generer-liste-manuelle/`,
+        `/api/candidatures/master/${masterId}/generer-liste-manuelle/`,
         {
           candidature_ids: candidatureIds,
           type_liste: typeListe,
@@ -7341,7 +7605,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/${candidature.id}/changer-statut/`,
+        `/api/candidatures/${candidature.id}/changer-statut/`,
         {
           statut: candidature.nouveau_statut,
           motif_rejet: motif_rejet,
@@ -8027,7 +8291,7 @@ export class DashboardCommissionComponent implements OnInit {
 
       this.http
         .post(
-          `http://localhost:8003/api/listes/${liste.id}/archiver/`,
+          `/api/listes/${liste.id}/archiver/`,
           {},
           { headers: { Authorization: `Bearer ${token}` } },
         )
@@ -8094,7 +8358,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .post('http://localhost:8003/api/ocr/analyser/', formData, {
+      .post('/api/ocr/analyser/', formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
@@ -9000,7 +9264,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post<any>(
-        'http://localhost:8003/api/candidatures/inscriptions/rapprochement/',
+        '/api/candidatures/inscriptions/rapprochement/',
         {
           rows: this.inscriptionsExcelRows,
           source_filename: this.selectedInscriptionsFileName,
@@ -9109,8 +9373,12 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   exportInscriptions(): void {
+    if (this.inscriptionsExportFormat === 'pdf') {
+      this.genererPDFOfficielISIMM('MASTER');
+      return;
+    }
     if (this.inscriptionsVerificationRows.length > 0) {
-      this.exportVerifiedInscriptions();
+      this.exportVerifiedInscriptions(this.inscriptionsExportFormat === 'xlsx' ? 'xlsx' : 'xlsx');
       return;
     }
 
@@ -9757,7 +10025,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.toastService.show(`${finalisable.length} inscription(s) finalisée(s).`, 'success');
   }
 
-  exportVerifiedInscriptions(): void {
+  exportVerifiedInscriptions(format: 'xlsx' | 'pdf' = 'xlsx'): void {
     const rows: ExportRow[] = (
       this.inscriptionsVerificationRows.length > 0
         ? this.inscriptionsVerificationRows.filter((row) => row.verification === 'valide')
@@ -9781,7 +10049,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.exportRows(
       rows,
-      this.inscriptionsExportFormat,
+      format as ExportFormat,
       'inscriptions-finales',
       'Inscriptions finales',
     );
@@ -9933,7 +10201,7 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.http
       .post(
-        `http://localhost:8003/api/candidatures/${this.candidatureValidationPreselection.id}/valider-preselection/`,
+        `/api/candidatures/${this.candidatureValidationPreselection.id}/valider-preselection/`,
         {
           recommandation: this.preselAvisSelectionne,
           commentaire: this.preselCommentaire,

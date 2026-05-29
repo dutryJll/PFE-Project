@@ -1,10 +1,29 @@
-<div style="position: relative">
-  <div style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: center">
-    <button type="button" class="btn btn-sec btn-sm" (click)="retourOffreList()">
-      <i class="fas fa-arrow-left" style="margin-right: 0.4rem"></i>
-      Retour
-    </button>
+<div class="ofe-page">
+  <!-- Page header -->
+  <div class="ofe-header">
+    <div class="ofe-header-left">
+      <button type="button" class="ofe-back-btn" (click)="retourOffreList()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <div class="ofe-eyebrow">Offre de Préinscription</div>
+        <div class="ofe-page-title">{{ titre || 'Nouvelle offre' }}</div>
+      </div>
+    </div>
+    <div class="ofe-header-right">
+      <span class="ofe-badge-vis" [class.ofe-badge-vis-on]="visibilite">
+        <i class="fas fa-circle" style="font-size:7px"></i>
+        {{ visibilite ? 'Visible' : 'Masquée' }}
+      </span>
+      <span class="ofe-badge-appel" [class.ofe-badge-appel-on]="appel">
+        {{ appel ? '● Appel actif' : '○ Appel inactif' }}
+      </span>
+    </div>
   </div>
+
+  <div class="ofe-body">
+    <!-- Form column -->
+    <div class="ofe-form-col">
   <div class="stepper" id="stepper">
     <button class="step-tab" [class.active]="currentStep === 1" id="tab-1" (click)="goStep(1)">
       <div class="step-num" id="sn-1">1</div>
@@ -49,6 +68,22 @@
           <div class="form-group full">
             <div class="flbl">Description</div>
             <textarea class="finput" [(ngModel)]="description" (input)="syncLive()"></textarea>
+          </div>
+          <div class="form-group full">
+            <div class="flbl">PDF officiel signé <span style="font-weight:400;font-size:11px;color:#94A3B8">(optionnel — offre signée par le directeur)</span></div>
+            <div class="ofe-pdf-upload-area">
+              <input type="file" accept=".pdf" id="pdf-signe-input" style="display:none"
+                (change)="onPdfSelected($event)" />
+              <label for="pdf-signe-input" class="ofe-pdf-upload-label">
+                <i class="fas fa-file-pdf" style="color:#EF4444;font-size:18px"></i>
+                <span *ngIf="!selectedPdfFile">Cliquer pour sélectionner un PDF signé</span>
+                <span *ngIf="selectedPdfFile" style="color:#185FA5;font-weight:500">{{ selectedPdfFile.name }}</span>
+              </label>
+              <button *ngIf="selectedPdfFile" type="button" class="ofe-pdf-remove-btn"
+                (click)="selectedPdfFile = null" title="Supprimer">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
           </div>
           <div class="form-group full" style="gap: 0.55rem">
             <div class="toggle-row">
@@ -216,19 +251,77 @@
     </div>
   </div>
 
+    </div><!-- /ofe-form-col -->
+
+    <!-- Live preview sidebar -->
+    <div class="ofe-preview-col">
+      <div class="ofe-preview-card">
+        <div class="ofe-preview-head">
+          <i class="fas fa-eye" style="font-size:12px;color:#185FA5"></i>
+          Aperçu — Vue candidat
+        </div>
+        <div class="ofe-preview-body">
+          <div class="ofe-prev-title">{{ titre || '—' }}</div>
+          <div class="ofe-prev-type">
+            <span>{{ typeFormation === 'master' ? 'Master' : 'Cycle Ingénieur' }}</span>
+            <span class="ofe-prev-dot">·</span>
+            <span>{{ soustype }}</span>
+          </div>
+          <div class="ofe-prev-desc">{{ description || '—' }}</div>
+          <div class="ofe-prev-sep"></div>
+          <div class="ofe-prev-row">
+            <i class="fas fa-tag ofe-prev-icon"></i>
+            <span>Spécialité : <strong>{{ spec || '—' }}</strong></span>
+          </div>
+          <div class="ofe-prev-row">
+            <i class="fas fa-calendar ofe-prev-icon"></i>
+            <span>Limite préinscription : <strong>{{ dateLimitePre || '—' }}</strong></span>
+          </div>
+          <div class="ofe-prev-row">
+            <i class="fas fa-calendar-check ofe-prev-icon"></i>
+            <span>Limite dépôt dossier : <strong>{{ dateLimiteDep || '—' }}</strong></span>
+          </div>
+          <div class="ofe-prev-row">
+            <i class="fas fa-users ofe-prev-icon"></i>
+            <span>Capacité : <strong>{{ capaciteTotal }} places</strong></span>
+          </div>
+          <div class="ofe-prev-sep"></div>
+          <div class="ofe-prev-quotas">
+            <div class="ofe-prev-qlbl">Répartition des quotas</div>
+            <div *ngFor="let q of quotas" class="ofe-prev-quota-row">
+              <span class="ofe-prev-qcat">{{ q.cat }}</span>
+              <span class="ofe-prev-qplaces">{{ q.places }} places</span>
+            </div>
+            <div *ngIf="quotas.length === 0" style="font-size:11px;color:#94A3B8;font-style:italic">Aucun quota défini</div>
+          </div>
+          <div class="ofe-prev-sep"></div>
+          <div class="ofe-prev-status-row">
+            <span class="ofe-prev-status-badge" [class.ofe-prev-status-on]="visibilite">
+              {{ visibilite ? '✓ Visible' : '○ Masquée' }}
+            </span>
+            <span class="ofe-prev-status-badge" [class.ofe-prev-status-appel]="appel">
+              {{ appel ? '● Appel actif' : '— Appel inactif' }}
+            </span>
+          </div>
+        </div>
+        <div class="ofe-preview-foot">
+          <button class="btn btn-primary btn-sm" type="button" (click)="enregistrer()">
+            <i class="fas fa-save"></i> Enregistrer
+          </button>
+          <button class="btn btn-teal btn-sm" type="button" (click)="publierOffre()">
+            <i class="fas fa-upload"></i> Publier
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /ofe-body -->
+
+  <!-- Overlay preview modal (kept for backward compat) -->
   <div
     id="preview-wrap"
     *ngIf="previewOpen"
-    style="
-      position: absolute;
-      inset: 0;
-      background: rgba(2, 8, 23, 0.5);
-      z-index: 50;
-      border-radius: var(--border-radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    "
+    style="position:fixed;inset:0;background:rgba(2,8,23,.5);z-index:50;display:flex;align-items:center;justify-content:center"
   >
     <div class="preview-modal">
       <div class="preview-head">
@@ -240,10 +333,10 @@
           </svg>
         </button>
       </div>
-      <div id="preview-card-wrap" style="padding: 0.75rem">
+      <div id="preview-card-wrap" style="padding:0.75rem">
         <div class="offre-title">{{ titre }}</div>
-        <div class="offre-desc" style="margin-top: 0.4rem">{{ description }}</div>
-        <div class="offre-info-row" style="margin-top: 0.55rem">Spécialité: {{ spec }}</div>
+        <div class="offre-desc" style="margin-top:0.4rem">{{ description }}</div>
+        <div class="offre-info-row" style="margin-top:0.55rem">Spécialité: {{ spec }}</div>
         <div class="offre-info-row">Date limite: {{ dateLimitePre }}</div>
         <div class="offre-info-row">Capacité: {{ capaciteTotal }} places</div>
       </div>

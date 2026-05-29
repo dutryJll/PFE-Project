@@ -278,7 +278,7 @@ function normalizeActionLabel(value: string): string {
     MatTooltipModule,
   ],
   templateUrl: './dashboard-candidat.html',
-  styleUrls: ['./dashboard-candidat.css', './dashboard-candidat-wizard.css'],
+  styleUrls: ['./dashboard-candidat.css', './dashboard-candidat-wizard.css', './dashboard-candidat-sections.css'],
 })
 export class DashboardCandidatComponent implements OnInit, OnDestroy {
   private readonly candidatureApiBase = environment.candidatureServiceUrl;
@@ -287,6 +287,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   currentView: CandidatView = 'dashboard';
   currentDate: Date = new Date();
   candidatureTabIndex: number = 0;
+  candidatureViewMode: 'cards' | 'table' = 'cards';
 
   /** The next upcoming candidature with a future date_limite_modification. Drives the countdown. */
   get nextDeadlineCandidature(): Candidature | null {
@@ -379,6 +380,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   selectedCandidatureForInscription: Candidature | null = null;
   openActionMenuId: number | null = null;
   openInscriptionActionMenuId: number | null = null;
+  openHistoriqueMenuId: number | null = null;
+  showRecapModal: boolean = false;
   savingInscriptionNumberId: number | null = null;
   inscriptionExportFormat: ExportFormat = 'pdf';
   notificationsNonLues = 0;
@@ -1757,11 +1760,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   voirRecapitulatif(candidature: Candidature): void {
     this.closeActionMenu();
+    this.openHistoriqueMenuId = null;
     this.selectedCandidatureForEdit = candidature;
-    this.toastService.show(
-      `Affichage du récapitulatif pour la candidature ${candidature.numero}`,
-      'info',
-    );
+    this.showRecapModal = true;
+  }
+
+  fermerRecapModal(): void {
+    this.showRecapModal = false;
+    this.selectedCandidatureForEdit = null;
+  }
+
+  toggleHistoriqueMenu(id: number): void {
+    this.openHistoriqueMenuId = this.openHistoriqueMenuId === id ? null : id;
   }
 
   suivreCandidature(candidature: Candidature): void {

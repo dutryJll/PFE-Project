@@ -114,6 +114,7 @@ urlpatterns = router.urls + [
     # ── Générateur PDF officiel ISIMM (GFH FOR 09 v1) ─────────────────────────
     path('documents/generer-pdf/', views_pdf_official.generer_pdf_officiel, name='generer_pdf_officiel'),
     path('documents/verifier-liste/', views_pdf_official.verifier_liste, name='verifier_liste'),
+    path('documents/auditer-ocr/', views_pdf_official.auditer_document_ocr, name='auditer_document_ocr'),
 ]
 
 

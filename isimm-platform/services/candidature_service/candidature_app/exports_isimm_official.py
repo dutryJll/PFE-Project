@@ -400,7 +400,13 @@ class ISIMMPDFGenerator:
 
     def _get_titre_doc(self, etape: str, master_nom: str,
                        specialite_filter: str, annee: str) -> str:
-        base = 'présélectionnés' if etape == 'PRESELECTION' else 'sélectionnés'
+        _labels = {
+            'PRESELECTION': 'présélectionnés',
+            'SELECTION': 'sélectionnés',
+            'MASTER': 'présélectionnés (Master)',
+            'INGENIEUR': 'présélectionnés (Ingénieur)',
+        }
+        base = _labels.get(etape, 'sélectionnés')
         titre = f'Liste des étudiants {base} pour le Master : {master_nom}'
         if specialite_filter:
             titre += f' | Spécialité : {specialite_filter}'

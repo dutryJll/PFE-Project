@@ -4383,9 +4383,9 @@ def rectifier_score_reclamation(request, reclamation_id):
 
 def _has_commission_access_to_master(user, master_id):
     role = getattr(user, 'role', None)
-    if role == 'admin':
+    if role in ('admin', 'responsable_commission'):
         return True
-    if role in ['responsable_commission', 'commission']:
+    if role == 'commission':
         return MembreCommission.objects.filter(
             user=user,
             actif=True,

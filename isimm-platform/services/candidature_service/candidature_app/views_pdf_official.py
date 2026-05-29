@@ -2,14 +2,18 @@
 Contrôleur : générateur PDF officiel ISIMM
 GET /api/documents/generer-pdf
 """
+import logging
+import os
 from datetime import date
-from django.http import HttpResponse
+
 from django.conf import settings
+from django.http import HttpResponse
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-import os
+
+logger = logging.getLogger(__name__)
 
 from .models import Candidature, MembreCommission
 from .exports_isimm_official import ISIMMPDFGenerator
@@ -81,14 +85,18 @@ def generer_pdf_officiel(request):
 
     master_id = int(master_id_str)
 
-    if etape not in ('PRESELECTION', 'SELECTION'):
+    ETAPES_VALIDES = ('PRESELECTION', 'SELECTION', 'MASTER', 'INGENIEUR')
+    if etape not in ETAPES_VALIDES:
         return Response(
-            {'error': "etape doit être 'PRESELECTION' ou 'SELECTION'."},
+            {'error': f"etape doit être l'un de : {', '.join(ETAPES_VALIDES)}."},
             status=status.HTTP_400_BAD_REQUEST
         )
+    # Normalise MASTER/INGENIEUR to PRESELECTION for query logic
+    etape_query = 'PRESELECTION' if etape in ('MASTER', 'INGENIEUR') else etape
 
     # ── Vérification des droits sur ce master ─────────────────────────────────
-    if role in ('responsable_commission', 'commission'):
+    # responsable_commission a accès global ; commission (membre) est limité à son master
+    if role == 'commission':
         has_access = MembreCommission.objects.filter(
             user=request.user,
             actif=True,
@@ -107,7 +115,10 @@ def generer_pdf_officiel(request):
 
     qs = Candidature.objects.filter(master_id=master_id).select_related('candidat')
 
-    if etape == 'PRESELECTION':
+    if etape in ('INGENIEUR',):
+        qs = qs.filter(type_concours='ingenieur')
+
+    if etape_query == 'PRESELECTION':
         qs = qs.filter(statut__in=statuts_presel)
     else:
         qs = qs.filter(statut__in=statuts_selection)
@@ -167,7 +178,8 @@ def generer_pdf_officiel(request):
         )
 
     # ── Nom du fichier ────────────────────────────────────────────────────────
-    etape_label = 'Preselection' if etape == 'PRESELECTION' else 'Selection'
+    etape_labels = {'PRESELECTION': 'Preselection', 'SELECTION': 'Selection', 'MASTER': 'Master', 'INGENIEUR': 'Ingenieur'}
+    etape_label = etape_labels.get(etape, etape.capitalize())
     spec_label = f'_{specialite_filter.replace(" ", "_")}' if specialite_filter else ''
     filename = f'ISIMM_{etape_label}{spec_label}_{annee.replace("/", "-")}.pdf'
 
@@ -208,3 +220,100 @@ def verifier_liste(request):
         })
     except Exception:
         return Response({'valid': False, 'message': 'Liste introuvable.'})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OCR Document Audit View
+# POST /api/documents/auditer-ocr/
+# ─────────────────────────────────────────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def auditer_document_ocr(request):
+    """
+    Analyse OCR locale d'un document soumis par le responsable/membre.
+
+    Body (multipart/form-data) :
+        fichier        : fichier PDF ou image
+        candidature_id : int (optionnel — pour déclencher flag_fraude si écart)
+        score_declare  : float (optionnel — score déclaré par le candidat)
+
+    Retourne le résultat d'audit OCR et met à jour flag_fraude si nécessaire.
+    """
+    from .services_ocr_local import OCRDocumentAuditor
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusée.'}, status=status.HTTP_403_FORBIDDEN)
+
+    fichier = request.FILES.get('fichier')
+    if not fichier:
+        return Response({'error': 'Aucun fichier fourni.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    candidature_id_str = request.data.get('candidature_id', '').strip()
+    score_declare_str = request.data.get('score_declare', '').strip()
+
+    score_declare = None
+    if score_declare_str:
+        try:
+            score_declare = float(score_declare_str)
+        except ValueError:
+            pass
+
+    # Récupère le score déclaré depuis la candidature si non fourni
+    candidature = None
+    if candidature_id_str and candidature_id_str.isdigit():
+        try:
+            candidature = Candidature.objects.get(pk=int(candidature_id_str))
+            if score_declare is None:
+                score_declare = float(candidature.score or 0) or None
+        except Candidature.DoesNotExist:
+            pass
+
+    try:
+        auditor = OCRDocumentAuditor()
+        result = auditor.analyser_document(fichier, score_declare=score_declare)
+    except Exception as exc:
+        logger.error('OCR audit error: %s', exc)
+        return Response({'error': f'Erreur OCR : {str(exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # ── Mise à jour flag_fraude ───────────────────────────────────────────────
+    if candidature and result.get('flag_fraude'):
+        candidature.flag_fraude = True
+        candidature.save(update_fields=['flag_fraude'])
+
+        # Notification pour le responsable
+        try:
+            from .models import Notification, MembreCommission
+            responsables = MembreCommission.objects.filter(
+                commission__master=candidature.master,
+                est_responsable=True,
+                actif=True,
+            ).select_related('user')
+            for mc in responsables:
+                Notification.objects.create(
+                    user=mc.user,
+                    type_notification='alerte_fraude',
+                    titre='⚠️ Alerte Fraude Détectée',
+                    message=(
+                        f'L\'OCR a détecté un écart de {result["delta"]:.2f} pts '
+                        f'pour la candidature #{candidature.numero or candidature.id}. '
+                        f'Score déclaré : {result["score_declare"]}, '
+                        f'Score extrait : {result["score_extrait"]}.'
+                    ),
+                    candidature=candidature,
+                    lu=False,
+                )
+        except Exception as notif_exc:
+            logger.warning('Notification fraude échouée : %s', notif_exc)
+
+    return Response({
+        'score_extrait': result['score_extrait'],
+        'score_declare': result['score_declare'],
+        'delta': result['delta'],
+        'flag_fraude': result['flag_fraude'],
+        'confiance': result['confiance'],
+        'moteur': result['moteur'],
+        'sha256': result['sha256'],
+        'anomalies': result['anomalies'],
+        'texte_extrait_preview': (result.get('texte_extrait') or '')[:500],
+    })

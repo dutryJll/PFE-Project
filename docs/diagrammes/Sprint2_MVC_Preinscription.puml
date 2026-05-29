@@ -1,0 +1,414 @@
+@startuml Sprint2_MVC_Preinscription
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam backgroundColor #F8FAFC
+skinparam ArrowColor #374151
+skinparam ArrowThickness 1.5
+skinparam packageBorderColor #059669
+skinparam packageFontStyle bold
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #10B981
+skinparam classHeaderBackgroundColor #ECFDF5
+
+left to right direction
+
+package "Angular 17  —  Frontend" as ANGULAR #ECFDF5 {
+
+  package "Components / Views" as AC #D1FAE5 {
+    class DashboardCandidatComponent {
+      + loadMetrics() : void
+      + loadCandidatures() : void
+      + showCountdown() : void
+      + get nextDeadlineCandidature() : CandidatureDTO
+    }
+    class CandidatureFormComponent {
+      + createCandidature() : void
+      + updateCandidature() : void
+      + submitCandidature() : void
+      + previewScore() : void
+    }
+    class OffresListComponent {
+      + loadOffers() : void
+      + filterByMaster() : void
+    }
+    class MesCandidaturesComponent {
+      + loadMesCandidatures() : void
+      + cancelCandidature() : void
+    }
+    class NotificationsComponent {
+      + loadNotifications() : void
+      + markAllRead() : void
+    }
+  }
+
+  package "Services" as AS #A7F3D0 {
+    class CandidatureService {
+      + create(data) : Observable
+      + update(id, data) : Observable
+      + submit(id) : Observable
+      + cancel(id) : Observable
+      + getMesCandidatures() : Observable
+      + previewScore(data) : Observable
+    }
+    class OffreService {
+      + getMasters() : Observable
+      + getAvailableOffers() : Observable
+      + getSpecialites(masterId) : Observable
+      + canReapply(masterId) : Observable
+    }
+    class NotificationService {
+      + getNotifications() : Observable
+      + markRead(id) : Observable
+      + markAllRead() : Observable
+    }
+    class LiveMetricsService {
+      + getLiveMetrics() : Observable
+      + connectWebSocket() : void
+    }
+  }
+
+  package "Models / DTOs  (TypeScript Interfaces)" as AM #FEF9C3 {
+
+    class CandidatureDTO <<interface>> {
+      + id : number
+      + numero : string
+      + master_nom : string
+      + master_id : number
+      + statut : string
+      + score : number
+      + choix_priorite : number
+      + dossier_depose : boolean
+      + dossier_valide : boolean
+      + date_soumission : string
+      + date_limite_modification : string
+      + peut_modifier : boolean
+      + jours_restants : number
+      + historique_statut : HistoriqueStatutItemDTO[]
+    }
+
+    class MasterDTO <<interface>> {
+      + id : number
+      + nom : string
+      + type : string
+      + description : string
+      + date_limite : string
+      + places : number
+      + statut : "ouvert" | "ferme"
+      + specialite : string
+    }
+
+    class OffreDTO <<interface>> {
+      + id : number
+      + master_id : number
+      + titre : string
+      + type : "master" | "cycle_ingenieur"
+      + sous_type : string
+      + specialite : string
+      + date_limite : string
+      + places : number
+      + statut : "ouvert" | "ferme"
+      + document_officiel_pdf_url : string
+      + nombre_candidats_inscrits : number
+    }
+
+    class NotificationItemDTO <<interface>> {
+      + id : number
+      + titre : string
+      + message : string
+      + date : string
+      + type : "info" | "success" | "warning" | "danger"
+      + lue : boolean
+    }
+
+    class HistoriqueStatutItemDTO <<interface>> {
+      + statut : string
+      + date : string
+      + commentaire : string
+    }
+
+    class DeadlineCountdownDTO <<interface>> {
+      + days : number
+      + hours : number
+      + minutes : number
+      + seconds : number
+      + expired : boolean
+    }
+
+    CandidatureDTO --> HistoriqueStatutItemDTO : contient
+    CandidatureDTO --> DeadlineCountdownDTO : alimente
+    OffreDTO --> MasterDTO : lié à
+  }
+
+}
+
+package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
+
+  package "Controller  (views.py)" as DC #D1FAE5 {
+    class "create_candidature" as cc << POST /candidatures/create/ >>
+    class "modifier_candidature" as mc << PUT /{id}/modifier/ >>
+    class "soumettre_candidature" as sc << POST /candidatures/soumettre/ >>
+    class "annuler_candidature" as ac << POST /{id}/annuler/ >>
+    class "mes_candidatures" as msc << GET /mes-candidatures/ >>
+    class "preview_score_candidature" as ps << POST /preview-score/ >>
+    class "lister_masters" as lm << GET /masters/ >>
+    class "get_available_offers" as gao << GET /offers-available/ >>
+    class "get_specialites" as gs << GET /masters/{id}/specialites/ >>
+    class "can_reapply" as cr << GET /masters/{id}/can-reapply/ >>
+    class "mes_notifications" as mn << GET /mes-notifications/ >>
+    class "marquer_toutes_lues" as ml << POST /notifications/mark-all-read/ >>
+    class "candidate_live_metrics" as clm << GET /candidate-live-metrics/ >>
+  }
+
+  package "Service  (services.py)" as DS #FEF9C3 {
+    class CandidatureBusinessService {
+      + create(user, data) : Candidature
+      + update(candidature, data) : Candidature
+      + submit(candidature) : Candidature
+      + cancel(candidature) : void
+      + validate_double_inscription() : bool
+      + detect_fraude(score_front, score_back) : bool
+    }
+    class ScoreService {
+      + calculate_score(candidature) : float
+      + preview_score(data) : float
+      + apply_coefficients(master, data) : float
+    }
+    class MasterService {
+      + list_masters() : QuerySet
+      + get_available_offers() : QuerySet
+      + get_specialites(master_id) : QuerySet
+      + can_reapply(user, master_id) : bool
+    }
+    class NotificationService {
+      + get_for_user(user) : QuerySet
+      + mark_all_read(user) : void
+      + send_ws_notification(user_id, payload) : void
+    }
+  }
+
+  package "Repository  (ORM / models.py)" as DR #FEE2E2 {
+    class CandidatureRepository {
+      + create(data) : Candidature
+      + find_by_user(user) : QuerySet
+      + find_by_id(id) : Candidature
+      + update(c) : Candidature
+    }
+    class MasterRepository {
+      + all_active() : QuerySet
+      + find_by_id(id) : Master
+    }
+    class AppelCandidatureRepository {
+      + get_open_offers() : QuerySet
+      + find_by_master(master) : AppelCandidature
+    }
+    class NotificationRepository {
+      + find_by_user(user) : QuerySet
+      + mark_all_read(user) : void
+    }
+  }
+
+  package "Model" as DM #F9FAFB {
+    enum TypeCandidature <<enumeration>> {
+      MASTER_PROFESSIONNEL : String
+      MASTER_DE_RECHERCHE : String
+      INGENIEUR : String
+    }
+
+    enum StatutCandidature <<enumeration>> {
+      SOUMISE : String
+      PRESELECTIONEE : String
+      REJETEE : String
+      SELECTIONEE : String
+      EN_ATTENTE : String
+      INSCRIPTION_CONFIRMEE : String
+    }
+
+    enum StatutAppelCandidature <<enumeration>> {
+      BROUILLON : String
+      OUVERT : String
+      PRESELECTION : String
+      SELECTION : String
+      CLOTURE : String
+    }
+
+    class Utilisateur {
+      - UID : String
+      - nom : String
+      - prenom : String
+      - telephone : String
+      - username : String
+      - password : String
+      - email : String
+    }
+
+    class Notification {
+      - idNotif : int
+      - label : string
+      - contenu : string
+      - dateEnvoi : int
+      - estLu : int
+    }
+
+    class Jeton {
+      - jeton : String
+      - expirationDate : Date
+      - revokerd : boolean
+    }
+
+    class Role {
+      - nom : String
+    }
+
+    class Action {
+      - refAction : String
+      - nom : String
+      - description : String
+    }
+
+    class Commission {
+      - codecommission : String
+      - nom : String
+      - dateDebut : Date
+      - dateFin : Date
+      - estActive : String
+      - description : boolean
+      + ajouterMembre() : void
+      + retirerMembre() : void
+      + designerResponsable() : void
+      + clotureMandat() : boolean
+    }
+
+    class CalendrierAdmission {
+      - code : String
+      - AnneeUniversitaire : String
+      + estPhaseActive() : boolean
+    }
+
+    class Echeance {
+      - nom : String
+      - deadline : Date
+    }
+
+    class AppelCandidature {
+      - codeAppel : String
+      - anneeUniversitaire : String
+      - statut : StatutAppelCandidature
+      - datePublication : Date
+      + changerStatut() : void
+      + genererClassement() : void
+      + verifierPaiementsCandidats() : void
+      + genererListePreselection() : void
+      + genererListeSelectionFinale() : void
+    }
+
+    class ParcoursAdmission {
+      - codeParcoursAdmission : String
+      - intitule : String
+      - description : String
+      - anneeIntegration : int
+      - type : Statut
+      - CapaciteAccueil : int
+    }
+
+    class SpecialiteParcours {
+      - nom : String
+    }
+
+    class CapaciteAccueil {
+      - interne : int
+      - externe : int
+    }
+
+    class Candidature {
+      - refCandidature : String
+      - score : double
+      - rang : string
+      - statut : StatutCandidature
+      - dateSoumission : Date
+      + mettreAJourStatut() : void
+      + validerPaiementInscription() : boolean
+      + controllerPreuvePaiement() : void
+    }
+
+    class HistoriqueStatutCandidature {
+      - statut : statutCandidature
+      - dateStatut : Date
+    }
+
+    class ParcoursAcademique {
+      - titre : int
+      - anneeObtention : int
+      - etablissement : String
+    }
+
+    class CritereEvaluation {
+      - nom : String
+    }
+
+    class ValeurCritere {
+      - value : double
+    }
+
+    ' Relations du modèle d'origine (optionnel pour la cohérence visuelle interne)
+    Utilisateur "0..*" -- "0..*" Notification : concerne
+    Utilisateur "1..1" -- "0..*" Jeton : utilise
+    Utilisateur "1..1" -- "1..1" Role : possède
+    Role "0..1" -- "0..*" Action : attribué
+    Utilisateur "0..1" -- "0..*" Commission : Responsable
+    Utilisateur "1..*" -- "0..*" Commission : membres
+    Commission "1..1" -- "0..*" AppelCandidature : évalue / traite / gère
+    CalendrierAdmission "1..1" -- "0..*" Echeance : contient
+    CalendrierAdmission "1..1" -- "1..1" AppelCandidature : appartient à
+    AppelCandidature "1..1" -- "1..1" ParcoursAdmission : fait l'objet de
+    ParcoursAdmission "1..1" -- "1..1" SpecialiteParcours : offre
+    SpecialiteParcours "1..1" -- "1..1" CapaciteAccueil
+    Utilisateur "1..1" -- "0..*" Candidature : dépose
+    Candidature "1..1" -- "0..*" HistoriqueStatutCandidature : possède_historique
+    Candidature "0..*" -- "1..1" ParcoursAcademique : porte_sur
+    Candidature "1..1" -- "1..1" AppelCandidature : concerne
+    CritereEvaluation "0..*" -- "1..1" ValeurCritere
+  }
+
+}
+
+' Angular internal
+DashboardCandidatComponent --> CandidatureService
+DashboardCandidatComponent --> NotificationService
+DashboardCandidatComponent --> LiveMetricsService
+CandidatureFormComponent --> CandidatureService
+CandidatureFormComponent --> OffreService
+OffresListComponent --> OffreService
+MesCandidaturesComponent --> CandidatureService
+NotificationsComponent --> NotificationService
+CandidatureService ..> AM
+OffreService ..> AM
+NotificationService ..> AM
+
+' Django internal
+cc --> CandidatureBusinessService
+mc --> CandidatureBusinessService
+sc --> CandidatureBusinessService
+ac --> CandidatureBusinessService
+msc --> CandidatureBusinessService
+ps --> ScoreService
+lm --> MasterService
+gao --> MasterService
+gs --> MasterService
+cr --> MasterService
+mn --> NotificationService
+ml --> NotificationService
+clm --> CandidatureBusinessService
+
+CandidatureBusinessService --> CandidatureRepository
+CandidatureBusinessService --> ScoreService
+ScoreService --> CandidatureRepository
+MasterService --> MasterRepository
+MasterService --> AppelCandidatureRepository
+NotificationService --> NotificationRepository
+
+CandidatureRepository ..> DM
+MasterRepository ..> DM
+AppelCandidatureRepository ..> DM
+NotificationRepository ..> DM
+
+@enduml

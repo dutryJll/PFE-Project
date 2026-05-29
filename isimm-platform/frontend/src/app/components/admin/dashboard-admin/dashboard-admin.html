@@ -53,11 +53,6 @@
         <span>Gestion des Commissions </span>
       </a>
 
-      <a class="nav-item" (click)="allerGestionResponsables()">
-        <i class="fas fa-id-badge"></i>
-        <span>Gestion des Responsables</span>
-      </a>
-
       <a
         class="nav-item"
         [class.active]="currentView === 'parametres'"
@@ -116,6 +111,14 @@
 
     <!-- ✅ TABLEAU DE BORD -->
     <div *ngIf="currentView === 'dashboard'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Vue globale</div>
+          <h2 class="adm-ph-title">Tableau de bord</h2>
+          <p class="adm-ph-sub">Vue d'ensemble de la plateforme ISIMM — utilisateurs, candidatures et activité récente.</p>
+        </div>
+        <span class="date">{{ currentDate | date: 'EEEE d MMMM yyyy' }}</span>
+      </div>
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)">
@@ -212,17 +215,21 @@
     </div>
 
     <div *ngIf="currentView === 'utilisateurs'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Comptes</div>
+          <h2 class="adm-ph-title">Gestion des utilisateurs</h2>
+          <p class="adm-ph-sub">Consultez, filtrez et gérez les comptes. Activez ou suspendez un utilisateur depuis le menu kebab.</p>
+        </div>
+        <button type="button" class="btn-primary" (click)="downloadUsersFile()">
+          <i class="fas fa-download"></i> Exporter
+        </button>
+      </div>
       <div class="section-card">
         <div class="section-header">
           <div>
-            <h2>👥 Gestion des utilisateurs</h2>
-            <p class="admin-site-subtitle">
-              Consultez les comptes, filtrez les statuts et gérez l'activation depuis cette page.
-            </p>
+            <h2>👥 Liste des utilisateurs</h2>
           </div>
-          <button type="button" class="btn-primary" (click)="downloadUsersFile()">
-            <i class="fas fa-download"></i> Exporter les utilisateurs
-          </button>
         </div>
 
         <div class="users-toolbar">
@@ -352,11 +359,20 @@
     </div>
 
     <div *ngIf="currentView === 'notifications'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Alertes</div>
+          <h2 class="adm-ph-title">Notifications</h2>
+          <p class="adm-ph-sub">{{ currentDate | date: 'EEEE d MMMM y' }} — {{ notificationsNonLues }} non lue(s)</p>
+        </div>
+        <button class="btn-secondary" (click)="marquerToutesNotificationsCommeLues()" *ngIf="notificationsNonLues > 0">
+          <i class="fas fa-check-double"></i> Tout marquer lu
+        </button>
+      </div>
       <div class="section-card">
         <div class="section-header">
           <div>
-            <h2>🔔 Notifications</h2>
-            <small class="notifications-date">{{ currentDate | date: 'EEEE d MMMM y' }}</small>
+            <h2>🔔 Toutes les notifications</h2>
           </div>
         </div>
 
@@ -443,12 +459,19 @@
 
     <!-- ✅ GESTION CONCOURS INGÉNIEUR -->
     <div *ngIf="currentView === 'concours-ingenieur'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Offres</div>
+          <h2 class="adm-ph-title">Parcours Ingénieur</h2>
+          <p class="adm-ph-sub">Gérez les parcours Ingénieur synchronisés avec le rendu Master.</p>
+        </div>
+        <button type="button" class="btn-primary" (click)="ajouterOffreIngenieur()">
+          <i class="fas fa-plus"></i> Ajouter un parcours
+        </button>
+      </div>
       <div class="section-card">
         <div class="section-header">
           <h2>🛤️ Parcours Ingénieur</h2>
-          <button type="button" class="btn-primary" (click)="ajouterOffreIngenieur()">
-            <i class="fas fa-plus"></i> Ajouter un parcours
-          </button>
         </div>
 
         <p class="admin-site-subtitle">
@@ -562,12 +585,19 @@
 
     <!-- ✅ GESTION MASTERS -->
     <div *ngIf="currentView === 'masters'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Offres</div>
+          <h2 class="adm-ph-title">Parcours Master</h2>
+          <p class="adm-ph-sub">Publiez les appels d'offre Master avec spécialité et capacité d'accueil.</p>
+        </div>
+        <button type="button" class="btn-primary" (click)="ajouterMaster()">
+          <i class="fas fa-plus"></i> Ajouter un parcours
+        </button>
+      </div>
       <div class="section-card">
         <div class="section-header">
           <h2>🛤️ Parcours Master</h2>
-          <button type="button" class="btn-primary" (click)="ajouterMaster()">
-            <i class="fas fa-plus"></i> Ajouter un parcours
-          </button>
         </div>
 
         <p class="admin-site-subtitle">
@@ -908,6 +938,13 @@
 
     <!-- ✅ RAPPORTS -->
     <div *ngIf="currentView === 'rapports'" class="view-content rapports-view">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Analyse</div>
+          <h2 class="adm-ph-title">Statistiques & Rapports</h2>
+          <p class="adm-ph-sub">Tableau de pilotage des candidatures, des comptes utilisateurs et des tendances par parcours.</p>
+        </div>
+      </div>
       <div class="section-card rapports-hero-card">
         <div class="rapports-hero-head">
           <div>
@@ -1010,6 +1047,13 @@
 
     <!-- ✅ PROFIL ADMIN -->
     <div *ngIf="currentView === 'profil'" class="view-content">
+      <div class="adm-ph">
+        <div>
+          <div class="adm-ph-eyebrow">Administration · Compte</div>
+          <h2 class="adm-ph-title">Mon Profil</h2>
+          <p class="adm-ph-sub">Modifiez vos informations personnelles et votre mot de passe.</p>
+        </div>
+      </div>
       <div class="profile-shell">
         <div class="profile-hero-card">
           <div class="profile-avatar">
