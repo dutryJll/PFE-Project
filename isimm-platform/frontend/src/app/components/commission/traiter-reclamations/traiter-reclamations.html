@@ -147,15 +147,19 @@
             <span class="numero-badge">#{{ reclamation.id }}</span>
           </div>
           <div class="reclamation-statut">
-            <span class="statut-badge" [class]="'badge-' + reclamation.statut">
-              <i
-                class="fas"
-                [class.fa-clock]="reclamation.statut === 'en_attente'"
-                [class.fa-check]="reclamation.statut === 'acceptee'"
-                [class.fa-times]="reclamation.statut === 'rejetee'"
-              ></i>
-              {{ getStatutLabel(reclamation.statut) }}
-            </span>
+            <div class="etat-field">
+              <span class="etat-label">État</span>
+              <select
+                class="etat-select"
+                [ngClass]="'etat-' + reclamation.statut"
+                [value]="reclamation.statut"
+                (change)="changerStatut(reclamation, $any($event.target).value)"
+              >
+                <option value="en_attente">En attente</option>
+                <option value="acceptee">Acceptée</option>
+                <option value="rejetee">Rejetée</option>
+              </select>
+            </div>
           </div>
         </div>
 

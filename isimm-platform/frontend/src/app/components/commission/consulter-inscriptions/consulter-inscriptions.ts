@@ -29,6 +29,7 @@ export class ConsulterInscriptions implements OnInit {
   inscriptions: InscriptionRecord[] = [];
   inscriptionsFiltrees: InscriptionRecord[] = [];
   recherche = '';
+  exportMenuOpen = false;
   private activeCommissionCategory: 'ingenieur' | 'master-ds' | 'master-gl' | null = null;
 
   constructor(
@@ -149,6 +150,31 @@ export class ConsulterInscriptions implements OnInit {
     if (paiement === 'Payé') return 'paiement-paye';
     if (paiement === 'Non vérifié') return 'paiement-non-verifie';
     return 'paiement-en-attente';
+  }
+
+  exporterExcel(): void {
+    const rows = this.inscriptionsFiltrees.map((r) => ({
+      'N° Inscription': r.matricule || '',
+      Candidat: r.candidat,
+      Email: r.email,
+      'Master / Spécialité': r.specialite,
+      'Date dépôt': r.dateDepot,
+      Paiement: r.paiement,
+      Statut: r.statut,
+    }));
+    const header = Object.keys(rows[0] || {}).join('\t');
+    const body = rows.map((r) => Object.values(r).join('\t')).join('\n');
+    const blob = new Blob([header + '\n' + body], { type: 'text/tab-separated-values' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inscriptions.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  exporterPDF(): void {
+    window.print();
   }
 
   private getCommissionCategoryFromId(

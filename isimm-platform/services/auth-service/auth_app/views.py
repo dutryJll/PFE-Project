@@ -257,6 +257,8 @@ def update_profile(request):
     user.last_name = data.get('last_name', user.last_name)
     user.phone = data.get('phone', user.phone)
     user.address = data.get('address', user.address)
+    if 'specialite' in data:
+        user.specialite = data.get('specialite') or ''
     user.save()
     
     return Response(
@@ -528,8 +530,24 @@ def create_commission_member(request):
     
     if not email or not first_name or not last_name:
         return Response(
-            {'error': 'Email, prénom et nom requis'}, 
+            {'error': 'Email, prénom et nom requis'},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+    PARCOURS_OFFICIELS = [
+        'Master Professionnel Génie Logiciel (MPGL)',
+        'Mastère Professionnel en sciences de données (MPDS)',
+        'Mastère Professionnel en Ingénieries en Instrumentation industrielle (MP3I)',
+        'Mastère Recherche en Génie logiciel (MRGL)',
+        'Mastère Recherche en micro-électronique et instrumentation (MRMI)',
+        'Ingénieur en sciences Appliquées et Technologie : Génie Logiciel',
+    ]
+    if specialite and specialite not in PARCOURS_OFFICIELS:
+        return Response(
+            {
+                'error': f"Spécialité invalide. Valeurs acceptées : {', '.join(PARCOURS_OFFICIELS)}"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
         )
     
     created_new_user = False
@@ -551,6 +569,8 @@ def create_commission_member(request):
         user.is_email_verified = False
         user.is_active = False
         user.set_unusable_password()
+        if specialite:
+            user.specialite = specialite
     else:
         created_new_user = True
         # Créer l'utilisateur SANS mot de passe
@@ -560,6 +580,7 @@ def create_commission_member(request):
             first_name=first_name,
             last_name=last_name,
             role=role,
+            specialite=specialite or '',
             is_email_verified=False,
             is_active=False
         )

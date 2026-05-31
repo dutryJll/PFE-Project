@@ -1,4 +1,7 @@
 @startuml Sprint2_MVC_Preinscription
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 120
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 11
 skinparam backgroundColor #F8FAFC
@@ -134,9 +137,6 @@ package "Angular 17  —  Frontend" as ANGULAR #ECFDF5 {
       + expired : boolean
     }
 
-    CandidatureDTO --> HistoriqueStatutItemDTO : contient
-    CandidatureDTO --> DeadlineCountdownDTO : alimente
-    OffreDTO --> MasterDTO : lié à
   }
 
 }
@@ -144,19 +144,19 @@ package "Angular 17  —  Frontend" as ANGULAR #ECFDF5 {
 package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
 
   package "Controller  (views.py)" as DC #D1FAE5 {
-    class "create_candidature" as cc << POST /candidatures/create/ >>
-    class "modifier_candidature" as mc << PUT /{id}/modifier/ >>
-    class "soumettre_candidature" as sc << POST /candidatures/soumettre/ >>
-    class "annuler_candidature" as ac << POST /{id}/annuler/ >>
-    class "mes_candidatures" as msc << GET /mes-candidatures/ >>
-    class "preview_score_candidature" as ps << POST /preview-score/ >>
-    class "lister_masters" as lm << GET /masters/ >>
-    class "get_available_offers" as gao << GET /offers-available/ >>
-    class "get_specialites" as gs << GET /masters/{id}/specialites/ >>
-    class "can_reapply" as cr << GET /masters/{id}/can-reapply/ >>
-    class "mes_notifications" as mn << GET /mes-notifications/ >>
-    class "marquer_toutes_lues" as ml << POST /notifications/mark-all-read/ >>
-    class "candidate_live_metrics" as clm << GET /candidate-live-metrics/ >>
+    class "CreateCandidatureController" as cc
+    class "ModifierCandidatureController" as mc
+    class "SoumettreCandidatureController" as sc
+    class "AnnulerCandidatureController" as ac
+    class "MesCandidaturesController" as msc
+    class "PreviewScoreController" as ps
+    class "ListerMastersController" as lm
+    class "GetAvailableOffersController" as gao
+    class "GetSpecialitesController" as gs
+    class "CanReapplyController" as cr
+    class "MesNotificationsController" as mn
+    class "MarquerToutesLuesController" as ml
+    class "CandidateLiveMetricsController" as clm
   }
 
   package "Service  (services.py)" as DS #FEF9C3 {
@@ -207,14 +207,16 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
     }
   }
 
-  package "Model" as DM #F9FAFB {
-    enum TypeCandidature <<enumeration>> {
+  package "Model" as DM #F8FAFC {
+
+    ' ── Enums JAUNE ──
+    enum TypeCandidature #FEF9C3 {
       MASTER_PROFESSIONNEL : String
       MASTER_DE_RECHERCHE : String
       INGENIEUR : String
     }
 
-    enum StatutCandidature <<enumeration>> {
+    enum StatutCandidature #FEF9C3 {
       SOUMISE : String
       PRESELECTIONEE : String
       REJETEE : String
@@ -223,7 +225,7 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       INSCRIPTION_CONFIRMEE : String
     }
 
-    enum StatutAppelCandidature <<enumeration>> {
+    enum StatutAppelCandidature #FEF9C3 {
       BROUILLON : String
       OUVERT : String
       PRESELECTION : String
@@ -231,7 +233,8 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       CLOTURE : String
     }
 
-    class Utilisateur {
+    ' ── Classes BLEUES — Auth ──
+    class Utilisateur #D6E4FF {
       - UID : String
       - nom : String
       - prenom : String
@@ -241,31 +244,32 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       - email : String
     }
 
-    class Notification {
-      - idNotif : int
+    class Jeton #D6E4FF {
+      - jeton : String
+      - expirationDate : Date
+      - revoked : boolean
+    }
+
+    class Role #D6E4FF {
+      - nom : String
+    }
+
+    class Action #D6E4FF {
+      - refAction : String
+      - nom : String
+      - description : String
+    }
+
+    ' ── Classes JAUNES — Domaine métier ──
+    class Notification #FEF9C3 {
+      - idnotif : int
       - label : string
       - contenu : string
       - dateEnvoi : int
       - estLu : int
     }
 
-    class Jeton {
-      - jeton : String
-      - expirationDate : Date
-      - revokerd : boolean
-    }
-
-    class Role {
-      - nom : String
-    }
-
-    class Action {
-      - refAction : String
-      - nom : String
-      - description : String
-    }
-
-    class Commission {
+    class Commission #FEF9C3 {
       - codecommission : String
       - nom : String
       - dateDebut : Date
@@ -278,30 +282,30 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       + clotureMandat() : boolean
     }
 
-    class CalendrierAdmission {
+    class CalendrierAdmission #FEF9C3 {
       - code : String
       - AnneeUniversitaire : String
       + estPhaseActive() : boolean
     }
 
-    class Echeance {
+    class Echeance #FEF9C3 {
       - nom : String
       - deadline : Date
     }
 
-    class AppelCandidature {
+    class AppelCandidature #FEF9C3 {
       - codeAppel : String
       - anneeUniversitaire : String
       - statut : StatutAppelCandidature
       - datePublication : Date
       + changerStatut() : void
       + genererClassement() : void
-      + verifierPaiementsCandidats() : void
+      + verifierPaiementCandidats() : void
       + genererListePreselection() : void
       + genererListeSelectionFinale() : void
     }
 
-    class ParcoursAdmission {
+    class ParcoursAdmission #FEF9C3 {
       - codeParcoursAdmission : String
       - intitule : String
       - description : String
@@ -310,16 +314,16 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       - CapaciteAccueil : int
     }
 
-    class SpecialiteParcours {
+    class SpecialiteParcours #FEF9C3 {
       - nom : String
     }
 
-    class CapaciteAccueil {
+    class CapaciteAccueil #FEF9C3 {
       - interne : int
       - externe : int
     }
 
-    class Candidature {
+    class Candidature #FEF9C3 {
       - refCandidature : String
       - score : double
       - rang : string
@@ -330,85 +334,52 @@ package "Django 4  —  Backend  (candidature_service)" as DJANGO #FFFBEB {
       + controllerPreuvePaiement() : void
     }
 
-    class HistoriqueStatutCandidature {
-      - statut : statutCandidature
+    class HistoriqueStatutCandidature #FEF9C3 {
+      - statut : StatutCandidature
       - dateStatut : Date
     }
 
-    class ParcoursAcademique {
+    class ParcoursAcademique #FEF9C3 {
       - titre : int
       - anneeObtention : int
       - etablissement : String
     }
 
-    class CritereEvaluation {
+    class CritereEvaluation #FEF9C3 {
       - nom : String
     }
 
-    class ValeurCritere {
+    class ValeurCritere #FEF9C3 {
       - value : double
     }
 
-    ' Relations du modèle d'origine (optionnel pour la cohérence visuelle interne)
-    Utilisateur "0..*" -- "0..*" Notification : concerne
-    Utilisateur "1..1" -- "0..*" Jeton : utilise
-    Utilisateur "1..1" -- "1..1" Role : possède
-    Role "0..1" -- "0..*" Action : attribué
-    Utilisateur "0..1" -- "0..*" Commission : Responsable
-    Utilisateur "1..*" -- "0..*" Commission : membres
-    Commission "1..1" -- "0..*" AppelCandidature : évalue / traite / gère
-    CalendrierAdmission "1..1" -- "0..*" Echeance : contient
+    ' ── Relations (lignes sans pointe de flèche) ──
+
+    ' Auth
+    Utilisateur "1..1" -- "1..1" Role         : possède
+    Role         "0..1" -- "0..*" Action       : attribue
+    Utilisateur "1..1" -- "0..*" Jeton         : utilise
+    Utilisateur "0..*" -- "0..*" Notification  : concerne
+
+    ' Commission & Calendrier
+    Utilisateur  "0..1" -- "0..*" Commission        : Responsable
+    Utilisateur  "1..*" -- "0..*" Commission        : membres
+    Commission   "1..1" -- "0..*" AppelCandidature  : évalue
+    CalendrierAdmission "1..1" -- "0..*" Echeance         : contient
     CalendrierAdmission "1..1" -- "1..1" AppelCandidature : appartient à
-    AppelCandidature "1..1" -- "1..1" ParcoursAdmission : fait l'objet de
-    ParcoursAdmission "1..1" -- "1..1" SpecialiteParcours : offre
+    AppelCandidature "1..1" -- "1..1" ParcoursAdmission   : fait l'objet de
+    ParcoursAdmission "1..1" -- "1..*" SpecialiteParcours : offre
     SpecialiteParcours "1..1" -- "1..1" CapaciteAccueil
-    Utilisateur "1..1" -- "0..*" Candidature : dépose
-    Candidature "1..1" -- "0..*" HistoriqueStatutCandidature : possède_historique
-    Candidature "0..*" -- "1..1" ParcoursAcademique : porte_sur
-    Candidature "1..1" -- "1..1" AppelCandidature : concerne
+
+    ' Cluster Candidature
+    Utilisateur  "1..1" -- "0..*" Candidature                       : dépose
+    Candidature  "1..1" -- "0..*" HistoriqueStatutCandidature       : possède_historique
+    Candidature  "0..*" -- "1..1" ParcoursAcademique                : porte_sur
+    Candidature  "1..1" -- "1..1" AppelCandidature                  : concerne
     CritereEvaluation "0..*" -- "1..1" ValeurCritere
+    Candidature  "1..1" -- "0..*" ValeurCritere                     : est evalué par
   }
 
 }
-
-' Angular internal
-DashboardCandidatComponent --> CandidatureService
-DashboardCandidatComponent --> NotificationService
-DashboardCandidatComponent --> LiveMetricsService
-CandidatureFormComponent --> CandidatureService
-CandidatureFormComponent --> OffreService
-OffresListComponent --> OffreService
-MesCandidaturesComponent --> CandidatureService
-NotificationsComponent --> NotificationService
-CandidatureService ..> AM
-OffreService ..> AM
-NotificationService ..> AM
-
-' Django internal
-cc --> CandidatureBusinessService
-mc --> CandidatureBusinessService
-sc --> CandidatureBusinessService
-ac --> CandidatureBusinessService
-msc --> CandidatureBusinessService
-ps --> ScoreService
-lm --> MasterService
-gao --> MasterService
-gs --> MasterService
-cr --> MasterService
-mn --> NotificationService
-ml --> NotificationService
-clm --> CandidatureBusinessService
-
-CandidatureBusinessService --> CandidatureRepository
-CandidatureBusinessService --> ScoreService
-ScoreService --> CandidatureRepository
-MasterService --> MasterRepository
-MasterService --> AppelCandidatureRepository
-NotificationService --> NotificationRepository
-
-CandidatureRepository ..> DM
-MasterRepository ..> DM
-AppelCandidatureRepository ..> DM
-NotificationRepository ..> DM
 
 @enduml

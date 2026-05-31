@@ -288,6 +288,35 @@
   color: #991b1b;
 }
 
+/* État select dropdown */
+.etat-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.etat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.etat-select {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1.5px solid #E2E8F0;
+  cursor: pointer;
+  font-family: inherit;
+  appearance: auto;
+  transition: all .15s;
+}
+.etat-select.etat-en_attente { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.etat-select.etat-acceptee   { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.etat-select.etat-rejetee    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.etat-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
+
 /* Candidat Section */
 .candidat-section {
   display: flex;

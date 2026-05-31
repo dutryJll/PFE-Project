@@ -1,4 +1,7 @@
 @startuml Sprint1_MVC_Authentification_Gestion_Utilisateurs
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 120
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 11
 skinparam backgroundColor #F8FAFC
@@ -92,9 +95,6 @@ package "Angular 17  -  Frontend" as ANGULAR #EFF6FF {
       + nom : string
     }
 
-    LoginDTO ..> TokenDTO : produit
-    RegisterDTO ..> UtilisateurDTO : produit
-    UtilisateurDTO --> RoleDTO : contient
   }
 
 }
@@ -185,33 +185,5 @@ package "Django 4  -  Backend  (auth_service / user_service)" as DJANGO #F0FDF4 
   }
 
 }
-
-' Angular internal
-LoginComponent --> AuthService
-RegisterComponent --> AuthService
-UserManagementComponent --> UserService
-ProfileComponent --> AuthService
-ProfileComponent --> UserService
-AuthService ..> AM
-UserService ..> AM
-
-' Django internal
-lv --> AuthBusinessService
-rv --> AuthBusinessService
-lov --> AuthBusinessService
-pv --> AuthBusinessService
-rt --> AuthBusinessService
-ulc --> UserBusinessService
-ud --> UserBusinessService
-rl --> UserBusinessService
-
-AuthBusinessService --> UserRepository
-AuthBusinessService --> JetonRepository
-UserBusinessService --> UserRepository
-UserBusinessService --> RoleRepository
-
-UserRepository ..> MD
-RoleRepository ..> MD
-JetonRepository ..> MD
 
 @enduml

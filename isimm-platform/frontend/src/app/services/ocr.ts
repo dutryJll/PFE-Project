@@ -2,11 +2,33 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface LotOcrResultat {
+  candidature_id: number;
+  candidat_nom: string;
+  master: string;
+  statut: 'ok' | 'anomalie' | 'incomplet' | 'erreur';
+  flag_fraude: boolean;
+  nb_anomalies: number;
+  rapport: any;
+  message?: string;
+}
+
+export interface LotOcrResponse {
+  success: boolean;
+  message: string;
+  nb_total: number;
+  nb_conformes: number;
+  nb_incoherences: number;
+  nb_erreurs: number;
+  resultats: LotOcrResultat[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class OcrService {
   private apiUrl = 'http://localhost:8005/api/ocr';
+  private candidatureApiUrl = 'http://localhost:8005/api/candidatures';
 
   constructor(private http: HttpClient) {}
 
@@ -31,6 +53,22 @@ export class OcrService {
     return this.http.post(
       `${this.apiUrl}/analyser-dossier/`,
       { candidature_id: candidatureId },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // Lister les dossiers déposés en attente d'analyse OCR
+  listerDossiersOcr(): Observable<any> {
+    return this.http.get(`${this.candidatureApiUrl}/dossiers-ocr/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // Lancer l'analyse OCR en lot (une seule transaction serveur)
+  analyserLot(candidatureIds: number[]): Observable<LotOcrResponse> {
+    return this.http.post<LotOcrResponse>(
+      `${this.candidatureApiUrl}/ocr/analyser-lot/`,
+      { candidature_ids: candidatureIds },
       { headers: this.getHeaders() },
     );
   }

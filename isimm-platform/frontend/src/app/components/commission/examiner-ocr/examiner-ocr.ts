@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { SpecialitesService } from '../../../services/specialites.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { OcrService, LotOcrResponse, LotOcrResultat } from '../../../services/ocr';
 
 interface Candidat {
   id: number;
@@ -72,10 +73,18 @@ export class ExaminerOcrComponent implements OnInit {
 
   documentViewer: any = null;
 
+  // Sélection multiple pour analyse en lot
+  selectedIds: Set<number> = new Set();
+  lotEnCours: boolean = false;
+  lotResultats: LotOcrResultat[] = [];
+  lotResume: Omit<LotOcrResponse, 'resultats'> | null = null;
+  lotErreur: string | null = null;
+
   constructor(
     private router: Router,
     private sanitizer: DomSanitizer,
     private specialitesService: SpecialitesService,
+    private ocrService: OcrService,
   ) {}
 
   ngOnInit(): void {
@@ -101,44 +110,29 @@ export class ExaminerOcrComponent implements OnInit {
   }
 
   loadCandidats(): void {
-    // TODO: Charger depuis l'API
-    this.candidatsEnAttente = [
-      {
-        id: 1,
-        first_name: 'Ahmed',
-        last_name: 'Ben Ali',
-        cin: '12345678',
-        email: 'ahmed@example.com',
-        master_id: 1,
-        master_nom: 'Master Recherche Génie Logiciel',
-        statut_analyse: 'en_attente',
-        analyse_effectuee: false,
+    this.ocrService.listerDossiersOcr().subscribe({
+      next: (data: any) => {
+        const results: any[] = data?.results ?? data ?? [];
+        this.candidatsEnAttente = results.map((item: any) => ({
+          id: item.id ?? item.candidature_id,
+          first_name: item.candidat?.first_name ?? item.first_name ?? '',
+          last_name: item.candidat?.last_name ?? item.last_name ?? '',
+          cin: item.candidat?.cin ?? item.cin ?? '',
+          email: item.candidat?.email ?? item.email ?? '',
+          master_id: item.master?.id ?? item.master_id ?? 0,
+          master_nom: item.master?.nom ?? item.master_nom ?? '',
+          statut_analyse: item.dossier_valide ? 'analyse_ok' : 'en_attente',
+          analyse_effectuee: Boolean(item.dossier_valide),
+        }));
+        this.candidatsFiltres = [...this.candidatsEnAttente];
+        this.dossiersAnalyses = this.candidatsEnAttente.length;
       },
-      {
-        id: 2,
-        first_name: 'Fatma',
-        last_name: 'Trabelsi',
-        cin: '87654321',
-        email: 'fatma@example.com',
-        master_id: 2,
-        master_nom: 'Master Professionnel Data Science',
-        statut_analyse: 'analyse_ok',
-        analyse_effectuee: true,
+      error: () => {
+        // Fallback sur données mock si l'API est inaccessible
+        this.candidatsEnAttente = [];
+        this.candidatsFiltres = [];
       },
-      {
-        id: 3,
-        first_name: 'Mohamed',
-        last_name: 'Karoui',
-        cin: '11223344',
-        email: 'mohamed@example.com',
-        master_id: 1,
-        master_nom: 'Master Recherche Génie Logiciel',
-        statut_analyse: 'probleme',
-        analyse_effectuee: true,
-      },
-    ];
-
-    this.candidatsFiltres = [...this.candidatsEnAttente];
+    });
   }
 
   filtrerCandidats(): void {
@@ -157,6 +151,78 @@ export class ExaminerOcrComponent implements OnInit {
       return matchRecherche && matchMaster && matchStatut && matchSpecialite;
     });
   }
+
+  // ── Sélection multiple ──────────────────────────────────────────────────────
+
+  toggleSelection(id: number): void {
+    if (this.selectedIds.has(id)) {
+      this.selectedIds.delete(id);
+    } else {
+      this.selectedIds.add(id);
+    }
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedIds.has(id);
+  }
+
+  toutSelectionner(): void {
+    if (this.selectedIds.size === this.candidatsFiltres.length) {
+      this.selectedIds.clear();
+    } else {
+      this.candidatsFiltres.forEach((c) => this.selectedIds.add(c.id));
+    }
+  }
+
+  get toutSelectionneLabel(): string {
+    return this.selectedIds.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0
+      ? 'Tout désélectionner'
+      : 'Tout sélectionner';
+  }
+
+  // ── Analyse en lot ──────────────────────────────────────────────────────────
+
+  lancerAnalyseLot(): void {
+    if (this.selectedIds.size === 0) return;
+
+    this.lotEnCours = true;
+    this.lotResultats = [];
+    this.lotResume = null;
+    this.lotErreur = null;
+
+    const ids = Array.from(this.selectedIds);
+    this.ocrService.analyserLot(ids).subscribe({
+      next: (response: LotOcrResponse) => {
+        this.lotEnCours = false;
+        this.lotResultats = response.resultats;
+        this.lotResume = {
+          success: response.success,
+          message: response.message,
+          nb_total: response.nb_total,
+          nb_conformes: response.nb_conformes,
+          nb_incoherences: response.nb_incoherences,
+          nb_erreurs: response.nb_erreurs,
+        };
+        // Met à jour le statut local des candidats analysés
+        response.resultats.forEach((r) => {
+          const candidat = this.candidatsEnAttente.find((c) => c.id === r.candidature_id);
+          if (candidat) {
+            candidat.statut_analyse = r.statut === 'ok' ? 'analyse_ok' : 'probleme';
+            candidat.analyse_effectuee = true;
+          }
+        });
+        this.selectedIds.clear();
+        this.filtrerCandidats();
+      },
+      error: (err: any) => {
+        this.lotEnCours = false;
+        this.lotErreur =
+          err?.error?.error ?? 'Erreur lors de l\'analyse OCR en lot. Veuillez réessayer.';
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
 
   selectionnerCandidat(candidat: Candidat): void {
     console.log('👤 Candidat sélectionné:', candidat);

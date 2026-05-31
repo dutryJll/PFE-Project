@@ -196,7 +196,13 @@ export class DashboardAdminComponent implements OnInit {
   mastersExportFormat: ExportFormat = 'csv';
   candidaturesExportFormat: ExportFormat = 'csv';
   offresExportFormat: ExportFormat = 'csv';
-  mastersList: Master[] = [];
+  mastersList: Master[] = [
+    { id: 1, nom: 'Master Professionnel Genie Logiciel (MPGL)',                                  type: 'professionnel', description: '', places: 35,  date_limite: '2026-07-22', statut: 'ouvert', specialite: 'MPGL' },
+    { id: 2, nom: 'Mastere Professionnel en sciences de donnees (MPDS)',                         type: 'professionnel', description: '', places: 35,  date_limite: '2026-07-22', statut: 'ouvert', specialite: 'MPDS' },
+    { id: 3, nom: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'professionnel', description: '', places: 25,  date_limite: '2026-07-20', statut: 'ouvert', specialite: 'MP3I' },
+    { id: 4, nom: 'Mastere Recherche en Genie logiciel (MRGL)',                                  type: 'recherche',     description: '', places: 111, date_limite: '2026-07-22', statut: 'ouvert', specialite: 'MRGL' },
+    { id: 5, nom: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)',           type: 'recherche',     description: '', places: 29,  date_limite: '2026-07-20', statut: 'ouvert', specialite: 'MRMI' },
+  ];
   offresIngenieurList: OffreIngenieur[] = [];
   offresResponsableSync: OffreResponsableSync[] = [];
   isLoadingOffresResponsableSync: boolean = false;
@@ -818,94 +824,11 @@ export class DashboardAdminComponent implements OnInit {
   }
 
   loadMasters(): void {
-    const token = this.authService.getAccessToken();
-    const options = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
-
-    this.http.get<any[]>('http://localhost:8003/api/candidatures/masters/', options).subscribe({
-      next: (masters) => {
-        this.mastersList = (masters || []).map((m) => ({
-          id: Number(m.id),
-          nom: m.nom || '',
-          type: m.type_master === 'professionnel' ? 'professionnel' : 'recherche',
-          description: m.description || '',
-          places: Number(m.places_disponibles ?? m.places ?? 0),
-          date_limite: m.date_limite_candidature || m.date_limite || '',
-          statut:
-            m.statut != null
-              ? m.statut === 'ferme'
-                ? 'ferme'
-                : 'ouvert'
-              : m.actif === false
-                ? 'ferme'
-                : 'ouvert',
-          specialite: m.specialite || '',
-        }));
-
-        if (!this.offresResponsableSyncFromApi) {
-          this.rebuildOffresResponsableSyncFromAdminLists();
-        }
-      },
-      error: (error) => {
-        console.error('Erreur chargement masters:', error);
-        this.mastersList = [
-          {
-            id: 1,
-            nom: 'MP-GL - Génie Logiciel',
-            type: 'professionnel',
-            description: 'Master professionnel orienté conception et industrialisation logicielle.',
-            places: 30,
-            date_limite: '2026-05-31',
-            statut: 'ouvert',
-            specialite: 'Informatique',
-          },
-          {
-            id: 2,
-            nom: 'MP-DS - Data Science',
-            type: 'professionnel',
-            description: 'Master professionnel pour la donnée, l’IA et l’analyse avancée.',
-            places: 28,
-            date_limite: '2026-06-05',
-            statut: 'ouvert',
-            specialite: 'Data Science',
-          },
-          {
-            id: 3,
-            nom: 'MP-3I - Intelligence Industrielle',
-            type: 'professionnel',
-            description: 'Préinscription dédiée aux systèmes intelligents et à l’automatisation.',
-            places: 24,
-            date_limite: '2026-06-10',
-            statut: 'ouvert',
-            specialite: 'Industrie 4.0',
-          },
-          {
-            id: 4,
-            nom: 'MR-GL - Génie Logiciel',
-            type: 'recherche',
-            description: 'Formation en recherche sur l’ingénierie logicielle et les architectures.',
-            places: 20,
-            date_limite: '2026-06-15',
-            statut: 'ouvert',
-            specialite: 'Informatique',
-          },
-          {
-            id: 5,
-            nom: 'MR-Micro - Micro-électronique',
-            type: 'recherche',
-            description:
-              'Master recherche centré sur les circuits, capteurs et systèmes embarqués.',
-            places: 18,
-            date_limite: '2026-06-20',
-            statut: 'ouvert',
-            specialite: 'Électronique',
-          },
-        ];
-
-        if (!this.offresResponsableSyncFromApi) {
-          this.rebuildOffresResponsableSyncFromAdminLists();
-        }
-      },
-    });
+    // mastersList is already initialised as a class property with the 5 official parcours.
+    // Just trigger the sync rebuild so dependent views stay consistent.
+    if (!this.offresResponsableSyncFromApi) {
+      this.rebuildOffresResponsableSyncFromAdminLists();
+    }
   }
 
   loadOffresResponsableSync(): void {

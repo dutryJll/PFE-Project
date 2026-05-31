@@ -317,4 +317,12 @@ export class TraiterReclamationsComponent implements OnInit {
     console.log('📎 Voir pièce jointe:', piece.nom);
     window.open(piece.url, '_blank');
   }
+
+  changerStatut(reclamation: Reclamation, newStatut: Reclamation['statut']): void {
+    const idx = this.reclamations.findIndex((r) => r.id === reclamation.id);
+    if (idx !== -1) {
+      this.reclamations[idx] = { ...this.reclamations[idx], statut: newStatut };
+    }
+    this.filtrerReclamations();
+  }
 }

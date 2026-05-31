@@ -18,6 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'role',
+            'specialite',
             'is_email_verified',
             'avatar_url',
             'phone',

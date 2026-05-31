@@ -1,4 +1,4 @@
-import os
+﻿import os
 import logging
 import csv
 import tempfile
@@ -568,14 +568,31 @@ def contenu_offre_inscription(request, offer_id):
 @permission_classes([IsAuthenticated])
 def create_candidature(request):
     """Creation simplifiee d'une candidature."""
+    formation_code = request.data.get('formation_code', '').strip().upper()
     master_id = request.data.get('master_id')
-    if not master_id:
-        return Response({'error': 'master_id est requis'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        master = Master.objects.get(id=master_id)
-    except Master.DoesNotExist:
-        return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+    master = None
+
+    # Primary lookup: formation_code → Master.specialite (canonical formation codes stored there)
+    if formation_code:
+        # Normalize ING aliases to the stored code
+        code_alias = {'ING_GL': 'ING_INFO_GL', 'ING-GL': 'ING_INFO_GL'}.get(formation_code, formation_code)
+        master = Master.objects.filter(specialite=code_alias).first()
+        if not master:
+            return Response(
+                {'error': f'Formation {formation_code} introuvable. Veuillez reessayer.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    # Fallback: master_id (kept for backward compatibility)
+    if not master and master_id:
+        try:
+            master = Master.objects.get(id=master_id)
+        except Master.DoesNotExist:
+            return Response({'error': 'Master non trouve'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not master:
+        return Response({'error': 'master_id ou formation_code est requis'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Check: Duplicate candidature prevention (cannot apply twice to same offer)
     existing_candidature = Candidature.objects.filter(
@@ -615,32 +632,40 @@ def create_candidature(request):
                 status=status.HTTP_409_CONFLICT
             )
 
-    # Check: Deadline validation
-    if master.date_limite_candidature and timezone.now().date() > master.date_limite_candidature:
+    # Check: Master is open for applications.
+    # The `actif` flag is the authoritative control — if admin keeps it active, deadline is bypassed.
+    if not master.actif:
         return Response(
-            {'error': f'La date limite de candidature pour {master.nom} est depassee'},
+            {'error': f'{master.nom} n\'est plus ouvert aux candidatures.'},
             status=status.HTTP_400_BAD_REQUEST
         )
+    # Deadline enforced only when master is explicitly inactive (covered above).
+    # If master.actif=True, the admin has intentionally kept it open past the deadline.
 
-    candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
-
-    # Sauvegarde detaillee des donnees de preinscription (etape 3) si presente.
+    # Parse academic data BEFORE creating candidature to avoid orphaned records on validation errors
     academic_data = request.data.get('academic_data')
     formation_code = request.data.get('formation_code')
     selected_diplome = request.data.get('selected_diplome')
     etablissement_origine = request.data.get('etablissement_origine')
     diplome_reference = request.data.get('diplome_reference')
     diplomes = request.data.get('diplomes')
-    score_soumis_front = request.data.get('score_soumis_front')
+    # Accept both key names from frontend (score_previsualisation is the current key)
+    score_soumis_front = (
+        request.data.get('score_soumis_front')
+        or request.data.get('score_previsualisation')
+    )
+
+    candidature = None  # created after validation passes
 
     if isinstance(academic_data, dict):
         def _as_float(value, default=0.0):
+            """Safe float conversion. Returns default (including None) when value is missing."""
             try:
                 if value is None or value == '':
-                    return float(default)
+                    return default if default is None else float(default)
                 return float(value)
             except (TypeError, ValueError):
-                return float(default)
+                return default if default is None else float(default)
 
         def _avg(values):
             cleaned = [_as_float(v, None) for v in values]
@@ -800,6 +825,9 @@ def create_candidature(request):
         except (TypeError, ValueError):
             nb_redoublements = 0
 
+        # Create candidature after all validation passes (avoids orphaned records)
+        candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
+
         DonneesAcademiques.objects.update_or_create(
             candidature=candidature,
             defaults={
@@ -860,6 +888,10 @@ def create_candidature(request):
         except Exception:
             logger.exception('Erreur lors de la tentative de scoring dynamique pour la candidature %s', candidature.id)
 
+    # Fallback: create candidature when no academic_data was provided
+    if candidature is None:
+        candidature = Candidature.objects.create(candidat=request.user, master=master, statut='soumis')
+
     Notification.objects.create(
         user=request.user,
         titre='Candidature créée',
@@ -910,50 +942,98 @@ def get_specialites_for_master(request, master_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_available_offers_with_specialites(request):
-    """Retourne la liste des offres ouvertes avec leurs specialites dynamiques."""
-    from django.utils import timezone
-    from datetime import datetime
+    """
+    Retourne les 6 parcours officiels ISIMM pour l'Espace Candidat.
+    Source primaire : SpecialiteParcoursMapping (seeded par migration 0025).
+    Statut / places / date : enrichis depuis ConfigurationAppel actifs si disponibles,
+    sinon valeurs par défaut 2026.
+    """
+    _PARCOURS_META = {
+        'MPGL':   {'date_limite': '2026-07-22', 'places': 35,  'type': 'master'},
+        'MPDS':   {'date_limite': '2026-07-22', 'places': 35,  'type': 'master'},
+        'MP3I':   {'date_limite': '2026-07-20', 'places': 25,  'type': 'master'},
+        'MRGL':   {'date_limite': '2026-07-22', 'places': 111, 'type': 'master'},
+        'MRMI':   {'date_limite': '2026-07-20', 'places': 29,  'type': 'master'},
+        'ING_GL': {'date_limite': '2026-08-08', 'places': 65,  'type': 'cycle_ingenieur'},
+    }
 
+    # Candidatures déjà soumises par l'utilisateur (badge "déjà postulé")
+    applied_codes = set(
+        Candidature.objects.filter(
+            candidat=request.user,
+            statut__in=['soumis', 'sous_examen', 'preselectionne', 'en_attente_dossier', 'dossier_depose'],
+        ).values_list('master__specialite', flat=True)
+    )
+
+    # Statuts temps-réel depuis ConfigurationAppel actifs (quand Responsable a publié)
     today = timezone.now().date()
-    
-    # Fetch all open masters
-    masters = Master.objects.filter(
+    configs_actifs = ConfigurationAppel.objects.filter(
         actif=True,
-        date_limite_candidature__gte=today
-    ).select_related().order_by('-date_limite_candidature')
+        master__specialite__in=list(_PARCOURS_META.keys()),
+    ).select_related('master')
+    config_by_code = {c.master.specialite: c for c in configs_actifs if c.master and c.master.specialite}
+
+    # Parcours depuis SpecialiteParcoursMapping
+    parcours_qs = SpecialiteParcoursMapping.objects.filter(
+        actif=True,
+        code_parcours__in=list(_PARCOURS_META.keys()),
+    ).order_by('type_formation', 'ordre')
 
     offers_data = []
-    for master in masters:
-        # Get parcours for this master
-        parcours_list = ParcoursAdmission.objects.filter(
-            master=master,
-            actif=True,
-            statut='ouvert'
-        ).values('id', 'nom', 'specialite', 'type')
+    for idx, parcours in enumerate(parcours_qs, start=1):
+        meta = _PARCOURS_META.get(parcours.code_parcours, {})
+        config = config_by_code.get(parcours.code_parcours)
+        specialites = parcours.specialites if isinstance(parcours.specialites, list) else []
 
-        specialites = list(set([p['specialite'] for p in parcours_list if p['specialite']]))
-        
-        # Check if user already has a candidature for this master
-        existing = Candidature.objects.filter(
-            candidat=request.user,
-            master=master,
-            statut__in=['soumis', 'sous_examen', 'preselectionne', 'en_attente_dossier', 'dossier_depose']
-        ).exists()
+        # Statut temps-réel depuis ConfigurationAppel si disponible
+        if config:
+            statut = 'ouvert' if config.peut_candidater() else 'ferme'
+            places = config.capacite_accueil or meta.get('places', 0)
+            date_lim = (
+                config.date_limite_preinscription.isoformat()
+                if config.date_limite_preinscription
+                else meta.get('date_limite', '2026-07-31')
+            )
+        else:
+            statut = 'ouvert'
+            places = meta.get('places', 0)
+            date_lim = meta.get('date_limite', '2026-07-31')
 
         offers_data.append({
-            'id': master.id,
-            'nom': master.nom,
-            'specialite': master.specialite,
-            'specialites_parcours': specialites,
-            'places_disponibles': master.places_disponibles,
-            'deadline': master.date_limite_candidature.isoformat(),
-            'type_master': master.type_master,
-            'annee_universitaire': master.annee_universitaire,
-            'candidat_deja_applique': existing,
-            'jours_restants': (master.date_limite_candidature - today).days
+            'id': idx,
+            'master_id': parcours.pk,
+            'master_nom': parcours.nom_parcours,
+            'specialite': parcours.code_parcours,
+            'date_limite': date_lim,
+            'type': meta.get('type', 'master'),
+            'already_applied': parcours.code_parcours in applied_codes,
+            'places_disponibles': places,
+            'code_parcours': parcours.code_parcours,
+            'specialites_eligibles': specialites,
+            'statut': statut,
         })
 
-    return Response(offers_data)
+    # Fallback complet si SpecialiteParcoursMapping vide (migration pas encore jouée)
+    if not offers_data:
+        offers_data = [
+            {
+                'id': i, 'master_id': i, 'master_nom': nom,
+                'specialite': code, 'date_limite': _PARCOURS_META[code]['date_limite'],
+                'type': _PARCOURS_META[code]['type'], 'already_applied': False,
+                'places_disponibles': _PARCOURS_META[code]['places'],
+                'code_parcours': code, 'specialites_eligibles': [], 'statut': 'ouvert',
+            }
+            for i, (code, nom) in enumerate([
+                ('MPGL',   'Master Professionnel Genie Logiciel (MPGL)'),
+                ('MPDS',   'Mastere Professionnel en sciences de donnees (MPDS)'),
+                ('MP3I',   'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)'),
+                ('MRGL',   'Mastere Recherche en Genie logiciel (MRGL)'),
+                ('MRMI',   'Mastere Recherche en micro-electronique et instrumentation (MRMI)'),
+                ('ING_GL', 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel'),
+            ], start=1)
+        ]
+
+    return Response({'offers': offers_data, 'total': len(offers_data)})
 
 
 def _safe_create_notification(user, titre, message, notif_type='info', dedup_key=None):
@@ -1197,14 +1277,22 @@ def soumettre_candidature(request):
 @permission_classes([AllowAny])
 def preview_score_candidature(request):
     """Calcule un score d'aperçu sans créer de candidature ni persister de données."""
+    formation_code = request.data.get('formation_code', '').strip().upper()
     master_id = request.data.get('master_id')
-    if not master_id:
-        return Response({'error': 'master_id est requis'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        master = Master.objects.select_related('formule_score').get(id=master_id)
-    except Master.DoesNotExist:
-        return Response({'error': 'Master non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+    master = None
+    if formation_code:
+        code_alias = {'ING_GL': 'ING_INFO_GL', 'ING-GL': 'ING_INFO_GL'}.get(formation_code, formation_code)
+        master = Master.objects.select_related('formule_score').filter(specialite=code_alias).first()
+
+    if not master and master_id:
+        try:
+            master = Master.objects.select_related('formule_score').get(id=master_id)
+        except Master.DoesNotExist:
+            pass
+
+    if not master:
+        return Response({'error': 'master_id ou formation_code est requis'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as exc:
         logger.exception("Erreur retrieving Master for preview_score_candidature: %s", exc)
         return Response(
@@ -1451,6 +1539,36 @@ def candidatures_responsable(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_mes_masters(request):
+    """Retourne les masters assignés à l'utilisateur courant via MembreCommission."""
+    role = getattr(request.user, 'role', None)
+    if role not in ['admin', 'responsable_commission', 'commission']:
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    master_ids = list(
+        MembreCommission.objects.filter(
+            user=request.user, actif=True, commission__actif=True
+        ).values_list('commission__master_id', flat=True)
+    )
+    master_ids = [mid for mid in master_ids if mid is not None]
+
+    masters = Master.objects.filter(id__in=master_ids, actif=True)
+
+    data = [
+        {
+            'id': m.id,
+            'nom': m.nom,
+            'specialite': m.specialite,
+            'type_master': m.type_master,
+        }
+        for m in masters
+    ]
+
+    return Response({'masters': data, 'count': len(data)})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def offres_inscription(request):
     """Retourne les offres d'inscription (masters + cycle ingenieur)."""
     today = timezone.now().date()
@@ -1473,8 +1591,12 @@ def offres_inscription(request):
                 continue
 
             nom_lower = (master.nom or '').lower()
-            specialite_lower = (master.specialite or '').lower()
-            is_cycle_ingenieur = 'ingenieur' in nom_lower or 'genie logiciel' in specialite_lower
+            specialite_upper = (master.specialite or '').upper()
+            is_cycle_ingenieur = (
+                specialite_upper.startswith('ING')
+                or 'ingenieur' in nom_lower
+                or 'ingénieur' in nom_lower
+            )
 
             reference_deadline = (
                 config.date_limite_preinscription
@@ -1491,6 +1613,7 @@ def offres_inscription(request):
                     'type': 'cycle_ingenieur' if is_cycle_ingenieur else 'master',
                     'sous_type': master.type_master,
                     'specialite': master.specialite,
+                    'code_parcours': master.specialite,  # Formation code (MPGL, MPDS, etc.)
                     'description': master.description,
                     'date_limite': master.date_limite_candidature,
                     'date_limite_preinscription': config.date_limite_preinscription if config else None,
@@ -3684,13 +3807,85 @@ def offres_inscription_responsable(request):
     """
     API pour responsable: retourne les offres avec statut détaillé (visible/cachée),
     capacités (interne/externe), URL PDF, et deadlines.
+    Si aucun Master actif n'existe, retourne les 6 parcours officiels depuis SpecialiteParcoursMapping.
     """
     if getattr(request.user, 'role', None) not in ['admin', 'responsable_commission']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
+    _PARCOURS_META = {
+        'MPGL':   {'date_limite': '2026-07-22', 'places': 35,  'frontend_type': 'master',         'sous_type': 'professionnel'},
+        'MPDS':   {'date_limite': '2026-07-22', 'places': 35,  'frontend_type': 'master',         'sous_type': 'professionnel'},
+        'MP3I':   {'date_limite': '2026-07-20', 'places': 25,  'frontend_type': 'master',         'sous_type': 'professionnel'},
+        'MRGL':   {'date_limite': '2026-07-22', 'places': 111, 'frontend_type': 'master',         'sous_type': 'recherche'},
+        'MRMI':   {'date_limite': '2026-07-20', 'places': 29,  'frontend_type': 'master',         'sous_type': 'recherche'},
+        'ING_GL': {'date_limite': '2026-08-08', 'places': 65,  'frontend_type': 'cycle_ingenieur','sous_type': 'cycle_ingenieur'},
+    }
+
     configurations = ConfigurationAppel.objects.filter(actif=True).select_related('master')
     config_by_master = {config.master_id: config for config in configurations}
     masters = Master.objects.filter(actif=True).order_by('nom')
+
+    # ── Fallback : si aucun Master actif → utiliser SpecialiteParcoursMapping ──
+    if not masters.exists():
+        parcours_qs = SpecialiteParcoursMapping.objects.filter(
+            actif=True,
+            code_parcours__in=list(_PARCOURS_META.keys()),
+        ).order_by('type_formation', 'ordre')
+        offres_fallback = []
+        for idx, p in enumerate(parcours_qs, start=1):
+            m = _PARCOURS_META.get(p.code_parcours, {})
+            offres_fallback.append({
+                'id': idx,
+                'titre': p.nom_parcours,
+                'type': m.get('frontend_type', 'master'),
+                'sous_type': m.get('sous_type', 'professionnel'),
+                'specialite': p.code_parcours,
+                'description': '',
+                'statut': 'ouvert',
+                'est_cache': False,
+                'est_visible': True,
+                'capacite_total': m.get('places', 0),
+                'capacite_interne': 0,
+                'capacite_externe': 0,
+                'capacite_liste_attente': 0,
+                'places': m.get('places', 0),
+                'nombre_candidats_inscrits': 0,
+                'date_limite': m.get('date_limite', '2026-07-31'),
+                'date_debut_visibilite': None,
+                'date_fin_visibilite': None,
+                'date_limite_preinscription': m.get('date_limite', '2026-07-31'),
+                'date_limite_depot_dossier': None,
+                'date_limite_paiement': None,
+                'delai_modification_jours': 7,
+                'delai_depot_dossier_j_jours': 14,
+                'document_officiel_pdf_url': None,
+                'requires_configuration': False,
+                'code_parcours': p.code_parcours,
+                'specialites_eligibles': p.specialites if isinstance(p.specialites, list) else [],
+            })
+        if offres_fallback:
+            return Response(offres_fallback)
+        # Fallback ultime si SpecialiteParcoursMapping aussi vide
+        return Response([
+            {'id': i, 'titre': nom, 'type': m['frontend_type'], 'sous_type': m['sous_type'],
+             'specialite': code, 'description': '', 'statut': 'ouvert', 'est_cache': False,
+             'est_visible': True, 'capacite_total': m['places'], 'capacite_interne': 0,
+             'capacite_externe': 0, 'capacite_liste_attente': 0, 'places': m['places'],
+             'nombre_candidats_inscrits': 0, 'date_limite': m['date_limite'],
+             'date_debut_visibilite': None, 'date_fin_visibilite': None,
+             'date_limite_preinscription': m['date_limite'], 'date_limite_depot_dossier': None,
+             'date_limite_paiement': None, 'delai_modification_jours': 7,
+             'delai_depot_dossier_j_jours': 14, 'document_officiel_pdf_url': None,
+             'requires_configuration': False, 'code_parcours': code, 'specialites_eligibles': []}
+            for i, (code, nom, m) in enumerate([
+                ('MPGL', 'Master Professionnel Genie Logiciel (MPGL)', _PARCOURS_META['MPGL']),
+                ('MPDS', 'Mastere Professionnel en sciences de donnees (MPDS)', _PARCOURS_META['MPDS']),
+                ('MP3I', 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', _PARCOURS_META['MP3I']),
+                ('MRGL', 'Mastere Recherche en Genie logiciel (MRGL)', _PARCOURS_META['MRGL']),
+                ('MRMI', 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', _PARCOURS_META['MRMI']),
+                ('ING_GL', 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel', _PARCOURS_META['ING_GL']),
+            ], start=1)
+        ])
 
     offres = []
     for master in masters:
@@ -4040,6 +4235,130 @@ def ocr_test_diagnostic(request):
             'ocr_diagnostic': diagnostic,
         }
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def analyser_lot_ocr(request):
+    """
+    Analyse OCR en lot — traite une liste de candidature_ids en une seule transaction serveur.
+
+    Body JSON :
+        { "candidature_ids": [1, 2, 3, ...] }
+
+    Retourne :
+        {
+          "success": true,
+          "nb_total": N,
+          "nb_conformes": K,
+          "nb_incoherences": M,
+          "nb_erreurs": P,
+          "resultats": [
+            {
+              "candidature_id": int,
+              "candidat_nom": str,
+              "master": str,
+              "statut": "ok" | "anomalie" | "incomplet" | "erreur",
+              "flag_fraude": bool,
+              "nb_anomalies": int,
+              "rapport": { ... }
+            },
+            ...
+          ]
+        }
+    """
+    from .ocr_global_service import auditer_dossier_complet
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusée.'}, status=status.HTTP_403_FORBIDDEN)
+
+    candidature_ids = request.data.get('candidature_ids', [])
+    if not isinstance(candidature_ids, list) or not candidature_ids:
+        return Response(
+            {'error': 'Le champ candidature_ids doit être une liste non vide d\'identifiants.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    MAX_LOT = 50
+    if len(candidature_ids) > MAX_LOT:
+        return Response(
+            {'error': f'Le lot ne peut pas dépasser {MAX_LOT} candidatures à la fois.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Charge toutes les candidatures en une seule requête DB
+    candidatures_qs = (
+        Candidature.objects
+        .select_related('candidat', 'master')
+        .filter(id__in=candidature_ids, dossier_depose=True)
+    )
+    candidatures_map = {c.id: c for c in candidatures_qs}
+
+    resultats = []
+    nb_conformes = 0
+    nb_incoherences = 0
+    nb_erreurs = 0
+
+    for cid in candidature_ids:
+        candidature = candidatures_map.get(int(cid))
+        if not candidature:
+            resultats.append({
+                'candidature_id': cid,
+                'statut': 'erreur',
+                'message': 'Candidature introuvable ou dossier non encore déposé.',
+                'flag_fraude': False,
+                'nb_anomalies': 0,
+                'rapport': None,
+            })
+            nb_erreurs += 1
+            continue
+
+        try:
+            rapport = auditer_dossier_complet(candidature.candidat_id)
+            statut_global = rapport.get('statut_global', 'erreur')
+
+            if statut_global == 'ok':
+                nb_conformes += 1
+            elif statut_global in ('anomalie', 'incomplet'):
+                nb_incoherences += 1
+            else:
+                nb_erreurs += 1
+
+            resultats.append({
+                'candidature_id': cid,
+                'candidat_nom': (
+                    f"{getattr(candidature.candidat, 'first_name', '')} "
+                    f"{getattr(candidature.candidat, 'last_name', '')}"
+                ).strip(),
+                'master': candidature.master.nom if candidature.master else '',
+                'statut': statut_global,
+                'flag_fraude': rapport.get('flag_fraude', False),
+                'nb_anomalies': len(rapport.get('anomalies_consolidees', [])),
+                'rapport': rapport,
+            })
+
+        except Exception as exc:
+            logger.exception('Erreur analyse OCR lot pour candidature_id=%s : %s', cid, exc)
+            resultats.append({
+                'candidature_id': cid,
+                'statut': 'erreur',
+                'message': str(exc),
+                'flag_fraude': False,
+                'nb_anomalies': 0,
+                'rapport': None,
+            })
+            nb_erreurs += 1
+
+    return Response({
+        'success': True,
+        'message': f'Analyse OCR terminée pour {len(candidature_ids)} candidature(s).',
+        'nb_total': len(candidature_ids),
+        'nb_conformes': nb_conformes,
+        'nb_incoherences': nb_incoherences,
+        'nb_erreurs': nb_erreurs,
+        'resultats': resultats,
+    })
 
 
 @api_view(['GET', 'PUT'])

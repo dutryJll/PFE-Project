@@ -1101,6 +1101,8 @@
 
 .candidatures-table.candidatures-historique {
   width: 100%;
+  min-width: unset !important;
+  table-layout: auto !important;
   border-collapse: collapse;
 }
 .candidatures-table.candidatures-historique th,
@@ -1111,6 +1113,26 @@
 .candidatures-table.candidatures-historique thead th {
   font-weight: 700;
   color: #0f172a;
+}
+
+/* Actions column: fully integrated — no separator, inherits row background */
+.candidatures-table.candidatures-historique th:last-child,
+.candidatures-table.candidatures-historique td:last-child {
+  border-left: 0 !important;
+  border-right: 0 !important;
+  background: inherit !important;
+  box-shadow: none !important;
+  position: static !important;
+  padding-left: 14px;
+  padding-right: 14px;
+  text-align: center;
+  width: 90px;
+}
+.candidatures-table.candidatures-historique tbody tr:hover td:last-child {
+  background: inherit !important;
+}
+.candidatures-table.candidatures-historique tbody tr td:nth-last-child(2) {
+  border-right: 0 !important;
 }
 
 .modern-badge {

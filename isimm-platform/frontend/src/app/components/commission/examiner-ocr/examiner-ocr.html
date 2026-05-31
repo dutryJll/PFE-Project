@@ -76,15 +76,54 @@
         </select>
       </div>
 
+      <!-- Barre de sélection multiple + lancement lot -->
+      <div class="lot-toolbar" *ngIf="candidatsFiltres.length > 0">
+        <label class="lot-select-all">
+          <input
+            type="checkbox"
+            [checked]="selectedIds.size === candidatsFiltres.length && candidatsFiltres.length > 0"
+            (change)="toutSelectionner()"
+          />
+          {{ toutSelectionneLabel }}
+        </label>
+
+        <span class="lot-count" *ngIf="selectedIds.size > 0">
+          <i class="fas fa-check-square"></i>
+          {{ selectedIds.size }} candidature(s) sélectionnée(s)
+        </span>
+
+        <button
+          class="btn-lancer-lot"
+          [disabled]="selectedIds.size === 0 || lotEnCours"
+          (click)="lancerAnalyseLot()"
+        >
+          <i
+            class="fas"
+            [class.fa-robot]="!lotEnCours"
+            [class.fa-spinner]="lotEnCours"
+            [class.fa-spin]="lotEnCours"
+          ></i>
+          {{ lotEnCours ? 'Analyse en cours...' : 'Lancer l\'analyse OCR (' + selectedIds.size + ')' }}
+        </button>
+      </div>
+
       <!-- Liste des candidats -->
       <div class="candidats-list">
         <div
           class="candidat-item"
           *ngFor="let candidat of candidatsFiltres"
           [class.selected]="candidatSelectionne?.id === candidat.id"
+          [class.lot-checked]="isSelected(candidat.id)"
           [class.analyse]="candidat.analyse_effectuee"
           (click)="selectionnerCandidat(candidat)"
         >
+          <div class="candidat-checkbox" (click)="$event.stopPropagation()">
+            <input
+              type="checkbox"
+              [checked]="isSelected(candidat.id)"
+              (change)="toggleSelection(candidat.id)"
+            />
+          </div>
           <div class="candidat-avatar">
             {{ candidat.first_name.charAt(0) }}{{ candidat.last_name.charAt(0) }}
           </div>
@@ -110,6 +149,49 @@
           <i class="fas fa-inbox"></i>
           <p>Aucun candidat trouvé</p>
         </div>
+      </div>
+
+      <!-- Résultats du lot OCR -->
+      <div class="lot-resultats" *ngIf="lotResume">
+        <div class="lot-resume-bar">
+          <span class="lot-resume-title"><i class="fas fa-chart-bar"></i> Résultats de l'analyse en lot</span>
+          <span class="lot-kpi lot-kpi-total">Total : {{ lotResume.nb_total }}</span>
+          <span class="lot-kpi lot-kpi-ok"><i class="fas fa-check-circle"></i> Conformes : {{ lotResume.nb_conformes }}</span>
+          <span class="lot-kpi lot-kpi-warn"><i class="fas fa-exclamation-triangle"></i> Incohérences : {{ lotResume.nb_incoherences }}</span>
+          <span class="lot-kpi lot-kpi-err" *ngIf="lotResume.nb_erreurs > 0"><i class="fas fa-times-circle"></i> Erreurs : {{ lotResume.nb_erreurs }}</span>
+        </div>
+        <div class="lot-rows">
+          <div
+            class="lot-row"
+            *ngFor="let r of lotResultats"
+            [class.lot-row-ok]="r.statut === 'ok'"
+            [class.lot-row-warn]="r.statut === 'anomalie' || r.statut === 'incomplet'"
+            [class.lot-row-err]="r.statut === 'erreur'"
+          >
+            <span class="lot-row-nom">{{ r.candidat_nom }}</span>
+            <span class="lot-row-master">{{ r.master }}</span>
+            <span class="lot-row-statut">
+              <i class="fas"
+                [class.fa-check-circle]="r.statut === 'ok'"
+                [class.fa-exclamation-triangle]="r.statut === 'anomalie' || r.statut === 'incomplet'"
+                [class.fa-times-circle]="r.statut === 'erreur'"
+              ></i>
+              {{ r.statut === 'ok' ? 'Conforme' : r.statut === 'anomalie' ? 'Incohérence' : r.statut === 'incomplet' ? 'Incomplet' : 'Erreur' }}
+            </span>
+            <span class="lot-row-fraude" *ngIf="r.flag_fraude">
+              <i class="fas fa-flag"></i> Fraude suspectée
+            </span>
+            <span class="lot-row-anomalies" *ngIf="r.nb_anomalies > 0">
+              {{ r.nb_anomalies }} anomalie(s)
+            </span>
+            <span class="lot-row-err-msg" *ngIf="r.message">{{ r.message }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Erreur lot -->
+      <div class="lot-erreur" *ngIf="lotErreur">
+        <i class="fas fa-times-circle"></i> {{ lotErreur }}
       </div>
     </div>
   </div>

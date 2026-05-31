@@ -336,9 +336,9 @@
                           <span>Activer</span>
                         </button>
                       </li>
-                      <li *ngIf="user.is_active">
-                        <button type="button" class="menu-item" (click)="closeUserMenu()">
-                          <i class="fas fa-times"></i>
+                      <li>
+                        <button type="button" class="menu-item danger-item" (click)="supprimerUtilisateur(user)">
+                          <i class="fas fa-trash"></i>
                           <span>Supprimer</span>
                         </button>
                       </li>
@@ -479,25 +479,6 @@
           Master.
         </p>
 
-        <div class="users-toolbar">
-          <div class="download-box">
-            <label>Download table data as</label>
-            <select [(ngModel)]="offresExportFormat">
-              <option value="csv">Comma separated values (csv)</option>
-              <option value="json">JSON</option>
-              <option value="ods">OpenDocument Spreadsheet (.ods)</option>
-              <option value="pdf">Portable Document Format (PDF)</option>
-            </select>
-            <button
-              type="button"
-              class="btn-primary btn-download"
-              (click)="downloadOffresIngenieurFile()"
-            >
-              Download
-            </button>
-          </div>
-        </div>
-
         <div class="table-container masters-table-container">
           <table class="data-table">
             <thead>
@@ -588,43 +569,26 @@
       <div class="adm-ph">
         <div>
           <div class="adm-ph-eyebrow">Administration · Offres</div>
-          <h2 class="adm-ph-title">Parcours Master</h2>
-          <p class="adm-ph-sub">Publiez les appels d'offre Master avec spécialité et capacité d'accueil.</p>
+          <h2 class="adm-ph-title">Parcours Mastère — Offres 2025-2026</h2>
+          <p class="adm-ph-sub">5 parcours officiels ISIMM (3 Professionnels · 2 Recherche) — Inscriptions ouvertes.</p>
         </div>
-        <button type="button" class="btn-primary" (click)="ajouterMaster()">
-          <i class="fas fa-plus"></i> Ajouter un parcours
-        </button>
       </div>
       <div class="section-card">
         <div class="section-header">
-          <h2>🛤️ Parcours Master</h2>
+          <h2>🛤️ Parcours Mastère</h2>
         </div>
 
         <p class="admin-site-subtitle">
-          Publiez les appels d'offre Master avec spécialité et capacité. Chaque parcours sauvegardé
-          apparaît dans l'espace offre du responsable.
+          Liste officielle des 5 parcours Mastère de l'ISIMM pour l'année universitaire 2025-2026.
+          Les données sont synchronisées depuis la base de données.
         </p>
-
-        <div class="users-toolbar">
-          <div class="download-box">
-            <label>Download table data as</label>
-            <select [(ngModel)]="mastersExportFormat">
-              <option value="csv">Comma separated values (csv)</option>
-              <option value="json">JSON</option>
-              <option value="ods">OpenDocument Spreadsheet (.ods)</option>
-              <option value="pdf">Portable Document Format (PDF)</option>
-            </select>
-            <button type="button" class="btn-primary btn-download" (click)="downloadMastersFile()">
-              Download
-            </button>
-          </div>
-        </div>
 
         <div class="table-container">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Nom du Master</th>
+                <th>Code</th>
+                <th>Nom du Parcours</th>
                 <th>Type</th>
                 <th>Places</th>
                 <th>Date limite</th>
@@ -635,15 +599,22 @@
             <tbody>
               <tr *ngFor="let master of mastersList">
                 <td>
+                  <span class="type-badge" [ngClass]="master.type === 'recherche' ? 'recherche' : 'professionnel'">
+                    {{ master.specialite }}
+                  </span>
+                </td>
+                <td>
                   <strong>{{ master.nom }}</strong>
                 </td>
                 <td>
-                  <span class="type-badge" [class]="master.type">{{ master.type }}</span>
+                  <span class="type-badge" [ngClass]="master.type === 'recherche' ? 'recherche' : 'professionnel'">
+                    {{ master.type === 'recherche' ? 'Recherche' : 'Professionnel' }}
+                  </span>
                 </td>
                 <td>{{ master.places }}</td>
                 <td>{{ master.date_limite | date: 'dd/MM/yyyy' }}</td>
                 <td>
-                  <span class="status-badge" [class]="master.statut">{{ master.statut }}</span>
+                  <span class="status-badge ouvert">Ouvert</span>
                 </td>
                 <td>
                   <div class="kebab-container">

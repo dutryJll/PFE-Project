@@ -30,11 +30,12 @@ export class EditCommissionMemberComponent implements OnInit {
   successMessage = '';
 
   specialites: string[] = [
-    'Master Data Science',
-    'Master Génie Logiciel',
-    'Master Microélectronique',
-    'Master Réseaux et Télécommunications',
-    'Tous les masters',
+    'Master Professionnel Génie Logiciel (MPGL)',
+    'Mastère Professionnel en sciences de données (MPDS)',
+    'Mastère Professionnel en Ingénieries en Instrumentation industrielle (MP3I)',
+    'Mastère Recherche en Génie logiciel (MRGL)',
+    'Mastère Recherche en micro-électronique et instrumentation (MRMI)',
+    'Ingénieur en sciences Appliquées et Technologie : Génie Logiciel',
   ];
 
   grades: string[] = ['Professeur', 'Maître de conférences', 'Maître assistant', 'Assistant'];

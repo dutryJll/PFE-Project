@@ -13,6 +13,10 @@ interface Offer {
   date_limite: string;
   type: string;
   already_applied: boolean;
+  places_disponibles?: number;
+  code_parcours?: string;
+  specialites_eligibles?: Array<{ nom: string; abreviation: string }>;
+  statut?: string;
 }
 
 interface CapaciteRow {
@@ -70,10 +74,10 @@ const PROGRAMS_DATA: ProgramData[] = [
       },
     ],
     calendrier: [
-      { event: 'Inscription sur le site web', date: "Du jour de la publication jusqu'au 22 juillet 2025" },
-      { event: 'Résultats présélection', date: '28 juillet 2025' },
-      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2025' },
-      { event: 'Liste des admis', date: '08 août 2025' },
+      { event: 'Inscription sur le site web', date: "Du jour de la publication jusqu'au 22 juillet 2026" },
+      { event: 'Résultats présélection', date: '28 juillet 2026' },
+      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2026' },
+      { event: 'Liste des admis', date: '08 août 2026' },
     ],
     dossier: [
       'Le formulaire de candidature au Mastère en Informatique (joint à cet avis)',
@@ -101,7 +105,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     remarques: [
       "Les dossiers reçus après les délais ou incomplets ne seront pas examinés.",
       "Toute candidature contenant des données erronées sera annulée. Des poursuites judiciaires seront engagées en cas de falsification.",
-      "Les candidats non retenus peuvent déposer un recours avant le 31 juillet 2025 via e-mail.",
+      "Les candidats non retenus peuvent déposer un recours avant le 31 juillet 2026 via e-mail.",
       "La présentation des documents originaux est obligatoire lors de l'inscription administrative.",
     ],
   },
@@ -120,10 +124,10 @@ const PROGRAMS_DATA: ProgramData[] = [
       { etablissement: 'Autres établissements', typesDiplome: "Licence en Sciences de l'Informatique (ou équivalent)", places: 4 },
     ],
     calendrier: [
-      { event: 'Inscription en ligne', date: "Du jour de la publication jusqu'au 22 juillet 2025" },
-      { event: 'Résultats présélection', date: '28 juillet 2025' },
-      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2025' },
-      { event: 'Liste finale des admis', date: '08 août 2025' },
+      { event: 'Inscription en ligne', date: "Du jour de la publication jusqu'au 22 juillet 2026" },
+      { event: 'Résultats présélection', date: '28 juillet 2026' },
+      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2026' },
+      { event: 'Liste finale des admis', date: '08 août 2026' },
     ],
     dossier: [
       'Formulaire de candidature au Mastère en Informatique (joint à l\'annonce)',
@@ -143,7 +147,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     remarques: [
       "Tout dossier incomplet ou reçu après les délais sera automatiquement rejeté.",
       "Toute fausse déclaration entraîne l'annulation et des poursuites judiciaires.",
-      "Les recours peuvent être déposés avec justificatifs avant le 31 juillet 2025.",
+      "Les recours peuvent être déposés avec justificatifs avant le 31 juillet 2026.",
       "Les documents originaux sont obligatoires lors de l'inscription administrative finale.",
     ],
   },
@@ -166,10 +170,10 @@ const PROGRAMS_DATA: ProgramData[] = [
       },
     ],
     calendrier: [
-      { event: 'Inscription sur le site web', date: "Du jour de la publication jusqu'au 20 juillet 2025" },
-      { event: 'Résultats présélection', date: '28 juillet 2025' },
-      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2025' },
-      { event: 'Liste finale des admis', date: '08 août 2025' },
+      { event: 'Inscription sur le site web', date: "Du jour de la publication jusqu'au 20 juillet 2026" },
+      { event: 'Résultats présélection', date: '28 juillet 2026' },
+      { event: 'Dépôt dossiers numériques', date: 'Du 28 au 31 juillet 2026' },
+      { event: 'Liste finale des admis', date: '08 août 2026' },
     ],
     dossier: [
       'Formulaire de candidature imprimé depuis le site, signé avec photo d\'identité',
@@ -191,7 +195,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     remarques: [
       "Les dossiers hors délais ou incomplets ne seront pas examinés.",
       "Toute donnée erronée entraîne l'annulation et des poursuites judiciaires en cas de falsification.",
-      "Les recours justifiés peuvent être déposés avant le 31 juillet 2025 par e-mail.",
+      "Les recours justifiés peuvent être déposés avant le 31 juillet 2026 par e-mail.",
       "Les documents originaux sont obligatoires lors de l'inscription administrative finale.",
     ],
   },
@@ -210,10 +214,10 @@ const PROGRAMS_DATA: ProgramData[] = [
       { etablissement: 'Autres établissements (Externes)', typesDiplome: 'Maîtrise en Informatique ou Informatique de Gestion', places: 2 },
     ],
     calendrier: [
-      { event: 'Inscription en ligne', date: "Du jour de la publication jusqu'au 22 juillet 2025" },
-      { event: 'Annonce des résultats préliminaires', date: '28 juillet 2025' },
-      { event: 'Dépôt dossiers numériques (pré-admis)', date: 'Du 28 au 31 juillet 2025' },
-      { event: 'Liste finale des admis', date: '08 août 2025' },
+      { event: 'Inscription en ligne', date: "Du jour de la publication jusqu'au 22 juillet 2026" },
+      { event: 'Annonce des résultats préliminaires', date: '28 juillet 2026' },
+      { event: 'Dépôt dossiers numériques (pré-admis)', date: 'Du 28 au 31 juillet 2026' },
+      { event: 'Liste finale des admis', date: '08 août 2026' },
     ],
     dossier: [
       'Demande de candidature au Mastère (jointe à l\'avis)',
@@ -229,12 +233,12 @@ const PROGRAMS_DATA: ProgramData[] = [
       { composante: 'B_NR (Bonus Non-Redoublement)', formule: '5 pts si 0 redoublement · 1,5 pts si 1 · 0 pt sinon' },
       { composante: 'B_SP (Bonus Session Principale)', formule: '3 pts si 0 session de contrôle · 1 pt si 1 · 0 pt sinon' },
       { composante: 'B_L (Bonus Langue)', formule: '1 pt si Français ≥ 12 ou Anglais ≥ 12 au Bac, ou Certification B2' },
-      { composante: 'B_AD (Bonus Année Diplôme)', formule: '4 pts si diplôme 2025 ou 2023 · 2 pts si 2022/2021/2020' },
+      { composante: 'B_AD (Bonus Année Diplôme)', formule: '4 pts si diplôme 2026 ou 2023 · 2 pts si 2022/2021/2020' },
     ],
     remarques: [
       "Aucun dossier ne sera accepté après les délais ou s'il est incomplet.",
       "Toute fausse information entraîne l'annulation immédiate et des poursuites judiciaires pour falsification.",
-      "Les candidats non retenus peuvent déposer une opposition justifiée par e-mail avant le 31 juillet 2025.",
+      "Les candidats non retenus peuvent déposer une opposition justifiée par e-mail avant le 31 juillet 2026.",
       "La présentation des documents originaux est obligatoire lors de l'inscription administrative finale.",
     ],
   },
@@ -264,10 +268,10 @@ const PROGRAMS_DATA: ProgramData[] = [
       },
     ],
     calendrier: [
-      { event: 'Inscription en ligne (Étape 1)', date: "Du jour de l'annonce jusqu'au 20 juillet 2025" },
-      { event: 'Résultats préliminaires', date: '28 juillet 2025' },
-      { event: 'Dépôt numérique (Étape 2)', date: 'Du 28 au 31 juillet 2025' },
-      { event: 'Résultats finaux', date: '08 août 2025' },
+      { event: 'Inscription en ligne (Étape 1)', date: "Du jour de l'annonce jusqu'au 20 juillet 2026" },
+      { event: 'Résultats préliminaires', date: '28 juillet 2026' },
+      { event: 'Dépôt numérique (Étape 2)', date: 'Du 28 au 31 juillet 2026' },
+      { event: 'Résultats finaux', date: '08 août 2026' },
     ],
     dossier: [
       'Formulaire de candidature rempli en ligne et signé',
@@ -292,7 +296,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     ],
   },
   {
-    keys: ['ingenieur', 'cycle ingénieur', 'cycle_ingenieur', 'génie logiciel ingénieur', 'ing gl'],
+    keys: ['ingenieur', 'cycle ingénieur', 'cycle_ingenieur', 'génie logiciel ingénieur', 'ing gl', 'ing_gl'],
     code: 'ING-GL',
     title: "Ingénieur en Sciences Appliquées et Technologie — Informatique, Génie Logiciel",
     subtitle: 'Cycle Ingénieur',
@@ -305,7 +309,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     ],
     calendrier: [
       { event: 'Retrait des fiches de candidature', date: 'Disponible sur www.isimm.rnu.tn' },
-      { event: 'Date limite de dépôt du dossier', date: 'Vendredi 8 août 2025 (cachet de la poste)' },
+      { event: 'Date limite de dépôt du dossier', date: 'Vendredi 8 août 2026 (cachet de la poste)' },
     ],
     dossier: [
       'Fiche de candidature retirée sur www.isimm.rnu.tn, remplie et signée',
@@ -324,7 +328,7 @@ const PROGRAMS_DATA: ProgramData[] = [
     ],
     remarques: [
       "Le dossier doit être envoyé par courrier rapide à : ISIMM — Route de la Corniche — BP 223 — 5000 Monastir.",
-      "Date limite : le vendredi 8 août 2025 (le cachet de la poste faisant foi).",
+      "Date limite : le vendredi 8 août 2026 (le cachet de la poste faisant foi).",
       "Catégorie 2 : candidats sans aucun redoublement durant leur cursus universitaire.",
     ],
   },
@@ -348,6 +352,7 @@ export class OffersListingComponent implements OnInit {
   selectedOffer: Offer | null = null;
   showModal = false;
   activeModalTab: 'programme' | 'dossier' | 'score' = 'programme';
+  expandedSpecialitesIds = new Set<number>();
 
   constructor(
     private candidatureService: CandidatureService,
@@ -358,24 +363,63 @@ export class OffersListingComponent implements OnInit {
     this.loadAvailableOffers();
   }
 
+  private readonly FALLBACK_OFFERS: Offer[] = [
+    { id: 1, master_id: 1, master_nom: 'Master Professionnel Genie Logiciel (MPGL)',                                  specialite: 'MPGL',   date_limite: '2026-07-22', type: 'master',         already_applied: false, places_disponibles: 35,  code_parcours: 'MPGL',   specialites_eligibles: [], statut: 'ouvert' },
+    { id: 2, master_id: 2, master_nom: 'Mastere Professionnel en sciences de donnees (MPDS)',                         specialite: 'MPDS',   date_limite: '2026-07-22', type: 'master',         already_applied: false, places_disponibles: 35,  code_parcours: 'MPDS',   specialites_eligibles: [], statut: 'ouvert' },
+    { id: 3, master_id: 3, master_nom: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', specialite: 'MP3I',   date_limite: '2026-07-20', type: 'master',         already_applied: false, places_disponibles: 25,  code_parcours: 'MP3I',   specialites_eligibles: [], statut: 'ouvert' },
+    { id: 4, master_id: 4, master_nom: 'Mastere Recherche en Genie logiciel (MRGL)',                                  specialite: 'MRGL',   date_limite: '2026-07-22', type: 'master',         already_applied: false, places_disponibles: 111, code_parcours: 'MRGL',   specialites_eligibles: [], statut: 'ouvert' },
+    { id: 5, master_id: 5, master_nom: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)',           specialite: 'MRMI',   date_limite: '2026-07-20', type: 'master',         already_applied: false, places_disponibles: 29,  code_parcours: 'MRMI',   specialites_eligibles: [], statut: 'ouvert' },
+    { id: 6, master_id: 6, master_nom: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel',            specialite: 'ING_GL', date_limite: '2026-08-08', type: 'cycle_ingenieur', already_applied: false, places_disponibles: 65,  code_parcours: 'ING_GL', specialites_eligibles: [], statut: 'ouvert' },
+  ];
+
   loadAvailableOffers(): void {
     this.isLoading = true;
     this.errorMessage = '';
     this.candidatureService.getAvailableOffersWithSpecialites().subscribe({
       next: (response: any) => {
-        if (response.offers && Array.isArray(response.offers)) {
-          this.offers = response.offers;
-        } else if (Array.isArray(response)) {
-          this.offers = response;
-        }
+        const raw: any[] = response.offers && Array.isArray(response.offers)
+          ? response.offers
+          : Array.isArray(response) ? response : [];
+
+        const mapped: Offer[] = raw.map((item: any): Offer => ({
+          id: item.id ?? 0,
+          master_id: item.master_id ?? item.id ?? 0,
+          master_nom: item.master_nom ?? item.nom ?? item.titre ?? '',
+          specialite: item.specialite ?? item.code_parcours ?? '',
+          date_limite: item.date_limite ?? item.date_limite_preinscription ?? item.deadline ?? '',
+          type: item.type ?? item.type_master ?? 'master',
+          already_applied: item.already_applied ?? item.candidat_deja_applique ?? false,
+          places_disponibles: item.places_disponibles ?? item.capacite_total ?? item.places ?? 0,
+          code_parcours: item.code_parcours ?? item.specialite ?? '',
+          specialites_eligibles: Array.isArray(item.specialites_eligibles) ? item.specialites_eligibles : [],
+          statut: item.statut ?? 'ouvert',
+        }));
+
+        // Si l'API retourne des données → les utiliser, sinon fallback local
+        this.offers = mapped.length > 0 ? mapped : [...this.FALLBACK_OFFERS];
         this.applyFilters();
         this.isLoading = false;
       },
-      error: (error: any) => {
-        this.errorMessage = error.error?.error || 'Erreur lors du chargement des offres';
+      error: () => {
+        // L'API est indisponible : afficher quand même les 6 parcours officiels
+        this.offers = [...this.FALLBACK_OFFERS];
+        this.applyFilters();
         this.isLoading = false;
       },
     });
+  }
+
+  toggleSpecialites(offerId: number, event: Event): void {
+    event.stopPropagation();
+    if (this.expandedSpecialitesIds.has(offerId)) {
+      this.expandedSpecialitesIds.delete(offerId);
+    } else {
+      this.expandedSpecialitesIds.add(offerId);
+    }
+  }
+
+  isSpecialitesExpanded(offerId: number): boolean {
+    return this.expandedSpecialitesIds.has(offerId);
   }
 
   applyFilters(): void {

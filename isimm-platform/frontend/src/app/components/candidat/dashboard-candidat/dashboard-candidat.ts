@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -617,72 +617,68 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   offresInscription: Offre[] = [
     {
       id: 1,
-      titre: 'Mastère Professionnel en Génie logiciel(GL)',
+      titre: 'Mastere Professionnel Genie Logiciel (MPGL)',
       type: 'master',
       sous_type: 'professionnel',
-      description: 'Formation professionnelle orientée ingénierie logicielle.',
+      code: 'MPGL',
+      description: '',
       date_limite: '2026-07-22',
       places: 35,
       statut: 'ouvert',
     },
     {
       id: 2,
-      titre: 'Mastère Professionnel en sciences de données(DS)',
+      titre: 'Mastere Professionnel en sciences de donnees (MPDS)',
       type: 'master',
       sous_type: 'professionnel',
-      description: 'Formation professionnelle en sciences de données.',
+      code: 'MPDS',
+      description: '',
       date_limite: '2026-07-22',
       places: 35,
       statut: 'ouvert',
     },
     {
       id: 3,
-      titre: 'Mastère Professionnel en Ingénieries en Instrumentation industrielle (3I)',
+      titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)',
       type: 'master',
       sous_type: 'professionnel',
-      description: 'Formation professionnelle en instrumentation industrielle.',
-      date_limite: '2026-07-22',
-      places: 30,
+      code: 'MP3I',
+      description: '',
+      date_limite: '2026-07-20',
+      places: 25,
       statut: 'ouvert',
     },
     {
       id: 4,
-      titre: 'Mastère Recherche en Génie logiciel(MRGL)',
+      titre: 'Mastere Recherche en Genie logiciel (MRGL)',
       type: 'master',
       sous_type: 'recherche',
-      description: 'Mastère recherche en génie logiciel.',
+      code: 'MRGL',
+      description: '',
       date_limite: '2026-07-22',
-      places: 30,
+      places: 111,
       statut: 'ouvert',
     },
     {
       id: 5,
-      titre: 'Mastère Recherche en micro-électronique et instrumentation',
+      titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)',
       type: 'master',
       sous_type: 'recherche',
-      description: 'Mastère recherche en micro-électronique et instrumentation.',
-      date_limite: '2026-07-22',
-      places: 30,
+      code: 'MRMI',
+      description: '',
+      date_limite: '2026-07-20',
+      places: 29,
       statut: 'ouvert',
     },
     {
       id: 6,
-      titre: 'Ingénieur en sciences Appliquées et Technologie : Informatique, Génie logiciel',
+      titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)',
       type: 'cycle_ingenieur',
-      specialite: 'Informatique, Génie logiciel',
-      description: 'Cycle ingénieur en informatique et génie logiciel.',
-      date_limite: '2026-07-22',
-      places: 50,
-      statut: 'ouvert',
-    },
-    {
-      id: 7,
-      titre: 'Ingénieur en sciences Appliquées et Technologie : Electronique, Microélectronique',
-      type: 'cycle_ingenieur',
-      specialite: 'Electronique, Microélectronique',
-      description: 'Cycle ingénieur en électronique et microélectronique.',
-      date_limite: '2026-07-22',
-      places: 50,
+      code: 'ING_GL',
+      specialite: 'Genie Logiciel',
+      description: '',
+      date_limite: '2026-08-08',
+      places: 65,
       statut: 'ouvert',
     },
   ];
@@ -1873,6 +1869,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
               titre: offre.titre,
               type: offre.type,
               sous_type: offre.sous_type,
+              code: offre.code_parcours || offre.specialite || offre.code || '',
               specialite: offre.specialite,
               description: offre.description,
               date_limite: offre.date_limite,
@@ -1892,12 +1889,13 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           }
 
           this.isOffresInscriptionFallback = false;
-          // If backend returned no public/open offers, use local fallback so the UI is not empty
-          if (Array.isArray(mappedOffres) && mappedOffres.length === 0) {
+          // Only use API data when it covers all 6 canonical ISIMM parcours.
+          // If fewer than 6 are returned (incomplete DB) show the canonical fallback.
+          if (Array.isArray(mappedOffres) && mappedOffres.length >= 6) {
+            this.offresInscription = mappedOffres;
+          } else {
             this.offresInscription = this.getFallbackOffresInscription();
             this.isOffresInscriptionFallback = true;
-          } else {
-            this.offresInscription = mappedOffres;
           }
           this.loadNotifications();
         },
@@ -1916,36 +1914,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   private getFallbackOffresInscription(): Offre[] {
     return [
-      {
-        id: 101,
-        titre: 'Master Recherche Génie Logiciel',
-        type: 'master',
-        sous_type: 'recherche',
-        description: 'Offre temporaire affichée quand le service candidature est indisponible.',
-        date_limite: '2026-07-22',
-        places: 30,
-        statut: 'ouvert',
-      },
-      {
-        id: 102,
-        titre: 'Master Professionnel Sciences de Données',
-        type: 'master',
-        sous_type: 'professionnel',
-        description: 'Carte de secours pour continuer la navigation côté candidat.',
-        date_limite: '2026-07-22',
-        places: 35,
-        statut: 'ouvert',
-      },
-      {
-        id: 103,
-        titre: 'Cycle d' + "'" + 'Ingénieur Informatique',
-        type: 'cycle_ingenieur',
-        specialite: 'Informatique, Génie logiciel',
-        description: 'Carte de secours si les offres réelles ne sont pas récupérables.',
-        date_limite: '2026-07-22',
-        places: 50,
-        statut: 'ouvert',
-      },
+      { id: 1, titre: 'Mastere Professionnel Genie Logiciel (MPGL)', type: 'master', sous_type: 'professionnel', code: 'MPGL', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert' },
+      { id: 2, titre: 'Mastere Professionnel en sciences de donnees (MPDS)', type: 'master', sous_type: 'professionnel', code: 'MPDS', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert' },
+      { id: 3, titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'master', sous_type: 'professionnel', code: 'MP3I', description: '', date_limite: '2026-07-20', places: 25, statut: 'ouvert' },
+      { id: 4, titre: 'Mastere Recherche en Genie logiciel (MRGL)', type: 'master', sous_type: 'recherche', code: 'MRGL', description: '', date_limite: '2026-07-22', places: 111, statut: 'ouvert' },
+      { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', code: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert' },
+      { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', code: 'ING_GL', specialite: 'Genie Logiciel', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert' },
     ];
   }
 
@@ -2358,7 +2332,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     if (offre.statut === 'ferme') {
-      this.toastService.show('Cette offre est fermée.', 'warning');
+      this.toastService.show('Cette offre est fermée aux candidatures.', 'warning');
       return;
     }
 
@@ -2371,7 +2345,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     this.candidatureService.createCandidature(requestPayload).subscribe({
       next: (response: any) => {
-        this.toastService.show('Candidature soumise avec succès.', 'success');
+        this.toastService.show('Candidature soumise avec succès !', 'success');
         this.mesCandidatures.push({
           id: response.id,
           numero: response.numero,
@@ -2390,9 +2364,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.switchView('candidatures');
       },
       error: (error) => {
-        console.error('Erreur:', error);
-        this.toastService.show('Erreur lors de la soumission de la candidature.', 'error');
+        console.error('Erreur soumission candidature:', error);
         this.wizardSubmitting = false;
+
+        // Extract the exact backend error message for display
+        const backendMsg: string =
+          error?.error?.error ||
+          error?.error?.detail ||
+          error?.error?.message ||
+          (typeof error?.error === 'string' ? error.error : '') ||
+          `Erreur ${error?.status || ''} lors de la soumission.`;
+
+        this.toastService.show(backendMsg, 'error');
       },
     });
   }
@@ -2765,6 +2748,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           bonusLangue +
           bonusDiplome;
       }
+    } else if (formationCode === 'MP3I') {
+      if (m1 === null && m2 === null && m3 === null) {
+        score = null;
+      } else {
+        const nonNull = [m1, m2, m3].filter((v) => v !== null) as number[];
+        const moyAcad = nonNull.reduce((a, b) => a + b, 0) / nonNull.length;
+        const penalty = Math.min(nbRedoublements, 3) * 0.25;
+        score = moyenneBac * 0.4 + moyAcad * 0.6 - penalty;
+      }
     } else if (formationCode === 'ING_INFO_GL' || formationCode === 'ING_EM') {
       const isInterne =
         String(this.wizardData.natureCandidature || '').toLowerCase() !== 'étudiant externe';
@@ -2808,13 +2800,16 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
   // Call backend to compute score using proper formula (e.g., MRGL)
   private calculateWizardScoreFromBackend(): void {
-    console.log('🧮 calculateWizardScoreFromBackend() called');
-    console.log('  Step 2 valid:', this.isWizardStepValid(2));
-
     // Only calculate if step 2 is valid (has all required academic data)
     if (!this.isWizardStepValid(2)) {
-      // If the step is not valid, stop loading and keep previous value (avoid perpetual "Calcul...").
-      console.warn('  ⚠️  Step 2 not valid, skipping score calculation');
+      this.wizardComputedScoreLoading = false;
+      return;
+    }
+
+    // Skip backend call when the offer has no real master_id (canonical fallback offers).
+    // The backend requires a valid Master with a formule_score; fallback offers use fake IDs.
+    const masterId = this.wizardOffre?.master_id;
+    if (!masterId) {
       this.wizardComputedScoreLoading = false;
       return;
     }
@@ -2825,7 +2820,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     const academicData = this.buildWizardAcademicDataPayload();
     const formationCode = this.getWizardFormationCode(this.wizardOffre);
     const payload = {
-      master_id: this.wizardOffre?.master_id ?? this.wizardOffre?.id,
+      master_id: masterId,
       formation_code: formationCode,
       academic_data: academicData,
       payload: academicData,
@@ -2848,24 +2843,18 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       sessionReussiteIng1: this.wizardData.sessionReussiteIng1,
     };
 
-    console.log('📤 Sending score calculation request:', {
-      formation_code: formationCode,
-      master_id: payload.master_id,
-      academic_data_keys: Object.keys(academicData),
-    });
-
     this.candidatureService.calculateWizardScore(payload).subscribe({
       next: (response: any) => {
-        console.log('✅ Score calculation succeeded:', response);
+        // Guard: modal may have been closed before the response arrived
+        if (!this.showSubmissionWizardModal) return;
         this.wizardComputedScoreBackend = response?.score ?? null;
         this.wizardComputedScoreLoading = false;
-        console.log('  Score set to:', this.wizardComputedScoreBackend);
       },
-      error: (error: any) => {
-        console.error('❌ Erreur calcul score:', error);
+      error: () => {
+        // Guard: modal may have been closed before the response arrived
+        if (!this.showSubmissionWizardModal) return;
         this.wizardComputedScoreError = 'Erreur lors du calcul du score';
         this.wizardComputedScoreLoading = false;
-        // Keep previous value or null on error
       },
     });
   }
@@ -2908,18 +2897,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   isWizardMrglOffer(): boolean {
-    const title = String(this.wizardOffre?.titre || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-    return (
-      title.includes('mrgl') ||
-      (title.includes('recherche') && title.includes('genie') && title.includes('logiciel'))
-    );
+    return String(this.wizardOffre?.code || '').toUpperCase() === 'MRGL';
   }
 
   isWizardMrmiOffer(): boolean {
-    return this.wizardOffre?.titre === 'Mastère Recherche en micro-électronique et instrumentation';
+    return String(this.wizardOffre?.code || '').toUpperCase() === 'MRMI';
+  }
+
+  isWizardMp3iOffer(): boolean {
+    return String(this.wizardOffre?.code || '').toUpperCase() === 'MP3I';
   }
 
   isWizardIngenieurOffer(): boolean {
@@ -4166,6 +4152,14 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   private getPreinscriptionDetailCode(offre: Offre | null): string | null {
+    const codeMap: Record<string, string> = {
+      MPGL: 'mpgl', MPDS: 'mpds', MP3I: 'mp3i',
+      MRGL: 'mrgl', MRMI: 'mrmi', ING_GL: 'ing_info_gl',
+    };
+    if (offre?.code && codeMap[offre.code]) return codeMap[offre.code];
+
+    if (offre?.type === 'cycle_ingenieur') return 'ing_info_gl';
+
     const normalize = (value: string): string =>
       (value || '')
         .toLowerCase()
@@ -4181,13 +4175,6 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     if (haystack.includes('instrumentation') && haystack.includes('industri')) return 'mp3i';
     if (haystack.includes('micro') && haystack.includes('instrument')) return 'mrmi';
     if (haystack.includes('recherche') && haystack.includes('genie logiciel')) return 'mrgl';
-    if (
-      haystack.includes('cycle') &&
-      haystack.includes('ingenieur') &&
-      haystack.includes('informatique')
-    ) {
-      return 'ing_info_gl';
-    }
     if (haystack.includes('ingenieur') && haystack.includes('microelectronique')) return 'ing_em';
     if (haystack.includes('ingenieur') && haystack.includes('electronique')) return 'ing_em';
     if (haystack.includes('genie logiciel') || haystack.includes('ingenierie logicielle'))

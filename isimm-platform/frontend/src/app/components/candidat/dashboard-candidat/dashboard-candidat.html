@@ -3037,6 +3037,7 @@
                 >
                 <select [(ngModel)]="wizardData.specialiteDiplome" name="wzSpecDiplome">
                   <option value="">— Sélectionner —</option>
+                  <!-- MRGL options -->
                   <option *ngIf="isWizardMrglOffer()" value="Licence en Informatique : GL & SI">
                     Licence en Informatique : GL & SI
                   </option>
@@ -3046,6 +3047,7 @@
                   >
                     Licence en Informatique de Gestion : BI
                   </option>
+                  <!-- MRMI options -->
                   <option
                     *ngIf="isWizardMrmiOffer()"
                     value="Licence en EEA, MIM (Electronique, Systemes Embarques, Metrologie) ou TIC (Reseaux et IoT)"
@@ -3064,14 +3066,43 @@
                   >
                     Réussite 1ère année cycle ingénieur
                   </option>
+                  <!-- MP3I options -->
                   <option
-                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()"
+                    *ngIf="isWizardMp3iOffer()"
+                    value="Licence en Électronique, Électrotechnique et Automatique (MIM)"
+                  >
+                    Licence en EEA (MIM)
+                  </option>
+                  <option
+                    *ngIf="isWizardMp3iOffer()"
+                    value="Licence en Électronique, Électrotechnique et Automatique (SE)"
+                  >
+                    Licence en EEA (SE)
+                  </option>
+                  <option *ngIf="isWizardMp3iOffer()" value="Licence en TIC">
+                    Licence en TIC
+                  </option>
+                  <option *ngIf="isWizardMp3iOffer()" value="Licence en Mesures et Instrumentation">
+                    Licence en Mesures et Instrumentation
+                  </option>
+                  <option
+                    *ngIf="isWizardMp3iOffer()"
+                    value="Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie"
+                  >
+                    Automatique / Mesures et Métrologie
+                  </option>
+                  <option *ngIf="isWizardMp3iOffer()" value="Licence en Génie Électrique">
+                    Licence en Génie Électrique
+                  </option>
+                  <!-- Fallback for MPGL / MPDS / Ingénieur — NOT for MP3I / MRGL / MRMI -->
+                  <option
+                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer() && !isWizardMp3iOffer()"
                     value="Genie Logiciel et Sciences de l'Informatique"
                   >
                     Génie Logiciel et Sciences de l'Informatique
                   </option>
                   <option
-                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer()"
+                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer() && !isWizardMp3iOffer()"
                     value="Sciences de l'Informatique"
                   >
                     Sciences de l'Informatique

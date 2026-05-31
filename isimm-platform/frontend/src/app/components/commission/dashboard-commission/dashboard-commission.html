@@ -21,25 +21,30 @@
         </span>
       </div>
       <p class="sidebar-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
-      <p class="user-role">{{ getCommissionUserRoleLabel() }}</p>
-      <small class="user-role-master" *ngIf="isResponsable">
-        Spécialité : {{ getDisplayedResponsableSpecialite() }}
-      </small>
+      <p class="user-role">{{ isResponsable ? 'Commission Responsable' : 'Membre Commission' }}</p>
+      <div class="user-role-master" *ngIf="isResponsable">
+        SPÉCIALITÉ : {{ getDisplayedResponsableSpecialite() || 'Non renseignée' }}
+      </div>
       <div class="commission-block" *ngIf="!isResponsable">
         <div class="commission-eyebrow">
           <i class="fas fa-filter"></i>
           Commission active
         </div>
+        <div *ngIf="!commissionsLoading && availableCommissions.length === 0" class="commission-empty-notice">
+          <i class="fas fa-info-circle"></i>
+          Aucune commission assignée
+        </div>
         <div
+          *ngIf="availableCommissions.length > 0"
           class="select-wrap"
-          [class.select-wrap-disabled]="commissionsLoading || !availableCommissions.length"
+          [class.select-wrap-disabled]="commissionsLoading"
         >
           <span class="status-dot"></span>
           <select
             class="commission-select"
             [ngModel]="activeCommissionId"
             (ngModelChange)="onActiveCommissionChange($event)"
-            [disabled]="commissionsLoading || !availableCommissions.length"
+            [disabled]="commissionsLoading"
           >
             <option *ngFor="let commission of availableCommissions" [value]="commission.id">
               {{ commission.nom }}
@@ -724,6 +729,14 @@
           >
             <i class="fas fa-redo-alt"></i> Reinitialiser
           </button>
+        </div>
+
+        <!-- Role section label -->
+        <div class="notif-role-bar">
+          <span class="notif-role-chip" [class.notif-role-resp]="isResponsable" [class.notif-role-membre]="!isResponsable">
+            <i class="fas" [class.fa-user-tie]="isResponsable" [class.fa-user]="!isResponsable"></i>
+            {{ isResponsable ? 'Notifications Responsable Commission' : 'Notifications Membre Commission' }}
+          </span>
         </div>
 
         <!-- Timeline list -->
@@ -2055,7 +2068,12 @@
                 <td colspan="8">
                   <div class="cm-empty-state">
                     <i class="fas fa-inbox"></i>
-                    <p>Aucune candidature ne correspond aux filtres.</p>
+                    <p *ngIf="candidaturesResponsable.length === 0">
+                      Aucune candidature reçue pour le moment. Votre espace est prêt et sera mis à jour dès la réception de candidatures.
+                    </p>
+                    <p *ngIf="candidaturesResponsable.length > 0">
+                      Aucune candidature ne correspond aux filtres appliqués.
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -2357,7 +2375,12 @@
                     <td colspan="8">
                       <div class="ing-empty-state">
                         <i class="fas fa-inbox"></i>
-                        <p>Aucune candidature ingénieur ne correspond aux filtres.</p>
+                        <p *ngIf="candidaturesResponsable.length === 0">
+                          Aucune candidature ingénieur reçue pour le moment.
+                        </p>
+                        <p *ngIf="candidaturesResponsable.length > 0">
+                          Aucune candidature ingénieur ne correspond aux filtres appliqués.
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -3012,10 +3035,6 @@
               Candidatures — <strong>{{ candidaturesFiltrees.length }}</strong> résultats
             </div>
             <div style="display: flex; align-items: center; gap: 10px">
-              <label class="prs-check-label" style="font-size: 12px">
-                <input type="checkbox" [(ngModel)]="hideValidated" (change)="applyFilters()" />
-                <span>Top 100 seulement</span>
-              </label>
               <div
                 style="
                   display: flex;
@@ -3058,8 +3077,7 @@
                   <th>Spécialité</th>
                   <th style="min-width: 130px">Score</th>
                   <th>Statut</th>
-                  <th>Avis membres</th>
-                  <th>Dossier candidatures</th>
+                  <th>Dossier (Valide/Non valide)</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -3117,11 +3135,6 @@
                     </span>
                   </td>
                   <td>
-                    <button class="prs-btn-voir-avis" type="button" (click)="ouvrirModalAvis(c)">
-                      <i class="fas fa-eye"></i> Voir avis
-                    </button>
-                  </td>
-                  <td>
                     <select
                       class="prs-dossier-select"
                       [value]="c.dossier_valide"
@@ -3153,7 +3166,7 @@
                             class="prs-kebab-item"
                             (click)="ouvrirModalAvis(c); togglePrsKebab(0)"
                           >
-                            <i class="fas fa-comments"></i> Donner un avis
+                            <i class="fas fa-eye"></i> Voir avis
                           </button>
                         </li>
                         <li>
@@ -3170,7 +3183,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="getVisibleCandidaturesForTable().length === 0">
-                  <td colspan="10">
+                  <td colspan="9">
                     <div class="prs-empty-state">
                       <i class="fas fa-inbox"></i>
                       <p>Aucune candidature ne correspond aux filtres.</p>
@@ -3240,8 +3253,8 @@
         </button>
       </div>
 
-      <!-- Modal Voir Avis / Décision -->
-      <div class="prs-modal-overlay" [class.open]="showModalAvis" (click)="fermerModalAvis()">
+      <!-- Modal Voir Avis / Décision (responsable only) -->
+      <div class="prs-modal-overlay" *ngIf="isResponsable" [class.open]="showModalAvis" (click)="fermerModalAvis()">
         <div class="prs-modal-avis" (click)="$event.stopPropagation()">
           <div class="prs-ma-header">
             <div class="prs-ma-title">
@@ -3590,8 +3603,8 @@
         </button>
       </div>
 
-      <!-- Avis modal (membre view) -->
-      <div class="prs-modal-overlay" [class.open]="showModalAvis" (click)="fermerModalAvis()">
+      <!-- Avis modal (membre view only) -->
+      <div class="prs-modal-overlay" *ngIf="!isResponsable" [class.open]="showModalAvis" (click)="fermerModalAvis()">
         <div class="prs-modal-avis" (click)="$event.stopPropagation()">
           <div class="prs-ma-header">
             <div class="prs-ma-title">
@@ -4575,16 +4588,6 @@
           </div>
         </div>
 
-        <!-- Action buttons row (moved from hero) -->
-        <div class="sel-action-bar">
-          <button class="sel-btn-repechage" type="button" (click)="repechageAutomatique()">
-            ⏳ Lancer le Repêchage automatique
-          </button>
-          <button class="sel-btn-publier" type="button" (click)="publierEtNotifier()">
-            ✓ Publier &amp; Notifier
-          </button>
-        </div>
-
         <!-- Filters -->
         <div class="sel-filter-bar">
           <div class="sel-fg">
@@ -4682,6 +4685,16 @@
           </button>
         </div>
 
+        <!-- Action buttons — above table -->
+        <div class="sel-action-bar">
+          <button class="sel-btn-repechage" type="button" (click)="repechageAutomatique()">
+            ⏳ Lancer le Repêchage automatique
+          </button>
+          <button class="sel-btn-publier" type="button" (click)="publierEtNotifier()">
+            ✓ Publier &amp; Notifier
+          </button>
+        </div>
+
         <!-- Table -->
         <div class="sel-table-card">
           <div class="sel-table-toolbar">
@@ -4718,9 +4731,9 @@
                   <th>Nom &amp; Prénom</th>
                   <th>Spécialité</th>
                   <th>Score</th>
-                  <th>Dossier de candidature</th>
+                  <th>Dossier</th>
                   <th>Avis membres</th>
-                  <th>Statut Sélection</th>
+                  <th>Décision</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -4780,13 +4793,25 @@
                     </select>
                   </td>
                   <td>
-                    <button
-                      class="sel-action-consult"
-                      type="button"
-                      (click)="ouvrirDossierOCRById(c.id)"
-                    >
-                      <i class="fas fa-file-alt"></i> Consulter dossier
-                    </button>
+                    <div style="position:relative" (click)="$event.stopPropagation()">
+                      <button class="prs-kebab-btn" type="button" (click)="toggleSelKebab(c.id)">
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                      <ul class="prs-kebab-menu" *ngIf="selKebabOpenId === c.id">
+                        <li>
+                          <button type="button" class="prs-kebab-item"
+                            (click)="ouvrirDossierOCRById(c.id); toggleSelKebab(0)">
+                            <i class="fas fa-file-alt"></i> Consulter dossier
+                          </button>
+                        </li>
+                        <li>
+                          <button type="button" class="prs-kebab-item"
+                            (click)="ouvrirModalAvis($any(c)); toggleSelKebab(0)">
+                            <i class="fas fa-eye"></i> Voir avis
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
                   </td>
                 </tr>
                 <tr *ngIf="finalSelectionFiltered.length === 0">
@@ -4803,7 +4828,7 @@
         </div>
       </div>
 
-      <!-- Floating banner -->
+      <!-- Floating banner (sélection) -->
       <div class="prs-float-banner" [class.show]="finalSelectionSelectedIds.size > 0">
         <div class="prs-float-count">
           <strong>{{ finalSelectionSelectedIds.size }}</strong> candidat(s) sélectionné(s)
@@ -5520,17 +5545,6 @@
             <div class="ins2-sub">
               Import Excel, verification des paiements et finalisation des inscriptions.
             </div>
-          </div>
-          <div class="ins2-hero-actions">
-            <select [(ngModel)]="inscriptionsExportFormat" class="ins2-select">
-              <option value="csv">CSV</option>
-              <option value="json">JSON</option>
-              <option value="pdf">PDF</option>
-              <option value="xlsx">Excel</option>
-            </select>
-            <button class="ins2-btn-export" (click)="exportInscriptions()">
-              <i class="fas fa-download"></i> Exporter
-            </button>
           </div>
         </div>
 
@@ -6681,8 +6695,8 @@
       </div>
     </div>
 
-    <!-- MODAL AVIS -->
-    <div *ngIf="showModalAvis" class="modal-overlay" (click)="fermerModalAvis()">
+    <!-- MODAL AVIS — remplacé par prs-modal-overlay (lignes 3244 / 3594) -->
+    <div *ngIf="false" class="modal-overlay" (click)="fermerModalAvis()">
       <div
         class="modal-content"
         (click)="$event.stopPropagation()"

@@ -49,17 +49,12 @@ export class GestionCommissionComponent implements OnInit {
   isEditMode: boolean = false;
 
   specialites = [
-    'Master Data Science',
-    'Master Génie Logiciel',
-    'Master Microélectronique',
-    'Master Réseaux et Télécommunications',
-    'Master Génie Logiciel - Ingénieur',
-    'Master Data Science - Licence Maths / Info / IG',
-    'Master Ingénierie Instrumentation Industrielle (3I)',
-    'Master Recherche Génie Logiciel (MRGL)',
-    'Master Recherche Micro-électronique et Instrumentation',
-    'Cycle Ingénieur Informatique / Génie Logiciel',
-    'Tous les masters',
+    'Master Professionnel Génie Logiciel (MPGL)',
+    'Mastère Professionnel en sciences de données (MPDS)',
+    'Mastère Professionnel en Ingénieries en Instrumentation industrielle (MP3I)',
+    'Mastère Recherche en Génie logiciel (MRGL)',
+    'Mastère Recherche en micro-électronique et instrumentation (MRMI)',
+    'Ingénieur en sciences Appliquées et Technologie : Génie Logiciel',
   ];
 
   grades = ['Professeur', 'Maître de conférences', 'Maître assistant', 'Assistant'];

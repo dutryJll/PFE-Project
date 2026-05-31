@@ -2334,6 +2334,23 @@
   white-space: nowrap;
 }
 
+.menu-item.danger-item {
+  color: #dc2626;
+}
+
+.menu-item.danger-item i {
+  color: #dc2626;
+}
+
+.menu-item.danger-item:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.menu-item.danger-item:hover i {
+  color: #b91c1c;
+}
+
 .activity-icon.list-icon {
   background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
   color: #6b21a8;

@@ -26,6 +26,9 @@ class User(AbstractUser):
     reset_password_token = models.UUIDField(null=True, blank=True)
     reset_password_expire = models.DateTimeField(null=True, blank=True)
     
+    # Champ spécialité pour les responsables/membres de commission
+    specialite = models.CharField(max_length=300, blank=True, default='', verbose_name='Spécialité')
+
     # Autres champs
     avatar_url = models.CharField(max_length=500, blank=True, default='', verbose_name='Avatar')
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Téléphone")

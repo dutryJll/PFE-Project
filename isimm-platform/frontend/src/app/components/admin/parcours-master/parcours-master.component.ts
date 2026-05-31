@@ -1,364 +1,492 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormsModule,
-  ReactiveFormsModule,
-  FormBuilder,
-  FormGroup,
-  Validators,
-} from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-interface Parcours {
-  id: number;
+interface Specialite {
   nom: string;
-  master_nom: string;
-  type: string;
-  type_display: string;
-  capacite: number;
-  date_limite: string;
-  statut: string;
-  statut_display: string;
-  updated_at: string;
+  abreviation: string;
 }
+
+interface ParcoursRow {
+  code_parcours: string;
+  nom_parcours: string;
+  type_formation: string;
+  specialites: Specialite[];
+  nombre_specialites: number;
+  places: number;
+  date_limite: string;
+  type_label: string;
+  color: string;
+}
+
+const PARCOURS_META: Record<string, { places: number; date_limite: string; type_label: string; color: string }> = {
+  MPGL:  { places: 35,  date_limite: '22 juillet 2026',  type_label: 'Professionnel', color: 'blue'   },
+  MPDS:  { places: 35,  date_limite: '22 juillet 2026',  type_label: 'Professionnel', color: 'teal'   },
+  MP3I:  { places: 25,  date_limite: '20 juillet 2026',  type_label: 'Professionnel', color: 'amber'  },
+  MRGL:  { places: 111, date_limite: '22 juillet 2026',  type_label: 'Recherche',     color: 'purple' },
+  MRMI:  { places: 29,  date_limite: '20 juillet 2026',  type_label: 'Recherche',     color: 'indigo' },
+};
 
 @Component({
   selector: 'app-parcours-master',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule],
   template: `
-    <div class="parcours-container">
-      <h2>Gestion des Parcours Master</h2>
+    <div class="pm-page">
 
-      <!-- Bouton Ajouter -->
-      <button class="btn btn-primary" (click)="openForm()">+ Ajouter un parcours</button>
+      <!-- ── Header ─────────────────────────────────────────── -->
+      <div class="pm-header">
+        <div class="pm-header-left">
+          <h2 class="pm-title">Parcours Mastère — Offres 2025‑2026</h2>
+          <p class="pm-subtitle">{{ rows.length }} parcours officiels · Inscriptions ouvertes</p>
+        </div>
+        <button class="pm-btn-refresh" (click)="load()" title="Actualiser">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 10a6 6 0 1 0 1-3.2"/><path d="M4 4v3h3"/>
+          </svg>
+        </button>
+      </div>
 
-      <!-- Liste des parcours -->
-      <div class="parcours-list" *ngIf="parcours && parcours.length > 0">
-        <table class="table">
+      <!-- ── Loading ───────────────────────────────────────── -->
+      <div *ngIf="loading" class="pm-loading">
+        <div class="pm-spinner"></div>
+        <span>Chargement des parcours…</span>
+      </div>
+
+      <!-- ── Error ────────────────────────────────────────── -->
+      <div *ngIf="error && !loading" class="pm-error">
+        <svg viewBox="0 0 20 20" fill="none" stroke="#dc2626" stroke-width="2" width="20" height="20">
+          <circle cx="10" cy="10" r="9"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="14" x2="10.01" y2="14"/>
+        </svg>
+        {{ error }}
+        <button (click)="load()">Réessayer</button>
+      </div>
+
+      <!-- ── Table ─────────────────────────────────────────── -->
+      <div *ngIf="!loading && rows.length > 0" class="pm-table-wrap">
+        <table class="pm-table">
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>Master</th>
+              <th>Code</th>
+              <th>Nom du parcours</th>
               <th>Type</th>
-              <th>Capacité</th>
-              <th>Date Limite</th>
-              <th>Statut</th>
-              <th>Actions</th>
+              <th style="text-align:center">Places</th>
+              <th>Date limite</th>
+              <th style="text-align:center">Spécialités éligibles</th>
+              <th style="text-align:center">Statut</th>
+              <th style="text-align:center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let p of parcours">
-              <td>{{ p.nom }}</td>
-              <td>{{ p.master_nom }}</td>
-              <td>{{ p.type_display }}</td>
-              <td>{{ p.capacite }}</td>
-              <td>{{ p.date_limite | date: 'dd/MM/yyyy' }}</td>
-              <td>
-                <span [ngClass]="'badge badge-' + getStatutClass(p.statut)">
-                  {{ p.statut_display }}
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-info" (click)="editParcours(p)">Modifier</button>
-                <button class="btn btn-sm btn-danger" (click)="deleteParcours(p.id)">
-                  Supprimer
-                </button>
-                <button class="btn btn-sm btn-success" (click)="generateCriteres(p.id)">
-                  Critères
-                </button>
-              </td>
-            </tr>
+            <ng-container *ngFor="let r of rows">
+              <tr class="pm-row" [class.pm-row-expanded]="isExpanded(r.code_parcours)">
+                <td>
+                  <span class="pm-code" [class]="'pm-code-' + r.color">{{ r.code_parcours }}</span>
+                </td>
+                <td class="pm-nom">{{ r.nom_parcours }}</td>
+                <td>
+                  <span class="pm-type" [class]="r.type_label === 'Recherche' ? 'pm-type-recherche' : 'pm-type-pro'">
+                    {{ r.type_label }}
+                  </span>
+                </td>
+                <td style="text-align:center">
+                  <strong>{{ r.places }}</strong>
+                </td>
+                <td class="pm-date">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13">
+                    <rect x="1" y="2" width="14" height="13" rx="2"/>
+                    <line x1="5" y1="1" x2="5" y2="4"/><line x1="11" y1="1" x2="11" y2="4"/>
+                    <line x1="1" y1="7" x2="15" y2="7"/>
+                  </svg>
+                  {{ r.date_limite }}
+                </td>
+                <td style="text-align:center">
+                  <button class="pm-btn-spec" (click)="toggle(r.code_parcours)">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" width="12" height="12">
+                      <path d="M4 6l4 4 4-4" *ngIf="!isExpanded(r.code_parcours)"/>
+                      <path d="M4 10l4-4 4 4" *ngIf="isExpanded(r.code_parcours)"/>
+                    </svg>
+                    {{ r.nombre_specialites }} diplôme(s)
+                  </button>
+                </td>
+                <td style="text-align:center">
+                  <span class="pm-badge-ouvert">OUVERT</span>
+                </td>
+                <td style="text-align:center">
+                  <button class="pm-btn-view" (click)="toggle(r.code_parcours)" title="Voir les spécialités">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14">
+                      <circle cx="8" cy="8" r="3"/><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Expanded specialités row -->
+              <tr *ngIf="isExpanded(r.code_parcours)" class="pm-spec-row">
+                <td colspan="8">
+                  <div class="pm-spec-panel">
+                    <div class="pm-spec-title">
+                      Diplômes / Licences éligibles pour
+                      <strong>{{ r.nom_parcours }}</strong>
+                    </div>
+                    <div class="pm-spec-grid">
+                      <div class="pm-spec-item" *ngFor="let s of r.specialites">
+                        <span class="pm-spec-abrev" [class]="'pm-code-' + r.color">{{ s.abreviation }}</span>
+                        <span class="pm-spec-nom">{{ s.nom }}</span>
+                      </div>
+                    </div>
+                    <p *ngIf="!r.specialites || r.specialites.length === 0" class="pm-spec-empty">
+                      Aucune spécialité définie.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
           </tbody>
         </table>
       </div>
 
-      <p *ngIf="!parcours || parcours.length === 0" class="text-muted">Aucun parcours créé</p>
-
-      <!-- Formulaire Modal -->
-      <div class="modal" *ngIf="showForm">
-        <div class="modal-content">
-          <span class="close" (click)="closeForm()">&times;</span>
-          <h3>{{ isEditing ? 'Modifier' : 'Créer' }} un parcours</h3>
-
-          <form [formGroup]="parcourForm" (ngSubmit)="saveParcours()">
-            <div class="form-group">
-              <label>Master</label>
-              <select formControlName="master" class="form-control" required>
-                <option value="">Sélectionner</option>
-                <option *ngFor="let m of masters" [value]="m.id">{{ m.nom }}</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Nom du Parcours</label>
-              <input type="text" formControlName="nom" class="form-control" required />
-            </div>
-
-            <div class="form-group">
-              <label>Type</label>
-              <select formControlName="type" class="form-control" required>
-                <option value="pro">Professionnel</option>
-                <option value="recherche">Recherche</option>
-                <option value="ingenieur">Ingénieur</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Capacité</label>
-              <input type="number" formControlName="capacite" class="form-control" />
-            </div>
-
-            <div class="form-group">
-              <label>Date Limite</label>
-              <input type="date" formControlName="date_limite" class="form-control" />
-            </div>
-
-            <div class="form-group">
-              <label>Statut</label>
-              <select formControlName="statut" class="form-control">
-                <option value="brouillon">Brouillon</option>
-                <option value="ouvert">Ouvert</option>
-                <option value="ferme">Fermé</option>
-              </select>
-            </div>
-
-            <button type="submit" class="btn btn-success" [disabled]="!parcourForm.valid">
-              Sauvegarder
-            </button>
-            <button type="button" class="btn btn-secondary" (click)="closeForm()">Annuler</button>
-          </form>
-        </div>
+      <!-- ── Empty ──────────────────────────────────────────── -->
+      <div *ngIf="!loading && rows.length === 0 && !error" class="pm-empty">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#94a3b8" stroke-width="2" width="48" height="48">
+          <rect x="8" y="12" width="48" height="40" rx="4"/>
+          <line x1="20" y1="26" x2="44" y2="26"/>
+          <line x1="20" y1="34" x2="36" y2="34"/>
+        </svg>
+        <p>Aucun parcours master trouvé. Vérifiez que le script de peuplement a été exécuté.</p>
       </div>
+
     </div>
   `,
-  styles: [
-    `
-      .parcours-container {
-        padding: 20px;
-      }
-      .btn {
-        padding: 8px 12px;
-        margin: 5px;
-        border: none;
-        cursor: pointer;
-        border-radius: 4px;
-      }
-      .btn-primary {
-        background-color: #007bff;
-        color: white;
-      }
-      .btn-info {
-        background-color: #17a2b8;
-        color: white;
-      }
-      .btn-success {
-        background-color: #28a745;
-        color: white;
-      }
-      .btn-danger {
-        background-color: #dc3545;
-        color: white;
-      }
-      .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-      }
-      .btn:hover {
-        opacity: 0.9;
-      }
-      .modal {
-        display: block;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.4);
-      }
-      .modal-content {
-        background-color: white;
-        margin: 10% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 500px;
-        border-radius: 8px;
-      }
-      .close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-      }
-      .form-group {
-        margin-bottom: 15px;
-      }
-      .form-control {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-      }
-      .badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-      }
-      .badge-brouillon {
-        background-color: #f8d7da;
-        color: #721c24;
-      }
-      .badge-ouvert {
-        background-color: #d4edda;
-        color: #155724;
-      }
-      .badge-ferme {
-        background-color: #f5f5f5;
-        color: #6c757d;
-      }
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-      .table th,
-      .table td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-      }
-      .table th {
-        background-color: #f8f9fa;
-      }
-    `,
-  ],
+  styles: [`
+    .pm-page {
+      padding: 1.5rem 2rem;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    /* Header */
+    .pm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+    .pm-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.2rem;
+    }
+    .pm-subtitle {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin: 0;
+    }
+    .pm-btn-refresh {
+      background: #f1f5f9;
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem;
+      cursor: pointer;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      transition: background 0.15s;
+    }
+    .pm-btn-refresh svg { width: 17px; height: 17px; }
+    .pm-btn-refresh:hover { background: #e2e8f0; color: #1e293b; }
+
+    /* Loading */
+    .pm-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2.5rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    .pm-spinner {
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .pm-error {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 1rem 1.25rem;
+      background: #fef2f2;
+      border-radius: 10px;
+      color: #dc2626;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .pm-error button {
+      margin-left: auto;
+      padding: 0.3rem 0.9rem;
+      border: 1.5px solid #dc2626;
+      border-radius: 6px;
+      background: transparent;
+      color: #dc2626;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .pm-error button:hover { background: #dc2626; color: #fff; }
+
+    /* Table */
+    .pm-table-wrap {
+      background: #fff;
+      border-radius: 14px;
+      border: 1.5px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .pm-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pm-table thead tr {
+      background: #f8fafc;
+      border-bottom: 1.5px solid #e2e8f0;
+    }
+    .pm-table th {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .pm-table td {
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      color: #1e293b;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .pm-row:last-child td { border-bottom: none; }
+    .pm-row:hover td { background: #f8fafc; }
+    .pm-row-expanded td { background: #f8fafc; }
+
+    /* Code badges */
+    .pm-code {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .pm-code-blue   { background: #dbeafe; color: #1e40af; }
+    .pm-code-teal   { background: #ccfbf1; color: #0f766e; }
+    .pm-code-amber  { background: #fef3c7; color: #b45309; }
+    .pm-code-purple { background: #ede9fe; color: #6d28d9; }
+    .pm-code-indigo { background: #e0e7ff; color: #3730a3; }
+
+    .pm-nom {
+      font-weight: 600;
+      max-width: 340px;
+    }
+
+    /* Type badge */
+    .pm-type {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.22rem 0.6rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .pm-type-pro      { background: #dbeafe; color: #1e40af; }
+    .pm-type-recherche{ background: #f3e8ff; color: #7c3aed; }
+
+    /* Date */
+    .pm-date {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    /* Statut OUVERT */
+    .pm-badge-ouvert {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #047857;
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+    }
+
+    /* Specialités button */
+    .pm-btn-spec {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.7rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 0.77rem;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .pm-btn-spec:hover { border-color: #94a3b8; background: #f1f5f9; color: #1e293b; }
+
+    /* View button */
+    .pm-btn-view {
+      background: none;
+      border: none;
+      padding: 0.3rem;
+      cursor: pointer;
+      color: #3b82f6;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .pm-btn-view:hover { background: #eff6ff; }
+
+    /* Specialités expanded panel */
+    .pm-spec-row td {
+      background: #f8fafc !important;
+      border-bottom: 1.5px solid #e2e8f0 !important;
+      padding: 0 !important;
+    }
+    .pm-spec-panel {
+      padding: 1rem 1.25rem 1.25rem;
+      border-top: 1.5px dashed #e2e8f0;
+    }
+    .pm-spec-title {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+    .pm-spec-title strong { color: #0f172a; }
+    .pm-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.45rem;
+    }
+    .pm-spec-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.45rem 0.65rem;
+    }
+    .pm-spec-abrev {
+      flex-shrink: 0;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+    }
+    .pm-spec-nom {
+      font-size: 0.78rem;
+      color: #334155;
+      line-height: 1.4;
+    }
+    .pm-spec-empty {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-style: italic;
+      margin: 0;
+    }
+
+    /* Empty state */
+    .pm-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 3rem;
+      color: #94a3b8;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+  `],
 })
 export class ParcoursMasterComponent implements OnInit {
-  parcours: Parcours[] = [];
-  masters: any[] = [];
-  parcourForm!: FormGroup;
-  showForm = false;
-  isEditing = false;
-  editingId: number | null = null;
+  rows: ParcoursRow[] = [];
+  loading = false;
+  error = '';
+  private expanded = new Set<string>();
 
-  constructor(
-    private http: HttpClient,
-    private fb: FormBuilder,
-  ) {
-    this.initForm();
+  private get headers(): HttpHeaders {
+    const token = localStorage.getItem('access_token') || '';
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
+
+  constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    this.loadParcours();
-    this.loadMasters();
+    this.load();
   }
 
-  initForm() {
-    this.parcourForm = this.fb.group({
-      master: ['', Validators.required],
-      nom: ['', Validators.required],
-      type: ['pro', Validators.required],
-      capacite: [30, [Validators.required, Validators.min(1)]],
-      date_limite: ['', Validators.required],
-      statut: ['brouillon'],
-    });
-  }
-
-  loadParcours() {
-    this.http.get<any[]>(`${environment.apiUrl}/candidatures/parcours/`).subscribe({
-      next: (data) => {
-        this.parcours = data;
-      },
-      error: (error) => {
-        console.error('Erreur chargement parcours:', error);
-      },
-    });
-  }
-
-  loadMasters() {
-    this.http.get<any[]>(`${environment.apiUrl}/candidatures/masters/`).subscribe({
-      next: (data) => {
-        this.masters = data;
-      },
-      error: (error) => {
-        console.error('Erreur chargement masters:', error);
-      },
-    });
-  }
-
-  openForm() {
-    this.isEditing = false;
-    this.editingId = null;
-    this.parcourForm.reset({ type: 'pro', statut: 'brouillon', capacite: 30 });
-    this.showForm = true;
-  }
-
-  closeForm() {
-    this.showForm = false;
-    this.isEditing = false;
-    this.editingId = null;
-  }
-
-  editParcours(p: Parcours) {
-    this.isEditing = true;
-    this.editingId = p.id;
-    this.parcourForm.patchValue(p);
-    this.showForm = true;
-  }
-
-  saveParcours() {
-    if (!this.parcourForm.valid) return;
-
-    const data = this.parcourForm.value;
-    const url =
-      this.isEditing && this.editingId
-        ? `${environment.apiUrl}/candidatures/parcours/${this.editingId}/`
-        : `${environment.apiUrl}/candidatures/parcours/`;
-
-    const method = this.isEditing ? 'patch' : 'post';
-
-    this.http[method as 'post' | 'patch'](url, data).subscribe({
-      next: () => {
-        this.loadParcours();
-        this.closeForm();
-      },
-      error: (error) => {
-        console.error('Erreur sauvegarde parcours:', error);
-      },
-    });
-  }
-
-  deleteParcours(id: number) {
-    if (confirm('Êtes-vous sûr de supprimer ce parcours?')) {
-      this.http.delete(`${environment.apiUrl}/candidatures/parcours/${id}/`).subscribe({
-        next: () => {
-          this.loadParcours();
+  load() {
+    this.loading = true;
+    this.error = '';
+    this.http
+      .get<any[]>(`${environment.apiUrl}/candidatures/all-parcours/?type_formation=master`, {
+        headers: this.headers,
+      })
+      .subscribe({
+        next: (data) => {
+          this.rows = (data || []).map((p) => {
+            const meta = PARCOURS_META[p.code_parcours] ?? {
+              places: 0,
+              date_limite: '—',
+              type_label: p.type_formation === 'master' ? 'Master' : 'Ingénieur',
+              color: 'blue',
+            };
+            return {
+              ...p,
+              ...meta,
+              specialites: Array.isArray(p.specialites) ? p.specialites : [],
+              nombre_specialites: p.nombre_specialites ?? (Array.isArray(p.specialites) ? p.specialites.length : 0),
+            } as ParcoursRow;
+          });
+          this.loading = false;
         },
-        error: (error) => {
-          console.error('Erreur suppression parcours:', error);
+        error: (err) => {
+          this.error = err.error?.error || 'Erreur lors du chargement des parcours.';
+          this.loading = false;
         },
       });
+  }
+
+  toggle(code: string) {
+    if (this.expanded.has(code)) {
+      this.expanded.delete(code);
+    } else {
+      this.expanded.add(code);
     }
   }
 
-  generateCriteres(id: number) {
-    this.http
-      .post(`${environment.apiUrl}/candidatures/parcours/${id}/generate_criteres/`, {})
-      .subscribe({
-        next: (response: any) => {
-          alert(response.message);
-          this.loadParcours();
-        },
-        error: (error) => {
-          console.error('Erreur génération critères:', error);
-        },
-      });
-  }
-
-  getStatutClass(statut: string): string {
-    return statut || 'brouillon';
+  isExpanded(code: string): boolean {
+    return this.expanded.has(code);
   }
 }

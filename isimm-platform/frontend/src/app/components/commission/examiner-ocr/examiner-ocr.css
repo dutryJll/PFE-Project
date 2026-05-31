@@ -1101,3 +1101,171 @@
     flex-direction: column;
   }
 }
+
+/* ============================= */
+/* ANALYSE EN LOT                */
+/* ============================= */
+.lot-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #f0f4ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.lot-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3730a3;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lot-select-all input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.lot-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: #4f46e5;
+  font-weight: 600;
+  background: #e0e7ff;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.btn-lancer-lot {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-lancer-lot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-lancer-lot:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.candidat-checkbox {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.candidat-checkbox input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.candidat-item.lot-checked {
+  background: #eef2ff !important;
+  border-color: #6366f1 !important;
+}
+
+.lot-resultats {
+  margin-top: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lot-resume-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: #1e293b;
+  color: #f8fafc;
+  flex-wrap: wrap;
+}
+
+.lot-resume-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.lot-kpi {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.lot-kpi-total { background: #334155; color: #e2e8f0; }
+.lot-kpi-ok    { background: #064e3b; color: #6ee7b7; }
+.lot-kpi-warn  { background: #78350f; color: #fde68a; }
+.lot-kpi-err   { background: #7f1d1d; color: #fca5a5; }
+
+.lot-rows { background: #fff; }
+
+.lot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.lot-row:last-child { border-bottom: none; }
+.lot-row-ok   { border-left: 3px solid #10b981; }
+.lot-row-warn { border-left: 3px solid #f59e0b; }
+.lot-row-err  { border-left: 3px solid #ef4444; }
+
+.lot-row-nom    { font-weight: 700; color: #0f172a; min-width: 140px; }
+.lot-row-master { color: #64748b; font-size: 0.8rem; flex: 1; }
+.lot-row-statut { font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.lot-row-fraude { color: #dc2626; font-size: 0.78rem; font-weight: 700; }
+.lot-row-anomalies { color: #92400e; font-size: 0.78rem; background: #fef3c7; padding: 2px 8px; border-radius: 999px; }
+.lot-row-err-msg { color: #b91c1c; font-size: 0.78rem; font-style: italic; }
+
+.lot-row-ok   .lot-row-statut { color: #059669; }
+.lot-row-warn .lot-row-statut { color: #b45309; }
+.lot-row-err  .lot-row-statut { color: #dc2626; }
+
+.lot-erreur {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.87rem;
+  font-weight: 600;
+}

@@ -7,7 +7,23 @@
         Les dossiers affichés suivent la commission active et les données mockées de démonstration.
       </p>
     </div>
-    <div class="count-pill">{{ inscriptionsFiltrees.length }} dossier(s)</div>
+    <div class="inscriptions-header-actions">
+      <div class="count-pill">{{ inscriptionsFiltrees.length }} dossier(s)</div>
+      <div class="export-wrap" style="position:relative">
+        <button class="btn-export" type="button" (click)="exportMenuOpen = !exportMenuOpen">
+          <i class="fas fa-download"></i> Exporter
+          <i class="fas fa-chevron-down" style="font-size:10px;margin-left:4px"></i>
+        </button>
+        <div class="export-menu" *ngIf="exportMenuOpen" (click)="$event.stopPropagation()">
+          <button class="export-item" type="button" (click)="exporterExcel(); exportMenuOpen=false">
+            <i class="fas fa-file-excel" style="color:#10b981"></i> Exporter Excel (.xlsx)
+          </button>
+          <button class="export-item" type="button" (click)="exporterPDF(); exportMenuOpen=false">
+            <i class="fas fa-file-pdf" style="color:#a32d2d"></i> Exporter PDF officiel
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="filters-card">
@@ -36,8 +52,8 @@
       <thead>
         <tr>
           <th>Candidat</th>
-          <th>Spécialité</th>
-          <th>Matricule</th>
+          <th>Master / Spécialité</th>
+          <th>N° Inscription</th>
           <th>Date dépôt</th>
           <th>Paiement</th>
           <th>Statut</th>

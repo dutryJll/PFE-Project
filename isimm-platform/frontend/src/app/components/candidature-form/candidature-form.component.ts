@@ -108,8 +108,8 @@ export class CandidatureFormComponent implements OnInit {
   readonly totalFormSteps = 4;
   readonly formSteps = [
     { no: 1, label: 'Profil' },
-    { no: 2, label: 'Bac et diplÃ´me' },
-    { no: 3, label: 'Parcours acadÃ©mique' },
+    { no: 2, label: 'Bac et diplôme' },
+    { no: 3, label: 'Parcours académique' },
     { no: 4, label: 'Validation' },
   ];
 
@@ -342,27 +342,12 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   getMasterFormTitle(): string {
-    if (this.masterParcours === 'mrmi') {
-      return 'ðŸ“š Candidature Master - MastÃ¨re Recherche en Micro-Ã©lectronique et Instrumentation (MRMI)';
-    }
-
-    if (this.masterParcours === 'mrgl') {
-      return 'ðŸ“š Candidature Master - MastÃ¨re Recherche en GÃ©nie Logiciel (MRGL)';
-    }
-
-    if (this.masterParcours === 'mpgl') {
-      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en GÃ©nie Logiciel (MPGL)';
-    }
-
-    if (this.masterParcours === 'mpds') {
-      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en Science de DonnÃ©es (MPDS)';
-    }
-
-    if (this.masterParcours === 'mp3i') {
-      return 'ðŸ“š Candidature Master - MastÃ¨re Professionnel en GÃ©nie des Instruments Industriels (MP3I)';
-    }
-
-    return 'ðŸ“š Candidature Ã  un Master';
+    if (this.masterParcours === 'mrmi') return 'Candidature — Mastère Recherche en Micro-électronique et Instrumentation (MRMI)';
+    if (this.masterParcours === 'mrgl') return 'Candidature — Mastère Recherche en Génie Logiciel (MRGL)';
+    if (this.masterParcours === 'mpgl') return 'Candidature — Mastère Professionnel en Génie Logiciel (MPGL)';
+    if (this.masterParcours === 'mpds') return 'Candidature — Mastère Professionnel en Science des Données (MPDS)';
+    if (this.masterParcours === 'mp3i') return 'Candidature — Mastère Professionnel en Génie des Instruments Industriels (MP3I)';
+    return 'Candidature à un Master';
   }
 
   getSpecialiteDiplomeOptions(): string[] {
@@ -407,15 +392,15 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   isIngenieurCategorie2Selected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 2');
+    return this.formData.categorieIngenieur.startsWith('Catégorie 2');
   }
 
   isIngenieurCategoriePrepaSelected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 1');
+    return this.formData.categorieIngenieur.startsWith('Catégorie 1');
   }
 
   isIngenieurCategorieLicenceSelected(): boolean {
-    return this.formData.categorieIngenieur.startsWith('CatÃ©gorie 2');
+    return this.formData.categorieIngenieur.startsWith('Catégorie 2');
   }
 
   shouldShowTroisiemeAnneeFields(): boolean {
@@ -434,7 +419,7 @@ export class CandidatureFormComponent implements OnInit {
       return false;
     }
 
-    const isCycleIngenieur = this.formData.natureDiplome === 'Cycle ingÃ©nieur';
+    const isCycleIngenieur = this.formData.natureDiplome === 'Cycle ingénieur';
 
     return isCycleIngenieur;
   }
@@ -452,7 +437,7 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   isEtudiantExterneSelected(): boolean {
-    return this.formData.natureCandidature === 'Ã‰tudiant Externe';
+    return this.formData.natureCandidature === 'Étudiant Externe';
   }
 
   shouldShowMrglFourthYearFields(): boolean {
@@ -588,18 +573,18 @@ export class CandidatureFormComponent implements OnInit {
 
   private getFormStepValidationMessage(step: number): string {
     if (step === 1) {
-      return 'ComplÃ©tez les informations personnelles obligatoires avant de continuer.';
+      return 'Complétez les informations personnelles obligatoires avant de continuer.';
     }
 
     if (step === 2) {
-      return 'ComplÃ©tez les champs obligatoires du bac et du diplÃ´me avant de continuer.';
+      return 'Complétez les champs obligatoires du bac et du diplôme avant de continuer.';
     }
 
     if (step === 3) {
-      return 'ComplÃ©tez les informations acadÃ©miques obligatoires avant de continuer.';
+      return 'Complétez les informations académiques obligatoires avant de continuer.';
     }
 
-    return 'Veuillez complÃ©ter les champs requis avant de continuer.';
+    return 'Veuillez compléter les champs requis avant de continuer.';
   }
 
   private getScoreValues(): number[] {
@@ -693,7 +678,7 @@ export class CandidatureFormComponent implements OnInit {
     return scoreFields.every((value) => this.isValidNote(value));
   }
 
-  // Mettre Ã  jour les validations selon le type de candidature
+  // Mettre à jour les validations selon le type de candidature
   updateValidations(): void {
     if (!this.candidatureForm) return;
   }
@@ -725,7 +710,7 @@ export class CandidatureFormComponent implements OnInit {
       !this.formData.natureCandidature ||
       this.formData.nombreAnneesRedoublement === ''
     ) {
-      this.errorMessage = 'Veuillez renseigner tous les champs obligatoires du Bac et du diplÃ´me.';
+      this.errorMessage = 'Veuillez renseigner tous les champs obligatoires du Bac et du diplôme.';
       return;
     }
 
@@ -737,7 +722,7 @@ export class CandidatureFormComponent implements OnInit {
     if (this.isEtudiantExterneSelected()) {
       if (!this.formData.etablissementExterne.trim() || !this.formData.specialiteExterne.trim()) {
         this.errorMessage =
-          "Veuillez renseigner l'Ã©tablissement et la spÃ©cialitÃ© pour un Ã©tudiant externe.";
+          "Veuillez renseigner l'établissement et la spécialité pour un étudiant externe.";
         return;
       }
     }
@@ -985,7 +970,7 @@ export class CandidatureFormComponent implements OnInit {
     this.router.navigate(['/masters/recherche/exploration']);
   }
 
-  // GÃ©nÃ©rer un mot de passe alÃ©atoire
+  // Générer un mot de passe aléatoire
   generatePassword(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let password = '';

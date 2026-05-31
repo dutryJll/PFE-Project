@@ -24,10 +24,6 @@ import {
   CommissionContextOption,
 } from '../../../services/commission-context.service';
 import { CommissionStateService } from '../../../services/commission-state.service';
-import {
-  MOCK_MASTER_CANDIDATURES,
-  MOCK_INGENIEUR_CANDIDATURES,
-} from '../../../shared/mock-candidatures';
 
 interface Candidature {
   id: number;
@@ -483,6 +479,10 @@ export class DashboardCommissionComponent implements OnInit {
   availableCommissions: UserCommissionOption[] = [];
   commissionsLoading = false;
   commissionsLoadError = '';
+  userMasterNoms: string[] = [];
+  userMasterSpecialites: string[] = [];
+  userMasterTypes: string[] = [];
+  userMasterInfoLoaded = false;
 
   actionPermissions: CommissionActionPermissions = {
     consultationCandidature: true,
@@ -785,6 +785,10 @@ export class DashboardCommissionComponent implements OnInit {
     this.prsKebabOpenId = this.prsKebabOpenId === id ? 0 : id;
   }
 
+  toggleSelKebab(id: number): void {
+    this.selKebabOpenId = this.selKebabOpenId === id ? 0 : id;
+  }
+
   updateReclamationEtat(id: number, etat: string): void {
     const rec = this.reclamations.find((r) => r.id === id);
     if (rec) rec.etat = etat as Reclamation['etat'];
@@ -930,45 +934,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   // --- Candidatures Master (carousel & actions) ---
-  candidates: any[] = [
-    {
-      id: 1,
-      num: '2603-00001-GL',
-      nom: 'Fatma Gharbi',
-      master: 'Master Data Science',
-      score: 17.2,
-      interne: true,
-      lu: false,
-      documents: [
-        { nom: 'Relevé L3', statut: 'ok' },
-        { nom: 'Lettre de motivation', statut: 'ok' },
-        { nom: 'Certificat de scolarité', statut: 'missing' },
-      ],
-    },
-    {
-      id: 2,
-      num: '2603-00002-DS',
-      nom: 'Ahmed Ben Ali',
-      master: 'Master Génie Logiciel',
-      score: 16.5,
-      interne: true,
-      lu: false,
-      documents: [
-        { nom: 'Relevé L3', statut: 'ok' },
-        { nom: 'Lettre de motivation', statut: 'ok' },
-      ],
-    },
-    {
-      id: 3,
-      num: '2603-00003-ING',
-      nom: 'Mohamed Trabelsi',
-      master: 'Cycle Ingénieur',
-      score: 15.8,
-      interne: false,
-      lu: false,
-      documents: [{ nom: 'Relevé L3', statut: 'ok' }],
-    },
-  ];
+  candidates: any[] = [];
 
   currentIndex: number = 0;
   get currentCandidate() {
@@ -1106,29 +1072,7 @@ export class DashboardCommissionComponent implements OnInit {
   };
 
   // Données
-  specialites: Specialite[] = [
-    {
-      id: 1,
-      nom: 'Master Génie Logiciel',
-      statut: 'actuel',
-      nb_candidatures: 45,
-      nb_dossiers: 42,
-    },
-    {
-      id: 2,
-      nom: 'Master Data Science',
-      statut: 'actuel',
-      nb_candidatures: 50,
-      nb_dossiers: 48,
-    },
-    {
-      id: 3,
-      nom: 'Master Réseaux',
-      statut: 'ancien',
-      nb_candidatures: 30,
-      nb_dossiers: 30,
-    },
-  ];
+  specialites: Specialite[] = [];
 
   notificationsCandidat: NotificationItem[] = [];
   notificationsNonLues: number = 0;
@@ -1138,44 +1082,7 @@ export class DashboardCommissionComponent implements OnInit {
   filtreNotificationDateFin: string = '';
   filtreNotificationRecherche: string = '';
 
-  reclamations: Reclamation[] = [
-    {
-      id: 1,
-      objet: 'Score incorrect',
-      candidat: 'Ahmed Ben Ali',
-      master: 'Master Génie Logiciel',
-      date: '2026-04-10',
-      pj: true,
-      etat: 'en_cours',
-      details: 'Le score affiché ne correspond pas',
-      priorite: 'haut',
-      candidature_id: 1,
-    },
-    {
-      id: 2,
-      objet: 'Document non pris en compte',
-      candidat: 'Sana Trabelsi',
-      master: 'Master Data Science',
-      date: '2026-04-08',
-      pj: true,
-      etat: 'en_attente',
-      details: "Mon relevé de notes L3 n'a pas été comptabilisé",
-      priorite: 'moyen',
-      candidature_id: 2,
-    },
-    {
-      id: 3,
-      objet: 'Erreur de spécialité',
-      candidat: 'Youssef Mahjoub',
-      master: 'Master Réseaux',
-      date: '2026-04-05',
-      pj: false,
-      etat: 'en_cours',
-      details: "Ma spécialité d'origine est incorrecte",
-      priorite: 'bas',
-      candidature_id: 3,
-    },
-  ];
+  reclamations: Reclamation[] = [];
   reclamationStatusFilter: '' | 'en_cours' | 'en_attente' | 'traite' | 'rejete' = '';
   reclamationPriorityFilter: '' | 'haut' | 'moyen' | 'bas' = '';
   reclamationSearch: string = '';
@@ -1208,153 +1115,13 @@ export class DashboardCommissionComponent implements OnInit {
     { label: 'Anglais', coef: 2 },
   ];
 
-  concoursIngenieur: Concours[] = [
-    {
-      id: 1,
-      nom: 'Cycle Ingénieur 2025-2026',
-      annee: '2026',
-      nb_candidatures: 120,
-      nb_acceptes: 45,
-      nb_refuses: 75,
-    },
-    {
-      id: 2,
-      nom: 'Cycle Ingénieur (Double Diplôme)',
-      annee: '2026',
-      nb_candidatures: 35,
-      nb_acceptes: 12,
-      nb_refuses: 23,
-    },
-  ];
+  concoursIngenieur: Concours[] = [];
 
-  candidatures: Candidature[] = [
-    {
-      id: 1,
-      numero: '2603-00001-GL',
-      candidat_nom: 'Ahmed Ben Ali',
-      candidat_email: 'ahmed@example.com',
-      candidat_cin: '12345678',
-      specialite: 'Master Génie Logiciel',
-      score: 16.5,
-      dossier_depose: true,
-      statut: 'sous_examen',
-      avis: 'Très bon dossier',
-      type_concours: 'masters',
-      parcours: 'ia',
-      annee_universitaire: '2025/2026',
-      notes_preinscription: 'Moyenne 15.8, classement 12/120, projet IA validé.',
-      decision_responsable: '',
-    },
-    {
-      id: 2,
-      numero: '2603-00002-DS',
-      candidat_nom: 'Fatma Gharbi',
-      candidat_email: 'fatma@example.com',
-      candidat_cin: '87654321',
-      specialite: 'Master Data Science',
-      score: 17.2,
-      dossier_depose: true,
-      statut: 'preselectionne',
-      type_concours: 'masters',
-      parcours: 'data',
-      annee_universitaire: '2024/2025',
-      notes_preinscription: 'Moyenne 16.7, forte base mathématique, stage data confirmé.',
-      decision_responsable: 'valide',
-    },
-    {
-      id: 3,
-      numero: '2603-00003-ING',
-      candidat_nom: 'Mohamed Trabelsi',
-      candidat_email: 'mohamed@example.com',
-      candidat_cin: '11223344',
-      specialite: 'Cycle Ingénieur',
-      score: 15.8,
-      dossier_depose: false,
-      statut: 'soumis',
-      type_concours: 'ingenieur',
-      parcours: 'web',
-      annee_universitaire: '2025/2026',
-      notes_preinscription: 'Moyenne 14.9, expérience développement web, motivation correcte.',
-      decision_responsable: '',
-    },
-  ];
+  candidatures: Candidature[] = [];
 
   finalSelectionQuotaLpTotal: number = 55;
   finalSelectionQuotaLaTotal: number = 20;
-  finalSelectionCandidates: FinalSelectionCandidate[] = [
-    {
-      id: 1,
-      rang: 1,
-      num: '2603-00001-GL',
-      nom: 'Fatma Gharbi',
-      spec: 'Master Data Science',
-      score: 17.2,
-      interne: true,
-      presel: 'oui',
-      statut: 'lp',
-      obs: '',
-    },
-    {
-      id: 2,
-      rang: 2,
-      num: '2603-00002-DS',
-      nom: 'Ahmed Ben Ali',
-      spec: 'Master Genie Logiciel',
-      score: 16.5,
-      interne: true,
-      presel: 'oui',
-      statut: 'lp',
-      obs: '',
-    },
-    {
-      id: 3,
-      rang: 3,
-      num: '2603-00003-GL',
-      nom: 'Sana Trabelsi',
-      spec: 'Master Genie Logiciel',
-      score: 15.8,
-      interne: false,
-      presel: 'oui',
-      statut: 'lp',
-      obs: '',
-    },
-    {
-      id: 4,
-      rang: 4,
-      num: '2603-00004-DS',
-      nom: 'Youssef Mahjoub',
-      spec: 'Master Data Science',
-      score: 14.3,
-      interne: true,
-      presel: 'non',
-      statut: 'lp',
-      obs: '',
-    },
-    {
-      id: 5,
-      rang: 5,
-      num: '2603-00005-GL',
-      nom: 'Nour Khelif',
-      spec: 'Master Reseaux',
-      score: 12.7,
-      interne: false,
-      presel: 'non',
-      statut: 'lp',
-      obs: '',
-    },
-    {
-      id: 6,
-      rang: 6,
-      num: '2603-00006-DS',
-      nom: 'Mariem Zouari',
-      spec: 'Master Data Science',
-      score: 11.2,
-      interne: true,
-      presel: 'non',
-      statut: 'lp',
-      obs: '',
-    },
-  ];
+  finalSelectionCandidates: FinalSelectionCandidate[] = [];
   finalSelectionFiltered: FinalSelectionCandidate[] = [];
   finalSelectionSelectedIds: Set<number> = new Set();
   finalSelectionTop100On: boolean = false;
@@ -1367,6 +1134,7 @@ export class DashboardCommissionComponent implements OnInit {
   prsmGenerateListOpen: boolean = false;
   prsmFloatGenOpen: boolean = false;
   prsKebabOpenId: number = 0;
+  selKebabOpenId: number = 0;
   nouvelleOfrePdfSigneNom: string = '';
   nouvelleOfrePdfSigneFile: File | null = null;
   finalSelectionConfirmOpen: boolean = false;
@@ -1414,17 +1182,7 @@ export class DashboardCommissionComponent implements OnInit {
   finalSelectionSearchTerm: string = '';
   finalSelectionHideValidated: boolean = false;
 
-  listes: Liste[] = [
-    {
-      id: 1,
-      nom: 'Présélection GL 2026',
-      specialite: 'Master Génie Logiciel',
-      type: 'preselection',
-      statut: 'active',
-      nb_candidats: 30,
-      date_creation: '15/02/2026',
-    },
-  ];
+  listes: Liste[] = [];
   derniereListeGeneree: Liste | null = null;
   listesExportFormat: ExportFormat = 'pdf';
   candidaturesMembreExportFormat: ExportFormat = 'xlsx';
@@ -1434,7 +1192,14 @@ export class DashboardCommissionComponent implements OnInit {
 
   masterOptions: MasterOption[] = [];
   offreOptions: OffreOption[] = [];
-  offresPreinscription: OffrePreinscription[] = [];
+  offresPreinscription: OffrePreinscription[] = [
+    { id: 1, titre: 'Mastere Professionnel Genie Logiciel (MPGL)', type: 'master', sous_type: 'professionnel', specialite: 'MPGL', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
+    { id: 2, titre: 'Mastere Professionnel en sciences de donnees (MPDS)', type: 'master', sous_type: 'professionnel', specialite: 'MPDS', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
+    { id: 3, titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'master', sous_type: 'professionnel', specialite: 'MP3I', description: '', date_limite: '2026-07-20', places: 25, statut: 'ouvert', est_cache: false, est_visible: true },
+    { id: 4, titre: 'Mastere Recherche en Genie logiciel (MRGL)', type: 'master', sous_type: 'recherche', specialite: 'MRGL', description: '', date_limite: '2026-07-22', places: 111, statut: 'ouvert', est_cache: false, est_visible: true },
+    { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', specialite: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert', est_cache: false, est_visible: true },
+    { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', sous_type: '', specialite: 'ING_GL', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert', est_cache: false, est_visible: true },
+  ];
   offresMasterCrud: OffreMasterCrudItem[] = [];
   offresMasterCrudFiltrees: OffreMasterCrudItem[] = [];
   offreMasterSearch: string = '';
@@ -2273,75 +2038,12 @@ export class DashboardCommissionComponent implements OnInit {
     actif: true,
   };
 
-  dossiersOCR: DossierOCR[] = [
-    {
-      id: 1,
-      candidat_nom: 'Mohamed Trabelsi',
-      fichier: 'releve_notes.pdf',
-      statut_ocr: 'en_attente',
-      date_upload: '2026-03-10',
-    },
-  ];
+  dossiersOCR: DossierOCR[] = [];
 
-  procesVerbaux: ProcesVerbal[] = [
-    {
-      id: 1,
-      titre: 'Délibération Master Génie Logiciel - Session 2026',
-      date_reunion: '2026-03-10',
-      master_nom: 'Master Génie Logiciel',
-      nb_participants: 5,
-      nb_candidatures: 45,
-      nb_admis: 30,
-      nb_rejetes: 5,
-      statut: 'publie',
-    },
-  ];
+  procesVerbaux: ProcesVerbal[] = [];
 
   // Membres
-  membres: CommissionMember[] = [
-    {
-      id: 1,
-      nom: 'Ben Ali',
-      prenom: 'Mohamed',
-      email: 'm.benali@isimm.rnu.tn',
-      telephone: '+216 98 123 456',
-      role: 'responsable',
-      statut: 'actif',
-      date_inscription: '2025-01-15',
-      master_rattachement: 'Master Génie Logiciel',
-    },
-    {
-      id: 2,
-      nom: 'Gharbi',
-      prenom: 'Fatma',
-      email: 'f.gharbi@isimm.rnu.tn',
-      telephone: '+216 98 234 567',
-      role: 'evaluateur',
-      statut: 'actif',
-      date_inscription: '2025-02-01',
-      master_rattachement: 'Master Data Science',
-    },
-    {
-      id: 3,
-      nom: 'Trabelsi',
-      prenom: 'Ahmed',
-      email: 'a.trabelsi@isimm.rnu.tn',
-      telephone: '+216 98 345 678',
-      role: 'evaluateur',
-      statut: 'actif',
-      date_inscription: '2025-02-10',
-    },
-    {
-      id: 4,
-      nom: 'Jmour',
-      prenom: 'Sana',
-      email: 's.jmour@isimm.rnu.tn',
-      telephone: '+216 98 456 789',
-      role: 'observateur',
-      statut: 'inactif',
-      date_inscription: '2024-11-20',
-    },
-  ];
+  membres: CommissionMember[] = [];
   membresFiltres: CommissionMember[] = [];
   rechercheMembres: string = '';
   filtreStatutMembre: string = '';
@@ -2489,6 +2191,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.profileData = { ...this.currentUser };
     this.isResponsable = ['responsable_commission', 'responsable'].includes(this.currentUser?.role);
+    this.refreshUserProfile();
     this.commissionSub = this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
       this.activeCommissionId = commissionId;
       this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
@@ -2515,15 +2218,6 @@ export class DashboardCommissionComponent implements OnInit {
     this.loadActionPermissions();
     this.candidaturesFiltrees = [...this.candidatures];
     this.updateFinalSelectionFiltered();
-    // Fallback: inject some mock candidatures for master/ingenieur views when API returns none
-    if (!this.candidatures || this.candidatures.length < 4) {
-      this.candidatures = [
-        ...MOCK_MASTER_CANDIDATURES,
-        ...MOCK_INGENIEUR_CANDIDATURES,
-        ...(this.candidatures || []),
-      ];
-      this.candidaturesFiltrees = [...this.candidatures];
-    }
     if (this.isResponsable) {
       this.loadMastersForConfiguration();
     }
@@ -2538,6 +2232,7 @@ export class DashboardCommissionComponent implements OnInit {
     }
     this.loadMembers();
     this.loadNotifications();
+    this.loadUserMasterInfo();
     if (this.isResponsable) {
       this.loadCandidaturesResponsable();
     }
@@ -2560,12 +2255,6 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.loadDerniereListeGenereeDepuisBackend();
-
-    // Initialize test data for Selection table
-    this.initSelectionTestData();
-
-    // Initialize test data for Inscription en ligne
-    this.initInscriptionTestData();
 
     // Start the WebSocket connection only for roles that use live notifications.
     if (this.isResponsable) {
@@ -2672,35 +2361,6 @@ export class DashboardCommissionComponent implements OnInit {
           }
         }
 
-        // If API returned no commissions (or member-scoped filter left none), provide dev mock commissions
-        if (!this.availableCommissions || this.availableCommissions.length === 0) {
-          const fallbackMocks: any[] = [
-            {
-              id: 901,
-              nom: 'Commission Mock - Membre A',
-              description: 'Commission de test (membre)',
-              actif: true,
-              is_active: true,
-              role: 'membre',
-            },
-            {
-              id: 902,
-              nom: 'Commission Mock - Observateur',
-              description: 'Commission de test (observateur)',
-              actif: true,
-              is_active: false,
-              role: 'observateur',
-            },
-          ];
-
-          // If current user is membre prefer membre mock only
-          if (this.currentUser?.role === 'membre') {
-            this.availableCommissions = fallbackMocks.filter((c) => c.role === 'membre');
-          } else {
-            this.availableCommissions = fallbackMocks;
-          }
-        }
-
         const responseActiveId = Number(response?.active_commission_id);
         const candidateActiveId = Number.isFinite(responseActiveId)
           ? responseActiveId
@@ -2740,6 +2400,7 @@ export class DashboardCommissionComponent implements OnInit {
   private refreshCommissionScopedData(): void {
     this.loadNotifications();
     this.loadResponsibleNotifications();
+    this.loadMembers();
     if (this.isResponsable) {
       this.loadCandidaturesResponsable();
     }
@@ -2796,10 +2457,31 @@ export class DashboardCommissionComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur chargement notifications commission:', error);
-          this.notificationsCandidat = [];
-          this.notificationsNonLues = 0;
+          this.notificationsCandidat = this.buildMockNotificationsForRole();
+          this.notificationsNonLues = this.notificationsCandidat.filter((n) => !n.lue).length;
         },
       });
+  }
+
+  private buildMockNotificationsForRole(): NotificationItem[] {
+    const now = new Date().toISOString();
+    const yesterday = new Date(Date.now() - 86400000).toISOString();
+    if (this.isResponsable) {
+      return [
+        { id: 1, titre: 'Phase de présélection ouverte', message: 'La phase de présélection pour Master GL 2025/2026 est maintenant active. Vérifiez les dossiers des candidats.', date: now, type: 'info', lue: false },
+        { id: 2, titre: 'Quota atteint — Master DS', message: '45 candidats ont été présélectionnés. Le quota de 50 places est presque atteint.', date: now, type: 'warning', lue: false },
+        { id: 3, titre: 'Réclamation en attente', message: 'Une réclamation de Amina Ben Salah concernant son score est en attente de traitement.', date: yesterday, type: 'danger', lue: false },
+        { id: 4, titre: 'Décision finale validée', message: 'La liste de sélection finale pour Ingénieur GL a été publiée avec succès.', date: yesterday, type: 'success', lue: true },
+        { id: 5, titre: 'Nouveau membre ajouté', message: 'Dr. Karim Mansouri a rejoint la commission Master GL en tant que membre évaluateur.', date: yesterday, type: 'info', lue: true },
+      ];
+    } else {
+      return [
+        { id: 1, titre: 'Nouvelle candidature à évaluer', message: 'Vous avez 3 nouveaux dossiers à examiner pour la commission Master DS. Merci de soumettre vos avis avant la date limite.', date: now, type: 'info', lue: false },
+        { id: 2, titre: 'Délai d\'avis approche', message: 'La date limite pour soumettre vos avis sur la cohorte Master GL 2025/2026 est dans 2 jours.', date: now, type: 'warning', lue: false },
+        { id: 3, titre: 'Réunion commission planifiée', message: 'Une réunion de délibération est planifiée le 05/06/2026 à 10h00. Votre présence est requise.', date: yesterday, type: 'info', lue: false },
+        { id: 4, titre: 'Avis enregistré', message: 'Votre avis favorable sur la candidature CAND-2026-0042 a bien été enregistré.', date: yesterday, type: 'success', lue: true },
+      ];
+    }
   }
 
   marquerNotificationCommeLue(notificationId: number): void {
@@ -3012,7 +2694,8 @@ export class DashboardCommissionComponent implements OnInit {
       )
       .subscribe({
         next: (data) => {
-          this.offresPreinscription = data || [];
+          const received = data || [];
+          this.offresPreinscription = received.length > 0 ? received : this.getCanonicalOffresPreinscription();
 
           this.offreOptions = this.offresPreinscription.map((offre) => ({
             id: offre.id,
@@ -3037,8 +2720,11 @@ export class DashboardCommissionComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur chargement offres responsable:', error);
-          this.offresPreinscription = [];
-          this.offreOptions = [];
+          this.offresPreinscription = this.getCanonicalOffresPreinscription();
+          this.offreOptions = this.offresPreinscription.map((offre) => ({
+            id: offre.id,
+            nom: offre.type === 'cycle_ingenieur' ? `${offre.titre} (Cycle Ingenieur)` : `${offre.titre} (Master)`,
+          }));
         },
       });
   }
@@ -3285,10 +2971,19 @@ export class DashboardCommissionComponent implements OnInit {
       });
   }
 
+  private getCanonicalOffresPreinscription(): OffrePreinscription[] {
+    return [
+      { id: 1, titre: 'Mastere Professionnel Genie Logiciel (MPGL)', type: 'master', sous_type: 'professionnel', specialite: 'MPGL', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
+      { id: 2, titre: 'Mastere Professionnel en sciences de donnees (MPDS)', type: 'master', sous_type: 'professionnel', specialite: 'MPDS', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
+      { id: 3, titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'master', sous_type: 'professionnel', specialite: 'MP3I', description: '', date_limite: '2026-07-20', places: 25, statut: 'ouvert', est_cache: false, est_visible: true },
+      { id: 4, titre: 'Mastere Recherche en Genie logiciel (MRGL)', type: 'master', sous_type: 'recherche', specialite: 'MRGL', description: '', date_limite: '2026-07-22', places: 111, statut: 'ouvert', est_cache: false, est_visible: true },
+      { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', specialite: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert', est_cache: false, est_visible: true },
+      { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', sous_type: '', specialite: 'ING_GL', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert', est_cache: false, est_visible: true },
+    ];
+  }
+
   getOffresPreinscriptionForDisplay(): OffrePreinscription[] {
-    return this.offresPreinscription.length > 0
-      ? this.offresPreinscription
-      : [this.demoOffrePreinscription];
+    return this.getCanonicalOffresPreinscription();
   }
 
   hasRealOffresPreinscription(): boolean {
@@ -3355,11 +3050,48 @@ export class DashboardCommissionComponent implements OnInit {
     ];
   }
 
+  refreshUserProfile(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) return;
+    this.http
+      .get<any>('/api/auth/profile/', { headers: { Authorization: `Bearer ${token}` } })
+      .subscribe({
+        next: (profile) => {
+          if (profile && profile.id) {
+            this.currentUser = { ...this.currentUser, ...profile };
+            localStorage.setItem('current_user', JSON.stringify(this.currentUser));
+          }
+        },
+        error: () => {},
+      });
+  }
+
+  loadUserMasterInfo(): void {
+    const token = this.authService.getAccessToken();
+    if (!token) return;
+    this.http
+      .get<any>('/api/candidatures/responsable/mes-masters/', { headers: { Authorization: `Bearer ${token}` } })
+      .subscribe({
+        next: (response) => {
+          const masters: any[] = response?.masters || [];
+          this.userMasterNoms = masters.map((m) => m.nom).filter(Boolean);
+          this.userMasterSpecialites = masters.map((m) => m.specialite).filter(Boolean);
+          this.userMasterTypes = masters.map((m) => m.type_master).filter(Boolean);
+          this.userMasterInfoLoaded = true;
+        },
+        error: () => {
+          this.userMasterNoms = [];
+          this.userMasterSpecialites = [];
+          this.userMasterTypes = [];
+          this.userMasterInfoLoaded = true;
+        },
+      });
+  }
+
   loadCandidaturesResponsable(masterId: number | 'all' = this.selectedMasterForCandidatures): void {
-    const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
     this.responsableCandidaturesFromApi = false;
-    this.candidaturesResponsable = this.sortRowsByScoreDesc(fallbackData);
-    this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
+    this.candidaturesResponsable = [];
+    this.candidaturesResponsableFiltrees = [];
     this.appliquerFiltresResponsable();
 
     const token = this.authService.getAccessToken();
@@ -3381,50 +3113,16 @@ export class DashboardCommissionComponent implements OnInit {
       .subscribe({
         next: (data) => {
           const apiRows = data || [];
-          console.log('[LoadCandidaturesResponsable] API returned', apiRows.length, 'rows');
-
-          // If API returns data, use it
-          if (apiRows.length > 0) {
-            this.responsableCandidaturesFromApi = true;
-            this.candidaturesResponsable = this.sortRowsByScoreDesc(apiRows);
-            console.log('[LoadCandidaturesResponsable] Using API data');
-          } else {
-            this.responsableCandidaturesFromApi = false;
-            // Fallback: use candidatures with type_concours from local cache
-            const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
-            this.candidaturesResponsable =
-              fallbackData.length > 0 ? this.sortRowsByScoreDesc(fallbackData) : [];
-            console.log(
-              '[LoadCandidaturesResponsable] Using fallback data:',
-              fallbackData.length,
-              'rows',
-            );
-          }
-
-          // Update filtered list and apply filters
+          this.responsableCandidaturesFromApi = true;
+          this.candidaturesResponsable = apiRows.length > 0 ? this.sortRowsByScoreDesc(apiRows) : [];
           this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
           this.appliquerFiltresResponsable();
-          console.log(
-            '[LoadCandidaturesResponsable] Final filtered count:',
-            this.candidaturesResponsableFiltrees.length,
-          );
         },
-        error: (error) => {
-          console.error('[LoadCandidaturesResponsable] API Error:', error);
+        error: () => {
           this.responsableCandidaturesFromApi = false;
-
-          // On error, try fallback
-          const fallbackData = this.candidatures.filter((c) => !!c.type_concours);
-          this.candidaturesResponsable =
-            fallbackData.length > 0 ? this.sortRowsByScoreDesc(fallbackData) : [];
-          this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
+          this.candidaturesResponsable = [];
+          this.candidaturesResponsableFiltrees = [];
           this.appliquerFiltresResponsable();
-
-          console.log(
-            '[LoadCandidaturesResponsable] Fallback activated with:',
-            this.candidaturesResponsable.length,
-            'rows',
-          );
         },
       });
   }
@@ -4168,7 +3866,12 @@ export class DashboardCommissionComponent implements OnInit {
       return this.isResponsable;
     }
 
-    if (view === 'candidatures-master' || view === 'candidatures-ingenieur') {
+    if (view === 'candidatures-master') {
+      return this.isResponsable || this.actionPermissions.consultationCandidature;
+    }
+
+    if (view === 'candidatures-ingenieur') {
+      if (this.isResponsable && this.userManagesMasterPrograms) return false;
       return this.isResponsable || this.actionPermissions.consultationCandidature;
     }
 
@@ -4187,9 +3890,19 @@ export class DashboardCommissionComponent implements OnInit {
     this.switchView(view);
   }
 
+  private get userManagesMasterPrograms(): boolean {
+    // 1. Definitive: MembreCommission API returned master records
+    if (this.userMasterNoms.length > 0) return true;
+    // 2. Reliable: user profile specialite starts with or contains 'master'
+    const spec = String(this.currentUser?.specialite || '').toLowerCase().trim();
+    if (spec) return spec.includes('master');
+    // 3. Fallback: commission name keyword detection (null → default to master)
+    return this.activeCommissionCategory !== 'ingenieur';
+  }
+
   canOpenCandidaturesMasterMenu(): boolean {
     if (this.isResponsable) {
-      return this.activeCommissionCategory !== 'ingenieur';
+      return this.userManagesMasterPrograms;
     }
     const scope = this.activeCommissionCategory;
     const isMasterScope = !scope || scope === 'master-ds' || scope === 'master-gl';
@@ -4202,7 +3915,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   canOpenCandidaturesIngenieurMenu(): boolean {
     if (this.isResponsable) {
-      return this.activeCommissionCategory === 'ingenieur';
+      return !this.userManagesMasterPrograms;
     }
 
     if (this.activeCommissionCategory && this.activeCommissionCategory !== 'ingenieur') {
@@ -5903,53 +5616,16 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getCommissionUserRoleLabel(): string {
-    if (!this.isResponsable) {
-      return 'Membre Commission';
-    }
-    const specialite = this.getDisplayedResponsableSpecialite();
-    if (specialite && specialite !== 'Non renseignée') {
-      return `Commission ${specialite}`;
-    }
-    return 'Responsable Commission';
+    return this.isResponsable ? 'Commission Responsable' : 'Membre Commission';
   }
 
   getDisplayedResponsableSpecialite(): string {
-    const candidates = [
-      this.currentUser?.responsable_master_name,
-      this.currentUser?.responsable_master?.nom,
-      this.currentUser?.responsable_master?.name,
-      this.currentUser?.master_rattachement,
-      this.currentUser?.master_nom,
-      this.currentUser?.master_name,
-      this.currentUser?.specialite,
-      this.currentUser?.speciality,
-    ];
-
-    for (const candidate of candidates) {
-      const value = String(candidate || '').trim();
-      if (value) {
-        return value;
-      }
+    // Priority 1: masters fetched via MembreCommission chain (candidature service)
+    if (this.userMasterNoms.length > 0) {
+      return this.userMasterNoms.join(' · ');
     }
-
-    const fromMembers = this.membres.find(
-      (member) => member.email?.toLowerCase() === (this.currentUser?.email || '').toLowerCase(),
-    )?.master_rattachement;
-    if (String(fromMembers || '').trim()) {
-      return String(fromMembers).trim();
-    }
-
-    const selectedMaster = this.getSelectedMasterName();
-    if (selectedMaster && selectedMaster !== 'Tous les masters') {
-      return selectedMaster;
-    }
-
-    const scopedLabel = this.getUserMasterOrSpecialiteLabel();
-    if (scopedLabel && scopedLabel !== 'Tous les masters') {
-      return scopedLabel;
-    }
-
-    return 'Non renseignée';
+    // Priority 2: specialite field on User profile (auth service)
+    return String(this.currentUser?.specialite || '').trim();
   }
 
   getSpecialitesFiltrees(): Specialite[] {
@@ -6000,11 +5676,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   get candidaturesIngenieurFiltrees(): Candidature[] {
-    const source =
-      this.candidaturesResponsableFiltrees && this.candidaturesResponsableFiltrees.length > 0
-        ? this.candidaturesResponsableFiltrees
-        : this.candidatures;
-    return source.filter((candidature) => candidature.type_concours === 'ingenieur');
+    return this.candidaturesResponsableFiltrees.filter((c) => c.type_concours === 'ingenieur');
   }
 
   get ingStatPreselectionnees(): number {
@@ -7879,208 +7551,8 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   initSelectionTestData(): void {
-    // Create test data for Selection table
-    const testCandidates: any[] = [
-      {
-        id: 1,
-        numero: 'CND001',
-        candidat_nom: 'Ahmed Ben Salah',
-        candidat_email: 'ahmed@example.com',
-        specialite: 'Génie Logiciel',
-        score: 18.5,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: 'Excellent profil',
-        dossier_depose: true,
-      },
-      {
-        id: 2,
-        numero: 'CND002',
-        candidat_nom: 'Fatima Cherif',
-        candidat_email: 'fatima@example.com',
-        specialite: 'Génie Mécanique',
-        score: 17.2,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 3,
-        numero: 'CND003',
-        candidat_nom: 'Mohamed Amine',
-        candidat_email: 'mohamed@example.com',
-        specialite: 'Génie Électrique',
-        score: 16.8,
-        statut: 'preselectionne',
-        type_concours: 'externe',
-        selectionStatut: 'la',
-        observation: 'À vérifier dossier',
-        dossier_depose: true,
-      },
-      {
-        id: 4,
-        numero: 'CND004',
-        candidat_nom: 'Leila Bouajaja',
-        candidat_email: 'leila@example.com',
-        specialite: 'Génie Civil',
-        score: 15.3,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: '',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 5,
-        numero: 'CND005',
-        candidat_nom: 'Karim Tahar',
-        candidat_email: 'karim@example.com',
-        specialite: 'Génie Logiciel',
-        score: 19.1,
-        statut: 'preselectionne',
-        type_concours: 'externe',
-        selectionStatut: 'lp',
-        observation: 'Très bon candidat',
-        dossier_depose: true,
-      },
-      {
-        id: 6,
-        numero: 'CND006',
-        candidat_nom: 'Nadia Mansouri',
-        candidat_email: 'nadia@example.com',
-        specialite: 'Génie Mécanique',
-        score: 14.7,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'refuse',
-        observation: 'Profil insuffisant',
-        dossier_depose: true,
-      },
-      {
-        id: 7,
-        numero: 'CND007',
-        candidat_nom: 'Bilel Hamza',
-        candidat_email: 'bilel@example.com',
-        specialite: 'Génie Électrique',
-        score: 17.9,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 8,
-        numero: 'CND008',
-        candidat_nom: 'Hana Salmi',
-        candidat_email: 'hana@example.com',
-        specialite: 'Génie Civil',
-        score: 16.2,
-        statut: 'preselectionne',
-        type_concours: 'externe',
-        selectionStatut: 'la',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 9,
-        numero: 'CND009',
-        candidat_nom: 'Omar Slimani',
-        candidat_email: 'omar@example.com',
-        specialite: 'Génie Logiciel',
-        score: 18.8,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: 'Excellent dossier',
-        dossier_depose: true,
-      },
-      {
-        id: 10,
-        numero: 'CND010',
-        candidat_nom: 'Amina Khaled',
-        candidat_email: 'amina@example.com',
-        specialite: 'Génie Mécanique',
-        score: 13.5,
-        statut: 'preselectionne',
-        type_concours: 'externe',
-        selectionStatut: '',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 11,
-        numero: 'CND011',
-        candidat_nom: 'Samir Nouri',
-        candidat_email: 'samir@example.com',
-        specialite: 'Génie Électrique',
-        score: 15.8,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'la',
-        observation: 'À considérer',
-        dossier_depose: true,
-      },
-      {
-        id: 12,
-        numero: 'CND012',
-        candidat_nom: 'Sana Zahra',
-        candidat_email: 'sana@example.com',
-        specialite: 'Génie Civil',
-        score: 17.4,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 13,
-        numero: 'CND013',
-        candidat_nom: 'Jassem Abbas',
-        candidat_email: 'jassem@example.com',
-        specialite: 'Génie Logiciel',
-        score: 16.5,
-        statut: 'preselectionne',
-        type_concours: 'externe',
-        selectionStatut: '',
-        observation: '',
-        dossier_depose: true,
-      },
-      {
-        id: 14,
-        numero: 'CND014',
-        candidat_nom: 'Dina Fakhri',
-        candidat_email: 'dina@example.com',
-        specialite: 'Génie Mécanique',
-        score: 18.2,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'lp',
-        observation: 'Bonne motivation',
-        dossier_depose: true,
-      },
-      {
-        id: 15,
-        numero: 'CND015',
-        candidat_nom: 'Wassim Belarbi',
-        candidat_email: 'wassim@example.com',
-        specialite: 'Génie Électrique',
-        score: 12.9,
-        statut: 'preselectionne',
-        type_concours: 'interne',
-        selectionStatut: 'refuse',
-        observation: 'Score insuffisant',
-        dossier_depose: true,
-      },
-    ];
-
-    this.selectionCandidates = testCandidates;
-    this.selectionFiltered = [...testCandidates];
-    this.updateSelectionStats();
+    this.selectionCandidates = [];
+    this.selectionFiltered = [];
   }
 
   nouvelleListe(type: 'preselection' | 'selection'): void {
@@ -8786,8 +8258,38 @@ export class DashboardCommissionComponent implements OnInit {
   // MEMBRES
   // ========================================
   loadMembers(): void {
-    // Charge les membres depuis l'API ou initialise avec les données mockées
-    this.membresFiltres = [...this.membres];
+    if (!this.activeCommissionId) {
+      this.membres = [];
+      this.membresFiltres = [];
+      return;
+    }
+    const token = this.authService.getAccessToken();
+    if (!token) return;
+    this.http
+      .get<any>(`/api/candidatures/commissions/${this.activeCommissionId}/members/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (response) => {
+          const list: any[] = Array.isArray(response) ? response : (response?.membres || response?.members || []);
+          this.membres = list.map((m: any) => ({
+            id: m.id,
+            nom: m.last_name || m.nom || '',
+            prenom: m.first_name || m.prenom || '',
+            email: m.email || '',
+            telephone: m.phone || m.telephone || '-',
+            role: m.role || 'membre',
+            statut: m.actif !== false ? 'actif' : 'inactif',
+            date_inscription: m.date_nomination || m.date_inscription || '',
+            master_rattachement: m.master_rattachement || '',
+          }));
+          this.membresFiltres = [...this.membres];
+        },
+        error: () => {
+          this.membres = [];
+          this.membresFiltres = [];
+        },
+      });
   }
 
   filtrerMembres(): void {
@@ -8981,9 +8483,10 @@ export class DashboardCommissionComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
-        next: () => {
+        next: (updated) => {
           this.showAlertMessage('✅ Profil mis à jour avec succès !');
-          this.currentUser = { ...this.currentUser, ...this.profileData };
+          this.currentUser = { ...this.currentUser, ...this.profileData, ...(updated || {}) };
+          localStorage.setItem('current_user', JSON.stringify(this.currentUser));
         },
         error: (error) => {
           console.error('Erreur:', error);
@@ -9489,191 +8992,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   initInscriptionTestData(): void {
-    this.inscriptionCandidates = [
-      {
-        id: 1,
-        num: 'INS-2025-001',
-        numero_inscription: 'UNI-2025-0001',
-        nom: 'Salma Ben Youssef',
-        cin: '09123456',
-        master: 'Master Data Science',
-        dossier: 'complet',
-        paiement: 'paye',
-        receiptPdfUrl: 'https://example.com/recu-salma.pdf',
-        recuVerifie: true,
-        statut_final: 'inscrite',
-        finalise: false,
-        matchPercent: 100,
-        email: 'salma@example.com',
-        dossierFile: 'dossier_salma.pdf',
-        observation: 'Dossier complet et paiement confirmé',
-      },
-      {
-        id: 2,
-        num: 'INS-2025-002',
-        numero_inscription: 'UNI-2025-0002',
-        nom: 'Yassine Trabelsi',
-        cin: '09223344',
-        master: 'Master Génie Logiciel',
-        dossier: 'complet',
-        paiement: 'en_attente',
-        receiptPdfUrl: 'https://example.com/recu-yassine.pdf',
-        recuVerifie: false,
-        statut_final: 'attente_paiement',
-        finalise: false,
-        matchPercent: 82,
-        email: 'yassine@example.com',
-        dossierFile: 'dossier_yassine.pdf',
-        observation: 'Paiement à confirmer',
-      },
-      {
-        id: 3,
-        num: 'INS-2025-003',
-        numero_inscription: 'UNI-2025-0003',
-        nom: 'Nour Azaiez',
-        cin: '09334455',
-        master: 'Master Réseaux',
-        dossier: 'incomplet',
-        paiement: 'incoherent',
-        receiptPdfUrl: 'https://example.com/recu-nour.pdf',
-        recuVerifie: false,
-        statut_final: 'rejetee',
-        finalise: false,
-        matchPercent: 67,
-        email: 'nour@example.com',
-        dossierFile: 'dossier_nour.pdf',
-        observation: 'Nom du dépôt différent du dossier administratif',
-      },
-      {
-        id: 4,
-        num: 'INS-2025-004',
-        numero_inscription: 'UNI-2025-0004',
-        nom: 'Imen Khelifi',
-        cin: '09445566',
-        master: 'Master Intelligence Artificielle',
-        dossier: 'complet',
-        paiement: 'paye',
-        receiptPdfUrl: 'https://example.com/recu-imen.pdf',
-        recuVerifie: true,
-        statut_final: 'inscrite',
-        finalise: true,
-        matchPercent: 100,
-        email: 'imen@example.com',
-        dossierFile: 'dossier_imen.pdf',
-        observation: 'Déjà finalisée',
-      },
-      {
-        id: 5,
-        num: 'INS-2025-005',
-        numero_inscription: 'UNI-2025-0005',
-        nom: 'Omar Saidi',
-        cin: '09556677',
-        master: 'Master Génie Civil',
-        dossier: 'complet',
-        paiement: 'absent',
-        receiptPdfUrl: 'https://example.com/recu-omar.pdf',
-        recuVerifie: false,
-        statut_final: 'attente_paiement',
-        finalise: false,
-        matchPercent: 48,
-        email: 'omar@example.com',
-        dossierFile: 'dossier_omar.pdf',
-        observation: 'Aucune trace de paiement',
-      },
-      {
-        id: 6,
-        num: 'INS-2025-006',
-        numero_inscription: 'UNI-2025-0006',
-        nom: 'Meriem Jaziri',
-        cin: '09667788',
-        master: 'Master Big Data',
-        dossier: 'complet',
-        paiement: 'paye',
-        receiptPdfUrl: 'https://example.com/recu-meriem.pdf',
-        recuVerifie: true,
-        statut_final: 'attente_paiement',
-        finalise: false,
-        matchPercent: 100,
-        email: 'meriem@example.com',
-        dossierFile: 'dossier_meriem.pdf',
-        observation: 'Compatible avec le fichier importé',
-      },
-      {
-        id: 7,
-        num: 'INS-2025-007',
-        numero_inscription: 'UNI-2025-0007',
-        nom: 'Anis Ferjani',
-        cin: '09778899',
-        master: 'Master Sécurité Informatique',
-        dossier: 'incomplet',
-        paiement: 'en_attente',
-        receiptPdfUrl: 'https://example.com/recu-anis.pdf',
-        recuVerifie: false,
-        statut_final: 'attente_paiement',
-        finalise: false,
-        matchPercent: 54,
-        email: 'anis@example.com',
-        dossierFile: 'dossier_anis.pdf',
-        observation: 'Pièce manquante dans le dossier',
-      },
-      {
-        id: 8,
-        num: 'INS-2025-008',
-        numero_inscription: 'UNI-2025-0008',
-        nom: 'Rim Hassen',
-        cin: '09889900',
-        master: 'Master Génie Logiciel',
-        dossier: 'complet',
-        paiement: 'paye',
-        receiptPdfUrl: 'https://example.com/recu-rim.pdf',
-        recuVerifie: true,
-        statut_final: 'inscrite',
-        finalise: false,
-        matchPercent: 97,
-        email: 'rim@example.com',
-        dossierFile: 'dossier_rim.pdf',
-        observation: 'Prête pour génération du fichier final',
-      },
-      {
-        id: 9,
-        num: 'INS-2025-009',
-        numero_inscription: 'UNI-2025-0009',
-        nom: 'Sofiene Brik',
-        cin: '09990011',
-        master: 'Master Réseaux',
-        dossier: 'complet',
-        paiement: 'incoherent',
-        receiptPdfUrl: 'https://example.com/recu-sofiene.pdf',
-        recuVerifie: false,
-        statut_final: 'rejetee',
-        finalise: false,
-        matchPercent: 72,
-        email: 'sofiene@example.com',
-        dossierFile: 'dossier_sofiene.pdf',
-        observation: 'Rapprochement à corriger',
-      },
-      {
-        id: 10,
-        num: 'INS-2025-010',
-        numero_inscription: 'UNI-2025-0010',
-        nom: 'Chaima Gharbi',
-        cin: '10001122',
-        master: 'Master Data Science',
-        dossier: 'complet',
-        paiement: 'paye',
-        receiptPdfUrl: 'https://example.com/recu-chaima.pdf',
-        recuVerifie: true,
-        statut_final: 'inscrite',
-        finalise: false,
-        matchPercent: 100,
-        email: 'chaima@example.com',
-        dossierFile: 'dossier_chaima.pdf',
-        observation: 'Dossier validé',
-      },
-    ];
-
-    this.applyInscriptionFilters();
-    this.updateInscriptionStats();
+    this.inscriptionCandidates = [];
   }
 
   applyInscriptionFilters(): void {

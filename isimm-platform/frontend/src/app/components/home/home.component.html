@@ -122,154 +122,173 @@
     </div>
   </section>
 
-  <!-- FORMATIONS SECTION MODIFIÉE -->
+  <!-- FORMATIONS SECTION -->
   <section class="formations-section" id="masters">
     <div class="concours-container">
-      <h2 class="section-title">{{ tr.sections.formationsTitle }}</h2>
-      <p class="section-subtitle">{{ tr.sections.formationsSubtitle }}</p>
-      <p class="publication-note">{{ tr.sections.formationsNote }}</p>
+      <div class="section-header-block">
+        <span class="section-eyebrow"><i class="fas fa-university"></i> ISIMM · Monastir</span>
+        <h2 class="section-title">{{ tr.sections.formationsTitle }}</h2>
+        <p class="section-subtitle">{{ tr.sections.formationsSubtitle }}</p>
+        <p class="publication-note">
+          <i class="fas fa-shield-alt"></i>
+          {{ tr.sections.formationsNote }}
+        </p>
+      </div>
 
       <div class="formations-grid">
+
         <!-- Masters de Recherche -->
         <div class="formation-card research">
-          <div class="card-icon-container">
-            <div class="icon-circle research-bg">
+          <div class="card-hero research-hero">
+            <div class="card-hero-deco"></div>
+            <div class="hero-icon-wrap">
               <i class="fas fa-flask"></i>
             </div>
             <div class="card-badge research-badge">{{ tr.cards.researchBadge }}</div>
           </div>
 
-          <h3 class="card-title">{{ tr.cards.researchTitle }}</h3>
-          <p class="card-description">{{ tr.cards.researchDesc }}</p>
+          <div class="card-body">
+            <h3 class="card-title">{{ tr.cards.researchTitle }}</h3>
+            <p class="card-description">{{ tr.cards.researchDesc }}</p>
 
-          <ul class="card-features">
-            <li>
-              <span class="feature-icon research-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.researchItem1 }}</span>
-            </li>
-            <li>
-              <span class="feature-icon research-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.researchItem2 }}</span>
-            </li>
-          </ul>
+            <ul class="card-features">
+              <li>
+                <span class="feature-dot research-dot"></span>
+                <span>{{ tr.cards.researchItem1 }}</span>
+              </li>
+              <li>
+                <span class="feature-dot research-dot"></span>
+                <span>{{ tr.cards.researchItem2 }}</span>
+              </li>
+            </ul>
 
-          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/recherche/exploration -->
-          <div class="formation-status">
-            <app-status-badge
-              [label]="formationStatuses['research'].label"
-              [tone]="formationStatuses['research'].tone"
-            ></app-status-badge>
+            <div class="card-stats-row">
+              <div class="stat-chip">
+                <i class="fas fa-users"></i>
+                <span>140 places</span>
+              </div>
+              <div class="stat-chip">
+                <i class="fas fa-clock"></i>
+                <span>2 ans</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <app-status-badge
+                [label]="formationStatuses['research'].label"
+                [tone]="formationStatuses['research'].tone"
+              ></app-status-badge>
+              <button class="btn-card research-btn" [routerLink]="[formationStatuses['research'].route]">
+                <span>{{ tr.cards.explore }}</span>
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
           </div>
-
-          <button
-            class="btn-card research-btn"
-            [routerLink]="[formationStatuses['research'].route]"
-          >
-            <span>{{ tr.cards.explore }}</span>
-            <i class="fas fa-arrow-right"></i>
-          </button>
         </div>
 
         <!-- Masters Professionnels -->
         <div class="formation-card professional">
-          <div class="card-icon-container">
-            <div class="icon-circle professional-bg">
+          <div class="card-hero professional-hero">
+            <div class="card-hero-deco"></div>
+            <div class="hero-icon-wrap">
               <i class="fas fa-briefcase"></i>
             </div>
             <div class="card-badge professional-badge">{{ tr.cards.professionalBadge }}</div>
           </div>
 
-          <h3 class="card-title">{{ tr.cards.professionalTitle }}</h3>
-          <p class="card-description">{{ tr.cards.professionalDesc }}</p>
+          <div class="card-body">
+            <h3 class="card-title">{{ tr.cards.professionalTitle }}</h3>
+            <p class="card-description">{{ tr.cards.professionalDesc }}</p>
 
-          <ul class="card-features">
-            <li>
-              <span class="feature-icon professional-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.professionalItem1 }}</span>
-            </li>
-            <li>
-              <span class="feature-icon professional-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.professionalItem2 }}</span>
-            </li>
-            <li>
-              <span class="feature-icon professional-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.professionalItem3 }}</span>
-            </li>
-          </ul>
+            <ul class="card-features">
+              <li>
+                <span class="feature-dot professional-dot"></span>
+                <span>{{ tr.cards.professionalItem1 }}</span>
+              </li>
+              <li>
+                <span class="feature-dot professional-dot"></span>
+                <span>{{ tr.cards.professionalItem2 }}</span>
+              </li>
+              <li>
+                <span class="feature-dot professional-dot"></span>
+                <span>{{ tr.cards.professionalItem3 }}</span>
+              </li>
+            </ul>
 
-          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/professionnel/exploration -->
-          <div class="formation-status">
-            <app-status-badge
-              [label]="formationStatuses['professional'].label"
-              [tone]="formationStatuses['professional'].tone"
-            ></app-status-badge>
+            <div class="card-stats-row">
+              <div class="stat-chip">
+                <i class="fas fa-users"></i>
+                <span>95 places</span>
+              </div>
+              <div class="stat-chip">
+                <i class="fas fa-clock"></i>
+                <span>2 ans</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <app-status-badge
+                [label]="formationStatuses['professional'].label"
+                [tone]="formationStatuses['professional'].tone"
+              ></app-status-badge>
+              <button class="btn-card professional-btn" [routerLink]="[formationStatuses['professional'].route]">
+                <span>{{ tr.cards.explore }}</span>
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
           </div>
-
-          <button
-            class="btn-card professional-btn"
-            [routerLink]="[formationStatuses['professional'].route]"
-          >
-            <span>{{ tr.cards.explore }}</span>
-            <i class="fas fa-arrow-right"></i>
-          </button>
         </div>
 
         <!-- Cycle Ingénieur -->
         <div class="formation-card engineer">
-          <div class="card-icon-container">
-            <div class="icon-circle engineer-bg">
+          <div class="featured-ribbon"><i class="fas fa-star"></i> Accrédité</div>
+          <div class="card-hero engineer-hero">
+            <div class="card-hero-deco"></div>
+            <div class="hero-icon-wrap">
               <i class="fas fa-graduation-cap"></i>
             </div>
-            <div class="card-badge engineer-badge featured">
-              <i class="fas fa-star"></i>
-              {{ tr.cards.engineerBadge }}
+            <div class="card-badge engineer-badge">{{ tr.cards.engineerBadge }}</div>
+          </div>
+
+          <div class="card-body">
+            <h3 class="card-title">{{ tr.cards.engineerTitle }}</h3>
+            <p class="card-description">{{ tr.cards.engineerDesc }}</p>
+
+            <ul class="card-features">
+              <li>
+                <span class="feature-dot engineer-dot"></span>
+                <span>{{ tr.cards.engineerItem1 }}</span>
+              </li>
+              <li>
+                <span class="feature-dot engineer-dot"></span>
+                <span>{{ tr.cards.engineerItem2 }}</span>
+              </li>
+            </ul>
+
+            <div class="card-stats-row">
+              <div class="stat-chip">
+                <i class="fas fa-users"></i>
+                <span>65 places</span>
+              </div>
+              <div class="stat-chip">
+                <i class="fas fa-clock"></i>
+                <span>3 ans</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <app-status-badge
+                [label]="formationStatuses['engineer'].label"
+                [tone]="formationStatuses['engineer'].tone"
+              ></app-status-badge>
+              <button class="btn-card engineer-btn" [routerLink]="[formationStatuses['engineer'].route]">
+                <span>{{ tr.cards.explore }}</span>
+                <i class="fas fa-arrow-right"></i>
+              </button>
             </div>
           </div>
-
-          <h3 class="card-title">{{ tr.cards.engineerTitle }}</h3>
-          <p class="card-description">{{ tr.cards.engineerDesc }}</p>
-
-          <ul class="card-features">
-            <li>
-              <span class="feature-icon engineer-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.engineerItem1 }}</span>
-            </li>
-            <li>
-              <span class="feature-icon engineer-icon">
-                <i class="fas fa-check"></i>
-              </span>
-              <span>{{ tr.cards.engineerItem2 }}</span>
-            </li>
-          </ul>
-
-          <!-- ✅ BOUTON MODIFIÉ - "Explorer" vers /masters/ingenieur/exploration -->
-          <div class="formation-status">
-            <app-status-badge
-              [label]="formationStatuses['engineer'].label"
-              [tone]="formationStatuses['engineer'].tone"
-            ></app-status-badge>
-          </div>
-
-          <button
-            class="btn-card engineer-btn"
-            [routerLink]="[formationStatuses['engineer'].route]"
-          >
-            <span>{{ tr.cards.explore }}</span>
-            <i class="fas fa-arrow-right"></i>
-          </button>
         </div>
+
       </div>
     </div>
   </section>
