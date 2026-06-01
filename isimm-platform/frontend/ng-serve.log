@@ -1,0 +1,2046 @@
+[33m>[39m Building...
+[32m√[39m Building...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.16 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.19 MB[22m
+
+Application bundle generation complete. [123.354 seconds] - 2026-05-31T03:06:02.874Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4200[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.16 MB[39m[2m | [22m
+
+Application bundle generation complete. [180.305 seconds] - 2026-05-31T03:16:14.040Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.16 MB[39m[2m | [22m
+
+Application bundle generation complete. [49.431 seconds] - 2026-05-31T03:17:03.494Z
+
+Page reload sent to client(s).
+[1m[31m[2m04:17:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m04:17:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m04:17:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m04:17:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.16 MB[39m[2m | [22m
+
+Application bundle generation complete. [42.747 seconds] - 2026-05-31T03:24:15.974Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.17 MB[39m[2m | [22m
+
+Application bundle generation complete. [10.080 seconds] - 2026-05-31T03:24:26.065Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.17 MB[39m[2m | [22m
+
+Application bundle generation complete. [8.506 seconds] - 2026-05-31T03:26:41.627Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.17 MB[39m[2m | [22m
+
+Application bundle generation complete. [44.998 seconds] - 2026-05-31T03:28:04.249Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.17 MB[39m[2m | [22m
+
+Application bundle generation complete. [10.220 seconds] - 2026-05-31T03:32:51.767Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.552 seconds] - 2026-05-31T03:33:56.348Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [10.254 seconds] - 2026-05-31T04:32:59.580Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:33:05[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m05:33:05[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [20.568 seconds] - 2026-05-31T04:33:29.726Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:33:34[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m05:33:34[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [19.817 seconds] - 2026-05-31T04:34:02.892Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [36.613 seconds] - 2026-05-31T04:34:39.682Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [27.345 seconds] - 2026-05-31T04:35:07.035Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[1m[31m[2m05:35:14[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m05:35:14[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [24.774 seconds] - 2026-05-31T04:35:31.822Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [16.154 seconds] - 2026-05-31T04:36:04.267Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [15.614 seconds] - 2026-05-31T04:36:28.217Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.408 seconds] - 2026-05-31T04:37:30.735Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [11.683 seconds] - 2026-05-31T04:39:35.203Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.585 seconds] - 2026-05-31T04:39:53.809Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+
+No output file changes.
+
+Application bundle generation complete. [13.262 seconds] - 2026-05-31T04:40:18.458Z
+
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [46.549 seconds] - 2026-05-31T04:41:31.397Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.037 seconds] - 2026-05-31T05:19:12.443Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [14.520 seconds] - 2026-05-31T05:19:36.094Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.18 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.295 seconds] - 2026-05-31T05:19:52.977Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.984 seconds] - 2026-05-31T05:20:20.524Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.289 seconds] - 2026-05-31T05:20:45.635Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [14.266 seconds] - 2026-05-31T05:22:17.037Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [3.565 seconds] - 2026-05-31T05:22:59.035Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [8.685 seconds] - 2026-05-31T10:48:08.290Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [3.419 seconds] - 2026-05-31T10:48:48.263Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [52.206 seconds] - 2026-05-31T10:50:14.494Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[1m[31m[2m11:50:18[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m11:50:18[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [67.055 seconds] - 2026-05-31T10:51:21.567Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [67.191 seconds] - 2026-05-31T10:52:28.764Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [41.666 seconds] - 2026-05-31T11:21:09.667Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [15.737 seconds] - 2026-05-31T11:21:25.414Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [8.627 seconds] - 2026-05-31T11:21:54.122Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:69:44:
+[37m      69 │ ...ss="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+         ╵                            [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:157:38:
+[37m      157 │ ...s="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+          ╵                           [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:254:9:
+[37m      254 │     this.[32mgenerateListOpen[37m = !this.generateListOpen;
+          ╵          [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:257:2:
+[37m      257 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:254:34:
+[37m      254 │     this.generateListOpen = !this.[32mgenerateListOpen[37m;
+          ╵                                   [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:257:2:
+[37m      257 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:260:9:
+[37m      260 │     this.[32mgenerateListOpen[37m = false;
+          ╵          [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:257:2:
+[37m      257 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [7.642 seconds] - 2026-05-31T11:22:38.122Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:69:44:
+[37m      69 │ ...ss="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+         ╵                            [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:157:38:
+[37m      157 │ ...s="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+          ╵                           [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:259:9:
+[37m      259 │     this.[32mgenerateListOpen[37m = !this.generateListOpen;
+          ╵          [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:262:2:
+[37m      262 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:259:34:
+[37m      259 │     this.generateListOpen = !this.[32mgenerateListOpen[37m;
+          ╵                                   [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:262:2:
+[37m      262 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'genererListe'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:265:9:
+[37m      265 │     this.[32mgenerateListOpen[37m = false;
+          ╵          [32m~~~~~~~~~~~~~~~~[0m
+
+  'genererListe' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:262:2:
+[37m      262 │   [32mgenererListe[37m(mode: 'all' | 'selection'): void {
+          ╵   [32m~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [8.376 seconds] - 2026-05-31T11:23:30.350Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleGenerateListMenu' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:66:67:
+[37m      66 │ ...pe="button" (click)="[32mtoggleGenerateListMenu[37m(); $event.stopPropa...
+         ╵                         [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:69:44:
+[37m      69 │ ...ss="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+         ╵                            [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleGenerateListMenu' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:154:72:
+[37m      154 │ ...e="button" (click)="[32mtoggleGenerateListMenu[37m(); $event.stopPropa...
+          ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:157:38:
+[37m      157 │ ...s="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+          ╵                           [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [4.647 seconds] - 2026-05-31T11:24:06.613Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleGenerateListMenu' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:155:72:
+[37m      155 │ ...e="button" (click)="[32mtoggleGenerateListMenu[37m(); $event.stopPropa...
+          ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'generateListOpen' does not exist on type 'CandidaturesMasterComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:158:38:
+[37m      158 │ ...s="cm-gen-menu" *ngIf="[32mgenerateListOpen[37m" (click)="$event.stopP...
+          ╵                           [32m~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:46:15:
+[37m      46 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.19 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.22 MB[22m
+
+Application bundle generation complete. [5.698 seconds] - 2026-05-31T11:24:37.508Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [10.489 seconds] - 2026-05-31T11:25:15.612Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.052 seconds] - 2026-05-31T11:27:08.363Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [11.213 seconds] - 2026-05-31T13:23:30.271Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2552: Cannot find name 'map'. Did you mean 'Map'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:169:8:
+[37m      169 │         [32mmap[37m((res) => res.specialites ?? []),
+          ╵         [32m~~~[0m
+
+  'Map' is declared here.
+
+    node_modules/typescript/lib/lib.es2015.collection.d.ts:53:12:
+[37m      53 │ declare var [32mMap[37m: MapConstructor;
+         ╵             [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:169:13:
+[37m      169 │         map(([32mres[37m) => res.specialites ?? []),
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'of'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:170:25:
+[37m      170 │         catchError(() => [32mof[37m([])),
+          ╵                          [32m~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.19 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.22 MB[22m
+
+Application bundle generation complete. [8.975 seconds] - 2026-05-31T13:24:21.167Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [4.871 seconds] - 2026-05-31T13:25:48.808Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2552: Cannot find name 'map'. Did you mean 'Map'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:169:8:
+[37m      169 │         [32mmap[37m((res) => res.specialites ?? []),
+          ╵         [32m~~~[0m
+
+  'Map' is declared here.
+
+    node_modules/typescript/lib/lib.es2015.collection.d.ts:53:12:
+[37m      53 │ declare var [32mMap[37m: MapConstructor;
+         ╵             [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:169:13:
+[37m      169 │         map(([32mres[37m) => res.specialites ?? []),
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'of'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/services/candidature.service.ts:170:25:
+[37m      170 │         catchError(() => [32mof[37m([])),
+          ╵                          [32m~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.19 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.22 MB[22m
+
+Application bundle generation complete. [7.939 seconds] - 2026-05-31T13:26:46.517Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [12.019 seconds] - 2026-05-31T13:29:11.052Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2741: Property 'specialiteDiplome' is missing in type '{ id: any; numeroCandidature: any; nom: any; master: any; master_id: any; score: any; etatDossier: "Complet" | "Incomplet"; statut: MasterStatus; email: any; cin: any; dateCandidature: any; commentaire: string; pieces: never[]; }' but required in type 'Candidat'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:127:4:
+[37m      127 │     [32mreturn[37m {
+          ╵     [32m~~~~~~[0m
+
+  'specialiteDiplome' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:25:2:
+[37m      25 │   [32mspecialiteDiplome[37m: string; // Diplôme d'origine du candidat (de...
+         ╵   [32m~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [11.221 seconds] - 2026-05-31T13:29:41.411Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2741: Property 'specialiteDiplome' is missing in type '{ id: any; numeroCandidature: any; nom: any; master: any; master_id: any; score: any; etatDossier: "Complet" | "Incomplet"; statut: MasterStatus; email: any; cin: any; dateCandidature: any; commentaire: string; pieces: never[]; }' but required in type 'Candidat'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:129:4:
+[37m      129 │     [32mreturn[37m {
+          ╵     [32m~~~~~~[0m
+
+  'specialiteDiplome' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:25:2:
+[37m      25 │   [32mspecialiteDiplome[37m: string; // Diplôme d'origine du candidat (de...
+         ╵   [32m~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [13.210 seconds] - 2026-05-31T13:31:34.255Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'chargerSpecialitesDiplome' does not exist on type 'CandidaturesMasterComponent'. Did you mean 'specialitesDiplome'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:112:17:
+[37m      112 │             this.[32mchargerSpecialitesDiplome[37m(this.currentMasterId);
+          ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  'specialitesDiplome' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:72:2:
+[37m      72 │   [32mspecialitesDiplome[37m: { nom: string; abreviation: string }[] = [];...
+         ╵   [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2741: Property 'specialiteDiplome' is missing in type '{ id: any; numeroCandidature: any; nom: any; master: any; master_id: any; score: any; etatDossier: "Complet" | "Incomplet"; statut: MasterStatus; email: any; cin: any; dateCandidature: any; commentaire: string; pieces: never[]; }' but required in type 'Candidat'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:133:4:
+[37m      133 │     [32mreturn[37m {
+          ╵     [32m~~~~~~[0m
+
+  'specialiteDiplome' is declared here.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:25:2:
+[37m      25 │   [32mspecialiteDiplome[37m: string; // Diplôme d'origine du candidat (de...
+         ╵   [32m~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.19 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.22 MB[22m
+
+Application bundle generation complete. [16.552 seconds] - 2026-05-31T13:32:32.015Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [10.477 seconds] - 2026-05-31T13:33:36.910Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.884 seconds] - 2026-05-31T13:34:25.090Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.529 seconds] - 2026-05-31T13:35:37.617Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [13.034 seconds] - 2026-05-31T13:37:14.114Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [12.366 seconds] - 2026-05-31T16:17:19.476Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [8.302 seconds] - 2026-05-31T16:18:12.998Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.850 seconds] - 2026-05-31T16:18:42.600Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.890 seconds] - 2026-05-31T16:19:10.036Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [7.596 seconds] - 2026-05-31T16:19:52.807Z
+
+Page reload sent to client(s).
+[1m[31m[2m04:43:37[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m04:43:37[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.19 MB[39m[2m | [22m
+
+Application bundle generation complete. [17.629 seconds] - 2026-06-01T04:01:13.310Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:19[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:20[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.20 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.648 seconds] - 2026-06-01T04:01:45.776Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:01:51[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.20 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.057 seconds] - 2026-06-01T04:02:16.367Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.20 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.456 seconds] - 2026-06-01T04:02:48.921Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.20 MB[39m[2m | [22m
+
+Application bundle generation complete. [8.961 seconds] - 2026-06-01T04:03:52.762Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:58[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:03:59[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [5.182 seconds] - 2026-06-01T04:04:58.047Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [11.482 seconds] - 2026-06-01T04:11:55.763Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [33.500 seconds] - 2026-06-01T04:12:29.300Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [42.091 seconds] - 2026-06-01T04:13:29.672Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [45.769 seconds] - 2026-06-01T04:16:10.746Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [37.201 seconds] - 2026-06-01T04:17:35.523Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:53:15:
+[37m      53 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[2m05:22:50[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:22:57[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [8.199 seconds] - 2026-06-01T04:23:19.722Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:118:40:
+[37m      118 │ ...           'cm-badge-examen':  [32mcandidat.statut === 'sous_examen'[37m,
+          ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types '"Sélectionné" | "Refusé"' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:119:80:
+[37m      119 │ ... === 'Présélectionné' [32m|| candidat.statut === 'dossier_depo[37mse',
+          ╵                          [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:124:31:
+[37m      124 │ ...  <span *ngIf="[32mcandidat.statut === 'sous_examen'[37m">En examen</s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:125:31:
+[37m      125 │ ...<span *ngIf="[32mcandidat.statut === 'dossier_depose'[37m">Dossier dé...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"sous_examen"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:31:
+[37m      126 │ ...  <span *ngIf="[32mcandidat.statut !== 'sous_examen'[37m && candidat.s...
+          ╵                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2367: This comparison appears to be unintentional because the types 'MasterStatus' and '"dossier_depose"' have no overlap.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.html:126:68:
+[37m      126 │ ...s_examen' && [32mcandidat.statut !== 'dossier_depose'[37m">{{ candidat...
+          ╵                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component CandidaturesMasterComponent.
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:54:15:
+[37m      54 │   templateUrl: [32m'./candidatures-master.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [9.461 seconds] - 2026-06-01T04:24:41.274Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'CandidatStatut' is not assignable to type 'MasterStatus'.
+  Type '"sous_examen"' is not assignable to type 'MasterStatus'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:402:4:
+[37m      402 │     [32mthis.avisStatut[37m = candidate.statut;
+          ╵     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[2m05:25:00[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:25:00[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:25:00[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-candidatures/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:25:00[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-dossiers/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:25:00[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [8.417 seconds] - 2026-06-01T04:25:32.440Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'CandidatStatut' is not assignable to type 'MasterStatus'.
+  Type '"sous_examen"' is not assignable to type 'MasterStatus'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/candidatures-master/candidatures-master.component.ts:402:4:
+[37m      402 │     [32mthis.avisStatut[37m = candidate.statut;
+          ╵     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.21 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.23 MB[22m
+
+Application bundle generation complete. [8.993 seconds] - 2026-06-01T04:27:05.426Z
+
+Page reload sent to client(s).
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-candidatures/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-dossiers/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:10[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-candidatures/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-dossiers/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:27:11[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:46[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:47[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:47[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-candidatures/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:47[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:48[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-dossiers/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:43:48[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:44[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-candidatures/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-dossiers/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m05:44:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m06:33:06[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m06:33:07[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m07:39:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m07:39:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m07:39:08[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m07:39:16[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m07:39:16[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [17.489 seconds] - 2026-06-01T06:56:31.175Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.909 seconds] - 2026-06-01T06:57:05.878Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.038 seconds] - 2026-06-01T06:57:28.256Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.130 seconds] - 2026-06-01T06:57:59.158Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.776 seconds] - 2026-06-01T06:58:27.379Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [9.974 seconds] - 2026-06-01T06:58:48.516Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.573 seconds] - 2026-06-01T06:59:22.101Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.21 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.408 seconds] - 2026-06-01T06:59:45.068Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.213 seconds] - 2026-06-01T07:00:12.731Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.179 seconds] - 2026-06-01T07:01:15.400Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [5.568 seconds] - 2026-06-01T07:02:49.954Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG5002: Unexpected closing tag "div". It may happen when the tag has already been closed by another tag. For more info see https://www.w3.org/TR/html5/syntax.html#closing-elements-that-have-implied-end-tags[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:975:4:
+[37m      975 │     [32m</div>[37m
+          ╵     [32m~~~~~~[0m
+
+  Error occurs in the template of component DashboardCandidatComponent.
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:280:15:
+[37m      280 │   templateUrl: [32m'./dashboard-candidat.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG5002: Unexpected closing tag "main". It may happen when the tag has already been closed by another tag. For more info see https://www.w3.org/TR/html5/syntax.html#closing-elements-that-have-implied-end-tags[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:2473:2:
+[37m      2473 │   [32m</main>[37m
+           ╵   [32m~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCandidatComponent.
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:280:15:
+[37m      280 │   templateUrl: [32m'./dashboard-candidat.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG5002: Unexpected closing tag "div". It may happen when the tag has already been closed by another tag. For more info see https://www.w3.org/TR/html5/syntax.html#closing-elements-that-have-implied-end-tags[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:3871:0:
+[37m      3871 │ [32m</div>[37m
+           ╵ [32m~~~~~~[0m
+
+  Error occurs in the template of component DashboardCandidatComponent.
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:280:15:
+[37m      280 │   templateUrl: [32m'./dashboard-candidat.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.22 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.25 MB[22m
+
+Application bundle generation complete. [46.589 seconds] - 2026-06-01T07:03:52.021Z
+
+Page reload sent to client(s).
+[1m[31m[2m08:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m08:03:57[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [71.211 seconds] - 2026-06-01T07:05:08.812Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [4.459 seconds] - 2026-06-01T07:17:17.508Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG5002: Unexpected closing tag "main". It may happen when the tag has already been closed by another tag. For more info see https://www.w3.org/TR/html5/syntax.html#closing-elements-that-have-implied-end-tags[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.html:2473:2:
+[37m      2473 │   [32m</main>[37m
+           ╵   [32m~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCandidatComponent.
+
+    src/app/components/candidat/dashboard-candidat/dashboard-candidat.ts:280:15:
+[37m      280 │   templateUrl: [32m'./dashboard-candidat.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.22 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.25 MB[22m
+
+Application bundle generation complete. [65.146 seconds] - 2026-06-01T07:18:37.803Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [81.522 seconds] - 2026-06-01T07:19:59.342Z
+
+Component update sent to client(s).

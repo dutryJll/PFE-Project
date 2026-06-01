@@ -55,6 +55,10 @@
         />
       </div>
 
+      <div class="forgot-row">
+        <button type="button" class="btn-forgot" (click)="openForgot()">Mot de passe oublié ?</button>
+      </div>
+
       <button type="submit" class="btn-login" [disabled]="isLoading">
         {{ isLoading ? ('login.com.loading' | translate) : ('login.com.submit' | translate) }}
       </button>
@@ -66,5 +70,36 @@
         {{ 'login.com.help.text' | translate }} <strong>admin@isimm.tn</strong>
       </p>
     </div>
+  </div>
+</div>
+
+<!-- ── Forgot password modal ── -->
+<div class="fp-overlay" *ngIf="showForgotModal" (click)="closeForgot()">
+  <div class="fp-modal" (click)="$event.stopPropagation()">
+    <button class="fp-close" (click)="closeForgot()">×</button>
+
+    <div class="fp-icon">
+      <i class="fas fa-lock"></i>
+    </div>
+    <h3>Réinitialiser le mot de passe</h3>
+
+    <ng-container *ngIf="!resetSent">
+      <p class="fp-desc">Saisissez votre adresse e-mail. Vous recevrez un lien de réinitialisation.</p>
+      <div *ngIf="resetError" class="alert alert-danger">{{ resetError }}</div>
+      <input type="email" [(ngModel)]="resetEmail" name="resetEmail"
+             placeholder="votre@email.com" class="fp-input"/>
+      <button class="btn-login fp-send" (click)="sendPasswordReset()" [disabled]="isResetting">
+        {{ isResetting ? 'Envoi…' : 'Envoyer le lien' }}
+      </button>
+    </ng-container>
+
+    <ng-container *ngIf="resetSent">
+      <div class="fp-success">
+        <i class="fas fa-check-circle"></i>
+        <p>Un lien de réinitialisation a été envoyé à <strong>{{ resetEmail }}</strong>.</p>
+        <p>Vérifiez votre boîte de réception.</p>
+      </div>
+      <button class="btn-login fp-send" (click)="closeForgot()">Fermer</button>
+    </ng-container>
   </div>
 </div>

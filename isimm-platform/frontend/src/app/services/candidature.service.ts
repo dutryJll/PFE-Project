@@ -138,6 +138,53 @@ export class CandidatureService {
     });
   }
 
+  // POUR COMMISSION : récupérer les candidatures Cycle Ingénieur (filtrées par spécialité côté backend)
+  getCandidaturesIngenieurCommission(): Observable<any> {
+    const params = new HttpParams().set('type', 'ingenieur');
+    return this.http.get(`${this.apiUrl}/responsable/candidatures/`, {
+      headers: this.getHeaders(),
+      params,
+    });
+  }
+
+  // POUR COMMISSION : télécharger l'attestation PDF individuelle d'une candidature
+  genererAttestation(candidatureId: number, force = false): Observable<Blob> {
+    const params = force ? new HttpParams().set('force', '1') : new HttpParams();
+    return this.http.get(`${this.apiUrl}/${candidatureId}/generer-pdf/`, {
+      headers: this.getHeaders(false),
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  // POUR COMMISSION : spécialités de diplômes admissibles pour un master donné
+  // Source : SpecialiteParcoursMapping (seedé via migration 0025 / seed_specialites_parcours)
+  // Le composant extrait res.specialites depuis la réponse.
+  getSpecialitesAdmissibles(masterId: number): Observable<any> {
+    return this.http.get(
+      `${this.apiUrl}/masters/${masterId}/specialites-admissibles/`,
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // POUR COMMISSION : générer le PDF officiel de sélection (LISTE PRINCIPALE + ATTENTE)
+  // Appel direct sans sélection de checkboxes — cible toute la promotion du master
+  genererListeOfficielle(
+    masterId: number,
+    etape: 'PRESELECTION' | 'SELECTION' = 'SELECTION',
+    annee: string = '2025-2026',
+  ): Observable<Blob> {
+    const params = new HttpParams()
+      .set('parcoursId', masterId.toString())
+      .set('etape', etape)
+      .set('annee', annee);
+    return this.http.get(`${this.apiUrl}/documents/generer-pdf/`, {
+      headers: this.getHeaders(false),
+      params,
+      responseType: 'blob',
+    });
+  }
+
   // POUR COMMISSION : accepter ou refuser une candidature
   deciderCandidatureCommission(
     candidatureId: number,

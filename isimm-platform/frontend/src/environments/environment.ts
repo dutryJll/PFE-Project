@@ -11,4 +11,5 @@ export const environment = {
   deliberationsServiceUrl: 'http://localhost:8003/api/deliberations',
   reclamationsServiceUrl: 'http://localhost:8003/api/reclamations',
   commissionsServiceUrl: 'http://localhost:8003/api/commissions',
+  websocketUrl: 'ws://localhost:8003',
 };

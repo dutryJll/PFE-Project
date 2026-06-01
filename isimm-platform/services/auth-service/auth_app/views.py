@@ -141,7 +141,7 @@ def register(request):
         try:
             send_verification_email(user)
         except Exception as e:
-            print(f"⚠️ Erreur envoi email: {e}")
+            print(f"[WARN] Erreur envoi email: {e}")
         
         return Response({
             'message': 'Inscription réussie ! Vérifiez votre email.',
@@ -217,7 +217,7 @@ def login(request):
         ip_address = request.META.get('REMOTE_ADDR')
         send_login_notification(user, ip_address)
     except Exception as e:
-        print(f"⚠️ Erreur notification: {e}")
+        print(f"[WARN] Erreur notification: {e}")
     
     return Response({
         'user': UserSerializer(user).data,
@@ -637,7 +637,7 @@ Pour activer votre compte et créer votre mot de passe, cliquez sur le lien ci-d
 
 {activation_link}
 
-⚠️ IMPORTANT :
+[WARN] IMPORTANT :
 - Ce lien est valide pendant 7 jours
 - Vous devrez créer un mot de passe sécurisé (minimum 8 caractères)
 - Une fois votre mot de passe créé, vous pourrez accéder à la plateforme
@@ -662,7 +662,7 @@ L'équipe ISIMM
             fail_silently=False,
             connection=connection,
         )
-        print(f"✅ Email d'activation envoyé à {email}")
+        print(f"[OK] Email d'activation envoyé à {email}")
         email_backend = getattr(settings, 'EMAIL_BACKEND', '')
         is_console_backend = bool(email_backend_override) or 'console' in str(email_backend).lower()
 
@@ -689,7 +689,7 @@ L'équipe ISIMM
         # Si l'email échoue, supprimer uniquement un nouvel utilisateur créé.
         if created_new_user:
             user.delete()
-        print(f"❌ Erreur envoi email: {e}")
+        print(f"[ERROR] Erreur envoi email: {e}")
         return Response(
             {'error': f'Erreur lors de l\'envoi de l\'email: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -1031,7 +1031,7 @@ def my_commissions(request):
             )
         
         else:
-            print(f"⚠️ Service candidature retourne: {response.status_code}")
+            print(f"[WARN] Service candidature retourne: {response.status_code}")
             return Response(
                 {
                     'error': f'Erreur service candidature: {response.status_code}',
@@ -1042,7 +1042,7 @@ def my_commissions(request):
             )
     
     except requests.exceptions.Timeout:
-        print("❌ Timeout lors de l'appel à candidature_service")
+        print("[ERROR] Timeout lors de l'appel à candidature_service")
         return Response(
             {
                 'error': 'Timeout - service candidature indisponible',
@@ -1053,7 +1053,7 @@ def my_commissions(request):
         )
     
     except requests.exceptions.RequestException as e:
-        print(f"❌ Erreur connexion service candidature: {e}")
+        print(f"[ERROR] Erreur connexion service candidature: {e}")
         return Response(
             {
                 'error': f'Erreur connexion: {str(e)}',
@@ -1153,7 +1153,7 @@ def select_commission(request):
             )
         
         else:
-            print(f"⚠️ Service candidature retourne: {response.status_code}")
+            print(f"[WARN] Service candidature retourne: {response.status_code}")
             # Fallback: accepter la sélection même si le service a une erreur
             request.session['selected_commission_id'] = commission_id
             return Response(
@@ -1167,7 +1167,7 @@ def select_commission(request):
             )
     
     except requests.exceptions.Timeout:
-        print("❌ Timeout lors de la validation de la commission")
+        print("[ERROR] Timeout lors de la validation de la commission")
         # Fallback: accepter la sélection même si le service est indisponible
         request.session['selected_commission_id'] = commission_id
         return Response(
@@ -1181,7 +1181,7 @@ def select_commission(request):
         )
     
     except requests.exceptions.RequestException as e:
-        print(f"❌ Erreur validation commission: {e}")
+        print(f"[ERROR] Erreur validation commission: {e}")
         # Fallback: accepter la sélection même si le service est indisponible
         request.session['selected_commission_id'] = commission_id
         return Response(
@@ -1193,3 +1193,88 @@ def select_commission(request):
             },
             status=status.HTTP_200_OK
         )
+
+# ========================================
+# RÉINITIALISATION MOT DE PASSE
+# ========================================
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def password_reset(request):
+    """POST /api/auth/password-reset/  — envoie un lien de reset par email"""
+    email = (request.data.get('email') or '').strip().lower()
+    if not email:
+        return Response({'error': 'Email requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        # Ne pas révéler si l'email existe ou non
+        return Response({'message': 'Si cet email existe, un lien a été envoyé.'}, status=status.HTTP_200_OK)
+
+    token = uuid.uuid4()
+    user.reset_password_token = token
+    user.reset_password_expire = timezone.now() + timezone.timedelta(hours=2)
+    user.save(update_fields=['reset_password_token', 'reset_password_expire'])
+
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:4200')
+    reset_url = f"{frontend_url}/reset-password/{token}"
+
+    subject = 'Réinitialisation de votre mot de passe — ISIMM'
+    html_message = f"""
+    <h2>Bonjour {user.first_name or user.email},</h2>
+    <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+    <p>Cliquez sur le bouton ci-dessous (valable 2 heures) :</p>
+    <p>
+      <a href="{reset_url}" style="display:inline-block;padding:12px 24px;
+         background:#185FA5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
+        Réinitialiser le mot de passe
+      </a>
+    </p>
+    <p>Si vous n'avez pas fait cette demande, ignorez cet email.</p>
+    <hr>
+    <p style="color:#888;font-size:12px;">ISIMM — Institut Supérieur d'Informatique et des Mathématiques de Monastir</p>
+    """
+
+    try:
+        send_mail(
+            subject=subject,
+            message=f"Réinitialisez votre mot de passe : {reset_url}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"[WARN] Erreur envoi email reset: {e}")
+        return Response({'error': "Erreur lors de l'envoi de l'email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'message': 'Si cet email existe, un lien a été envoyé.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def password_reset_confirm(request):
+    """POST /api/auth/password-reset/confirm/ — valide le token et change le mot de passe"""
+    token = (request.data.get('token') or '').strip()
+    password = (request.data.get('password') or '').strip()
+
+    if not token or not password:
+        return Response({'error': 'Token et mot de passe requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if len(password) < 8:
+        return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(reset_password_token=token)
+    except (User.DoesNotExist, Exception):
+        return Response({'error': 'Lien invalide ou déjà utilisé'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if user.reset_password_expire and timezone.now() > user.reset_password_expire:
+        return Response({'error': 'Ce lien a expiré. Veuillez faire une nouvelle demande.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(password)
+    user.reset_password_token = None
+    user.reset_password_expire = None
+    user.save(update_fields=['password', 'reset_password_token', 'reset_password_expire'])
+
+    return Response({'message': 'Mot de passe réinitialisé avec succès !'}, status=status.HTTP_200_OK)

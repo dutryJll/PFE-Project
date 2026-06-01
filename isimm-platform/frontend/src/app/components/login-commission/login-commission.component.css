@@ -303,6 +303,122 @@ input:focus {
   }
 }
 
+/* ── Forgot password link ── */
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.4rem 0 1.1rem;
+}
+.btn-forgot {
+  background: none;
+  border: none;
+  color: var(--accent-strong);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.btn-forgot:hover { color: #066a8a; }
+
+/* ── Forgot password modal ── */
+.fp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 40, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+.fp-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.2rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28);
+  position: relative;
+  text-align: center;
+  animation: card-rise 0.3s ease-out;
+}
+.fp-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #475569;
+  line-height: 1;
+}
+.fp-close:hover { background: #e2e8f0; }
+.fp-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.18), rgba(8, 145, 178, 0.15));
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+.fp-icon i { font-size: 1.6rem; color: var(--accent-strong); }
+.fp-modal h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.fp-desc {
+  font-size: 0.88rem;
+  color: #3e646b;
+  margin: 0 0 1.1rem;
+  line-height: 1.5;
+}
+.fp-input {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #c2ddd9;
+  border-radius: 12px;
+  background: #f7fcfb;
+  color: #13383f;
+  font-size: 0.96rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.fp-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(29, 211, 176, 0.2);
+}
+.fp-send {
+  margin-top: 0;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.35);
+}
+.fp-success {
+  padding: 1rem 0;
+  color: #065f46;
+}
+.fp-success i {
+  font-size: 2.2rem;
+  color: #10b981;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+.fp-success p { margin: 0.3rem 0; font-size: 0.9rem; }
+
 @media (max-width: 640px) {
   .login-commission-page {
     padding: 1rem;

@@ -5,6 +5,7 @@ from . import views
 from . import views_export
 from .views_parcours import ParcoursAdmissionViewSet
 from . import views_pdf_official
+from . import views_attestation
 
 router = DefaultRouter()
 router.register(r'parcours', ParcoursAdmissionViewSet, basename='parcours-admission')
@@ -15,6 +16,7 @@ urlpatterns = router.urls + [
     path('preview-score/', views.preview_score_candidature, name='preview_score_candidature'),
     path('masters/', views.lister_masters, name='lister_masters'),
     path('masters/<int:master_id>/specialites/', views.get_specialites_for_master, name='get_specialites_for_master'),
+    path('masters/<int:master_id>/specialites-admissibles/', views.get_specialites_admissibles_master, name='get_specialites_admissibles_master'),
     path('offers-available/', views.get_available_offers_with_specialites, name='get_available_offers_with_specialites'),
     path('masters/<int:master_id>/can-reapply/', views.can_reapply_to_master, name='can_reapply_to_master'),
     path('masters/<int:master_id>/specialites-preselection/', views.get_specialites_for_preselection, name='get_specialites_for_preselection'),
@@ -36,6 +38,7 @@ urlpatterns = router.urls + [
     path('responsable/candidatures/', views.candidatures_responsable, name='candidatures_responsable'),
     path('responsable/mes-masters/', views.get_mes_masters, name='get_mes_masters'),
     path('responsable/notifications/', views.notifications_responsable, name='notifications_responsable'),
+    path('upload-fichier/', views.upload_fichier_dossier, name='upload_fichier_dossier'),
     path('mes-dossiers/', views.mes_dossiers, name='mes_dossiers'),
     path('dossiers-ocr/', views.lister_dossiers_ocr, name='lister_dossiers_ocr'),
     path('<int:candidature_id>/modifier/', views.modifier_candidature, name='modifier_candidature'),
@@ -117,6 +120,10 @@ urlpatterns = router.urls + [
     path('documents/generer-pdf/', views_pdf_official.generer_pdf_officiel, name='generer_pdf_officiel'),
     path('documents/verifier-liste/', views_pdf_official.verifier_liste, name='verifier_liste'),
     path('documents/auditer-ocr/', views_pdf_official.auditer_document_ocr, name='auditer_document_ocr'),
+
+    # ── Attestation individuelle + OCR par candidature ─────────────────────────
+    path('<int:candidature_id>/generer-pdf/', views_attestation.generer_attestation_pdf, name='generer_attestation_pdf'),
+    path('<int:candidature_id>/analyser-ocr/', views_attestation.analyser_ocr_candidature, name='analyser_ocr_candidature'),
 ]
 
 

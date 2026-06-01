@@ -18,6 +18,7 @@ try:
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
     REPORTLAB_AVAILABLE = True
 except ImportError:
+    colors = None  # type: ignore[assignment]
     REPORTLAB_AVAILABLE = False
 
 try:
@@ -29,15 +30,18 @@ except ImportError:
 
 
 # ─── Palette ISIMM ────────────────────────────────────────────────────────────
-NAVY = colors.HexColor('#0F1F3D')
-BLUE = colors.HexColor('#185FA5')
-BLUE_LT = colors.HexColor('#2E75B6')
-GREEN = colors.HexColor('#10B981')
-MUTED = colors.HexColor('#64748B')
-BORDER = colors.HexColor('#E2E8F4')
-BG = colors.HexColor('#F4F7FB')
-WHITE = colors.white
-BLACK = colors.black
+if REPORTLAB_AVAILABLE and colors is not None:
+    NAVY = colors.HexColor('#0F1F3D')
+    BLUE = colors.HexColor('#185FA5')
+    BLUE_LT = colors.HexColor('#2E75B6')
+    GREEN = colors.HexColor('#10B981')
+    MUTED = colors.HexColor('#64748B')
+    BORDER = colors.HexColor('#E2E8F4')
+    BG = colors.HexColor('#F4F7FB')
+    WHITE = colors.white
+    BLACK = colors.black
+else:
+    NAVY = BLUE = BLUE_LT = GREEN = MUTED = BORDER = BG = WHITE = BLACK = None
 
 
 def _mask_cin(cin: str) -> str:

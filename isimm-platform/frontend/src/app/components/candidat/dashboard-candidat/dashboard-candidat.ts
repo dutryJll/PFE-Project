@@ -1,4 +1,4 @@
-﻿import { Component, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -358,6 +358,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   get completionPercent(): number {
     if (this.documentsTotaux === 0) return 0;
     return Math.round((this.documentsValides / this.documentsTotaux) * 100);
+  }
+
+  get canDeposerDossier(): boolean {
+    const allowed = ['preselectionne', 'en_attente_dossier'];
+    return this.mesCandidatures.some(c => allowed.includes((c.statut || '').toLowerCase()));
+  }
+
+  get isSelectionne(): boolean {
+    return this.mesCandidatures.some(c =>
+      ['selectionne', 'inscrit'].includes((c.statut || '').toLowerCase())
+    );
   }
 
   isSidebarOpen: boolean = false;
@@ -1030,6 +1041,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     this.profileData.two_factor_enabled = this.twoFactorEnabled;
     this.initializeDossierPreferenceForm();
 
+    // Restauration immédiate depuis localStorage pour éviter le clignotement au refresh
+    if (this.authService.hasCandidatureValue) {
+      this.actionPermissions.consultationCandidature = true;
+      this.actionPermissions.suiviCandidature = true;
+    }
+
     const requestedView = this.route.snapshot.queryParamMap.get('view') as CandidatView | null;
     const workflowMockMode = this.route.snapshot.queryParamMap.get('workflowMock') === '1';
     const requestedWizardStep = Number(this.route.snapshot.queryParamMap.get('wizardStep') || '0');
@@ -1194,9 +1211,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   private buildWebSocketUrl(): string {
-    const socketUrl = new URL('/ws/candidatures/', window.location.origin);
-    socketUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return socketUrl.toString();
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/ws/candidatures/`;
   }
 
   private connectStatusWebSocket(): void {
@@ -1398,12 +1414,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
           return;
         }
 
+        const hasCandidature = this.authService.hasCandidatureValue;
         this.actionPermissions = {
           preinscription: this.authService.hasMyAction('Préinscription'),
-          consultationCandidature: this.authService.hasMyAction('Consultation de candidature'),
+          // Si le candidat a déjà une candidature, toujours afficher le menu même si
+          // l'action n'est pas explicitement dans la matrice backend
+          consultationCandidature:
+            hasCandidature || this.authService.hasMyAction('Consultation de candidature'),
           consultationDossier: this.authService.hasMyAction('Consultation de dossier'),
           depotDossier: this.authService.hasMyAction('Dépôt de dossier'),
-          suiviCandidature: this.authService.hasMyAction('Suivi de candidature'),
+          suiviCandidature:
+            hasCandidature || this.authService.hasMyAction('Suivi de candidature'),
           deposerReclamation: this.authService.hasMyAction('Déposer réclamation'),
         };
 
@@ -1808,6 +1829,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
                 ? item.historiqueStatut
                 : [],
           }));
+
+          // Persiste l'existence de candidatures dans localStorage pour le refresh
+          const hasCandidature = this.mesCandidatures.length > 0;
+          this.authService.setHasCandidature(hasCandidature);
+          if (hasCandidature) {
+            this.actionPermissions.consultationCandidature = true;
+            this.actionPermissions.suiviCandidature = true;
+          }
+
           this.isDashboardLoading = false;
           this.loadNotifications();
           // Point 4: Load live metrics after loading candidatures
@@ -3896,6 +3926,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         description: 'Validation finale après paiement sur inscription.tn.',
       },
     ];
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.openActionMenuId = null;
   }
 
   toggleActionMenu(candidatureId: number): void {

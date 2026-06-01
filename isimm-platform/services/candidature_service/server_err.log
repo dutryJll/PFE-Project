@@ -1,0 +1,1 @@
+Listen failure: Couldn't listen on 127.0.0.1:8003: [WinError 10048] Une seule utilisation de chaque adresse de socket (protocole/adresse réseau/port) est habituellement autorisée.

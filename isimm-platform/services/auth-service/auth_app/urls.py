@@ -28,4 +28,6 @@ urlpatterns = [
     # ÉTAPE 3: Commissions multiples
     path('my-commissions/', views.my_commissions, name='my_commissions'),
     path('select-commission/', views.select_commission, name='select_commission'),
+    path('password-reset/', views.password_reset, name='password_reset'),
+    path('password-reset/confirm/', views.password_reset_confirm, name='password_reset_confirm'),
 ]

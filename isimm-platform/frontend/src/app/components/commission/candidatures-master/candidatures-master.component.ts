@@ -7,22 +7,32 @@ import {
   CommissionContextOption,
 } from '../../../services/commission-context.service';
 import { PdfExportService } from '../../../services/pdf-export.service';
+import { CandidatureService } from '../../../services/candidature.service';
 
 interface PieceJustificative {
   nom: string;
   statut: 'ok' | 'missing';
 }
 
-type MasterStatus = 'Présélectionné' | 'Refusé';
+type MasterStatus = 'Présélectionné' | 'Sélectionné' | 'Refusé';
+type CandidatStatut = MasterStatus | 'sous_examen' | 'dossier_depose';
+
+const STATUT_BACKEND: Record<MasterStatus, string> = {
+  'Présélectionné': 'preselectionne',
+  'Sélectionné':    'selectionne',
+  'Refusé':         'rejete',
+};
 
 interface Candidat {
   id: number;
   numeroCandidature: string;
   nom: string;
   master: string;
+  master_id?: number;       // ID Django du master (pour l'appel PDF)
+  specialiteDiplome: string; // Diplôme d'origine du candidat (depuis DonneesAcademiques)
   score: number;
   etatDossier: 'Complet' | 'Incomplet';
-  statut: MasterStatus;
+  statut: CandidatStatut;
   pieces: PieceJustificative[];
   email: string;
   cin: string;
@@ -52,16 +62,21 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   candidatsFiltres: Candidat[] = [];
   selectedIds: number[] = [];
   activeKebab: number | null = null;
-  generateListOpen = false;
+  isLoading = false;
+  loadError: string | null = null;
+  isGenerating = false;          // verrou pendant la génération PDF
+  currentMasterId: number | null = null;  // master_id extrait du premier résultat API
 
   selectedCommissionId: number | null = null;
   private activeCommissionCategory: CommissionContextOption['category'] | null = null;
   selectedYear = '';
   selectedSpecialite = '';
+  selectedSpecialiteDiplome = '';        // filtre par diplôme d'origine
   filtreStatut = '';
   recherche = '';
   distinctYears: string[] = [];
   availableSpecialites: string[] = [];
+  specialitesDiplome: { nom: string; abreviation: string }[] = []; // chargé depuis l'API
 
   consultationModalOpen = false;
   consultationCandidates: Candidat[] = [];
@@ -80,14 +95,97 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     private commissionContext: CommissionContextService,
     private router: Router,
     private pdfExport: PdfExportService,
+    private candidatureService: CandidatureService,
   ) {}
 
   private onDocumentClickBound: any = null;
 
   ngOnInit(): void {
     this.selectedCommissionId = this.activeCommissionId;
-    this.candidatsList = this.buildMockCandidates();
-    this.rebuildDerivedLists();
+    this.chargerCandidatures();
+  }
+
+  chargerCandidatures(): void {
+    this.isLoading = true;
+    this.loadError = null;
+    this.candidatureService.getCandidaturesCommissionClassees().subscribe({
+      next: (data: any[]) => {
+        this.candidatsList = (data || []).map((item, index) =>
+          this.mapApiToCandidatMaster(item, index),
+        );
+
+        if (data && data.length > 0) {
+          this.currentMasterId = data[0].master ?? data[0].master_id ?? null;
+
+          if (this.currentMasterId) {
+            this.chargerSpecialitesDiplome(this.currentMasterId);
+          }
+        }
+
+        this.isLoading = false;
+        this.rebuildDerivedLists();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.loadError = 'Impossible de charger les candidatures.';
+        this.candidatsList = [];
+        this.rebuildDerivedLists();
+      },
+    });
+  }
+
+  private mapApiToCandidatMaster(item: any, index: number): Candidat {
+    const statutRaw: string = (item.statut || '').toLowerCase();
+    let statut: CandidatStatut = 'Présélectionné';
+    if (statutRaw === 'selectionne' || statutRaw === 'inscrit') {
+      statut = 'Sélectionné';
+    } else if (statutRaw.includes('refus') || statutRaw === 'rejete') {
+      statut = 'Refusé';
+    } else if (statutRaw === 'dossier_depose') {
+      statut = 'dossier_depose';
+    } else if (statutRaw === 'sous_examen' || statutRaw === 'soumis') {
+      statut = 'sous_examen';
+    }
+    return {
+      id: item.id ?? index + 1,
+      numeroCandidature: item.numero || `CAND-${item.id}`,
+      nom: item.candidat_nom || '',
+      master: item.master_nom || item.specialite || '',
+      master_id: item.master ?? item.master_id,
+      specialiteDiplome: item.specialite_diplome || '',
+      score: item.score ?? 0,
+      etatDossier: item.dossier_depose ? 'Complet' : 'Incomplet',
+      statut,
+      email: item.candidat_email || '',
+      cin: item.candidat_cin || '',
+      dateCandidature: item.date_soumission || new Date().toISOString().slice(0, 10),
+      commentaire: '',
+      pieces: [],
+    };
+  }
+
+  chargerSpecialitesDiplome(masterId: number): void {
+    if (!masterId) {
+      this.specialitesDiplome = [];
+      return;
+    }
+
+    this.candidatureService.getSpecialitesAdmissibles(masterId).subscribe({
+      next: (res: any) => {
+        if (res && res.specialites && Array.isArray(res.specialites)) {
+          this.specialitesDiplome = res.specialites;
+        } else if (Array.isArray(res)) {
+          this.specialitesDiplome = res;
+        } else {
+          this.specialitesDiplome = [];
+        }
+        this.appliquerFiltres();
+      },
+      error: (err: any) => {
+        console.error('Erreur lors du chargement des spécialités admissibles', err);
+        this.specialitesDiplome = [];
+      },
+    });
   }
 
   ngAfterViewInit(): void {
@@ -111,95 +209,51 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     }
   }
 
-  private buildMockCandidates(): Candidat[] {
-    const base: Array<[string, string, string, number, 'Complet' | 'Incomplet', MasterStatus]> = [
-      ['Amira', 'Ben Salah', 'GL', 18.7, 'Complet', 'Présélectionné'],
-      ['Yassine', 'Trabelsi', 'DSI', 17.9, 'Complet', 'Présélectionné'],
-      ['Meriem', 'Khaldi', 'TI', 17.1, 'Complet', 'Présélectionné'],
-      ['Omar', 'Jaziri', 'RS', 16.2, 'Complet', 'Présélectionné'],
-      ['Nour', 'Cherif', 'GL', 15.8, 'Complet', 'Présélectionné'],
-      ['Mahdi', 'Bouzid', 'DSI', 15.1, 'Incomplet', 'Présélectionné'],
-      ['Salma', 'Haddad', 'TI', 14.6, 'Incomplet', 'Refusé'],
-      ['Anis', 'Gharbi', 'RS', 14.1, 'Complet', 'Refusé'],
-      ['Asma', 'Masmoudi', 'GL', 13.8, 'Incomplet', 'Refusé'],
-      ['Riadh', 'Hamdi', 'DSI', 13.2, 'Incomplet', 'Refusé'],
-      ['Wiem', 'Sassi', 'TI', 12.9, 'Complet', 'Refusé'],
-      ['Hassen', 'Mnif', 'RS', 12.4, 'Incomplet', 'Refusé'],
-      ['Nesrine', 'Brahmi', 'GL', 18.2, 'Complet', 'Présélectionné'],
-      ['Sami', 'Ammar', 'DSI', 17.4, 'Complet', 'Présélectionné'],
-      ['Imen', 'Ben Youssef', 'TI', 16.8, 'Complet', 'Présélectionné'],
-      ['Fares', 'Ouertani', 'RS', 15.6, 'Incomplet', 'Présélectionné'],
-      ['Rania', 'Sfar', 'GL', 14.9, 'Complet', 'Refusé'],
-      ['Mehdi', 'Zidi', 'DSI', 13.6, 'Incomplet', 'Refusé'],
-      ['Ines', 'Karray', 'TI', 18.0, 'Complet', 'Présélectionné'],
-      ['Bassem', 'Mansouri', 'RS', 12.2, 'Incomplet', 'Refusé'],
-    ];
-
-    return base.map((item, index) => ({
-      id: index + 1,
-      numeroCandidature: `2603-${String(index + 1).padStart(5, '0')}-${item[2]}`,
-      nom: `${item[0]} ${item[1]}`,
-      master: `Master ${item[2]}`,
-      score: item[3],
-      etatDossier: item[4],
-      statut: item[5],
-      email: `${item[0].toLowerCase()}.${item[1].toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      cin: `${24000000 + index}`,
-      dateCandidature: `2026-01-${String(10 + (index % 18)).padStart(2, '0')}`,
-      commentaire: '',
-      pieces: [
-        { nom: 'Diplôme Licence', statut: index % 4 === 0 ? 'missing' : 'ok' },
-        { nom: 'Relevé de Notes', statut: index % 5 === 0 ? 'missing' : 'ok' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Lettre de Motivation', statut: index % 6 === 0 ? 'missing' : 'ok' },
-      ],
-    }));
-  }
-
   private rebuildDerivedLists(): void {
     this.distinctYears = Array.from(
-      new Set(
-        this.candidatsList.map((candidat) => new Date(candidat.dateCandidature).getFullYear()),
-      ),
+      new Set(this.candidatsList.map((c) => new Date(c.dateCandidature).getFullYear())),
     )
-      .map((year) => String(year))
+      .map(String)
       .sort((a, b) => Number(b) - Number(a));
-    this.availableSpecialites = Array.from(
-      new Set(this.candidatsList.map((candidat) => candidat.master.replace('Master ', ''))),
-    ).sort();
+
+    // availableSpecialites supprimé — chargerSpecialitesDiplome() pilote tout
     this.appliquerFiltres();
   }
 
   appliquerFiltres(): void {
     const search = this.recherche.trim().toLowerCase();
-    this.candidatsFiltres = this.candidatsList.filter((candidat) => {
+
+    this.candidatsFiltres = this.candidatsList.filter((c) => {
       const scope = this.activeCommissionCategory;
       const matchesCommission =
         !scope ||
-        (scope === 'master-ds' && candidat.master.includes('DSI')) ||
-        (scope === 'master-gl' && candidat.master.includes('GL'));
+        (scope === 'master-ds' && c.master.includes('DSI')) ||
+        (scope === 'master-gl' && c.master.includes('GL'));
+
       const matchesYear =
         !this.selectedYear ||
-        String(new Date(candidat.dateCandidature).getFullYear()) === String(this.selectedYear);
+        String(new Date(c.dateCandidature).getFullYear()) === String(this.selectedYear);
+
       const matchesSpecialite =
-        !this.selectedSpecialite ||
-        candidat.master.replace('Master ', '') === this.selectedSpecialite;
-      const matchesStatus = !this.filtreStatut || candidat.statut === this.filtreStatut;
+        !this.selectedSpecialiteDiplome ||
+        c.specialiteDiplome === this.selectedSpecialiteDiplome;
+
+      const matchesStatus = !this.filtreStatut || c.statut === this.filtreStatut;
+
       const matchesSearch =
         !search ||
-        candidat.numeroCandidature.toLowerCase().includes(search) ||
-        candidat.nom.toLowerCase().includes(search) ||
-        candidat.email.toLowerCase().includes(search) ||
-        candidat.cin.toLowerCase().includes(search) ||
-        candidat.master.toLowerCase().includes(search) ||
-        candidat.statut.toLowerCase().includes(search);
-      return (
-        matchesCommission && matchesYear && matchesSpecialite && matchesStatus && matchesSearch
-      );
+        c.numeroCandidature.toLowerCase().includes(search) ||
+        c.nom.toLowerCase().includes(search) ||
+        c.email.toLowerCase().includes(search) ||
+        c.cin.toLowerCase().includes(search) ||
+        (c.specialiteDiplome && c.specialiteDiplome.toLowerCase().includes(search)) ||
+        c.statut.toLowerCase().includes(search);
+
+      return matchesCommission && matchesYear && matchesSpecialite && matchesStatus && matchesSearch;
     });
 
     this.selectedIds = this.selectedIds.filter((id) =>
-      this.candidatsFiltres.some((candidat) => candidat.id === id),
+      this.candidatsFiltres.some((c) => c.id === id),
     );
   }
 
@@ -216,7 +270,7 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   reinitialiserFiltres(): void {
     this.selectedCommissionId = this.activeCommissionId;
     this.selectedYear = '';
-    this.selectedSpecialite = '';
+    this.selectedSpecialiteDiplome = '';
     this.filtreStatut = '';
     this.recherche = '';
     this.appliquerFiltres();
@@ -250,14 +304,51 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     );
   }
 
-  toggleGenerateListMenu(): void {
-    this.generateListOpen = !this.generateListOpen;
-  }
+  /**
+   * Génère le PDF officiel ISIMM (LISTE PRINCIPALE + LISTE D'ATTENTE)
+   * pour TOUTE la promotion du parcours actuel.
+   * Indépendant des checkboxes — accessible en un seul clic.
+   */
+  genererListeOfficielle(): void {
+    const masterId = this.currentMasterId
+      ?? this.candidatsFiltres[0]?.master_id
+      ?? null;
 
-  genererListe(mode: 'all' | 'selection'): void {
-    const count = mode === 'all' ? this.candidatsFiltres.length : this.selectedCandidates.length;
-    window.alert(`Génération de la liste (${mode}) — ${count} éléments`);
-    this.generateListOpen = false;
+    if (!masterId) {
+      window.alert(
+        'Impossible de déterminer le master. Assurez-vous que des candidatures sont chargées.',
+      );
+      return;
+    }
+
+    if (this.candidatsFiltres.length === 0) {
+      window.alert('Aucune candidature à exporter.');
+      return;
+    }
+
+    this.isGenerating = true;
+
+    this.candidatureService.genererListeOfficielle(masterId, 'SELECTION').subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const masterLabel = this.getSpecialiteBadgeLabel(
+          this.candidatsFiltres[0]?.master || 'Master',
+        );
+        a.download = `ISIMM_Liste_Selection_${masterLabel}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.isGenerating = false;
+      },
+      error: (err: any) => {
+        console.error('Erreur génération PDF liste officielle :', err);
+        window.alert(
+          'Erreur lors de la génération du PDF. Vérifiez que le service candidature est démarré.',
+        );
+        this.isGenerating = false;
+      },
+    });
   }
 
   telechargerZIP(): void {
@@ -291,9 +382,27 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     });
   }
 
+  telechargerAttestation(candidate: Candidat): void {
+    this.closeActionMenu();
+    this.candidatureService.genererAttestation(candidate.id, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ISIMM_Attestation_${candidate.nom.replace(/ /g, '_')}_${candidate.numeroCandidature}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => window.alert('Erreur lors de la génération de l\'attestation PDF.'),
+    });
+  }
+
   openAvis(candidate: Candidat): void {
     this.avisCandidate = candidate;
-    this.avisStatut = candidate.statut;
+    const settable: MasterStatus[] = ['Présélectionné', 'Sélectionné', 'Refusé'];
+    this.avisStatut = settable.includes(candidate.statut as MasterStatus)
+      ? (candidate.statut as MasterStatus)
+      : 'Présélectionné';
     this.avisCommentaire = candidate.commentaire || '';
     this.avisModalOpen = true;
     this.closeActionMenu();
@@ -322,14 +431,28 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   }
 
   saveAvis(): void {
-    if (!this.avisCandidate) {
-      return;
-    }
-    this.avisCandidate.statut = this.avisStatut;
-    this.avisCandidate.commentaire = this.avisCommentaire.trim();
-    this.avisModalOpen = false;
-    this.avisCandidate = null;
-    this.appliquerFiltres();
+    if (!this.avisCandidate) return;
+
+    const backendStatut = STATUT_BACKEND[this.avisStatut] ?? 'preselectionne';
+    const candidat = this.avisCandidate;
+
+    this.candidatureService.updateStatus(candidat.id, backendStatut, this.avisCommentaire.trim())
+      .subscribe({
+        next: () => {
+          candidat.statut = this.avisStatut;
+          candidat.commentaire = this.avisCommentaire.trim();
+          this.avisModalOpen = false;
+          this.avisCandidate = null;
+          this.appliquerFiltres();
+        },
+        error: (err: any) => {
+          console.error('saveAvis error:', err);
+          window.alert(
+            'Erreur lors de la mise à jour du statut.\n' +
+            (err?.error?.error || err?.message || 'Vérifiez vos permissions.')
+          );
+        },
+      });
   }
 
   closeAvisModal(): void {
@@ -389,28 +512,29 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
   }
 
   get statistiques(): StatistiqueCard[] {
+    const base = this.candidatsFiltres.length ? this.candidatsFiltres : this.candidatsList;
     return [
       {
         label: 'Total candidatures',
-        nombre: this.candidatsList.length,
+        nombre: base.length,
         theme: 'blue',
         icon: 'fas fa-folder-open',
       },
       {
         label: 'Présélectionnés',
-        nombre: this.candidatsList.filter((c) => c.statut === 'Présélectionné').length,
+        nombre: base.filter((c) => c.statut === 'Présélectionné').length,
         theme: 'green',
         icon: 'fas fa-circle-check',
       },
       {
         label: 'Refusés',
-        nombre: this.candidatsList.filter((c) => c.statut === 'Refusé').length,
+        nombre: base.filter((c) => c.statut === 'Refusé').length,
         theme: 'red',
         icon: 'fas fa-xmark',
       },
       {
         label: 'Dossiers complets',
-        nombre: this.candidatsList.filter((c) => c.etatDossier === 'Complet').length,
+        nombre: base.filter((c) => c.etatDossier === 'Complet').length,
         theme: 'amber',
         icon: 'fas fa-folder-check',
       },
@@ -543,44 +667,7 @@ export class CandidaturesMasterComponent implements OnInit, OnChanges {
     URL.revokeObjectURL(url);
   }
 
-  genererPDF(): void {
-    // Try to use html2canvas + jsPDF when available, otherwise fallback to print
-    const jsPDF = (window as any).jsPDF;
-    const html2canvas = (window as any).html2canvas || (window as any).html2canvas;
-
-    const table = document.querySelector('.selection-table');
-    if (!table) {
-      this.showToast('Aucun tableau trouvé pour exporter en PDF.');
-      return;
-    }
-
-    if (html2canvas && jsPDF) {
-      html2canvas(table as HTMLElement, { scale: 2 }).then((canvas: HTMLCanvasElement) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = (pdf as any).getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save('candidatures.pdf');
-      });
-      return;
-    }
-
-    // Fallback: open printable window
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write('<html><head><title>Export PDF</title>');
-    w.document.write(
-      '<style>table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}</style>',
-    );
-    w.document.write('</head><body>');
-    w.document.write((table as HTMLElement).outerHTML);
-    w.document.write('</body></html>');
-    w.document.close();
-    w.focus();
-    w.print();
-  }
+  // genererPDF() remplacé par genererListeOfficielle() — appel backend ReportLab
 
   getScoreClass(score: number): string {
     if (score >= 16) return 'score-pill score-pill--green';

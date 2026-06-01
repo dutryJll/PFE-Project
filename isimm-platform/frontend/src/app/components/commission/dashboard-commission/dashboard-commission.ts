@@ -3893,10 +3893,24 @@ export class DashboardCommissionComponent implements OnInit {
   private get userManagesMasterPrograms(): boolean {
     // 1. Definitive: MembreCommission API returned master records
     if (this.userMasterNoms.length > 0) return true;
-    // 2. Reliable: user profile specialite starts with or contains 'master'
+    // 2. Reliable: user profile specialite contains master/mastère keyword or known formation code
     const spec = String(this.currentUser?.specialite || '').toLowerCase().trim();
-    if (spec) return spec.includes('master');
-    // 3. Fallback: commission name keyword detection (null → default to master)
+    if (spec) {
+      const masterCodes = ['mpgl', 'mpds', 'mp3i', 'mrgl', 'mrmi'];
+      if (
+        spec.includes('master') ||
+        spec.includes('mastère') ||
+        spec.includes('mastere') ||
+        masterCodes.some((c) => spec.includes(c))
+      ) {
+        return true;
+      }
+      // If spec explicitly names an ingénieur program, it's not master
+      if (spec.includes('ing') || spec.includes('ingénieur') || spec.includes('ingenieur')) {
+        return false;
+      }
+    }
+    // 3. Fallback: commission category detection (null → default to master)
     return this.activeCommissionCategory !== 'ingenieur';
   }
 
@@ -3905,7 +3919,7 @@ export class DashboardCommissionComponent implements OnInit {
       return this.userManagesMasterPrograms;
     }
     const scope = this.activeCommissionCategory;
-    const isMasterScope = !scope || scope === 'master-ds' || scope === 'master-gl';
+    const isMasterScope = !scope || scope !== 'ingenieur';
     if (!isMasterScope) return false;
     return (
       this.actionPermissions.consultationCandidature ||

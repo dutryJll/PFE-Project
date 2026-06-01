@@ -1234,9 +1234,27 @@
                     <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
                   </td>
                   <td>
-                    <div class="cc-tbl-actions">
-                      <button type="button" class="cc-tbl-btn cc-tbl-recap" (click)="voirRecapitulatif(candidature)" title="Récapitulatif"><i class="fas fa-file-alt"></i></button>
-                      <button type="button" class="cc-tbl-btn cc-tbl-follow" (click)="suivreCandidature(candidature)" title="Suivre"><i class="fas fa-chart-line"></i></button>
+                    <div class="cc-tbl-actions" style="position:relative">
+                      <button type="button" class="kebab-btn" aria-label="Actions"
+                              (click)="$event.stopPropagation(); toggleActionMenu(candidature.id)">
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                      <div class="actions-dropdown-menu" *ngIf="openActionMenuId === candidature.id"
+                           (click)="$event.stopPropagation()">
+                        <button type="button" class="menu-item" (click)="voirRecapitulatif(candidature); closeActionMenu()">
+                          <i class="fas fa-file-alt"></i><span>Récapitulatif</span>
+                        </button>
+                        <button type="button" class="menu-item" (click)="suivreCandidature(candidature); closeActionMenu()">
+                          <i class="fas fa-chart-line"></i><span>Suivre</span>
+                        </button>
+                        <button type="button" class="menu-item"
+                                [class.disabled]="!canModifyCandidature(candidature)"
+                                [disabled]="!canModifyCandidature(candidature)"
+                                (click)="modifierCandidature(candidature)">
+                          <i class="fas fa-pen"></i>
+                          <span>{{ canModifyCandidature(candidature) ? 'Modifier' : 'Modifier (expiré)' }}</span>
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -1269,6 +1287,15 @@
           </button>
         </div>
         <p>Consultez vos dossiers via leur numéro lié à la candidature</p>
+
+        <!-- Guard : dépôt bloqué si statut insuffisant -->
+        <div class="depot-locked-banner" *ngIf="!canDeposerDossier">
+          <i class="fas fa-lock"></i>
+          <div>
+            <strong>Dépôt de dossier non disponible</strong>
+            <p>Le dépôt de pièces est accessible uniquement lorsque votre candidature est <strong>Présélectionnée</strong> ou en statut <strong>En attente de dossier</strong>.</p>
+          </div>
+        </div>
 
         <div class="dossier-toolbar">
           <span *ngIf="selectedDossierNumber" class="selected-dossier-badge">
@@ -1659,7 +1686,8 @@
           </div>
         </div>
 
-        <div class="inscription-banner">
+        <!-- CTA inscription : visible uniquement si sélectionné -->
+        <div class="inscription-banner" *ngIf="isSelectionne">
           <div class="inscription-banner-text">
             <h3>Félicitations — Vous avez été sélectionné !</h3>
             <p>
@@ -1676,6 +1704,15 @@
             >
               <i class="fas fa-external-link-alt"></i> Effectuer l'inscription
             </a>
+          </div>
+        </div>
+
+        <!-- État verrouillé : candidature pas encore sélectionnée -->
+        <div class="inscription-locked-banner" *ngIf="!isSelectionne">
+          <i class="fas fa-hourglass-half"></i>
+          <div>
+            <strong>Inscription non disponible</strong>
+            <p>Cette section est accessible uniquement après que votre candidature soit <strong>Sélectionnée</strong> par la commission. Revenez ici une fois la décision communiquée.</p>
           </div>
         </div>
         <div class="insc-admis-scroll">

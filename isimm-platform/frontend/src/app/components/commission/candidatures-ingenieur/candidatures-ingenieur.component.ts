@@ -7,6 +7,7 @@ import {
   CommissionContextService,
   CommissionContextOption,
 } from '../../../services/commission-context.service';
+import { CandidatureService } from '../../../services/candidature.service';
 
 // ========================================
 // INTERFACES
@@ -16,6 +17,39 @@ interface PieceJustificative {
   statut: 'ok' | 'missing';
 }
 
+type IngenieurStatut =
+  | 'Soumis'
+  | 'Sous examen'
+  | 'Présélectionné'
+  | 'En attente dossier'
+  | 'Dossier déposé'
+  | 'Sélectionné'
+  | 'Inscrit'
+  | 'Refusé';
+
+const STATUT_DISPLAY: Record<string, IngenieurStatut> = {
+  soumis:              'Soumis',
+  sous_examen:         'Sous examen',
+  preselectionne:      'Présélectionné',
+  en_attente_dossier:  'En attente dossier',
+  dossier_depose:      'Dossier déposé',
+  selectionne:         'Sélectionné',
+  inscrit:             'Inscrit',
+  rejete:              'Refusé',
+  refuse:              'Refusé',
+};
+
+const STATUT_BACKEND_ING: Record<IngenieurStatut, string> = {
+  'Soumis':              'soumis',
+  'Sous examen':         'sous_examen',
+  'Présélectionné':      'preselectionne',
+  'En attente dossier':  'en_attente_dossier',
+  'Dossier déposé':      'dossier_depose',
+  'Sélectionné':         'selectionne',
+  'Inscrit':             'inscrit',
+  'Refusé':              'rejete',
+};
+
 interface Candidat {
   id: number;
   nom: string;
@@ -24,11 +58,12 @@ interface Candidat {
   specialite: string;
   score: number;
   etat_dossier: 'Complet' | 'Incomplet';
-  statut: 'Présélectionné' | 'Refusé';
+  statut: IngenieurStatut;
   pieces: PieceJustificative[];
   email?: string;
   cin?: string;
   date_candidature?: string;
+  commentaire?: string;
 }
 
 interface StatistiqueCard {
@@ -62,11 +97,13 @@ export class CandidaturesIngenieurComponent implements OnInit {
   filtreStatut: string = '';
   filtreEtatDossier: string = '';
   recherche = '';
-  private activeCommissionCategory: CommissionContextOption['category'] | null = null;
+  private readonly activeCommissionCategory: CommissionContextOption['category'] | null = null;
   // ========================================
   // DONNÉES
   // ========================================
   candidatsList: Candidat[] = [];
+  isLoading = false;
+  loadError: string | null = null;
 
   // ========================================
   // STATE
@@ -78,6 +115,10 @@ export class CandidaturesIngenieurComponent implements OnInit {
   viewingSelection: boolean = false;
   viewingList: Candidat[] = [];
   activeKebab: number | null = null;
+  avisModalOpen = false;
+  avisCandidate: Candidat | null = null;
+  avisStatut: IngenieurStatut = 'Présélectionné';
+  avisCommentaire = '';
   // consultation UI
   activeConsultationTab: 'details' | 'documents' | 'timeline' = 'details';
   timelineEntries: Array<{ date: string; author: string; note: string }> = [];
@@ -90,73 +131,52 @@ export class CandidaturesIngenieurComponent implements OnInit {
   constructor(
     private commissionContext: CommissionContextService,
     private router: Router,
+    private candidatureService: CandidatureService,
   ) {}
 
   ngOnInit(): void {
-    this.candidatsList = this.buildMockCandidates();
-    this.availableSpecialites = Array.from(
-      new Set(this.candidatsList.map((c) => c.specialite)),
-    ).sort();
-    this.appliquerFiltres();
-    this.commissionContext.activeCommissionId$.subscribe((commissionId) => {
-      this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
-      this.appliquerFiltres();
+    this.chargerCandidatures();
+  }
+
+  chargerCandidatures(): void {
+    this.isLoading = true;
+    this.loadError = null;
+    this.candidatureService.getCandidaturesIngenieurCommission().subscribe({
+      next: (data: any[]) => {
+        this.candidatsList = (data || []).map((item, index) => this.mapApiToCandidatIngenieur(item, index));
+        this.availableSpecialites = Array.from(
+          new Set(this.candidatsList.map((c) => c.specialite).filter(Boolean)),
+        ).sort();
+        this.isLoading = false;
+        this.appliquerFiltres();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.loadError = 'Impossible de charger les candidatures.';
+        this.candidatsList = [];
+        this.appliquerFiltres();
+      },
     });
   }
 
-  private buildMockCandidates(): Candidat[] {
-    const base: Array<
-      [
-        string,
-        string,
-        'GL' | 'TI' | 'DSI',
-        number,
-        'Complet' | 'Incomplet',
-        'Présélectionné' | 'Refusé',
-      ]
-    > = [
-      ['Amina', 'Boucher', 'GL', 17.8, 'Complet', 'Présélectionné'],
-      ['Riyad', 'Khalil', 'TI', 15.8, 'Incomplet', 'Présélectionné'],
-      ['Nadia', 'Mansour', 'DSI', 18.5, 'Complet', 'Présélectionné'],
-      ['Issam', 'Ould', 'GL', 14.1, 'Incomplet', 'Présélectionné'],
-      ['Meriem', 'Sassi', 'TI', 16.4, 'Complet', 'Présélectionné'],
-      ['Yassine', 'Ben Amor', 'DSI', 13.8, 'Incomplet', 'Refusé'],
-      ['Sara', 'Brahmi', 'GL', 18.2, 'Complet', 'Présélectionné'],
-      ['Anis', 'Gharbi', 'TI', 12.9, 'Incomplet', 'Refusé'],
-      ['Wiem', 'Karray', 'DSI', 15.3, 'Complet', 'Présélectionné'],
-      ['Omar', 'Jaziri', 'GL', 17.1, 'Complet', 'Présélectionné'],
-      ['Asma', 'Masmoudi', 'TI', 14.7, 'Incomplet', 'Présélectionné'],
-      ['Bassem', 'Mansouri', 'DSI', 11.8, 'Incomplet', 'Refusé'],
-      ['Ines', 'Khelifi', 'GL', 16.9, 'Complet', 'Présélectionné'],
-      ['Fares', 'Haddad', 'TI', 15.1, 'Complet', 'Présélectionné'],
-      ['Nour', 'Miled', 'DSI', 18.7, 'Complet', 'Présélectionné'],
-      ['Mehdi', 'Zidi', 'GL', 13.4, 'Incomplet', 'Refusé'],
-      ['Rania', 'Trabelsi', 'TI', 16.1, 'Complet', 'Présélectionné'],
-      ['Khalil', 'Hamdi', 'DSI', 14.3, 'Incomplet', 'Refusé'],
-      ['Lina', 'Ben Youssef', 'GL', 17.4, 'Complet', 'Présélectionné'],
-      ['Sami', 'Ouertani', 'TI', 12.6, 'Incomplet', 'Refusé'],
-    ];
-
-    return base.map((item, index) => ({
-      id: index + 1,
-      nom: `${item[0]} ${item[1]}`,
-      numeroCandidature: `2603-${String(index + 1).padStart(5, '0')}-${item[2]}`,
-      numeroInscription: `2603-${String(index + 21).padStart(5, '0')}-ING-${item[2]}`,
-      specialite: item[2],
-      score: item[3],
-      etat_dossier: item[4],
-      statut: item[5],
-      email: `${item[0].toLowerCase()}.${item[1].toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      cin: `${33000000 + index}`,
-      date_candidature: `2026-02-${String(1 + (index % 18)).padStart(2, '0')}`,
-      pieces: [
-        { nom: 'Diplôme BAC', statut: index % 4 === 0 ? 'missing' : 'ok' },
-        { nom: 'Relevé de Notes', statut: index % 5 === 0 ? 'missing' : 'ok' },
-        { nom: 'Lettre de Motivation', statut: index % 6 === 0 ? 'missing' : 'ok' },
-        { nom: 'CV', statut: 'ok' },
-        { nom: 'Certificat de Scolarité', statut: index % 3 === 0 ? 'missing' : 'ok' },
-      ],
-    }));
+  private mapApiToCandidatIngenieur(item: any, index: number): Candidat {
+    const statutRaw: string = (item.statut || '').toLowerCase().replace(/-/g, '_');
+    const statut: IngenieurStatut = STATUT_DISPLAY[statutRaw] ?? 'Soumis';
+    return {
+      id: item.id ?? index + 1,
+      nom: item.candidat_nom || '',
+      numeroCandidature: item.numero || `CAND-${item.id}`,
+      numeroInscription: item.numero || `CAND-${item.id}`,
+      specialite: item.specialite || '',
+      score: item.score ?? 0,
+      etat_dossier: item.dossier_depose ? 'Complet' : 'Incomplet',
+      statut,
+      email: item.candidat_email || '',
+      cin: item.candidat_cin || '',
+      date_candidature: item.date_soumission || new Date().toISOString().slice(0, 10),
+      commentaire: item.commentaire || '',
+      pieces: [],
+    };
   }
 
   // ========================================
@@ -182,6 +202,7 @@ export class CandidaturesIngenieurComponent implements OnInit {
   accepterCandidat(): void {
     if (this.candidatActuel) {
       this.candidatActuel.statut = 'Présélectionné';
+      this.candidatureService.updateStatus(this.candidatActuel.id, 'preselectionne').subscribe();
       this.nextCandidat();
     }
   }
@@ -189,6 +210,7 @@ export class CandidaturesIngenieurComponent implements OnInit {
   refuserCandidat(): void {
     if (this.candidatActuel) {
       this.candidatActuel.statut = 'Refusé';
+      this.candidatureService.updateStatus(this.candidatActuel.id, 'rejete').subscribe();
       this.nextCandidat();
     }
   }
@@ -196,9 +218,50 @@ export class CandidaturesIngenieurComponent implements OnInit {
   massValider(): void {
     this.candidatsFiltres
       .filter((c) => this.selectionSet.has(c.id))
-      .forEach((c) => { c.statut = 'Présélectionné'; });
+      .forEach((c) => {
+        c.statut = 'Présélectionné';
+        this.candidatureService.updateStatus(c.id, 'preselectionne').subscribe();
+      });
     this.clearSelection();
     this.appliquerFiltres();
+  }
+
+  openAvis(candidate: Candidat): void {
+    this.avisCandidate = candidate;
+    this.avisStatut = candidate.statut;
+    this.avisCommentaire = candidate.commentaire || '';
+    this.avisModalOpen = true;
+    this.activeKebab = null;
+  }
+
+  closeAvisModal(): void {
+    this.avisModalOpen = false;
+    this.avisCandidate = null;
+    this.avisCommentaire = '';
+    this.avisStatut = 'Présélectionné';
+  }
+
+  saveAvis(): void {
+    if (!this.avisCandidate) return;
+    const backendStatut = STATUT_BACKEND_ING[this.avisStatut] ?? 'preselectionne';
+    const candidat = this.avisCandidate;
+    this.candidatureService.updateStatus(candidat.id, backendStatut, this.avisCommentaire.trim())
+      .subscribe({
+        next: () => {
+          candidat.statut = this.avisStatut;
+          candidat.commentaire = this.avisCommentaire.trim();
+          this.avisModalOpen = false;
+          this.avisCandidate = null;
+          this.appliquerFiltres();
+        },
+        error: (err: any) => {
+          console.error('saveAvis error:', err);
+          window.alert(
+            'Erreur lors de la mise à jour du statut.\n' +
+            (err?.error?.error || err?.message || 'Vérifiez vos permissions.')
+          );
+        },
+      });
   }
 
   clearSelection(): void {
@@ -419,6 +482,21 @@ export class CandidaturesIngenieurComponent implements OnInit {
     });
   }
 
+  telechargerAttestation(c: Candidat): void {
+    this.activeKebab = null;
+    this.candidatureService.genererAttestation(c.id, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ISIMM_Attestation_${c.nom.replace(/ /g, '_')}_${c.numeroCandidature}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => window.alert('Erreur lors de la génération de l\'attestation PDF.'),
+    });
+  }
+
   closeConsultation(): void {
     this.fermerConsultation();
   }
@@ -458,28 +536,29 @@ export class CandidaturesIngenieurComponent implements OnInit {
   // STATISTIQUES DYNAMIQUES
   // ========================================
   get statistiques(): StatistiqueCard[] {
+    const base = this.candidatsList;
     return [
       {
         label: 'Total candidatures',
-        nombre: this.candidatsFiltres.length,
+        nombre: base.length,
         theme: 'blue',
         icon: 'fas fa-folder-open',
       },
       {
         label: 'Présélectionnés',
-        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Présélectionné').length,
+        nombre: base.filter((c) => c.statut === 'Présélectionné').length,
         theme: 'green',
         icon: 'fas fa-circle-check',
       },
       {
         label: 'Refusés',
-        nombre: this.candidatsFiltres.filter((c) => c.statut === 'Refusé').length,
+        nombre: base.filter((c) => c.statut === 'Refusé').length,
         theme: 'red',
         icon: 'fas fa-xmark',
       },
       {
         label: 'Dossiers complets',
-        nombre: this.candidatsFiltres.filter((c) => c.etat_dossier === 'Complet').length,
+        nombre: base.filter((c) => c.etat_dossier === 'Complet').length,
         theme: 'amber',
         icon: 'fas fa-folder-check',
       },
@@ -526,9 +605,16 @@ export class CandidaturesIngenieurComponent implements OnInit {
   }
 
   getStatutBadgeClass(statut: string): string {
-    if (statut === 'Présélectionné') return 'status-pill status-pill--ok';
-    if (statut === 'Refusé') return 'status-pill status-pill--danger';
-    return 'status-pill status-pill--info';
+    switch (statut) {
+      case 'Présélectionné':     return 'status-pill status-pill--ok';
+      case 'Sélectionné':        return 'status-pill status-pill--sel';
+      case 'Inscrit':            return 'status-pill status-pill--inscrit';
+      case 'Refusé':             return 'status-pill status-pill--danger';
+      case 'Sous examen':        return 'status-pill status-pill--examen';
+      case 'En attente dossier': return 'status-pill status-pill--attente';
+      case 'Dossier déposé':     return 'status-pill status-pill--depose';
+      default:                   return 'status-pill status-pill--info';
+    }
   }
 
   getScoreClass(score: number): string {

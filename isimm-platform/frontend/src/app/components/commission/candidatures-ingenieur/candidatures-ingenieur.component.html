@@ -67,7 +67,13 @@
               <div class="flbl">Statut</div>
               <select class="finput" [(ngModel)]="filtreStatut" (change)="appliquerFiltres()">
                 <option value="">Tous</option>
+                <option value="Soumis">Soumis</option>
+                <option value="Sous examen">Sous examen</option>
                 <option value="Présélectionné">Présélectionné</option>
+                <option value="En attente dossier">En attente dossier</option>
+                <option value="Dossier déposé">Dossier déposé</option>
+                <option value="Sélectionné">Sélectionné</option>
+                <option value="Inscrit">Inscrit</option>
                 <option value="Refusé">Refusé</option>
               </select>
             </div>
@@ -227,6 +233,22 @@
                             <i class="fas fa-folder-open"></i>
                             Ouvrir le dossier
                           </button>
+                          <button
+                            type="button"
+                            class="action-menu-item"
+                            (click)="openAvis(candidat)"
+                          >
+                            <i class="fas fa-pen"></i>
+                            Modifier le statut
+                          </button>
+                          <button
+                            type="button"
+                            class="action-menu-item action-menu-item--pdf"
+                            (click)="telechargerAttestation(candidat)"
+                          >
+                            <i class="fas fa-file-pdf"></i>
+                            Télécharger Attestation
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -254,6 +276,46 @@
       <button class="btn-mass btn-mass-consult" type="button" (click)="consulterSelection()">Consulter</button>
       <button class="btn-mass btn-mass-list" type="button" (click)="toggleGenerateListMenu()">Générer liste</button>
       <button class="btn-mass btn-mass-cancel" type="button" (click)="clearSelection()">Annuler</button>
+    </div>
+  </div>
+
+  <!-- Avis modal -->
+  <div class="cm-modal-overlay" *ngIf="avisModalOpen" (click)="closeAvisModal()">
+    <div class="cm-modal-sm" (click)="$event.stopPropagation()">
+      <div class="cm-modal-hdr">
+        <div>
+          <div class="cm-modal-kicker">Commission · Candidatures Ingénieur</div>
+          <h3 class="cm-modal-title">Modifier le statut</h3>
+          <p class="cm-modal-sub" *ngIf="avisCandidate">{{ avisCandidate.nom }}</p>
+        </div>
+        <button class="cm-modal-close" type="button" (click)="closeAvisModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="cm-modal-body">
+        <div class="cm-form-group">
+          <label>Statut</label>
+          <select class="cm-filter-select" style="width:100%" [(ngModel)]="avisStatut">
+            <option value="Soumis">Soumis</option>
+            <option value="Sous examen">Sous examen</option>
+            <option value="Présélectionné">Présélectionné</option>
+            <option value="En attente dossier">En attente dossier</option>
+            <option value="Dossier déposé">Dossier déposé</option>
+            <option value="Sélectionné">Sélectionné</option>
+            <option value="Inscrit">Inscrit</option>
+            <option value="Refusé">Refusé</option>
+          </select>
+        </div>
+        <div class="cm-form-group">
+          <label>Commentaire</label>
+          <textarea class="cm-textarea" rows="3" [(ngModel)]="avisCommentaire"
+            placeholder="Observations..."></textarea>
+        </div>
+        <div class="cm-modal-actions">
+          <button type="button" class="cm-btn-cancel" (click)="closeAvisModal()">Annuler</button>
+          <button type="button" class="cm-btn-submit" (click)="saveAvis()">
+            <i class="fas fa-save"></i> Enregistrer
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

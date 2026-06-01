@@ -117,6 +117,10 @@ export const routes: Routes = [
     component: ResetPasswordComponent,
   },
   {
+    path: 'reset-password/:token',
+    component: ResetPasswordComponent,
+  },
+  {
     path: 'concours-ingenieur',
     redirectTo: '',
     pathMatch: 'full',
@@ -189,6 +193,12 @@ export const routes: Routes = [
     data: { roles: ['candidat'] },
   },
   {
+    path: 'candidat/candidature/modifier',
+    component: ModifierCandidatureComponent,
+    canActivate: [authGuard, roleGuard, actionGuard],
+    data: { roles: ['candidat'], actions: ['Modifier candidature'] },
+  },
+  {
     path: 'candidat/candidature',
     component: ConsulterCandidaturesComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
@@ -199,12 +209,6 @@ export const routes: Routes = [
     component: ConsulterCandidaturesComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: { roles: ['candidat'], actions: ['Consultation de candidature'] },
-  },
-  {
-    path: 'candidat/candidature/modifier',
-    component: ModifierCandidatureComponent,
-    canActivate: [authGuard, roleGuard, actionGuard],
-    data: { roles: ['candidat'], actions: ['Modifier candidature'] },
   },
   {
     path: 'candidat/dossier',

@@ -23,6 +23,21 @@ export class AuthService {
   private enabledActions = new Set<string>();
   private actionsLoaded = false;
 
+  // Persistance de l'état candidature entre les refreshs de page
+  private hasCandidatureSubject = new BehaviorSubject<boolean>(
+    localStorage.getItem('has_candidature') === '1',
+  );
+  public hasCandidature$ = this.hasCandidatureSubject.asObservable();
+
+  get hasCandidatureValue(): boolean {
+    return this.hasCandidatureSubject.value;
+  }
+
+  setHasCandidature(value: boolean): void {
+    localStorage.setItem('has_candidature', value ? '1' : '0');
+    this.hasCandidatureSubject.next(value);
+  }
+
   get currentUserValue(): any {
     return this.currentUserSubject.value;
   }
@@ -84,8 +99,10 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('current_user');
+    localStorage.removeItem('has_candidature');
     this.enabledActions.clear();
     this.actionsLoaded = false;
+    this.hasCandidatureSubject.next(false);
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }

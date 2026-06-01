@@ -37,18 +37,30 @@
           <option *ngFor="let year of distinctYears" [value]="year">{{ year }}</option>
         </select>
       </div>
-      <div class="cm-filter-group">
-        <span class="cm-filter-label">Spécialité</span>
-        <select class="cm-filter-select" [(ngModel)]="selectedSpecialite" (change)="appliquerFiltres()">
-          <option value="">Tous</option>
-          <option *ngFor="let specialite of availableSpecialites" [value]="specialite">{{ specialite }}</option>
+      <div class="cm-filter-group cm-filter-group--diplome">
+        <span class="cm-filter-label">
+          Spécialité diplôme
+          <span class="cm-filter-badge" *ngIf="specialitesDiplome.length > 0">{{ specialitesDiplome.length }}</span>
+          <span class="cm-filter-loading" *ngIf="specialitesDiplome.length === 0 && currentMasterId">…</span>
+        </span>
+        <select class="cm-filter-select cm-filter-select--diplome"
+          [(ngModel)]="selectedSpecialiteDiplome"
+          (change)="appliquerFiltres()"
+          [disabled]="specialitesDiplome.length === 0">
+          <option value="">Toutes spécialités diplôme</option>
+          <option *ngFor="let sp of specialitesDiplome" [value]="sp.nom">
+            {{ sp.abreviation }} — {{ sp.nom }}
+          </option>
         </select>
       </div>
       <div class="cm-filter-group">
         <span class="cm-filter-label">Statut</span>
         <select class="cm-filter-select" [(ngModel)]="filtreStatut" (change)="appliquerFiltres()">
           <option value="">Tous</option>
+          <option value="sous_examen">En cours d'examen</option>
           <option value="Présélectionné">Présélectionné</option>
+          <option value="dossier_depose">Dossier déposé</option>
+          <option value="Sélectionné">Sélectionné (Admis)</option>
           <option value="Refusé">Refusé</option>
         </select>
       </div>
@@ -60,21 +72,22 @@
     <!-- Table card -->
     <div class="cm-table-card">
       <div class="cm-table-toolbar">
-        <div class="cm-list-count">Liste des candidatures — <strong>{{ candidatsFiltres.length }}</strong></div>
-        <div class="cm-toolbar-right">
-          <div style="position:relative">
-            <button class="cm-btn-generate" type="button" (click)="toggleGenerateListMenu(); $event.stopPropagation()">
-              <i class="fas fa-bolt"></i> Générer liste
-            </button>
-            <div class="cm-gen-menu" *ngIf="generateListOpen" (click)="$event.stopPropagation()">
-              <div class="cm-gen-item" (click)="genererExcel()"><i class="fas fa-file-excel"></i> Format Excel (.xlsx)</div>
-              <div class="cm-gen-item" (click)="genererPDF()"><i class="fas fa-file-pdf"></i> Format PDF (ISIMM + QR Code)</div>
-            </div>
-          </div>
-          <button class="cm-btn-zip" type="button" (click)="telechargerZIP()">
-            <i class="fas fa-download"></i> Télécharger ZIP
-          </button>
+        <div class="cm-list-count">
+          Liste des candidatures — <strong>{{ candidatsFiltres.length }}</strong>
         </div>
+
+        <!-- Bouton global TOUJOURS VISIBLE, indépendant des checkboxes -->
+        <button
+          class="cm-btn-generate-global"
+          type="button"
+          [disabled]="candidatsFiltres.length === 0 || isGenerating"
+          (click)="genererListeOfficielle()"
+          title="Générer le PDF officiel ISIMM avec LISTE PRINCIPALE et LISTE D'ATTENTE"
+        >
+          <i class="fas fa-spinner fa-spin" *ngIf="isGenerating"></i>
+          <i class="fas fa-file-pdf" *ngIf="!isGenerating"></i>
+          <span>{{ isGenerating ? 'Génération…' : 'Générer Liste Officielle' }}</span>
+        </button>
       </div>
 
       <div class="cm-table-scroll">
@@ -101,8 +114,16 @@
               <td><span class="cm-score-val">{{ candidat.score | number:'1.1-1' }}</span></td>
               <td>
                 <span class="cm-status-badge"
-                  [ngClass]="candidat.statut === 'Présélectionné' ? 'cm-badge-presel' : 'cm-badge-refuse'">
-                  <span class="cm-badge-dot"></span>{{ candidat.statut }}
+                  [ngClass]="{
+                    'cm-badge-examen':  candidat.statut === 'sous_examen',
+                    'cm-badge-presel':  candidat.statut === 'Présélectionné' || candidat.statut === 'dossier_depose',
+                    'cm-badge-sel':     candidat.statut === 'Sélectionné',
+                    'cm-badge-refuse':  candidat.statut === 'Refusé'
+                  }">
+                  <span class="cm-badge-dot"></span>
+                  <span *ngIf="candidat.statut === 'sous_examen'">En examen</span>
+                  <span *ngIf="candidat.statut === 'dossier_depose'">Dossier déposé</span>
+                  <span *ngIf="candidat.statut !== 'sous_examen' && candidat.statut !== 'dossier_depose'">{{ candidat.statut }}</span>
                 </span>
               </td>
               <td>
@@ -117,6 +138,9 @@
                     </button>
                     <button type="button" class="menu-item" (click)="openAvis(candidat)">
                       <i class="fas fa-pen"></i><span>Modifier le statut</span>
+                    </button>
+                    <button type="button" class="menu-item menu-item--pdf" (click)="telechargerAttestation(candidat)">
+                      <i class="fas fa-file-pdf"></i><span>Télécharger Attestation</span>
                     </button>
                   </div>
                 </div>
@@ -137,26 +161,19 @@
 
   </div>
 
-  <!-- Floating banner -->
+  <!-- Floating banner (sélection uniquement — sans génération PDF) -->
   <div class="cm-float-banner" *ngIf="selectedIds.length > 0">
-    <div class="cm-float-count"><strong>{{ selectedIds.length }}</strong> candidat(s) sélectionné(s)</div>
+    <div class="cm-float-count">
+      <strong>{{ selectedIds.length }}</strong> candidat(s) sélectionné(s)
+    </div>
     <div class="cm-float-sep"></div>
     <button class="cm-btn-float cm-btn-f-green" type="button" (click)="massValider()">
-      <i class="fas fa-check"></i> Tous Valider
+      <i class="fas fa-check"></i> Valider sélection
     </button>
     <button class="cm-btn-float cm-btn-f-blue" type="button" (click)="openMassConsultation()">
-      <i class="fas fa-eye"></i> Consulter
+      <i class="fas fa-eye"></i> Consulter dossiers
     </button>
-    <div style="position:relative">
-      <button class="cm-btn-float cm-btn-f-list" type="button" (click)="toggleGenerateListMenu(); $event.stopPropagation()">
-        <i class="fas fa-bolt"></i> Générer liste ▾
-      </button>
-      <div class="cm-gen-menu" *ngIf="generateListOpen" (click)="$event.stopPropagation()">
-        <div class="cm-gen-item" (click)="genererExcel()"><i class="fas fa-file-excel"></i> Format Excel (.xlsx)</div>
-        <div class="cm-gen-item" (click)="genererPDF()"><i class="fas fa-file-pdf"></i> Format PDF ISIMM + QR Code</div>
-      </div>
-    </div>
-    <button class="cm-float-close" type="button" (click)="clearSelection()">
+    <button class="cm-float-close" type="button" (click)="clearSelection()" title="Annuler la sélection">
       <i class="fas fa-times"></i>
     </button>
   </div>
@@ -252,6 +269,7 @@
           <label>Statut</label>
           <select class="cm-filter-select" style="width:100%" [(ngModel)]="avisStatut">
             <option value="Présélectionné">Présélectionné</option>
+            <option value="Sélectionné">Sélectionné (Admis)</option>
             <option value="Refusé">Refusé</option>
           </select>
         </div>

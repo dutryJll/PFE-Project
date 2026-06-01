@@ -17,7 +17,8 @@ from django.db.models import F, Max, Q, Count
 from django.db.models.expressions import Window
 from django.db.models.functions import Rank
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -1230,7 +1231,10 @@ def _sync_system_notifications_for_user(user):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mes_notifications(request):
-    _sync_system_notifications_for_user(request.user)
+    try:
+        _sync_system_notifications_for_user(request.user)
+    except Exception as exc:
+        logger.warning("_sync_system_notifications_for_user failed for user %s: %s", request.user.id, exc)
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
     serializer = NotificationSerializer(notifications, many=True)
     return Response(serializer.data)
@@ -1280,19 +1284,20 @@ def preview_score_candidature(request):
     formation_code = request.data.get('formation_code', '').strip().upper()
     master_id = request.data.get('master_id')
 
-    master = None
-    if formation_code:
-        code_alias = {'ING_GL': 'ING_INFO_GL', 'ING-GL': 'ING_INFO_GL'}.get(formation_code, formation_code)
-        master = Master.objects.select_related('formule_score').filter(specialite=code_alias).first()
+    try:
+        master = None
+        if formation_code:
+            code_alias = {'ING_GL': 'ING_INFO_GL', 'ING-GL': 'ING_INFO_GL'}.get(formation_code, formation_code)
+            master = Master.objects.select_related('formule_score').filter(specialite=code_alias).first()
 
-    if not master and master_id:
-        try:
-            master = Master.objects.select_related('formule_score').get(id=master_id)
-        except Master.DoesNotExist:
-            pass
+        if not master and master_id:
+            try:
+                master = Master.objects.select_related('formule_score').get(id=master_id)
+            except Master.DoesNotExist:
+                pass
 
-    if not master:
-        return Response({'error': 'master_id ou formation_code est requis'}, status=status.HTTP_400_BAD_REQUEST)
+        if not master:
+            return Response({'error': 'master_id ou formation_code est requis'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as exc:
         logger.exception("Erreur retrieving Master for preview_score_candidature: %s", exc)
         return Response(
@@ -1478,6 +1483,9 @@ def candidatures_responsable(request):
     if role not in ['admin', 'responsable_commission', 'commission']:
         return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
 
+    # Specialite du membre/responsable (MPGL, MPDS, MP3I, MRGL, MRMI, Cycle Ingenieur, ...)
+    specialite_user = getattr(request.user, 'specialite', '').strip()
+
     master_ids = None
     if role in ['responsable_commission', 'commission']:
         master_ids = list(
@@ -1485,19 +1493,25 @@ def candidatures_responsable(request):
                 'commission__master_id', flat=True
             )
         )
-        if not master_ids:
+        if not master_ids and not specialite_user:
             return Response([])
 
     master_id = request.query_params.get('master_id')
     type_concours = request.query_params.get('type')
 
-    candidatures_qs = Candidature.objects.select_related('candidat', 'master', 'concours').order_by(
+    candidatures_qs = Candidature.objects.select_related(
+        'candidat', 'master', 'concours', 'donnees_academiques',
+    ).order_by(
         F('score').desc(nulls_last=True),
         '-date_soumission',
     )
 
     if master_ids is not None:
         candidatures_qs = candidatures_qs.filter(master_id__in=master_ids)
+
+    # Filtrage dynamique par specialite — s'applique a tous les parcours sans hardcoding
+    if specialite_user and role not in ['admin']:
+        candidatures_qs = candidatures_qs.filter(master__specialite__icontains=specialite_user)
 
     if master_id and master_id != 'all':
         candidatures_qs = candidatures_qs.filter(master_id=master_id)
@@ -1521,6 +1535,7 @@ def candidatures_responsable(request):
                 'candidat_email': candidature.candidat.email,
                 'candidat_cin': getattr(candidature.candidat, 'cin', ''),
                 'specialite': candidature.master.specialite if candidature.master else '',
+                'specialite_diplome': _extract_specialite_diplome(candidature),
                 'master_id': candidature.master_id,
                 'master_nom': candidature.master.nom if candidature.master else '',
                 'score': candidature.score,
@@ -1568,7 +1583,7 @@ def get_mes_masters(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def offres_inscription(request):
     """Retourne les offres d'inscription (masters + cycle ingenieur)."""
     today = timezone.now().date()
@@ -1692,8 +1707,10 @@ def offres_inscription(request):
             {
                 'id': concours.id,
                 'titre': concours.nom,
-                'type': 'concours_ingenieur' if concours.type_concours == 'ingenieur' else 'concours_master',
-                'sous_type': concours.type_concours,
+                'type': 'cycle_ingenieur' if concours.type_concours == 'ingenieur' else 'master',
+                'sous_type': 'recherche' if concours.type_concours == 'recherche' else (
+                    'cycle_ingenieur' if concours.type_concours == 'ingenieur' else 'professionnel'
+                ),
                 'specialite': (concours.conditions_admission or {}).get('specialite', ''),
                 'description': concours.description,
                 'date_limite': concours.date_cloture,
@@ -5896,6 +5913,75 @@ def get_specialites_by_parcours(request):
         )
 
 
+def _extract_specialite_diplome(candidature) -> str:
+    """Extrait la spécialité du diplôme d'origine depuis DonneesAcademiques.notes_detaillees."""
+    try:
+        da = candidature.donnees_academiques
+        notes = da.notes_detaillees if isinstance(da.notes_detaillees, dict) else {}
+        payload = notes.get('payload', {}) if isinstance(notes.get('payload'), dict) else notes
+        for key in ('specialiteLicence', 'specialite_diplome', 'specialiteDiplome',
+                    'licenceSpecialite', 'specialite', 'diplome'):
+            val = payload.get(key) or notes.get(key)
+            if val and isinstance(val, str) and val.strip():
+                return val.strip()
+    except Exception:
+        pass
+    return ''
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_specialites_admissibles_master(request, master_id):
+    """
+    Retourne la liste des spécialités de diplômes admissibles pour un master donné.
+    Source : SpecialiteParcoursMapping, résolution via master.specialite = code_parcours.
+
+    GET /api/candidatures/masters/<master_id>/specialites-admissibles/
+    Réponse :
+      {
+        "master_id": 3,
+        "master_nom": "Mastère Professionnel Génie Logiciel (MPGL)",
+        "code_parcours": "MPGL",
+        "specialites": [
+          {"nom": "Licence en Sciences de l'Informatique génie logiciel", "abreviation": "LSI-GL"},
+          ...
+        ]
+      }
+    """
+    try:
+        master = Master.objects.get(pk=master_id)
+    except Master.DoesNotExist:
+        return Response({'error': 'Master introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+    code_parcours = (master.specialite or '').strip()
+
+    # Résolution prioritaire : via code_parcours (ex: "MPGL")
+    mapping = None
+    if code_parcours:
+        mapping = SpecialiteParcoursMapping.objects.filter(
+            code_parcours=code_parcours, actif=True
+        ).first()
+
+    # Fallback : via FK master
+    if mapping is None:
+        mapping = SpecialiteParcoursMapping.objects.filter(
+            master=master, actif=True
+        ).first()
+
+    if mapping is None:
+        return Response(
+            {'error': f'Aucune matrice d\'admissibilité trouvée pour ce master (code: {code_parcours!r}).'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response({
+        'master_id': master.id,
+        'master_nom': master.nom,
+        'code_parcours': mapping.code_parcours,
+        'specialites': mapping.specialites,
+    })
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_all_parcours(request):
@@ -6222,3 +6308,49 @@ def get_commission_members_list(request):
             {'error': f'Erreur serveur: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def upload_fichier_dossier(request):
+    """
+    Endpoint générique d'upload de fichier pour le dossier candidat.
+    Accepte: fichier (File), document_type (str), numero_dossier (str optionnel).
+    Stocke le fichier dans MEDIA_ROOT/dossiers/<candidature_id>/<document_type>/<filename>.
+    """
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+
+    fichier = request.FILES.get('fichier')
+    if not fichier:
+        return Response({'error': 'Aucun fichier reçu.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    max_size = 5 * 1024 * 1024  # 5 Mo
+    if fichier.size > max_size:
+        return Response({'error': 'Fichier trop volumineux (max 5 Mo).'}, status=status.HTTP_400_BAD_REQUEST)
+
+    document_type = request.data.get('document_type', 'divers').strip()[:100]
+    numero_dossier = request.data.get('numero_dossier', '').strip()
+
+    # Trouver la candidature du candidat (la plus récente si plusieurs)
+    candidature = (
+        Candidature.objects.filter(candidat=request.user)
+        .order_by('-date_soumission')
+        .first()
+    )
+
+    candidature_ref = str(candidature.id) if candidature else 'inconnu'
+    safe_type = ''.join(c for c in document_type if c.isalnum() or c in '_ -')[:60]
+    safe_name = fichier.name.replace(' ', '_')[:100]
+    path = f'dossiers/{candidature_ref}/{safe_type}/{safe_name}'
+
+    saved_path = default_storage.save(path, ContentFile(fichier.read()))
+
+    return Response({
+        'success': True,
+        'message': 'Fichier enregistré avec succès.',
+        'fichier_url': default_storage.url(saved_path),
+        'document_type': document_type,
+        'candidature_id': candidature.id if candidature else None,
+    }, status=status.HTTP_201_CREATED)

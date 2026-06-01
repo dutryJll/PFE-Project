@@ -26,9 +26,12 @@ export class ResetPasswordComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.token = this.route.snapshot.queryParamMap.get('token') || '';
+    this.token =
+      this.route.snapshot.paramMap.get('token') ||
+      this.route.snapshot.queryParamMap.get('token') ||
+      '';
     if (!this.token) {
-      this.errorMessage = 'Token invalide ou manquant';
+      this.errorMessage = 'Token invalide ou manquant. Utilisez le lien reçu par email.';
     }
   }
 
