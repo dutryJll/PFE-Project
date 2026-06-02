@@ -17,7 +17,12 @@ class SharedJWTAuthentication(JWTAuthentication):
 
         if user_id is not None:
             try:
-                user = User.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+                found = User.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+                # Validate email matches to prevent cross-service ID collisions
+                if email and found.email.lower() != email.lower():
+                    user = None
+                else:
+                    user = found
             except User.DoesNotExist:
                 user = None
 

@@ -3418,7 +3418,7 @@ def get_my_commissions(request):
     commissions = Commission.objects.filter(
         Q(membres__user=request.user, membres__actif=True) |
         Q(membre_commission_links__user=request.user, membre_commission_links__actif=True)
-    ).distinct().order_by('nom')
+    ).distinct().select_related('master').order_by('nom')
 
     data = []
     active_commission_id = request.headers.get('X-Active-Commission-Id') or request.query_params.get('active_commission_id')
@@ -3431,6 +3431,8 @@ def get_my_commissions(request):
                 'nom': commission.nom,
                 'description': commission.description,
                 'actif': commission.actif,
+                'master_id': commission.master_id,
+                'master_nom': commission.master.nom if commission.master else '',
                 'is_active': commission.id == active_commission_id,
             }
         )
@@ -6039,8 +6041,14 @@ def changer_statut_candidature_endpoint(request, candidature_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Vérifier les permissions (admin ou responsable)
-    if not (request.user.is_staff or request.user.is_superuser):
+    # Vérifier les permissions (admin, responsable_commission ou membre de la commission)
+    user_role = getattr(request.user, 'role', None)
+    is_privileged = (
+        request.user.is_staff
+        or request.user.is_superuser
+        or user_role in ('admin', 'responsable_commission', 'commission')
+    )
+    if not is_privileged:
         return Response(
             {'error': 'Permissions insuffisantes pour changer un statut'},
             status=status.HTTP_403_FORBIDDEN

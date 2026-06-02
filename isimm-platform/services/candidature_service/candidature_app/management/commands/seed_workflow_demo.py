@@ -1,15 +1,18 @@
 """
-Seed script pour la démo workflow complet MPGL.
+Seed DEMO Workflow — Commission Genie Logiciel Demo
 
-Distribution des 12 candidats selon la State Machine :
-  - 3 x 'sous_examen'    → onglet Présélection (responsable valide → preselectionne)
-  - 1 x 'sous_examen'    → Ahmed Ben Ali (démo OCR live + flux complet)
-  - 4 x 'dossier_depose' → onglet Sélection (responsable valide → selectionne / rejete)
-  - 4 x 'selectionne'    → liste des admis (candidat voit le bouton inscription)
+Cible EXACTE :
+  Commission existante : "Commission Genie Logiciel Demo"  (Commission [2])
+  Master lié           : Master [11]  -> actif=True forcé
 
-Statuts valides Django :
-  soumis | sous_examen | preselectionne | en_attente_dossier
-  dossier_depose | selectionne | rejete | inscrit
+Membres (par email) :
+  responsable@isimm.tn  -> role='responsable'
+  commission@isimm.tn   -> role='membre'
+
+12 candidatures sur Master [11] :
+  4 x sous_examen      (présélection)
+  4 x dossier_depose   (sélection)
+  4 x selectionne      (admis)
 
 Usage :
     python manage.py seed_workflow_demo
@@ -21,169 +24,163 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from candidature_app.models import Candidature, DonneesAcademiques, Master
+from candidature_app.models import (
+    Candidature, Commission, DonneesAcademiques, Master, MembreCommission,
+)
 
 User = get_user_model()
 
 # ---------------------------------------------------------------------------
-# DONNÉES : 3 + 1 + 4 + 4 = 12 candidats MPGL
+# Comptes principaux — identifiés par EMAIL (même que auth-service)
 # ---------------------------------------------------------------------------
+RESPONSABLE_EMAIL = 'responsable@isimm.tn'
+COMMISSION_EMAIL  = 'commission@isimm.tn'
 
-# Onglet PRÉSÉLECTION → responsable les voit et les valide en 'preselectionne'
+# ---------------------------------------------------------------------------
+# Commission cible — doit correspondre EXACTEMENT à ce qu'Angular affiche
+# ---------------------------------------------------------------------------
+TARGET_COMMISSION_NOM = 'Commission Genie Logiciel Demo'
+
+# ---------------------------------------------------------------------------
+# Candidats demo : 4 + 4 + 4 = 12
+# ---------------------------------------------------------------------------
 PRESELECTEES = [
-    {
-        "prenom": "Yassine", "nom": "Ben Ammar",
-        "email": "yassine.benammar@demo.tn",
-        "score": 16.85, "statut": "sous_examen", "depose": False,
-        "spec": "Licence en Sciences de l'Informatique genie logiciel",
-    },
-    {
-        "prenom": "Nour", "nom": "Zouari",
-        "email": "nour.zouari@demo.tn",
-        "score": 15.20, "statut": "sous_examen", "depose": False,
-        "spec": "Licence en Sciences de l'Informatique genie logiciel",
-    },
-    {
-        "prenom": "Rania", "nom": "Mabrouk",
-        "email": "rania.mabrouk@demo.tn",
-        "score": 17.10, "statut": "sous_examen", "depose": False,
-        "spec": "Informatique de Gestion (uniquement)",
-    },
+    {"prenom": "Yassine", "nom": "Ben Ammar",  "email": "yassine.benammar@demo.tn",  "score": 16.85, "statut": "sous_examen",    "depose": False, "spec": "Licence Informatique GL"},
+    {"prenom": "Nour",    "nom": "Zouari",     "email": "nour.zouari@demo.tn",       "score": 15.20, "statut": "sous_examen",    "depose": False, "spec": "Licence Informatique GL"},
+    {"prenom": "Rania",   "nom": "Mabrouk",    "email": "rania.mabrouk@demo.tn",     "score": 17.10, "statut": "sous_examen",    "depose": False, "spec": "Informatique de Gestion"},
+    {"prenom": "Ahmed",   "nom": "Ben Ali",    "email": "ahmed.benali.test@demo.tn", "score": 14.50, "statut": "sous_examen",    "depose": False, "spec": "Licence Informatique GL"},
 ]
-
-# Candidat démo OCR live (flux complet devant le prof)
-AHMED = {
-    "prenom": "Ahmed", "nom": "Ben Ali",
-    "email": "ahmed.benali.test@demo.tn",
-    "score": 14.50, "statut": "sous_examen", "depose": False,
-    "spec": "Licence en Sciences de l'Informatique genie logiciel",
-}
-
-# Onglet SELECTION → responsable vérifie et valide en 'selectionne' ou 'rejete'
 DOSSIERS_DEPOSES = [
-    {
-        "prenom": "Mohamed", "nom": "Jlassi",
-        "email": "mohamed.jlassi@demo.tn",
-        "score": 14.90, "statut": "dossier_depose", "depose": True,
-        "spec": "Informatique de Gestion (uniquement)",
-    },
-    {
-        "prenom": "Sonia", "nom": "Trabelsi",
-        "email": "sonia.trabelsi@demo.tn",
-        "score": 15.75, "statut": "dossier_depose", "depose": True,
-        "spec": "Genie Logiciel et Systemes d'Information",
-    },
-    {
-        "prenom": "Marwen", "nom": "Gharbi",
-        "email": "marwen.gharbi@demo.tn",
-        "score": 13.25, "statut": "dossier_depose", "depose": True,
-        "spec": "Genie Logiciel et Systemes d'Information",
-    },
-    {
-        "prenom": "Amira", "nom": "Dridi",
-        "email": "amira.dridi@demo.tn",
-        "score": 16.40, "statut": "dossier_depose", "depose": True,
-        "spec": "Genie Logiciel",
-    },
+    {"prenom": "Mohamed", "nom": "Jlassi",    "email": "mohamed.jlassi@demo.tn",    "score": 14.90, "statut": "dossier_depose", "depose": True,  "spec": "Informatique de Gestion"},
+    {"prenom": "Sonia",   "nom": "Trabelsi",  "email": "sonia.trabelsi@demo.tn",    "score": 15.75, "statut": "dossier_depose", "depose": True,  "spec": "Genie Logiciel et SI"},
+    {"prenom": "Marwen",  "nom": "Gharbi",    "email": "marwen.gharbi@demo.tn",     "score": 13.25, "statut": "dossier_depose", "depose": True,  "spec": "Genie Logiciel et SI"},
+    {"prenom": "Amira",   "nom": "Dridi",     "email": "amira.dridi@demo.tn",       "score": 16.40, "statut": "dossier_depose", "depose": True,  "spec": "Genie Logiciel"},
 ]
-
-# Liste ADMIS → candidat voit son statut 'selectionne' + bouton inscription
 SELECTIONNES = [
-    {
-        "prenom": "Fedi", "nom": "Khamassi",
-        "email": "fedi.khamassi@demo.tn",
-        "score": 15.60, "statut": "selectionne", "depose": True,
-        "spec": "Licence en Sciences de l'Informatique genie logiciel",
-    },
-    {
-        "prenom": "Hamza", "nom": "Ayari",
-        "email": "hamza.ayari@demo.tn",
-        "score": 14.80, "statut": "selectionne", "depose": True,
-        "spec": "Genie Logiciel",
-    },
-    {
-        "prenom": "Farah", "nom": "Ellouze",
-        "email": "farah.ellouze@demo.tn",
-        "score": 16.10, "statut": "selectionne", "depose": True,
-        "spec": "Licence Appliquee en Developpement des Systemes Informatiques",
-    },
-    {
-        "prenom": "Oussema", "nom": "Saidi",
-        "email": "oussema.saidi@demo.tn",
-        "score": 15.60, "statut": "selectionne", "depose": True,
-        "spec": "Licence Appliquee en Developpement des Systemes Informatiques",
-    },
+    {"prenom": "Fedi",    "nom": "Khamassi",  "email": "fedi.khamassi@demo.tn",     "score": 15.60, "statut": "selectionne",    "depose": True,  "spec": "Licence Informatique GL"},
+    {"prenom": "Hamza",   "nom": "Ayari",     "email": "hamza.ayari@demo.tn",        "score": 14.80, "statut": "selectionne",    "depose": True,  "spec": "Genie Logiciel"},
+    {"prenom": "Farah",   "nom": "Ellouze",   "email": "farah.ellouze@demo.tn",     "score": 16.10, "statut": "selectionne",    "depose": True,  "spec": "Licence App. DSI"},
+    {"prenom": "Oussema", "nom": "Saidi",     "email": "oussema.saidi@demo.tn",     "score": 15.60, "statut": "selectionne",    "depose": True,  "spec": "Licence App. DSI"},
 ]
-
-ALL_DEMO = PRESELECTEES + [AHMED] + DOSSIERS_DEPOSES + SELECTIONNES
+ALL_DEMO = PRESELECTEES + DOSSIERS_DEPOSES + SELECTIONNES
 
 
 class Command(BaseCommand):
-    help = (
-        "Seed demo workflow MPGL : 3 sous_examen + Ahmed + 4 dossier_depose + 4 selectionne. "
-        "Master MPGL (specialite='MPGL') doit exister en base."
-    )
+    help = "Seed 12 candidats demo sur 'Commission Genie Logiciel Demo'."
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", action="store_true",
-                            help="Affiche sans ecrire.")
-        parser.add_argument("--reset", action="store_true",
-                            help="Supprime et re-seed les candidats demo.tn.")
+        parser.add_argument("--dry-run", action="store_true")
+        parser.add_argument("--reset",   action="store_true",
+                            help="Supprime les candidats demo.tn avant de reseed.")
 
     def handle(self, *args, **options):
         dry = options["dry_run"]
         reset = options["reset"]
+        w = self.stdout.write
 
-        self.stdout.write(self.style.MIGRATE_HEADING(
+        w(self.style.MIGRATE_HEADING(
             "\n=======================================================\n"
-            "  ISIMM - Seed WORKFLOW demo MPGL\n"
+            "  ISIMM - Seed WORKFLOW demo\n"
+            "  Cible : Commission Genie Logiciel Demo\n"
             "=======================================================\n"
         ))
-        if dry:
-            self.stdout.write(self.style.WARNING("Mode DRY-RUN - aucune ecriture.\n"))
 
-        # 1. Master MPGL
-        try:
-            master = Master.objects.get(specialite="MPGL")
-        except Master.DoesNotExist:
+        # ── 1. Trouver les comptes par email ─────────────────────────────
+        responsable_user = User.objects.filter(email__iexact=RESPONSABLE_EMAIL).first()
+        commission_user  = User.objects.filter(email__iexact=COMMISSION_EMAIL).first()
+
+        if not responsable_user:
             self.stderr.write(self.style.ERROR(
-                "Aucun Master specialite='MPGL'. Creez-le via l'admin."
+                f"User '{RESPONSABLE_EMAIL}' introuvable.\n"
+                "Connectez-vous UNE FOIS avec ce compte pour l'auto-creer dans la DB."
             ))
             return
-        except Master.MultipleObjectsReturned:
-            master = Master.objects.filter(specialite="MPGL").order_by("id").first()
+        if not commission_user:
+            self.stderr.write(self.style.ERROR(
+                f"User '{COMMISSION_EMAIL}' introuvable.\n"
+                "Connectez-vous UNE FOIS avec ce compte pour l'auto-creer dans la DB."
+            ))
+            return
 
-        self.stdout.write(f"  Master : [{master.id}] {master.nom}\n")
+        w(f"  Responsable : [{responsable_user.id}] {responsable_user.username} ({responsable_user.email})")
+        w(f"  Commission  : [{commission_user.id}]  {commission_user.username} ({commission_user.email})\n")
 
-        # 2. Reset
+        # ── 2. Trouver la commission cible par nom EXACT ──────────────────
+        try:
+            commission = Commission.objects.get(nom=TARGET_COMMISSION_NOM)
+        except Commission.DoesNotExist:
+            self.stderr.write(self.style.ERROR(
+                f"Commission '{TARGET_COMMISSION_NOM}' introuvable en base.\n"
+                "Verifiez le nom exact dans Django admin."
+            ))
+            return
+        except Commission.MultipleObjectsReturned:
+            commission = Commission.objects.filter(nom=TARGET_COMMISSION_NOM).order_by('id').first()
+
+        w(f"  Commission  : [{commission.id}] '{commission.nom}' actif={commission.actif}")
+
+        if not commission.actif:
+            commission.actif = True
+            commission.save(update_fields=['actif'])
+            w(self.style.WARNING("  [FIX] Commission mise actif=True"))
+
+        # ── 3. Master lié ─────────────────────────────────────────────────
+        if not commission.master_id:
+            self.stderr.write(self.style.ERROR(
+                f"La commission '{TARGET_COMMISSION_NOM}' n'a pas de master associé."
+            ))
+            return
+
+        master = commission.master
+        w(f"  Master      : [{master.id}] '{master.nom}' actif={master.actif}")
+
+        if not master.actif:
+            master.actif = True
+            master.save(update_fields=['actif'])
+            w(self.style.WARNING(f"  [FIX] Master [{master.id}] mis actif=True"))
+
+        # ── 4. Membres ────────────────────────────────────────────────────
+        if not dry:
+            for user, role in [(responsable_user, 'responsable'), (commission_user, 'membre')]:
+                mb, created = MembreCommission.objects.get_or_create(
+                    commission=commission,
+                    user=user,
+                    defaults={"role": role, "actif": True},
+                )
+                changed = False
+                if not mb.actif:
+                    mb.actif = True
+                    changed = True
+                if mb.role != role:
+                    mb.role = role
+                    changed = True
+                if changed:
+                    mb.save(update_fields=['actif', 'role'])
+                tag = "CREE" if created else ("MAJ " if changed else "OK  ")
+                w(f"  [{tag}] MembreCommission : {user.username} -> role={role}")
+
+        # ── 5. Reset ──────────────────────────────────────────────────────
         if reset and not dry:
             emails = [c["email"] for c in ALL_DEMO]
-            users = User.objects.filter(email__in=emails)
-            deleted_cand, _ = Candidature.objects.filter(
-                candidat__in=users, master=master
-            ).delete()
-            users.delete()
-            self.stdout.write(self.style.WARNING(
-                f"  [RESET] {deleted_cand} candidature(s) supprimee(s).\n"
-            ))
+            users_demo = User.objects.filter(email__in=emails)
+            nb, _ = Candidature.objects.filter(candidat__in=users_demo).delete()
+            users_demo.delete()
+            w(self.style.WARNING(f"\n  [RESET] {nb} candidature(s) demo supprimee(s).\n"))
 
-        # 3. Seed helper
+        # ── 6. Seed ───────────────────────────────────────────────────────
         def seed_one(data: dict, suffix: str) -> None:
-            label = (
-                f"{data['prenom']} {data['nom']} "
-                f"[{data['statut']}] score={data['score']}"
-            )
+            label = f"{data['prenom']} {data['nom']} [{data['statut']}] score={data['score']}"
             if dry:
-                self.stdout.write(f"  DRY  {label}")
+                w(f"  DRY  {label}")
                 return
 
             u, u_created = User.objects.get_or_create(
                 email=data["email"],
                 defaults={
-                    "username": data["email"].split("@")[0].replace(".", "_")[:150],
+                    "username":   data["email"].split("@")[0].replace(".", "_")[:150],
                     "first_name": data["prenom"],
-                    "last_name": data["nom"],
-                    "is_active": True,
+                    "last_name":  data["nom"],
+                    "is_active":  True,
                 },
             )
             if u_created:
@@ -194,10 +191,10 @@ class Command(BaseCommand):
                 candidat=u,
                 master=master,
                 defaults={
-                    "numero": f"CAND-WF-{suffix}",
-                    "score": data["score"],
-                    "statut": data["statut"],
-                    "dossier_depose": data["depose"],
+                    "numero":          f"CAND-WF-{suffix}",
+                    "score":           data["score"],
+                    "statut":          data["statut"],
+                    "dossier_depose":  data["depose"],
                     "date_soumission": timezone.now(),
                 },
             )
@@ -213,8 +210,7 @@ class Command(BaseCommand):
                 },
             )
 
-            # DonneesAcademiques.save() re-calcule le score via signal.
-            # On force les valeurs correctes avec un UPDATE direct (bypass signal).
+            # Bypass signal recalcul — force les valeurs correctes
             Candidature.objects.filter(pk=cand.pk).update(
                 score=data["score"],
                 statut=data["statut"],
@@ -222,37 +218,32 @@ class Command(BaseCommand):
             )
 
             tag = self.style.SUCCESS("CREE  ") if c_created else self.style.NOTICE("MAJ   ")
-            self.stdout.write(f"  {tag} {label}")
+            w(f"  {tag} {label}")
 
-        # 4. Seed par groupe
-        self.stdout.write("\n-- Groupe Preselectees (sous_examen) -------------------")
+        w("\n-- 4x sous_examen (présélection) -----------------------")
         for i, d in enumerate(PRESELECTEES, start=100):
             seed_one(d, str(i))
 
-        self.stdout.write("\n-- Ahmed Ben Ali (sous_examen - demo live) -------------")
-        seed_one(AHMED, "OCR")
-
-        self.stdout.write("\n-- Groupe Dossiers deposes (dossier_depose) ------------")
+        w("\n-- 4x dossier_depose (sélection) -----------------------")
         for i, d in enumerate(DOSSIERS_DEPOSES, start=200):
             seed_one(d, str(i))
 
-        self.stdout.write("\n-- Groupe Selectionnes (selectionne) -------------------")
+        w("\n-- 4x selectionne (admis) ------------------------------")
         for i, d in enumerate(SELECTIONNES, start=300):
             seed_one(d, str(i))
 
-        # 5. Resume
+        # ── 7. Résumé ─────────────────────────────────────────────────────
         if not dry:
             def count(s):
                 return Candidature.objects.filter(master=master, statut=s).count()
 
             total = Candidature.objects.filter(master=master).count()
-            self.stdout.write(self.style.SUCCESS(
-                f"\n[OK] {total} candidature(s) pour MPGL\n"
+            w(self.style.SUCCESS(
+                f"\n[OK] {total} candidature(s) sur '{master.nom}'\n"
                 f"     sous_examen={count('sous_examen')}  "
                 f"dossier_depose={count('dossier_depose')}  "
                 f"selectionne={count('selectionne')}\n"
             ))
-            self.stdout.write(
-                ">>> Ahmed (ahmed.benali.test@demo.tn) : sous_examen, "
-                "dossier_depose=False → pret pour demo flux complet.\n"
-            )
+            w("Identifiants demo :")
+            w(f"  Responsable : {RESPONSABLE_EMAIL}  / TestPassword123!")
+            w(f"  Commission  : {COMMISSION_EMAIL}   / Demo@2026!\n")

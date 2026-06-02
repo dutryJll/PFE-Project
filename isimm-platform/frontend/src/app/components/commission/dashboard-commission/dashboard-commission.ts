@@ -3,6 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
@@ -296,6 +297,8 @@ interface UserCommissionOption {
   actif?: boolean;
   is_active?: boolean;
   role?: string;
+  master_id?: number;
+  master_nom?: string;
 }
 
 type CommissionView =
@@ -701,12 +704,40 @@ export class DashboardCommissionComponent implements OnInit {
   dossierOCRDocumentIndex: number = 0;
   showOCRPanel: boolean = false;
 
+  // --- OCR réel (pdf2image + PaddleOCR) ---
+  ocrModalFile: File | null = null;
+  ocrModalFileName: string = '';
+  ocrModalLoading: boolean = false;
+  ocrModalUpdateScore: boolean = false;
+  ocrModalResult: {
+    score_extrait: number | null;
+    score_declare: number | null;
+    delta: number | null;
+    flag_fraude: boolean;
+    confiance: number;
+    moteur: string;
+    anomalies: any[];
+    texte_preview: string;
+  } | null = null;
+
+  // --- PDF Officiel + QR Code ---
+  pdfOfficielLoading: boolean = false;
+  pdfOfficielBlobUrl: SafeResourceUrl | null = null;
+  pdfOfficielError: string = '';
+
   ouvrirDossierOCR(c: Candidature): void {
     this.dossierOCRCandidature = c;
     this.dossierOCRActiveTab = 'documents';
     this.dossierOCRDocumentIndex = 0;
     this.showOCRPanel = false;
     this.showDossierOCRModal = true;
+    // Reset OCR/PDF state when opening
+    this.ocrModalFile = null;
+    this.ocrModalFileName = '';
+    this.ocrModalResult = null;
+    this.ocrModalUpdateScore = false;
+    this.pdfOfficielBlobUrl = null;
+    this.pdfOfficielError = '';
   }
 
   ouvrirDossierOCRById(id: number): void {
@@ -742,6 +773,133 @@ export class DashboardCommissionComponent implements OnInit {
   lancerAnalyseOCRDossier(): void {
     this.showOCRPanel = true;
     this.toastService.show('Analyse OCR lancée', 'info');
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // OCR RÉEL — Upload PDF + pdf2image + PaddleOCR
+  // ──────────────────────────────────────────────────────────────────
+  onOcrModalFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.ocrModalFile = input.files[0];
+      this.ocrModalFileName = this.ocrModalFile.name;
+      this.ocrModalResult = null;
+    }
+  }
+
+  lancerOcrReel(): void {
+    if (!this.dossierOCRCandidature || this.ocrModalLoading) return;
+    this.ocrModalLoading = true;
+    this.ocrModalResult = null;
+    const candidatureId = this.dossierOCRCandidature.id;
+
+    this.candidatureService
+      .analyserOcrCandidature(candidatureId, this.ocrModalFile || undefined, this.ocrModalUpdateScore)
+      .subscribe({
+        next: (res: any) => {
+          this.ocrModalResult = {
+            score_extrait: res.score_extrait,
+            score_declare: res.score_declare,
+            delta: res.delta,
+            flag_fraude: !!res.flag_fraude,
+            confiance: Number(res.confiance ?? 0),
+            moteur: res.moteur || '—',
+            anomalies: res.anomalies || [],
+            texte_preview: res.texte_preview || '',
+          };
+          if (this.ocrModalUpdateScore && res.score_extrait != null && this.dossierOCRCandidature) {
+            this.dossierOCRCandidature.score = res.score_extrait;
+          }
+          this.toastService.show(
+            `OCR (${this.ocrModalResult.moteur}) terminé — score extrait : ${this.ocrModalResult.score_extrait ?? '—'}`,
+            this.ocrModalResult.flag_fraude ? 'warning' : 'success',
+          );
+          this.ocrModalLoading = false;
+        },
+        error: (err: any) => {
+          const msg = err?.error?.error || err?.message || 'Erreur OCR';
+          this.toastService.show(msg, 'error');
+          this.ocrModalLoading = false;
+        },
+      });
+  }
+
+  resetOcrModal(): void {
+    this.ocrModalFile = null;
+    this.ocrModalFileName = '';
+    this.ocrModalResult = null;
+    this.ocrModalUpdateScore = false;
+  }
+
+  get ocrModalConfianceClass(): string {
+    if (!this.ocrModalResult) return '';
+    const c = this.ocrModalResult.confiance;
+    if (this.ocrModalResult.flag_fraude) return 'ocr-conf-bad';
+    if (c >= 0.8) return 'ocr-conf-high';
+    if (c >= 0.5) return 'ocr-conf-medium';
+    return 'ocr-conf-low';
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // PDF Officiel + QR Code (force=1 pour la démo)
+  // ──────────────────────────────────────────────────────────────────
+  genererPdfOfficielModal(): void {
+    if (!this.dossierOCRCandidature || this.pdfOfficielLoading) return;
+    this.pdfOfficielLoading = true;
+    this.pdfOfficielError = '';
+    this.pdfOfficielBlobUrl = null;
+    const candidatureId = this.dossierOCRCandidature.id;
+
+    this.candidatureService.genererAttestation(candidatureId, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        this.pdfOfficielBlobUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.pdfOfficielLoading = false;
+        this.toastService.show('Document officiel généré (QR code intégré).', 'success');
+      },
+      error: (err: any) => {
+        const msg = err?.error?.error || err?.message || 'Erreur génération PDF';
+        this.pdfOfficielError = msg;
+        this.pdfOfficielLoading = false;
+        this.toastService.show(msg, 'error');
+      },
+    });
+  }
+
+  telechargerPdfOfficielModal(): void {
+    if (!this.dossierOCRCandidature) return;
+    const cand = this.dossierOCRCandidature;
+    this.candidatureService.genererAttestation(cand.id, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const nom = (cand.candidat_nom || 'candidat').replace(/ /g, '_');
+        const num = cand.numero || String(cand.id);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ISIMM_Attestation_${nom}_${num}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toastService.show('Erreur téléchargement PDF', 'error'),
+    });
+  }
+
+  fermerPdfOfficielModal(): void {
+    this.pdfOfficielBlobUrl = null;
+  }
+
+  statutLabelDisplay(statut: string): string {
+    switch ((statut || '').toLowerCase()) {
+      case 'preselectionne':  return 'Présélectionné';
+      case 'selectionne':     return 'Sélectionné';
+      case 'rejete':
+      case 'refuse':          return 'Refusé';
+      case 'sous_examen':     return 'Sous examen';
+      case 'dossier_depose':  return 'Dossier déposé';
+      case 'soumis':          return 'Soumis';
+      case 'inscrit':         return 'Inscrit';
+      default:                return statut || '—';
+    }
   }
 
   validerDossierOCR(): void {
@@ -2185,6 +2343,7 @@ export class DashboardCommissionComponent implements OnInit {
     private specialitesService: SpecialitesService,
     private commissionContext: CommissionContextService,
     private commissionState: CommissionStateService,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -2226,8 +2385,8 @@ export class DashboardCommissionComponent implements OnInit {
       this.loadOffresPreinscription();
       this.loadOffresMasterCrud();
       this.loadResponsibleNotifications();
-    } else if (this.currentUser?.role === 'membre') {
-      // members should be able to view offers relevant to their commissions
+    } else if (this.currentUser?.role === 'commission') {
+      // commission membres can view offers relevant to their commissions
       this.loadOffresPreinscription();
     }
     this.loadMembers();
@@ -2235,6 +2394,8 @@ export class DashboardCommissionComponent implements OnInit {
     this.loadUserMasterInfo();
     if (this.isResponsable) {
       this.loadCandidaturesResponsable();
+    } else if (this.currentUser?.role === 'commission') {
+      this.loadCandidaturesMembre();
     }
 
     this.routeSub = this.router.events.subscribe((event) => {
@@ -2351,10 +2512,12 @@ export class DashboardCommissionComponent implements OnInit {
           actif: commission.actif ?? true,
           is_active: commission.is_active ?? false,
           role: commission.role || '',
+          master_id: commission.master_id ?? null,
+          master_nom: commission.master_nom || '',
         }));
 
         // If user is a commission member, scope available commissions to those where role === 'membre'
-        if (this.currentUser?.role === 'membre') {
+        if (this.currentUser?.role === 'commission') {
           const memberScoped = this.availableCommissions.filter((c) => c.role === 'membre');
           if (memberScoped.length) {
             this.availableCommissions = memberScoped;
@@ -2403,6 +2566,8 @@ export class DashboardCommissionComponent implements OnInit {
     this.loadMembers();
     if (this.isResponsable) {
       this.loadCandidaturesResponsable();
+    } else if (this.currentUser?.role === 'commission') {
+      this.loadCandidaturesMembre();
     }
     this.appliquerFiltres();
     this.appliquerFiltresResponsable();
@@ -3128,8 +3293,27 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   loadCandidaturesMembre(): void {
-    this.candidaturesFiltrees = [...this.candidatures];
-    this.appliquerFiltres();
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      this.candidaturesFiltrees = [];
+      return;
+    }
+    this.http
+      .get<any[]>('/api/candidatures/responsable/candidatures/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .subscribe({
+        next: (data) => {
+          this.candidatures = data || [];
+          this.candidaturesFiltrees = [...this.candidatures];
+          this.appliquerFiltres();
+        },
+        error: () => {
+          this.candidatures = [];
+          this.candidaturesFiltrees = [];
+          this.appliquerFiltres();
+        },
+      });
   }
 
   loadResponsibleNotifications(): void {
@@ -5634,11 +5818,24 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getDisplayedResponsableSpecialite(): string {
-    // Priority 1: masters fetched via MembreCommission chain (candidature service)
-    if (this.userMasterNoms.length > 0) {
-      return this.userMasterNoms.join(' · ');
+    // Show the active commission's master name (not all masters concatenated)
+    if (this.activeCommissionId && this.availableCommissions.length > 0) {
+      const activeComm = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
+      if (activeComm?.master_nom) return activeComm.master_nom;
+      if (activeComm?.nom) return activeComm.nom;
     }
-    // Priority 2: specialite field on User profile (auth service)
+    // Single master → show it directly
+    if (this.userMasterNoms.length === 1) {
+      return this.userMasterNoms[0];
+    }
+    // Specific master selected in filter
+    if (this.selectedMasterForCandidatures !== 'all') {
+      const found = this.masterOptions.find(
+        (m) => Number(m.id) === Number(this.selectedMasterForCandidatures),
+      );
+      if (found?.nom) return found.nom;
+    }
+    // Fallback to user profile specialite
     return String(this.currentUser?.specialite || '').trim();
   }
 

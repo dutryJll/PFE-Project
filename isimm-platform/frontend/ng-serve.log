@@ -2044,3 +2044,885 @@ Page reload sent to client(s).
 Application bundle generation complete. [81.522 seconds] - 2026-06-01T07:19:59.342Z
 
 Component update sent to client(s).
+[1m[31m[2m19:52:17[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m19:52:17[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m20:13:52[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:17:24[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:15[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:18:17[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [78.707 seconds] - 2026-06-01T19:40:26.144Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:36[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:41[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:40:46[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [71.128 seconds] - 2026-06-01T19:41:37.282Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:41:45[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [69.838 seconds] - 2026-06-01T19:42:47.112Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:53[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:42:56[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [96.161 seconds] - 2026-06-01T19:44:23.284Z
+
+Page reload sent to client(s).
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-master/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/mes-notifications/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/my-commissions/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/candidatures/?[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/offres-inscription-responsable/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/responsable/mes-masters/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[1m[31m[2m20:44:33[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/candidatures/commissions/2/members/[31m
+Error: connect ECONNREFUSED 127.0.0.1:8003
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [106.455 seconds] - 2026-06-01T23:14:14.271Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'master_nom' does not exist on type 'UserCommissionOption'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:5663:22:
+[37m      5663 │       if (activeComm?.[32mmaster_nom[37m) return activeComm.master_nom;
+           ╵                       [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'master_nom' does not exist on type 'UserCommissionOption'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:5663:52:
+[37m      5663 │       if (activeComm?.master_nom) return activeComm.[32mmaster_nom[37m;
+           ╵                                                     [32m~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[2m00:14:28[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m00:14:28[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m00:14:28[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.22 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.25 MB[22m
+
+Application bundle generation complete. [87.494 seconds] - 2026-06-01T23:18:21.292Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [161.448 seconds] - 2026-06-01T23:21:02.760Z
+
+Page reload sent to client(s).
+[1m[31m[2m00:21:10[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m00:21:10[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [74.444 seconds] - 2026-06-01T23:28:33.273Z
+
+Page reload sent to client(s).
+[1m[31m[2m02:43:16[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m02:43:16[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m02:43:16[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.22 MB[39m[2m | [22m
+
+Application bundle generation complete. [83.735 seconds] - 2026-06-02T01:55:55.744Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.23 MB[39m[2m | [22m
+
+Application bundle generation complete. [8.592 seconds] - 2026-06-02T01:56:04.345Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [4.043 seconds] - 2026-06-02T01:57:01.588Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2341: Property 'statutLabel' is private and only accessible within class 'ConsultationDossierComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/consultation-dossier/consultation-dossier.component.html:210:39:
+[37m      210 │ ...tatut actuel : <strong>{{ [32mstatutLabel[37m(currentStatutBackend) }}...
+          ╵                              [32m~~~~~~~~~~~[0m
+
+  Error occurs in the template of component ConsultationDossierComponent.
+
+    src/app/components/consultation-dossier/consultation-dossier.component.ts:41:15:
+[37m      41 │   templateUrl: [32m'./consultation-dossier.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.24 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.26 MB[22m
+
+Application bundle generation complete. [9.344 seconds] - 2026-06-02T01:59:01.519Z
+
+Page reload sent to client(s).
+[1m[31m[2m02:59:05[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m02:59:05[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.24 MB[39m[2m | [22m
+
+Application bundle generation complete. [2.989 seconds] - 2026-06-02T02:03:12.893Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.24 MB[39m[2m | [22m
+
+Application bundle generation complete. [6.425 seconds] - 2026-06-02T02:48:08.168Z
+
+Page reload sent to client(s).
+[1m[31m[2m03:48:14[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m03:48:14[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.24 MB[39m[2m | [22m
+
+Application bundle generation complete. [3.984 seconds] - 2026-06-02T02:50:02.054Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.25 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.140 seconds] - 2026-06-02T02:54:22.219Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.26 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.990 seconds] - 2026-06-02T03:00:22.223Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/consultation-dossier/consultation-dossier.component.html:300:65:
+[37m      300 │ ...  <div class="ocr-anomalies" *ngIf="ocrResult.anomalies?.[32mlength[37m">
+          ╵                                                             [32m~~~~~~[0m
+
+  Warning occurs in the template of component ConsultationDossierComponent.
+
+    src/app/components/consultation-dossier/consultation-dossier.component.ts:41:15:
+[37m      41 │   templateUrl: [32m'./consultation-dossier.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.27 MB[39m[2m | [22m
+
+Application bundle generation complete. [5.705 seconds] - 2026-06-02T03:02:12.841Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/consultation-dossier/consultation-dossier.component.html:300:65:
+[37m      300 │ ...  <div class="ocr-anomalies" *ngIf="ocrResult.anomalies?.[32mlength[37m">
+          ╵                                                             [32m~~~~~~[0m
+
+  Warning occurs in the template of component ConsultationDossierComponent.
+
+    src/app/components/consultation-dossier/consultation-dossier.component.ts:41:15:
+[37m      41 │   templateUrl: [32m'./consultation-dossier.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.29 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.423 seconds] - 2026-06-02T03:09:04.323Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/consultation-dossier/consultation-dossier.component.html:300:65:
+[37m      300 │ ...  <div class="ocr-anomalies" *ngIf="ocrResult.anomalies?.[32mlength[37m">
+          ╵                                                             [32m~~~~~~[0m
+
+  Warning occurs in the template of component ConsultationDossierComponent.
+
+    src/app/components/consultation-dossier/consultation-dossier.component.ts:41:15:
+[37m      41 │   templateUrl: [32m'./consultation-dossier.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.29 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.035 seconds] - 2026-06-02T03:20:02.592Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.28 MB[39m[2m | [22m
+
+Application bundle generation complete. [4.643 seconds] - 2026-06-02T03:34:23.258Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [71.861 seconds] - 2026-06-02T03:51:18.299Z
+
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'SafeResourceUrl'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:724:22:
+[37m      724 │   pdfOfficielBlobUrl: [32mSafeResourceUrl[37m | null = null;
+          ╵                       [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.28 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.31 MB[22m
+
+Application bundle generation complete. [102.426 seconds] - 2026-06-02T03:57:29.457Z
+
+Page reload sent to client(s).
+[1m[31m[2m04:57:34[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[1m[31m[2m04:57:34[22m[1m [31m[1m[vite][22m[1m[31m [31mws proxy socket error:[31m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.28 MB[39m[2m | [22m
+
+Application bundle generation complete. [79.036 seconds] - 2026-06-02T04:02:06.820Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.29 MB[39m[2m | [22m
+
+Application bundle generation complete. [81.746 seconds] - 2026-06-02T04:07:40.500Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.29 MB[39m[2m | [22m
+
+Application bundle generation complete. [80.068 seconds] - 2026-06-02T04:09:08.101Z
+
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.32 MB[39m[2m | [22m
+
+Application bundle generation complete. [81.031 seconds] - 2026-06-02T04:11:11.087Z
+
+Component update sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.33 MB[39m[2m | [22m
+
+Application bundle generation complete. [62.596 seconds] - 2026-06-02T04:12:54.899Z
+
+Component update sent to client(s).

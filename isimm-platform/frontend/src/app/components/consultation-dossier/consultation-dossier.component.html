@@ -200,6 +200,264 @@
         </div>
       </div>
     </section>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- 1️⃣  CARD OCR — Upload + traitement du relevé de notes PDF       -->
+    <!--    Affichage FORCÉ (pas de *ngIf bloquant)                       -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <section class="card full-width ocr-card">
+      <div class="ocr-head">
+        <div>
+          <h3>
+            <i class="fas fa-file-pdf"></i>
+            OCR — Relevé de Notes
+          </h3>
+          <p class="ocr-sub">
+            Upload du PDF candidat → extraction automatique de la moyenne
+            (pdf2image + PaddleOCR). Détection des écarts vs score déclaré.
+          </p>
+        </div>
+      </div>
+
+      <div class="ocr-body">
+        <div class="ocr-upload-row">
+          <label class="ocr-file-label" [class.has-file]="!!ocrFile">
+            <i class="fas fa-upload"></i>
+            <span>{{ ocrFileName || 'Choisir un PDF...' }}</span>
+            <input
+              type="file"
+              accept="application/pdf,image/png,image/jpeg"
+              (change)="onOcrFileSelected($event)"
+              hidden
+            />
+          </label>
+
+          <label class="ocr-checkbox">
+            <input type="checkbox" [(ngModel)]="ocrUpdateScore" />
+            <span>Écraser le score déclaré avec la note OCR</span>
+          </label>
+
+          <button
+            type="button"
+            class="btn btn-primary ocr-btn-launch"
+            [disabled]="!ocrFile || ocrLoading"
+            (click)="lancerOcrReleveNotes()"
+          >
+            <i class="fas" [ngClass]="ocrLoading ? 'fa-spinner fa-spin' : 'fa-magic-wand-sparkles'"></i>
+            <span>{{ ocrLoading ? 'OCR en cours...' : 'Uploader / Traiter le PDF' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-sec ocr-btn-reset"
+            *ngIf="ocrFile || ocrResult"
+            [disabled]="ocrLoading"
+            (click)="resetOcr()"
+          >
+            <i class="fas fa-times"></i>
+            Réinitialiser
+          </button>
+        </div>
+
+        <!-- Résultats OCR (affichés après traitement) -->
+        <div class="ocr-results" *ngIf="ocrResult">
+          <div class="ocr-grid">
+            <div class="ocr-stat">
+              <span class="ocr-stat-lbl">Score extrait</span>
+              <strong class="ocr-stat-val">
+                {{ ocrResult.score_extrait != null ? ocrResult.score_extrait : '—' }}
+              </strong>
+            </div>
+            <div class="ocr-stat">
+              <span class="ocr-stat-lbl">Score déclaré</span>
+              <strong class="ocr-stat-val">
+                {{ ocrResult.score_declare != null ? ocrResult.score_declare : '—' }}
+              </strong>
+            </div>
+            <div class="ocr-stat">
+              <span class="ocr-stat-lbl">Écart (Δ)</span>
+              <strong class="ocr-stat-val" [class.ocr-delta-bad]="ocrResult.flag_fraude">
+                {{ ocrResult.delta != null ? ocrResult.delta : '—' }}
+              </strong>
+            </div>
+            <div class="ocr-stat">
+              <span class="ocr-stat-lbl">Confiance</span>
+              <strong class="ocr-stat-val" [ngClass]="ocrConfianceClass">
+                {{ (ocrResult.confiance * 100).toFixed(0) }}%
+              </strong>
+            </div>
+            <div class="ocr-stat">
+              <span class="ocr-stat-lbl">Moteur</span>
+              <strong class="ocr-stat-val">{{ ocrResult.moteur }}</strong>
+            </div>
+          </div>
+
+          <div class="ocr-alert ocr-alert-warn" *ngIf="ocrResult.flag_fraude">
+            <i class="fas fa-triangle-exclamation"></i>
+            <div>
+              <strong>Écart anormal détecté</strong> — Vérification manuelle recommandée
+              avant validation.
+            </div>
+          </div>
+
+          <div class="ocr-anomalies" *ngIf="ocrResult.anomalies && ocrResult.anomalies.length">
+            <h4>Anomalies détectées</h4>
+            <ul>
+              <li *ngFor="let a of ocrResult.anomalies">
+                <strong>{{ a.type }}</strong> — {{ a.message }}
+              </li>
+            </ul>
+          </div>
+
+          <details class="ocr-text-block" *ngIf="ocrResult.texte_preview">
+            <summary>Texte OCR extrait (preview)</summary>
+            <pre>{{ ocrResult.texte_preview }}</pre>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- 2️⃣  CARD DÉCISION COMMISSION — Changement de statut             -->
+    <!--    Affichage FORCÉ (pas de *ngIf bloquant)                       -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <section class="card full-width commission-actions-card">
+      <div class="commission-actions-head">
+        <div>
+          <h3>Décision de la commission</h3>
+          <p class="commission-actions-sub">
+            Statut actuel : <strong>{{ statutLabel(currentStatutBackend) }}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="commission-actions-body">
+        <textarea
+          class="finput commission-comment"
+          rows="2"
+          [(ngModel)]="decisionComment"
+          placeholder="Commentaire/motif (requis pour un refus)..."
+        ></textarea>
+
+        <div class="commission-actions-row">
+          <button
+            type="button"
+            class="btn btn-primary commission-btn-presel"
+            [disabled]="isSavingStatus || isAlreadyPreselectionne"
+            (click)="validerPreselection()"
+            title="Passer le candidat en statut Présélectionné"
+          >
+            <i class="fas fa-check-circle"></i>
+            <span>{{ isAlreadyPreselectionne ? 'Déjà présélectionné' : 'Valider la Présélection' }}</span>
+          </button>
+
+          <div class="commission-action-more">
+            <button
+              type="button"
+              class="btn btn-sec commission-btn-more"
+              (click)="toggleDecisionDropdown()"
+              [disabled]="isSavingStatus"
+            >
+              <i class="fas fa-ellipsis-v"></i>
+              <span>Autres décisions</span>
+            </button>
+
+            <div class="commission-dropdown" *ngIf="showDecisionDropdown">
+              <button
+                type="button"
+                class="commission-dd-item commission-dd-success"
+                [disabled]="isSavingStatus || isAlreadySelectionne"
+                (click)="selectionnerCandidat()"
+              >
+                <i class="fas fa-award"></i> Sélectionner (admis)
+              </button>
+              <button
+                type="button"
+                class="commission-dd-item commission-dd-danger"
+                [disabled]="isSavingStatus || isAlreadyRefuse"
+                (click)="refuserCandidature()"
+              >
+                <i class="fas fa-times-circle"></i> Refuser la candidature
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="decision-result show"
+          *ngIf="decisionResult"
+          [ngClass]="decisionResultClass || 'dr-warn'"
+        >
+          {{ decisionResult }}
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- 3️⃣  CARD DOCUMENT OFFICIEL PDF + QR Code                        -->
+    <!--    Affichage FORCÉ + bouton TOUJOURS cliquable (force=1 backend) -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <section class="card full-width pdf-officiel-card">
+      <div class="pdf-head">
+        <div>
+          <h3>
+            <i class="fas fa-shield-halved"></i>
+            Document Officiel ISIMM
+          </h3>
+          <p class="pdf-sub">
+            PDF généré avec QR code de sécurité (vérification d'authenticité).
+            Statut courant : <strong>{{ statutLabel(currentStatutBackend) }}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="pdf-body">
+        <div class="pdf-actions-row">
+          <button
+            type="button"
+            class="btn btn-primary pdf-btn-generate"
+            [disabled]="pdfLoading"
+            (click)="genererDocumentOfficiel()"
+            title="Générer le document officiel avec QR code"
+          >
+            <i class="fas" [ngClass]="pdfLoading ? 'fa-spinner fa-spin' : 'fa-file-shield'"></i>
+            <span>{{ pdfLoading ? 'Génération...' : 'Générer le Document Officiel' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-sec pdf-btn-download"
+            *ngIf="pdfBlobUrl"
+            (click)="telechargerPdfOfficiel()"
+          >
+            <i class="fas fa-download"></i>
+            Télécharger
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-sec pdf-btn-close"
+            *ngIf="pdfBlobUrl"
+            (click)="fermerPdfPreview()"
+          >
+            <i class="fas fa-times"></i>
+            Fermer l'aperçu
+          </button>
+        </div>
+
+        <div class="pdf-error" *ngIf="pdfError">
+          <i class="fas fa-circle-exclamation"></i> {{ pdfError }}
+        </div>
+
+        <div class="pdf-preview" *ngIf="pdfBlobUrl">
+          <iframe
+            [src]="pdfBlobUrl"
+            class="pdf-iframe"
+            title="Document officiel ISIMM"
+          ></iframe>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div class="toast" [class.show]="toastShow" [ngClass]="toastClass">

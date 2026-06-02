@@ -7239,6 +7239,171 @@
         <div class="ocr-body" *ngIf="dossierOCRCandidature">
           <!-- Documents tab -->
           <div *ngIf="dossierOCRActiveTab === 'documents'">
+
+            <!-- ════════════════════════════════════════════════════════ -->
+            <!-- 🟣 CARD OCR RÉEL — pdf2image + PaddleOCR                -->
+            <!-- ════════════════════════════════════════════════════════ -->
+            <div class="ocr-real-card">
+              <div class="ocr-real-head">
+                <h4>
+                  <i class="fas fa-file-pdf"></i>
+                  OCR — Relevé de Notes (pdf2image + PaddleOCR)
+                </h4>
+                <p>
+                  Upload le PDF candidat → extraction automatique de la moyenne,
+                  détection des écarts vs score déclaré.
+                </p>
+              </div>
+
+              <div class="ocr-real-row">
+                <label class="ocr-real-file" [class.has-file]="!!ocrModalFile">
+                  <i class="fas fa-upload"></i>
+                  <span>{{ ocrModalFileName || 'Choisir un PDF / image...' }}</span>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    (change)="onOcrModalFileSelected($event)"
+                    hidden
+                  />
+                </label>
+
+                <label class="ocr-real-checkbox">
+                  <input type="checkbox" [(ngModel)]="ocrModalUpdateScore" />
+                  <span>Écraser le score déclaré</span>
+                </label>
+
+                <button
+                  type="button"
+                  class="ocr-real-btn-launch"
+                  [disabled]="ocrModalLoading"
+                  (click)="lancerOcrReel()"
+                >
+                  <i class="fas" [ngClass]="ocrModalLoading ? 'fa-spinner fa-spin' : 'fa-magic-wand-sparkles'"></i>
+                  <span>{{ ocrModalLoading ? 'OCR en cours...' : 'Uploader / Traiter le PDF' }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="ocr-real-btn-reset"
+                  *ngIf="ocrModalFile || ocrModalResult"
+                  [disabled]="ocrModalLoading"
+                  (click)="resetOcrModal()"
+                >
+                  <i class="fas fa-times"></i> Reset
+                </button>
+              </div>
+
+              <!-- Résultats OCR réel -->
+              <div class="ocr-real-results" *ngIf="ocrModalResult">
+                <div class="ocr-real-grid">
+                  <div class="ocr-real-stat">
+                    <span class="ocr-real-lbl">Score extrait</span>
+                    <strong>{{ ocrModalResult.score_extrait != null ? ocrModalResult.score_extrait : '—' }}</strong>
+                  </div>
+                  <div class="ocr-real-stat">
+                    <span class="ocr-real-lbl">Score déclaré</span>
+                    <strong>{{ ocrModalResult.score_declare != null ? ocrModalResult.score_declare : '—' }}</strong>
+                  </div>
+                  <div class="ocr-real-stat">
+                    <span class="ocr-real-lbl">Écart Δ</span>
+                    <strong [class.ocr-delta-bad]="ocrModalResult.flag_fraude">
+                      {{ ocrModalResult.delta != null ? ocrModalResult.delta : '—' }}
+                    </strong>
+                  </div>
+                  <div class="ocr-real-stat">
+                    <span class="ocr-real-lbl">Confiance</span>
+                    <strong [ngClass]="ocrModalConfianceClass">
+                      {{ (ocrModalResult.confiance * 100).toFixed(0) }}%
+                    </strong>
+                  </div>
+                  <div class="ocr-real-stat">
+                    <span class="ocr-real-lbl">Moteur</span>
+                    <strong>{{ ocrModalResult.moteur }}</strong>
+                  </div>
+                </div>
+
+                <div class="ocr-real-alert" *ngIf="ocrModalResult.flag_fraude">
+                  <i class="fas fa-triangle-exclamation"></i>
+                  <strong>Écart anormal détecté</strong> — Vérification manuelle recommandée.
+                </div>
+
+                <div class="ocr-real-anomalies" *ngIf="ocrModalResult.anomalies && ocrModalResult.anomalies.length">
+                  <h5>Anomalies</h5>
+                  <ul>
+                    <li *ngFor="let a of ocrModalResult.anomalies">
+                      <strong>{{ a.type }}</strong> — {{ a.message }}
+                    </li>
+                  </ul>
+                </div>
+
+                <details class="ocr-real-text" *ngIf="ocrModalResult.texte_preview">
+                  <summary>Texte OCR extrait (preview)</summary>
+                  <pre>{{ ocrModalResult.texte_preview }}</pre>
+                </details>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════ -->
+            <!-- 🟠 CARD DOCUMENT OFFICIEL PDF + QR Code                 -->
+            <!-- ════════════════════════════════════════════════════════ -->
+            <div class="pdf-officiel-modal-card">
+              <div class="pdf-officiel-head">
+                <h4>
+                  <i class="fas fa-shield-halved"></i>
+                  Document Officiel ISIMM (PDF + QR Code)
+                </h4>
+                <p>
+                  PDF généré avec QR code de sécurité pour vérification d'authenticité.
+                  Statut courant :
+                  <strong>{{ statutLabelDisplay(dossierOCRCandidature.statut) }}</strong>
+                </p>
+              </div>
+
+              <div class="pdf-officiel-actions">
+                <button
+                  type="button"
+                  class="pdf-officiel-btn-generate"
+                  [disabled]="pdfOfficielLoading"
+                  (click)="genererPdfOfficielModal()"
+                >
+                  <i class="fas" [ngClass]="pdfOfficielLoading ? 'fa-spinner fa-spin' : 'fa-file-shield'"></i>
+                  <span>{{ pdfOfficielLoading ? 'Génération...' : 'Générer le Document Officiel' }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="pdf-officiel-btn-sec"
+                  *ngIf="pdfOfficielBlobUrl"
+                  (click)="telechargerPdfOfficielModal()"
+                >
+                  <i class="fas fa-download"></i> Télécharger
+                </button>
+
+                <button
+                  type="button"
+                  class="pdf-officiel-btn-sec"
+                  *ngIf="pdfOfficielBlobUrl"
+                  (click)="fermerPdfOfficielModal()"
+                >
+                  <i class="fas fa-times"></i> Fermer
+                </button>
+              </div>
+
+              <div class="pdf-officiel-error" *ngIf="pdfOfficielError">
+                <i class="fas fa-circle-exclamation"></i> {{ pdfOfficielError }}
+              </div>
+
+              <div class="pdf-officiel-preview" *ngIf="pdfOfficielBlobUrl">
+                <iframe
+                  [src]="pdfOfficielBlobUrl"
+                  title="Document officiel ISIMM"
+                ></iframe>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════ -->
+            <!-- 📄 Liste documents existante (mock data, non touchée)   -->
+            <!-- ════════════════════════════════════════════════════════ -->
             <div class="ocr-doc-item ocr-s-valid">
               <div class="ocr-doc-header">
                 <div class="ocr-doc-title">

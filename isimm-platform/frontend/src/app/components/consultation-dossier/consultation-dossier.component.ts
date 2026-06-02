@@ -58,6 +58,31 @@ export class ConsultationDossierComponent implements OnInit {
   activeTab: 'general' | 'cursus' | 'documents' | 'history' = 'general';
   consultationBackLabel = 'Retour';
   timelineDraft = '';
+  isSavingStatus = false;
+  decisionComment = '';
+  showDecisionDropdown = false;
+
+  // ── OCR (Relevé de Notes) ────────────────────────────────────────────
+  ocrFile: File | null = null;
+  ocrFileName = '';
+  ocrLoading = false;
+  ocrResult: {
+    score_extrait: number | null;
+    score_declare: number | null;
+    delta: number | null;
+    flag_fraude: boolean;
+    confiance: number;
+    moteur: string;
+    anomalies: any[];
+    texte_preview: string;
+    note_extraite_ocr: number;
+  } | null = null;
+  ocrUpdateScore = false;
+
+  // ── PDF Officiel (avec QR Code) ──────────────────────────────────────
+  pdfLoading = false;
+  pdfBlobUrl: SafeResourceUrl | null = null;
+  pdfError = '';
 
   cursusRows: CursusRow[] = [
     {
@@ -423,6 +448,218 @@ export class ConsultationDossierComponent implements OnInit {
     this.decisionResultClass = 'dr-warn';
     this.addToTimeline('final-hold', false);
     this.showToast(this.decisionResult, 't-warn');
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // Actions Commission : changement de statut API-backed
+  // ────────────────────────────────────────────────────────────────────
+
+  get isCommissionView(): boolean {
+    return this.sourceContext === 'commission';
+  }
+
+  get currentStatutBackend(): string {
+    return String(this.candidat?.statut || '').toLowerCase();
+  }
+
+  get isAlreadyPreselectionne(): boolean {
+    return this.currentStatutBackend === 'preselectionne';
+  }
+
+  get isAlreadyRefuse(): boolean {
+    const s = this.currentStatutBackend;
+    return s === 'rejete' || s === 'refuse';
+  }
+
+  get isAlreadySelectionne(): boolean {
+    return this.currentStatutBackend === 'selectionne';
+  }
+
+  validerPreselection(): void {
+    this.changerStatutCandidature('preselectionne', 'Validation présélection par la commission');
+  }
+
+  refuserCandidature(): void {
+    const raison = (this.decisionComment || '').trim();
+    if (!raison) {
+      this.showToast('Veuillez saisir un motif de refus.', 't-warn');
+      return;
+    }
+    this.changerStatutCandidature('rejete', raison);
+  }
+
+  selectionnerCandidat(): void {
+    this.changerStatutCandidature('selectionne', 'Sélection finale par la commission');
+  }
+
+  private changerStatutCandidature(nouveauStatut: string, raison: string): void {
+    if (!this.candidatureId || this.isSavingStatus) return;
+    this.isSavingStatus = true;
+    this.showDecisionDropdown = false;
+
+    this.candidatureService.updateStatus(this.candidatureId, nouveauStatut, raison).subscribe({
+      next: () => {
+        if (this.candidat) {
+          this.candidat.statut = nouveauStatut;
+        }
+        const label = this.statutLabel(nouveauStatut);
+        this.decisionResult = `Statut mis à jour : ${label}`;
+        this.decisionResultClass =
+          nouveauStatut === 'rejete' ? 'dr-danger'
+          : nouveauStatut === 'selectionne' ? 'dr-success'
+          : 'dr-success';
+        this.addToTimeline(
+          nouveauStatut === 'rejete' ? 'status-rejet'
+          : nouveauStatut === 'selectionne' ? 'status-selectionne'
+          : 'status-preselectionne',
+          nouveauStatut !== 'rejete',
+        );
+        this.showToast(`Candidature ${label.toLowerCase()} — notification envoyée.`, 't-success');
+        this.decisionComment = '';
+        this.isSavingStatus = false;
+      },
+      error: (err) => {
+        const msg = err?.error?.error || err?.message || 'Erreur lors du changement de statut.';
+        this.showToast(msg, 't-danger');
+        this.isSavingStatus = false;
+      },
+    });
+  }
+
+  statutLabel(statut: string): string {
+    switch ((statut || '').toLowerCase()) {
+      case 'preselectionne':   return 'Présélectionné';
+      case 'selectionne':      return 'Sélectionné';
+      case 'rejete':
+      case 'refuse':           return 'Refusé';
+      case 'sous_examen':      return 'Sous examen';
+      case 'dossier_depose':   return 'Dossier déposé';
+      case 'soumis':           return 'Soumis';
+      case 'inscrit':          return 'Inscrit';
+      default:                 return statut || '—';
+    }
+  }
+
+  toggleDecisionDropdown(): void {
+    this.showDecisionDropdown = !this.showDecisionDropdown;
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // OCR — Upload PDF Relevé de Notes + extraction score
+  // ────────────────────────────────────────────────────────────────────
+
+  onOcrFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.ocrFile = input.files[0];
+      this.ocrFileName = this.ocrFile.name;
+      this.ocrResult = null;
+    }
+  }
+
+  lancerOcrReleveNotes(): void {
+    if (!this.candidatureId || !this.ocrFile || this.ocrLoading) return;
+    this.ocrLoading = true;
+    this.ocrResult = null;
+
+    this.candidatureService
+      .analyserOcrCandidature(this.candidatureId, this.ocrFile, this.ocrUpdateScore)
+      .subscribe({
+        next: (res: any) => {
+          this.ocrResult = {
+            score_extrait:     res.score_extrait,
+            score_declare:     res.score_declare,
+            delta:             res.delta,
+            flag_fraude:       !!res.flag_fraude,
+            confiance:         Number(res.confiance ?? 0),
+            moteur:            res.moteur || '—',
+            anomalies:         res.anomalies || [],
+            texte_preview:     res.texte_preview || '',
+            note_extraite_ocr: Number(res.note_extraite_ocr ?? 0),
+          };
+          if (this.candidat && this.ocrResult.score_extrait != null && this.ocrUpdateScore) {
+            this.candidat.score = this.ocrResult.score_extrait;
+          }
+          this.showToast(
+            `OCR terminé (${this.ocrResult.moteur}) — score extrait : ${this.ocrResult.score_extrait ?? '—'}`,
+            this.ocrResult.flag_fraude ? 't-warn' : 't-success',
+          );
+          this.ocrLoading = false;
+        },
+        error: (err) => {
+          const msg = err?.error?.error || err?.message || 'Erreur OCR';
+          this.showToast(msg, 't-danger');
+          this.ocrLoading = false;
+        },
+      });
+  }
+
+  resetOcr(): void {
+    this.ocrFile = null;
+    this.ocrFileName = '';
+    this.ocrResult = null;
+    this.ocrUpdateScore = false;
+  }
+
+  get ocrConfianceClass(): string {
+    if (!this.ocrResult) return '';
+    const c = this.ocrResult.confiance;
+    if (this.ocrResult.flag_fraude) return 'ocr-conf-bad';
+    if (c >= 0.8) return 'ocr-conf-good';
+    if (c >= 0.5) return 'ocr-conf-medium';
+    return 'ocr-conf-low';
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // PDF Officiel + QR Code de vérification
+  // ────────────────────────────────────────────────────────────────────
+
+  get canGenererPdfOfficiel(): boolean {
+    const s = this.currentStatutBackend;
+    return ['preselectionne', 'selectionne', 'admis', 'inscrit', 'dossier_depose'].includes(s);
+  }
+
+  genererDocumentOfficiel(): void {
+    if (!this.candidatureId || this.pdfLoading) return;
+    this.pdfLoading = true;
+    this.pdfError = '';
+    this.pdfBlobUrl = null;
+
+    this.candidatureService.genererAttestation(this.candidatureId, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        this.pdfBlobUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.pdfLoading = false;
+        this.showToast('Document officiel généré avec QR code de sécurité.', 't-success');
+      },
+      error: (err) => {
+        const msg = err?.error?.error || err?.message || 'Erreur génération PDF';
+        this.pdfError = msg;
+        this.pdfLoading = false;
+        this.showToast(msg, 't-danger');
+      },
+    });
+  }
+
+  telechargerPdfOfficiel(): void {
+    if (!this.candidatureId) return;
+    this.candidatureService.genererAttestation(this.candidatureId, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const nom = (this.candidat?.last_name || 'candidat').replace(/ /g, '_');
+        const num = (this.candidat?.numero || this.candidatureId).toString();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ISIMM_Attestation_${nom}_${num}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.showToast('Erreur téléchargement PDF', 't-danger'),
+    });
+  }
+
+  fermerPdfPreview(): void {
+    this.pdfBlobUrl = null;
   }
 
   updateProgress(): void {

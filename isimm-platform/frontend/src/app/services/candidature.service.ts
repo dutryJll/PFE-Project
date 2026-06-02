@@ -157,6 +157,26 @@ export class CandidatureService {
     });
   }
 
+  // POUR COMMISSION : OCR sur un PDF de relevé de notes (pdf2image + PaddleOCR)
+  analyserOcrCandidature(
+    candidatureId: number,
+    fichier?: File,
+    updateScore = false,
+  ): Observable<any> {
+    const formData = new FormData();
+    if (fichier) {
+      formData.append('fichier', fichier, fichier.name);
+    }
+    if (updateScore) {
+      formData.append('update_score', '1');
+    }
+    return this.http.post(
+      `${this.apiUrl}/${candidatureId}/analyser-ocr/`,
+      formData,
+      { headers: this.getHeaders(false) },
+    );
+  }
+
   // POUR COMMISSION : spécialités de diplômes admissibles pour un master donné
   // Source : SpecialiteParcoursMapping (seedé via migration 0025 / seed_specialites_parcours)
   // Le composant extrait res.specialites depuis la réponse.
