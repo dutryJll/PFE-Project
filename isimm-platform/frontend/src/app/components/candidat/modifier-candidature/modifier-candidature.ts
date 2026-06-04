@@ -43,16 +43,15 @@ export class ModifierCandidatureComponent implements OnInit {
   isLoading = true;
   isSaving = false;
 
-  // Step management
-  readonly steps = [1, 2, 3, 4];
+  // Step management — Vœux et Documents retirés (demande utilisateur).
+  // Le candidat peut soumettre directement après Informations + Diplôme.
+  readonly steps = [1, 2];
   readonly stepLabels: Record<number, string> = {
     1: 'Informations personnelles',
     2: 'Diplôme & Formation',
-    3: 'Vœux & Motivation',
-    4: 'Documents',
   };
   currentStep = 1;
-  stepProgress: Record<number, boolean> = { 1: false, 2: false, 3: false, 4: false };
+  stepProgress: Record<number, boolean> = { 1: false, 2: false };
 
   // Step 1: personal info (read-only, from profile)
   formNom = '';

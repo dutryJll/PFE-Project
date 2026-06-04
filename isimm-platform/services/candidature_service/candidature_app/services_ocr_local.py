@@ -43,7 +43,16 @@ except ImportError:
     _pdf2image_available = False
 
 # ── Regex extraction de scores / moyennes ────────────────────────────────────
+# Ordre = priorité (plus spécifique → plus générique)
 _SCORE_PATTERNS = [
+    # "Moyenne Generale 14.17" / "Moyenne Générale : 14,75"
+    re.compile(r'moyenne\s*g[eé]n[eé]rale\s*[:\-–\.]*\s*(\d{1,2}[.,]\d{1,2})', re.I),
+    # "M.G : 14.17" / "MG = 14.17"
+    re.compile(r'\bm\.?g\.?\s*[:\-–=]?\s*(\d{1,2}[.,]\d{1,2})', re.I),
+    # "Moyenne générale" suivi de notes en colonnes avec score à la fin
+    re.compile(r'moyenne\s*g[eé]n[eé]rale\s+\S+\s+(\d{1,2}[.,]\d{1,2})', re.I),
+    # "Score Total" ou "SCORE TOTAL" → extrait la valeur après
+    re.compile(r'score\s*total\s*[:\-–=]?\s*(\d{1,2}[.,]\d{1,2})', re.I),
     # "Moyenne générale : 14,75" ou "Moyenne: 14.75"
     re.compile(r'moyenne\s*[:\-–]?\s*(\d{1,2}[.,]\d{1,2})', re.I),
     # "Total : 14.75 / 20"
@@ -148,7 +157,24 @@ class OCRDocumentAuditor:
             raise ImportError(
                 "pdf2image non disponible. Installez : pip install pdf2image"
             )
-        pages = convert_from_bytes(pdf_bytes, dpi=200)
+        # ── Localiser Poppler (Windows) ────────────────────────────────
+        import os as _os
+        poppler_candidates = [
+            r'C:\poppler\bin',
+            r'C:\poppler\poppler-26.02.0\Library\bin',
+            r'C:\Users\HP\Downloads\poppler\poppler-26.02.0\Library\bin',
+        ]
+        poppler_path = None
+        for p in poppler_candidates:
+            if _os.path.isdir(p) and _os.path.isfile(_os.path.join(p, 'pdftoppm.exe')):
+                poppler_path = p
+                break
+
+        if poppler_path:
+            pages = convert_from_bytes(pdf_bytes, dpi=200, poppler_path=poppler_path)
+        else:
+            pages = convert_from_bytes(pdf_bytes, dpi=200)
+
         images = []
         for page in pages:
             buf = io.BytesIO()

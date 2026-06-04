@@ -1908,22 +1908,14 @@
             <option value="inscrit">Inscrit</option>
             <option value="annule">Annulé</option>
           </select>
-          <select
-            class="cm-select"
-            [(ngModel)]="selectedMasterForCandidatures"
-            (ngModelChange)="appliquerFiltresResponsable()"
-          >
-            <option value="all">Toutes spécialités</option>
-            <option *ngFor="let m of masterOptions" [value]="m.id">{{ m.nom }}</option>
-          </select>
+          <!-- Filtre par master supprimé (un seul master MPGL en démo) -->
           <select
             class="cm-select"
             [(ngModel)]="filtres.specialite"
             (ngModelChange)="appliquerFiltresResponsable()"
-            *ngIf="specialiteOptionsForCurrentMaster.length > 0"
           >
             <option value="">Toutes spécialités diplôme</option>
-            <option *ngFor="let s of specialiteOptionsForCurrentMaster" [value]="s">{{ s }}</option>
+            <option *ngFor="let s of SPECIALITES_DIPLOME_MPGL" [value]="s">{{ s }}</option>
           </select>
           <button
             class="cm-btn-reset"
@@ -2017,7 +2009,7 @@
                 </td>
                 <td>
                   <span class="cm-spec-badge">{{
-                    candidature.master_nom || candidature.specialite || '—'
+                    candidature.specialite_diplome || candidature.specialite || '—'
                   }}</span>
                 </td>
                 <td>
@@ -2713,54 +2705,56 @@
               Décision collégiale — validation des candidatures présélectionnées
             </div>
           </div>
-          <div class="prs-title-actions">
-            <div class="prs-export-wrap">
-              <button class="prs-btn-export" type="button" (click)="toggleExport($event)">
-                <i class="fas fa-download"></i> Générer liste
-                <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 2px"></i>
+          <!-- Bouton Générer liste supprimé sur demande utilisateur -->
+          <div class="prs-title-actions"></div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════ -->
+        <!-- MODAL DÉCISION FINALE — 2 boutons : Sélectionner / Rejeter -->
+        <!-- ════════════════════════════════════════════════════════ -->
+        <div class="final-decision-backdrop" *ngIf="showFinalDecisionModal" (click)="closeFinalDecisionModal()">
+          <div class="final-decision-modal" (click)="$event.stopPropagation()">
+            <div class="final-decision-head">
+              <h3>Décision Finale</h3>
+              <button class="final-decision-close" (click)="closeFinalDecisionModal()">
+                <i class="fas fa-times"></i>
               </button>
-              <div
-                class="prs-export-menu"
-                [class.open]="exportMenuOpen"
-                [ngStyle]="exportMenuPosition"
-              >
-                <div class="prs-export-section">
-                  <div class="prs-export-section-title">Spécialité actuelle</div>
-                  <button
-                    class="prs-export-item"
-                    type="button"
-                    (click)="exportCandidatures('specialite', 'pdf')"
-                  >
-                    <i class="fas fa-file-pdf" style="color: #a32d2d"></i> Exporter PDF
-                  </button>
-                  <button
-                    class="prs-export-item"
-                    type="button"
-                    (click)="exportCandidatures('specialite', 'xlsx')"
-                  >
-                    <i class="fas fa-file-excel" style="color: #10b981"></i> Exporter Excel
-                  </button>
-                </div>
-                <div class="prs-export-section">
-                  <div class="prs-export-section-title">Master complet</div>
-                  <button
-                    class="prs-export-item"
-                    type="button"
-                    (click)="exportCandidatures('master', 'pdf')"
-                  >
-                    <i class="fas fa-file-pdf" style="color: #a32d2d"></i> Exporter PDF
-                  </button>
-                  <button
-                    class="prs-export-item"
-                    type="button"
-                    (click)="exportCandidatures('master', 'xlsx')"
-                  >
-                    <i class="fas fa-file-excel" style="color: #10b981"></i> Exporter Excel
-                  </button>
-                </div>
+            </div>
+            <div class="final-decision-body">
+              <p class="final-decision-text">
+                Choisissez l'action à appliquer à <strong>tous les candidats présélectionnés</strong> :
+              </p>
+              <div class="final-decision-buttons">
+                <button
+                  class="final-decision-btn final-decision-select"
+                  type="button"
+                  [disabled]="finalDecisionLoading"
+                  (click)="decisionFinaleSelectionner()"
+                >
+                  <i class="fas fa-award"></i>
+                  <div>
+                    <strong>Sélectionner</strong>
+                    <small>Tous → statut 'Sélectionné' + bascule Nav Sélection</small>
+                  </div>
+                </button>
+                <button
+                  class="final-decision-btn final-decision-reject"
+                  type="button"
+                  [disabled]="finalDecisionLoading"
+                  (click)="decisionFinaleRejeter()"
+                >
+                  <i class="fas fa-times-circle"></i>
+                  <div>
+                    <strong>Rejeter</strong>
+                    <small>Tous → statut 'Rejeté'</small>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="prs-title-row-spacer" style="display:none">
         </div>
 
         <!-- Stats grid -->
@@ -2844,26 +2838,57 @@
                   <th>Membre</th>
                   <th>Email</th>
                   <th>Statut</th>
+                  <th>Avis</th>
                   <th>Commentaire</th>
                   <th>Date</th>
                 </tr>
               </thead>
               <tbody>
                 <ng-container *ngFor="let membre of membres">
-                  <tr>
+                  <tr [ngSwitch]="getAvisMembrePourCandidature(membre.email).choix">
                     <td>{{ membre.nom }} {{ membre.prenom }}</td>
                     <td class="prs-avis-email">{{ membre.email }}</td>
+
+                    <!-- Statut : avis donné / en_attente -->
                     <td>
-                      <span class="prs-avis-badge prs-avis-wait">
+                      <span *ngSwitchCase="'favorable'" class="prs-avis-badge prs-avis-ok">
+                        <span class="prs-badge-dot"></span>Avis donné
+                      </span>
+                      <span *ngSwitchCase="'defavorable'" class="prs-avis-badge prs-avis-no">
+                        <span class="prs-badge-dot"></span>Avis donné
+                      </span>
+                      <span *ngSwitchDefault class="prs-avis-badge prs-avis-wait">
                         <span class="prs-badge-dot"></span>en_attente
                       </span>
                     </td>
-                    <td class="prs-avis-muted">—</td>
-                    <td class="prs-avis-muted">—</td>
+
+                    <!-- AVIS : Favorable (vert) / Défavorable (rouge) / — -->
+                    <td>
+                      <span *ngSwitchCase="'favorable'" class="prs-choix-badge prs-choix-fav">
+                        <i class="fas fa-thumbs-up"></i> Favorable
+                      </span>
+                      <span *ngSwitchCase="'defavorable'" class="prs-choix-badge prs-choix-def">
+                        <i class="fas fa-thumbs-down"></i> Défavorable
+                      </span>
+                      <span *ngSwitchDefault class="prs-avis-muted">—</span>
+                    </td>
+
+                    <td>
+                      <span *ngIf="getAvisMembrePourCandidature(membre.email).commentaire">
+                        {{ getAvisMembrePourCandidature(membre.email).commentaire }}
+                      </span>
+                      <span class="prs-avis-muted" *ngIf="!getAvisMembrePourCandidature(membre.email).commentaire">—</span>
+                    </td>
+                    <td>
+                      <span *ngIf="getAvisMembrePourCandidature(membre.email).date">
+                        {{ getAvisMembrePourCandidature(membre.email).date | date:'dd/MM/yyyy HH:mm' }}
+                      </span>
+                      <span class="prs-avis-muted" *ngIf="!getAvisMembrePourCandidature(membre.email).date">—</span>
+                    </td>
                   </tr>
                 </ng-container>
                 <tr *ngIf="!membres || membres.length === 0">
-                  <td colspan="5" class="prs-avis-empty">Aucun membre dans cette commission.</td>
+                  <td colspan="6" class="prs-avis-empty">Aucun membre dans cette commission.</td>
                 </tr>
               </tbody>
             </table>
@@ -3146,15 +3171,23 @@
                     </select>
                   </td>
                   <td>
-                    <div style="position: relative" (click)="$event.stopPropagation()">
-                      <button class="prs-kebab-btn" type="button" (click)="togglePrsKebab(c.id)">
+                    <div (click)="$event.stopPropagation()">
+                      <button class="prs-kebab-btn" type="button" (click)="togglePrsKebab(c.id, $event)">
                         <i class="fas fa-ellipsis-v"></i>
                       </button>
-                      <ul class="prs-kebab-menu" *ngIf="prsKebabOpenId === c.id">
+                      <!-- Menu en position FIXED, coordonnées calculées au click -->
+                      <ul
+                        class="prs-kebab-menu-fixed"
+                        *ngIf="prsKebabOpenId === c.id"
+                        [ngStyle]="{
+                          'top.px': prsKebabPos.top,
+                          'left.px': prsKebabPos.left
+                        }"
+                      >
                         <li>
                           <button
                             type="button"
-                            class="prs-kebab-item"
+                            class="prs-kebab-item-fixed"
                             (click)="ouvrirDossierOCR(c); togglePrsKebab(0)"
                           >
                             <i class="fas fa-file-alt"></i> Consulter dossier
@@ -3163,7 +3196,7 @@
                         <li>
                           <button
                             type="button"
-                            class="prs-kebab-item"
+                            class="prs-kebab-item-fixed"
                             (click)="ouvrirModalAvis(c); togglePrsKebab(0)"
                           >
                             <i class="fas fa-eye"></i> Voir avis
@@ -3172,7 +3205,7 @@
                         <li>
                           <button
                             type="button"
-                            class="prs-kebab-item"
+                            class="prs-kebab-item-fixed"
                             (click)="quickValidate(c); togglePrsKebab(0)"
                           >
                             <i class="fas fa-check" style="color: #10b981"></i> Valider rapidement
@@ -7201,11 +7234,42 @@
             >
           </div>
           <div class="ocr-topbar-actions">
-            <button class="ocr-action-btn" type="button" (click)="validerDossierOCR()">
-              <i class="fas fa-check-circle"></i> Valider
+            <!-- RESPONSABLE : Valider Présélection / Rejeter -->
+            <button
+              *ngIf="isResponsable"
+              class="ocr-action-btn"
+              type="button"
+              (click)="validerDossierOCR()"
+            >
+              <i class="fas fa-check-circle"></i> Valider Présélection
             </button>
-            <button class="ocr-action-btn ocr-reject" type="button" (click)="rejeterDossierOCR()">
+            <button
+              *ngIf="isResponsable"
+              class="ocr-action-btn ocr-reject"
+              type="button"
+              (click)="rejeterDossierOCR()"
+            >
               <i class="fas fa-times-circle"></i> Rejeter
+            </button>
+
+            <!-- MEMBRE COMMISSION : Favorable / Défavorable (condition élargie) -->
+            <button
+              *ngIf="canMembreVote"
+              class="ocr-action-btn ocr-favorable"
+              type="button"
+              [disabled]="avisMembreLoading"
+              (click)="donnerAvisMembre(true)"
+            >
+              <i class="fas fa-thumbs-up"></i> Favorable
+            </button>
+            <button
+              *ngIf="canMembreVote"
+              class="ocr-action-btn ocr-defavorable"
+              type="button"
+              [disabled]="avisMembreLoading"
+              (click)="donnerAvisMembre(false)"
+            >
+              <i class="fas fa-thumbs-down"></i> Défavorable
             </button>
           </div>
         </div>
@@ -7402,8 +7466,65 @@
             </div>
 
             <!-- ════════════════════════════════════════════════════════ -->
-            <!-- 📄 Liste documents existante (mock data, non touchée)   -->
+            <!-- 📄 DOCUMENTS RÉELLEMENT DÉPOSÉS PAR LE CANDIDAT          -->
+            <!--     (depuis filesystem Django via /list-fichiers-deposes)-->
             <!-- ════════════════════════════════════════════════════════ -->
+            <div
+              class="docs-not-available-yet"
+              *ngIf="(dossierOCRCandidature?.statut === 'sous_examen' || dossierOCRCandidature?.statut === 'soumis') && fichiersDeposes.length === 0"
+            >
+              <div class="docs-info-icon"><i class="fas fa-clock"></i></div>
+              <div>
+                <h4>Documents non encore disponibles</h4>
+                <p>
+                  En phase <strong>Sous examen</strong>, seules les notes déclarées par le candidat
+                  sont disponibles pour le calcul automatique du score. Les pièces justificatives
+                  physiques apparaîtront ici dès que le candidat aura déposé ses fichiers.
+                </p>
+              </div>
+            </div>
+
+            <!-- Liste réelle des fichiers uploadés -->
+            <div class="real-files-list" *ngIf="fichiersDeposes.length > 0">
+              <div class="real-files-head">
+                <h4>
+                  <i class="fas fa-folder-open"></i>
+                  Fichiers déposés par le candidat ({{ fichiersDeposes.length }})
+                </h4>
+              </div>
+              <div class="real-file-item" *ngFor="let f of fichiersDeposes">
+                <div class="real-file-icon">
+                  <i class="fas fa-file-pdf" *ngIf="f.extension === 'pdf'"></i>
+                  <i class="fas fa-file-image" *ngIf="f.extension === 'jpg' || f.extension === 'jpeg' || f.extension === 'png'"></i>
+                  <i class="fas fa-file" *ngIf="!['pdf','jpg','jpeg','png'].includes(f.extension)"></i>
+                </div>
+                <div class="real-file-info">
+                  <strong>{{ f.type_document }}</strong>
+                  <small>{{ f.nom_fichier }} · {{ f.taille_human }}</small>
+                </div>
+                <div class="real-file-actions">
+                  <a
+                    [href]="fichierDeposeUrl(f.url)"
+                    target="_blank"
+                    rel="noopener"
+                    class="real-file-btn real-file-btn-view"
+                  >
+                    <i class="fas fa-eye"></i> Voir
+                  </a>
+                  <a
+                    [href]="fichierDeposeUrl(f.url)"
+                    download
+                    class="real-file-btn real-file-btn-dl"
+                  >
+                    <i class="fas fa-download"></i> Télécharger
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <ng-container
+              *ngIf="dossierOCRCandidature?.statut !== 'sous_examen' && dossierOCRCandidature?.statut !== 'soumis'"
+            >
             <div class="ocr-doc-item ocr-s-valid">
               <div class="ocr-doc-header">
                 <div class="ocr-doc-title">
@@ -7482,6 +7603,7 @@
                 </div>
               </div>
             </div>
+            </ng-container>
           </div>
 
           <!-- Historique tab -->

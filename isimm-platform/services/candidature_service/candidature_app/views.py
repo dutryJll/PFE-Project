@@ -6238,37 +6238,18 @@ def get_my_commissions_from_candidature(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_commission_members_list(request):
+def get_commission_members_list(request, commission_id=None):
     """
-    GET /api/commissions/commission-members/?commission_id=<id>
-    
+    GET /api/candidatures/commissions/<commission_id>/members/
+    GET /api/commissions/commission-members/?commission_id=<id>  (legacy)
+
     Retourne la liste des membres d'une commission spécifique.
-    Appelé par auth-service pour afficher les responsables et membres.
-    
-    Query params:
-    - commission_id (requis): ID de la commission
-    
-    Returns:
-    {
-        "success": true,
-        "commission_id": 1,
-        "commission_nom": "Commission MPGL",
-        "count": 3,
-        "members": [
-            {
-                "id": 1,
-                "user_id": 42,
-                "first_name": "Ahmed",
-                "last_name": "Ben Ali",
-                "email": "ahmed@isimm.tn",
-                "role": "responsable",
-                "date_nomination": "2024-01-15"
-            }
-        ]
-    }
+    Accepte commission_id depuis l'URL OU depuis ?commission_id=...
     """
-    commission_id = request.query_params.get('commission_id')
-    
+    # Path param prioritaire, sinon fallback sur query string
+    if commission_id is None:
+        commission_id = request.query_params.get('commission_id')
+
     if not commission_id:
         return Response(
             {'error': 'commission_id est requis'},
@@ -6348,12 +6329,39 @@ def upload_fichier_dossier(request):
         .first()
     )
 
+    # ── Normalisation ASCII pour éviter problèmes Windows/encodage ──
+    import unicodedata
+    import re as _re
+    import uuid as _uuid
+
+    def _ascii_slug(text, max_len):
+        # Convertit é → e, à → a, etc. + supprime caractères non-ASCII
+        normalized = unicodedata.normalize('NFKD', text or '')
+        ascii_only = normalized.encode('ASCII', 'ignore').decode('ASCII')
+        # Garde alphanumeric + _ - et remplace espaces par _
+        cleaned = _re.sub(r'[^a-zA-Z0-9_\- ]', '', ascii_only).strip()
+        cleaned = _re.sub(r'\s+', '_', cleaned)
+        return (cleaned or 'doc')[:max_len]
+
     candidature_ref = str(candidature.id) if candidature else 'inconnu'
-    safe_type = ''.join(c for c in document_type if c.isalnum() or c in '_ -')[:60]
-    safe_name = fichier.name.replace(' ', '_')[:100]
+    safe_type = _ascii_slug(document_type, 60)
+    safe_name = _ascii_slug(fichier.name.rsplit('.', 1)[0], 80)
+    ext = (fichier.name.rsplit('.', 1)[-1] or 'bin').lower()[:5]
+    safe_name = f'{safe_name}.{ext}'
     path = f'dossiers/{candidature_ref}/{safe_type}/{safe_name}'
 
-    saved_path = default_storage.save(path, ContentFile(fichier.read()))
+    # ── Sauvegarde avec gestion d'erreur explicite ──
+    try:
+        saved_path = default_storage.save(path, ContentFile(fichier.read()))
+    except Exception as exc:
+        logger.exception('upload_fichier_dossier — erreur stockage')
+        return Response(
+            {
+                'error': f'Erreur lors du stockage du fichier : {type(exc).__name__}',
+                'detail': str(exc)[:300],
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     return Response({
         'success': True,
@@ -6362,3 +6370,72 @@ def upload_fichier_dossier(request):
         'document_type': document_type,
         'candidature_id': candidature.id if candidature else None,
     }, status=status.HTTP_201_CREATED)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# GET /api/candidatures/<candidature_id>/list-fichiers-deposes/
+# Liste les fichiers réellement présents dans MEDIA_ROOT/dossiers/<id>/
+# Utilisé côté responsable/membre pour voir ce qu'Ahmed a uploadé.
+# ──────────────────────────────────────────────────────────────────────────
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_fichiers_deposes(request, candidature_id):
+    import os
+    from django.conf import settings as _settings
+    from django.core.files.storage import default_storage
+
+    try:
+        candidature = Candidature.objects.get(pk=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Permission : admin / commission / responsable / le candidat lui-même
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission') and candidature.candidat_id != request.user.id:
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    media_root = getattr(_settings, 'MEDIA_ROOT', '')
+    media_url = getattr(_settings, 'MEDIA_URL', '/media/').rstrip('/')
+    base_dir = os.path.join(str(media_root), 'dossiers', str(candidature.id))
+
+    fichiers = []
+    if os.path.isdir(base_dir):
+        for doc_type_dir in sorted(os.listdir(base_dir)):
+            full_type_dir = os.path.join(base_dir, doc_type_dir)
+            if not os.path.isdir(full_type_dir):
+                continue
+            for filename in sorted(os.listdir(full_type_dir)):
+                full_path = os.path.join(full_type_dir, filename)
+                if not os.path.isfile(full_path):
+                    continue
+                try:
+                    size = os.path.getsize(full_path)
+                    mtime = os.path.getmtime(full_path)
+                except OSError:
+                    size, mtime = 0, 0
+                rel_path = f'dossiers/{candidature.id}/{doc_type_dir}/{filename}'
+                fichiers.append({
+                    'type_document': doc_type_dir.replace('_', ' '),
+                    'nom_fichier': filename,
+                    'taille_octets': size,
+                    'taille_human': _human_size(size),
+                    'date_upload': mtime,
+                    'url': f'{media_url}/{rel_path}',
+                    'extension': (filename.rsplit('.', 1)[-1] or '').lower(),
+                })
+
+    return Response({
+        'candidature_id': candidature.id,
+        'numero': candidature.numero or '',
+        'candidat_nom': candidature.candidat.get_full_name() or candidature.candidat.email,
+        'count': len(fichiers),
+        'fichiers': fichiers,
+    })
+
+
+def _human_size(size_bytes):
+    if size_bytes < 1024:
+        return f'{size_bytes} o'
+    if size_bytes < 1024 * 1024:
+        return f'{size_bytes / 1024:.1f} Ko'
+    return f'{size_bytes / 1024 / 1024:.1f} Mo'

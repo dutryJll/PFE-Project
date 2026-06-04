@@ -37,6 +37,7 @@ interface Candidature {
   etablissement_origine?: string;
   master_id?: number;
   specialite: string;
+  specialite_diplome?: string;
   spec?: string;
   master_nom?: string;
   score: number;
@@ -725,6 +726,10 @@ export class DashboardCommissionComponent implements OnInit {
   pdfOfficielBlobUrl: SafeResourceUrl | null = null;
   pdfOfficielError: string = '';
 
+  // Documents réellement déposés par le candidat (depuis le filesystem Django)
+  fichiersDeposes: any[] = [];
+  fichiersDeposesLoading: boolean = false;
+
   ouvrirDossierOCR(c: Candidature): void {
     this.dossierOCRCandidature = c;
     this.dossierOCRActiveTab = 'documents';
@@ -738,6 +743,31 @@ export class DashboardCommissionComponent implements OnInit {
     this.ocrModalUpdateScore = false;
     this.pdfOfficielBlobUrl = null;
     this.pdfOfficielError = '';
+    // Charger les vrais fichiers déposés
+    this.loadFichiersDeposes(c.id);
+  }
+
+  loadFichiersDeposes(candidatureId: number): void {
+    this.fichiersDeposesLoading = true;
+    this.fichiersDeposes = [];
+    this.candidatureService.getFichiersDeposes(candidatureId).subscribe({
+      next: (res: any) => {
+        this.fichiersDeposes = res?.fichiers || [];
+        this.fichiersDeposesLoading = false;
+      },
+      error: () => {
+        this.fichiersDeposes = [];
+        this.fichiersDeposesLoading = false;
+      },
+    });
+  }
+
+  /** URL absolue d'un fichier déposé pour download/preview */
+  fichierDeposeUrl(rawUrl: string): string {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('http')) return rawUrl;
+    // Le proxy Angular dev redirige /media/* vers Django, mais pour le download, on cible directement le service
+    return `http://localhost:8003${rawUrl}`;
   }
 
   ouvrirDossierOCRById(id: number): void {
@@ -771,8 +801,64 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   lancerAnalyseOCRDossier(): void {
-    this.showOCRPanel = true;
-    this.toastService.show('Analyse OCR lancée', 'info');
+    if (!this.dossierOCRCandidature) return;
+    const cand = this.dossierOCRCandidature;
+
+    // Cible le premier PDF déposé par le candidat
+    const fichier = (this.fichiersDeposes || []).find(
+      (f) => f.extension === 'pdf',
+    );
+    if (!fichier) {
+      this.toastService.show(
+        'Aucun PDF déposé par ce candidat. Utilisez la zone d\'upload OCR au-dessus.',
+        'warning',
+      );
+      return;
+    }
+
+    this.showOCRPanel = false;
+    this.ocrModalLoading = true;
+    this.ocrModalResult = null;
+    this.toastService.show(`Analyse OCR en cours sur ${fichier.nom_fichier}…`, 'info');
+
+    // Télécharge le fichier depuis Django + envoie à l'endpoint OCR
+    const fileUrl = this.fichierDeposeUrl(fichier.url);
+    fetch(fileUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Téléchargement échec : ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const file = new File([blob], fichier.nom_fichier, { type: 'application/pdf' });
+        return this.candidatureService
+          .analyserOcrCandidature(cand.id, file, false)
+          .toPromise();
+      })
+      .then((res: any) => {
+        this.ocrModalResult = {
+          score_extrait: res?.score_extrait ?? null,
+          score_declare: res?.score_declare ?? null,
+          delta: res?.delta ?? null,
+          flag_fraude: !!res?.flag_fraude,
+          confiance: Number(res?.confiance ?? 0),
+          moteur: res?.moteur || '—',
+          anomalies: res?.anomalies || [],
+          texte_preview: res?.texte_preview || '',
+        };
+        this.showOCRPanel = true; // Affiche aussi le panel mock pour layout
+        this.ocrModalLoading = false;
+        const score = this.ocrModalResult.score_extrait;
+        this.toastService.show(
+          `✅ OCR (${this.ocrModalResult.moteur}) — Score extrait : ${score ?? '—'}`,
+          this.ocrModalResult.flag_fraude ? 'warning' : 'success',
+        );
+      })
+      .catch((err) => {
+        this.ocrModalLoading = false;
+        const msg = err?.message || 'Erreur OCR sur le fichier déposé.';
+        this.toastService.show(msg, 'error');
+        console.error('OCR error:', err);
+      });
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -904,16 +990,48 @@ export class DashboardCommissionComponent implements OnInit {
 
   validerDossierOCR(): void {
     if (!this.dossierOCRCandidature) return;
-    this.updateCandidatureStatus(this.dossierOCRCandidature.id, 'preselectionne');
-    this.toastService.show(`Dossier validé : ${this.dossierOCRCandidature.candidat_nom}`, 'success');
-    this.fermerDossierOCR();
+    const cand = this.dossierOCRCandidature;
+    this.candidatureService.updateStatus(cand.id, 'preselectionne').subscribe({
+      next: () => {
+        // 1) Mise à jour locale immédiate
+        const idx = this.candidatures.findIndex((c) => c.id === cand.id);
+        if (idx >= 0) this.candidatures[idx].statut = 'preselectionne';
+        const idxR = this.candidaturesResponsable.findIndex((c) => c.id === cand.id);
+        if (idxR >= 0) this.candidaturesResponsable[idxR].statut = 'preselectionne';
+        // 2) Toast + fermeture modal
+        this.toastService.show(`✅ ${cand.candidat_nom} validé — bascule vers Présélection.`, 'success');
+        this.fermerDossierOCR();
+        // 3) Refresh + recalcul des compteurs nav
+        this.loadCandidaturesResponsable();
+        this.appliquerFiltresResponsable();
+        // 4) Switch automatique vers le nav-item Présélection
+        setTimeout(() => this.switchView('avis-listes'), 300);
+      },
+      error: (err: any) => {
+        const msg = err?.error?.error || err?.message || 'Erreur mise à jour statut';
+        this.toastService.show(msg, 'error');
+      },
+    });
   }
 
   rejeterDossierOCR(): void {
     if (!this.dossierOCRCandidature) return;
-    this.updateCandidatureStatus(this.dossierOCRCandidature.id, 'rejete');
-    this.toastService.show(`Dossier rejeté : ${this.dossierOCRCandidature.candidat_nom}`, 'warning');
-    this.fermerDossierOCR();
+    const cand = this.dossierOCRCandidature;
+    this.candidatureService.updateStatus(cand.id, 'rejete').subscribe({
+      next: () => {
+        const idx = this.candidatures.findIndex((c) => c.id === cand.id);
+        if (idx >= 0) this.candidatures[idx].statut = 'rejete';
+        const idxR = this.candidaturesResponsable.findIndex((c) => c.id === cand.id);
+        if (idxR >= 0) this.candidaturesResponsable[idxR].statut = 'rejete';
+        this.toastService.show(`Dossier rejeté : ${cand.candidat_nom}`, 'warning');
+        this.fermerDossierOCR();
+        this.loadCandidaturesResponsable();
+        this.appliquerFiltresResponsable();
+      },
+      error: (err: any) => {
+        this.toastService.show(err?.error?.error || 'Erreur mise à jour statut', 'error');
+      },
+    });
   }
 
   updateCandidatureStatus(id: number, statut: string): void {
@@ -923,6 +1041,9 @@ export class DashboardCommissionComponent implements OnInit {
         if (idx >= 0) this.candidatures[idx].statut = statut;
         const idxR = this.candidaturesResponsable.findIndex((c) => c.id === id);
         if (idxR >= 0) this.candidaturesResponsable[idxR].statut = statut;
+        // Refresh global après tout changement de statut
+        this.loadCandidaturesResponsable();
+        this.appliquerFiltresResponsable();
       },
       error: (err: any) => {
         this.toastService.show(err?.error?.error || 'Erreur mise à jour statut', 'error');
@@ -939,8 +1060,29 @@ export class DashboardCommissionComponent implements OnInit {
     }
   }
 
-  togglePrsKebab(id: number): void {
+  prsKebabPos: { top: number; left: number } = { top: 0, left: 0 };
+
+  togglePrsKebab(id: number, event?: MouseEvent): void {
     this.prsKebabOpenId = this.prsKebabOpenId === id ? 0 : id;
+    if (this.prsKebabOpenId === id && event) {
+      const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        // Menu en position fixed : au-dessus à gauche du bouton
+        this.prsKebabPos = {
+          top: rect.top - 145,  // 145px = hauteur estimée du menu (3 items)
+          left: rect.left - 180,  // décale vers la gauche
+        };
+        // Si pas assez de place en haut, ouvre vers le bas
+        if (this.prsKebabPos.top < 10) {
+          this.prsKebabPos.top = rect.bottom + 4;
+        }
+        // Si pas assez de place à gauche, aligner sur le bouton
+        if (this.prsKebabPos.left < 10) {
+          this.prsKebabPos.left = rect.left;
+        }
+      }
+    }
   }
 
   toggleSelKebab(id: number): void {
@@ -1422,7 +1564,12 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getVisibleCandidaturesForTable(): Candidature[] {
-    let rows = (this.candidaturesFiltrees || []).slice();
+    // En vue Présélection responsable : utiliser candidaturesResponsableFiltrees (source API)
+    const sourceList =
+      this.currentView === 'avis-listes' && this.isResponsable
+        ? this.candidaturesResponsableFiltrees
+        : this.candidaturesFiltrees;
+    let rows = (sourceList || []).slice();
     // In présélection responsable view, show only préselectionné candidates
     if (this.currentView === 'avis-listes' && this.isResponsable) {
       rows = rows.filter((r) => r.statut === 'preselectionne');
@@ -2285,6 +2432,37 @@ export class DashboardCommissionComponent implements OnInit {
   selectedOCRCandidature: Candidature | null = null;
 
   candidatureVotes: Record<number, CandidatureVoteAvis[]> = {};
+  avisMembreLoading: boolean = false;
+
+  /** Liste stricte des spécialités diplôme pour le master MPGL (filtre + tableau). */
+  readonly SPECIALITES_DIPLOME_MPGL: string[] = [
+    'Licence en Sciences de l\'Informatique génie logiciel',
+    'Informatique de Gestion',
+    'Génie logiciel et systèmes d\'information',
+    'Génie logiciel',
+    'Licence appliquée en développement des systèmes informatiques',
+    'Big data et Analyse de données',
+    'Business Computing',
+  ];
+
+  /**
+   * TRUE si l'utilisateur peut donner un avis de membre commission.
+   * Conditions :
+   *  - Drawer ouvert sur un candidat (`dossierOCRCandidature` non null)
+   *  - User connecté ET pas responsable_commission ni admin ni candidat
+   *  - User a au moins une commission active (déduit de availableCommissions)
+   */
+  get canMembreVote(): boolean {
+    if (!this.dossierOCRCandidature) return false;
+    const role = (this.currentUser?.role || '').toLowerCase();
+    if (!role) return false;
+    // Exclure les rôles non-membres
+    if (['responsable_commission', 'responsable', 'admin', 'candidat'].includes(role)) {
+      return false;
+    }
+    // Tout autre rôle = membre potentiel (commission, membre, etc.)
+    return true;
+  }
 
   inscriptionsExcelRows: any[] = [];
   inscriptionsVerificationRows: InscriptionVerificationRow[] = [];
@@ -4423,8 +4601,111 @@ export class DashboardCommissionComponent implements OnInit {
     this.bulkListType = type;
   }
 
+  // Modal Décision Finale (Sélectionner / Rejeter)
+  showFinalDecisionModal: boolean = false;
+  finalDecisionLoading: boolean = false;
+
   showConfirm(): void {
-    this.validateBulkSelection();
+    this.showFinalDecisionModal = true;
+  }
+
+  closeFinalDecisionModal(): void {
+    this.showFinalDecisionModal = false;
+  }
+
+  /**
+   * Action "SÉLECTIONNER" :
+   *  - Tous les candidats actuellement visibles dans la vue Présélection (statut='preselectionne')
+   *    passent à 'selectionne'
+   *  - Bascule auto vers Nav Sélection
+   */
+  decisionFinaleSelectionner(): void {
+    if (this.finalDecisionLoading) return;
+    const candidats = this.getVisibleCandidaturesForTable()
+      .filter((c) => c.statut === 'preselectionne');
+    if (candidats.length === 0) {
+      this.toastService.show('Aucun candidat présélectionné à sélectionner.', 'warning');
+      this.closeFinalDecisionModal();
+      return;
+    }
+    this.finalDecisionLoading = true;
+    let done = 0;
+    candidats.forEach((cand) => {
+      this.candidatureService.updateStatus(cand.id, 'selectionne').subscribe({
+        next: () => {
+          done++;
+          // MAJ locale immédiate
+          const idx = this.candidatures.findIndex((c) => c.id === cand.id);
+          if (idx >= 0) this.candidatures[idx].statut = 'selectionne';
+          const idxR = this.candidaturesResponsable.findIndex((c) => c.id === cand.id);
+          if (idxR >= 0) this.candidaturesResponsable[idxR].statut = 'selectionne';
+          if (done === candidats.length) {
+            this.finalDecisionLoading = false;
+            this.closeFinalDecisionModal();
+            this.toastService.show(
+              `✅ ${candidats.length} candidat(s) sélectionné(s) — bascule vers Sélection`,
+              'success',
+            );
+            this.loadCandidaturesResponsable();
+            this.appliquerFiltresResponsable();
+            setTimeout(() => this.switchView('listes'), 400);
+          }
+        },
+        error: () => {
+          done++;
+          if (done === candidats.length) {
+            this.finalDecisionLoading = false;
+            this.closeFinalDecisionModal();
+            this.toastService.show('Erreur partielle pendant la sélection.', 'error');
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * Action "REJETER" : passe tous les candidats présélectionnés à 'rejete'
+   */
+  decisionFinaleRejeter(): void {
+    if (this.finalDecisionLoading) return;
+    const candidats = this.getVisibleCandidaturesForTable()
+      .filter((c) => c.statut === 'preselectionne');
+    if (candidats.length === 0) {
+      this.toastService.show('Aucun candidat à rejeter.', 'warning');
+      this.closeFinalDecisionModal();
+      return;
+    }
+    if (!window.confirm(`Rejeter ${candidats.length} candidat(s) ? Cette action est irréversible.`)) {
+      return;
+    }
+    this.finalDecisionLoading = true;
+    let done = 0;
+    candidats.forEach((cand) => {
+      this.candidatureService.updateStatus(cand.id, 'rejete').subscribe({
+        next: () => {
+          done++;
+          const idx = this.candidatures.findIndex((c) => c.id === cand.id);
+          if (idx >= 0) this.candidatures[idx].statut = 'rejete';
+          const idxR = this.candidaturesResponsable.findIndex((c) => c.id === cand.id);
+          if (idxR >= 0) this.candidaturesResponsable[idxR].statut = 'rejete';
+          if (done === candidats.length) {
+            this.finalDecisionLoading = false;
+            this.closeFinalDecisionModal();
+            this.toastService.show(`${candidats.length} candidat(s) rejeté(s)`, 'warning');
+            this.loadCandidaturesResponsable();
+            this.appliquerFiltresResponsable();
+          }
+        },
+        error: () => {
+          done++;
+          if (done === candidats.length) {
+            this.finalDecisionLoading = false;
+            this.closeFinalDecisionModal();
+            this.toastService.show('Erreur partielle pendant le rejet.', 'error');
+          }
+        },
+      });
+    });
   }
 
   toggleExport(evt?: Event): void {
@@ -4535,7 +4816,9 @@ export class DashboardCommissionComponent implements OnInit {
         this.toastService.show('Session expirée. Veuillez vous reconnecter.', 'error');
         return;
       }
-      const masterId = this.activeCommissionId
+      // FIX : convertir commission ID -> master ID via availableCommissions (master_id fourni par my-commissions API)
+      const activeComm = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
+      const masterId = activeComm?.master_id
         ?? (Number.isFinite(Number(this.selectedMasterForCandidatures)) ? Number(this.selectedMasterForCandidatures) : null);
       if (!masterId) {
         this.toastService.show('Veuillez sélectionner une commission avant de générer le PDF.', 'warning');
@@ -5738,6 +6021,22 @@ export class DashboardCommissionComponent implements OnInit {
 
     if (view === 'listes') {
       this.loadDerniereListeGenereeDepuisBackend();
+      // ► PEUPLE finalSelectionCandidates depuis les candidatures responsable
+      // (statuts éligibles : selectionne + preselectionne)
+      this.populateFinalSelectionFromApi();
+    }
+
+    // Vue Présélection : charger les avis pour le 1er candidat préselectionné par défaut
+    if (view === 'avis-listes' && this.isResponsable) {
+      setTimeout(() => {
+        const visibles = this.getVisibleCandidaturesForTable();
+        if (visibles.length > 0 && !this.candidatureSelectionnee) {
+          this.candidatureSelectionnee = visibles[0];
+        }
+        if (this.candidatureSelectionnee) {
+          this.loadAvisForCandidature(this.candidatureSelectionnee.id);
+        }
+      }, 200);
     }
   }
 
@@ -6679,6 +6978,114 @@ export class DashboardCommissionComponent implements OnInit {
     return this.candidatureVotes[candidatureId] || [];
   }
 
+  /**
+   * Charge les vrais avis depuis l'API et les croise avec la liste des membres
+   * pour afficher : favorable / défavorable / en_attente pour CHAQUE membre.
+   * Appelé quand on entre dans la vue Présélection ou qu'on sélectionne un candidat.
+   */
+  loadAvisForCandidature(candidatureId: number): void {
+    if (!candidatureId) return;
+    this.candidatureService.getAvisCandidature(candidatureId).subscribe({
+      next: (res: any) => {
+        const avisList = res?.avis || [];
+        // Normaliser en CandidatureVoteAvis (champs renvoyés par AvisMembreSerializer)
+        this.candidatureVotes[candidatureId] = avisList.map((a: any) => ({
+          membreNom: a.membre_name || '',
+          membreEmail: a.membre_email || '',
+          recommandation:
+            a.avis_type === 'favorable' || a.avis === true ? 'favorable' : 'defavorable',
+          commentaire: a.argument || '',
+          date: a.date || a.date_avis || '',
+        }));
+      },
+      error: (err) => {
+        console.warn('loadAvisForCandidature error:', err);
+      },
+    });
+  }
+
+  /**
+   * MEMBRE COMMISSION : soumet un avis Favorable / Défavorable sur le candidat
+   * actuellement ouvert dans le drawer OCR.
+   *
+   * - avis=true  → Favorable
+   * - avis=false → Défavorable (un commentaire est demandé via prompt)
+   *
+   * Côté backend : POST /api/candidatures/<id>/avis/
+   * { avis: bool, argument: string, commission_id?: number }
+   */
+  donnerAvisMembre(favorable: boolean): void {
+    if (!this.dossierOCRCandidature || this.avisMembreLoading) return;
+    const cand = this.dossierOCRCandidature;
+
+    let argument = '';
+    if (!favorable) {
+      argument = (window.prompt(
+        'Avis défavorable : merci de saisir un argument (obligatoire).',
+        '',
+      ) || '').trim();
+      if (!argument) {
+        this.toastService.show('Argument obligatoire pour un avis défavorable.', 'warning');
+        return;
+      }
+    } else {
+      argument = (window.prompt(
+        'Commentaire (optionnel) :', '',
+      ) || '').trim();
+    }
+
+    // Détermine la commission active (utilisée pour cibler l'avis)
+    const activeComm = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
+    const commission_id = activeComm?.id || undefined;
+
+    this.avisMembreLoading = true;
+    this.candidatureService
+      .soumettreAvisMembre(cand.id, {
+        avis: favorable,
+        argument,
+        commission_id,
+      })
+      .subscribe({
+        next: (res: any) => {
+          this.avisMembreLoading = false;
+          const label = favorable ? 'Favorable' : 'Défavorable';
+          this.toastService.show(`✅ Avis ${label} enregistré pour ${cand.candidat_nom}`, 'success');
+          // Recharger les avis localement pour cohérence
+          this.loadAvisForCandidature(cand.id);
+          this.fermerDossierOCR();
+        },
+        error: (err: any) => {
+          this.avisMembreLoading = false;
+          const msg = err?.error?.error || err?.message || 'Erreur enregistrement avis';
+          this.toastService.show(msg, 'error');
+        },
+      });
+  }
+
+  /**
+   * Retourne l'avis d'un membre donné pour la candidature sélectionnée :
+   *   { choix: 'favorable' | 'defavorable' | 'en_attente', commentaire, date }
+   */
+  getAvisMembrePourCandidature(membreEmail: string): {
+    choix: 'favorable' | 'defavorable' | 'en_attente';
+    commentaire: string;
+    date: string;
+  } {
+    const id = this.candidatureSelectionnee?.id;
+    if (!id) return { choix: 'en_attente', commentaire: '', date: '' };
+    const votes = this.candidatureVotes[id] || [];
+    const vote = votes.find(
+      (v: any) =>
+        (v.membreEmail || '').toLowerCase() === (membreEmail || '').toLowerCase(),
+    );
+    if (!vote) return { choix: 'en_attente', commentaire: '', date: '' };
+    return {
+      choix: (vote.recommandation === 'favorable' ? 'favorable' : 'defavorable') as any,
+      commentaire: (vote as any).commentaire || '',
+      date: (vote as any).date || '',
+    };
+  }
+
   getAllVotesDisplay(candidatureId: number): string {
     const votes = this.getVotesForCandidature(candidatureId);
     if (!votes.length) {
@@ -7388,8 +7795,8 @@ export class DashboardCommissionComponent implements OnInit {
   getStatusDisplayLabel(statut: string): string {
     const labels: Record<string, string> = {
       soumis: 'Soumis',
-      sous_examen: 'Sous examen',
-      preselectionne: 'Admissible',
+      sous_examen: 'En examen',
+      preselectionne: 'Présélectionné',
       en_attente_dossier: 'En attente dossier',
       dossier_depose: 'Dossier déposé',
       dossier_non_depose: 'Dossier non déposé',
@@ -7764,6 +8171,49 @@ export class DashboardCommissionComponent implements OnInit {
   initSelectionTestData(): void {
     this.selectionCandidates = [];
     this.selectionFiltered = [];
+  }
+
+  /**
+   * Peuple finalSelectionCandidates à partir de la liste API responsable.
+   * Inclut les statuts : selectionne, preselectionne, inscrit (visibles dans Sélection).
+   * Recharge depuis l'API si la liste est vide pour garantir des données fraîches.
+   */
+  populateFinalSelectionFromApi(): void {
+    const buildFromList = () => {
+      const eligibles = (this.candidaturesResponsable || []).filter((c) =>
+        ['selectionne', 'preselectionne', 'inscrit'].includes(c.statut),
+      );
+      const sorted = [...eligibles].sort(
+        (a, b) => Number(b.score || 0) - Number(a.score || 0),
+      );
+      this.finalSelectionCandidates = sorted.map((c, idx) => ({
+        id: Number(c.id),
+        rang: idx + 1,
+        num: c.numero || `CAND-${c.id}`,
+        nom: c.candidat_nom || '',
+        spec: c.specialite || c.master_nom || '',
+        score: Number(c.score || 0),
+        interne: !this.isExternalCandidate(c),
+        presel: 'oui' as FinalSelectionPresel,
+        statut:
+          c.statut === 'selectionne' || c.statut === 'inscrit' ? 'lp' : '' as FinalSelectionDecision,
+        obs: '',
+      }));
+      this.updateFinalSelectionFiltered();
+    };
+
+    if (!this.candidaturesResponsable || this.candidaturesResponsable.length === 0) {
+      // Charge depuis API puis construit
+      this.candidatureService.getCandidaturesCommissionClassees().subscribe({
+        next: (data: any[]) => {
+          this.candidaturesResponsable = data || [];
+          buildFromList();
+        },
+        error: () => buildFromList(),
+      });
+    } else {
+      buildFromList();
+    }
   }
 
   nouvelleListe(type: 'preselection' | 'selection'): void {

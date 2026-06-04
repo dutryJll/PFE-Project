@@ -177,6 +177,31 @@ export class CandidatureService {
     );
   }
 
+  // POUR COMMISSION / CANDIDAT : lister les fichiers réels déposés par le candidat
+  // (scan filesystem côté Django)
+  getFichiersDeposes(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${candidatureId}/list-fichiers-deposes/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // POUR COMMISSION : lister les avis d'une candidature (responsable + membres)
+  getAvisCandidature(candidatureId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${candidatureId}/avis/list/`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  // POUR MEMBRE COMMISSION : soumettre/mettre à jour son avis sur une candidature
+  soumettreAvisMembre(
+    candidatureId: number,
+    payload: { avis: boolean; argument?: string; commission_id?: number },
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${candidatureId}/avis/`, payload, {
+      headers: this.getHeaders(),
+    });
+  }
+
   // POUR COMMISSION : spécialités de diplômes admissibles pour un master donné
   // Source : SpecialiteParcoursMapping (seedé via migration 0025 / seed_specialites_parcours)
   // Le composant extrait res.specialites depuis la réponse.

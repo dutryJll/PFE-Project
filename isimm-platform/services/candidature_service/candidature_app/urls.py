@@ -39,6 +39,7 @@ urlpatterns = router.urls + [
     path('responsable/mes-masters/', views.get_mes_masters, name='get_mes_masters'),
     path('responsable/notifications/', views.notifications_responsable, name='notifications_responsable'),
     path('upload-fichier/', views.upload_fichier_dossier, name='upload_fichier_dossier'),
+    path('<int:candidature_id>/list-fichiers-deposes/', views.list_fichiers_deposes, name='list_fichiers_deposes'),
     path('mes-dossiers/', views.mes_dossiers, name='mes_dossiers'),
     path('dossiers-ocr/', views.lister_dossiers_ocr, name='lister_dossiers_ocr'),
     path('<int:candidature_id>/modifier/', views.modifier_candidature, name='modifier_candidature'),

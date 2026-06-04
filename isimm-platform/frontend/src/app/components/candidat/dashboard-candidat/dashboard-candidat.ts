@@ -728,24 +728,21 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       id: 1,
       nom: 'Formulaire de candidature au Mastère en Informatique (joint à cet avis)',
       icon: 'fa-file-signature',
-      depose: true,
-      date_depot: '2026-02-10',
+      depose: false,
       obligatoire: true,
     },
     {
       id: 2,
       nom: 'Fiche de candidature imprimée depuis le site web et dûment signée',
       icon: 'fa-clipboard-check',
-      depose: true,
-      date_depot: '2026-02-10',
+      depose: false,
       obligatoire: true,
     },
     {
       id: 3,
       nom: "Curriculum Vitae (CV) d'une page avec adresse postale, téléphone et e-mail",
       icon: 'fa-user-tie',
-      depose: true,
-      date_depot: '2026-02-12',
+      depose: false,
       obligatoire: true,
     },
     {
@@ -3980,14 +3977,27 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   canModifyCandidature(candidature: Candidature): boolean {
-    if (candidature.statut !== 'soumis' || candidature.peut_modifier !== true) {
+    // ► Statuts permettant la modification/dépôt du dossier
+    const editableStatuts = [
+      'soumis',
+      'preselectionne',
+      'en_attente_dossier',
+      'dossier_depose',
+    ];
+    if (!editableStatuts.includes(candidature.statut)) {
       return false;
     }
-
+    // Pour 'preselectionne' : autoriser indépendamment de la deadline
+    if (candidature.statut === 'preselectionne' || candidature.statut === 'en_attente_dossier') {
+      return true;
+    }
+    // Pour 'soumis' : check classique avec deadline
+    if (candidature.peut_modifier !== true) {
+      return false;
+    }
     if (!candidature.date_limite_modification) {
       return false;
     }
-
     return new Date(candidature.date_limite_modification).getTime() > this.countdownNow;
   }
 

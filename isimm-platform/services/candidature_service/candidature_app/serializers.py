@@ -247,6 +247,7 @@ class CritereEvaluationSerializer(serializers.ModelSerializer):
 class AvisMembreSerializer(serializers.ModelSerializer):
     membre_id = serializers.IntegerField(source='membre.id', read_only=True)
     membre_user = serializers.CharField(source='membre.user.username', read_only=True)
+    membre_email = serializers.EmailField(source='membre.user.email', read_only=True)
     membre_name = serializers.SerializerMethodField()
     candidature_id = serializers.IntegerField(source='candidature.id', read_only=True)
     candidature_numero = serializers.SerializerMethodField()
@@ -262,6 +263,7 @@ class AvisMembreSerializer(serializers.ModelSerializer):
             'membre',
             'membre_id',
             'membre_user',
+            'membre_email',
             'membre_name',
             'candidature',
             'candidature_id',
@@ -280,6 +282,7 @@ class AvisMembreSerializer(serializers.ModelSerializer):
             'date',
             'membre_id',
             'membre_user',
+            'membre_email',
             'membre_name',
             'candidature_id',
             'candidature_numero',

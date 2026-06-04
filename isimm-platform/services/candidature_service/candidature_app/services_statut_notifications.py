@@ -154,13 +154,15 @@ class StatutNotificationService:
             }
         )
         
-        # 1. Créer la notification in-app
-        notification = Notification.objects.create(
+        # 1. Créer/Mettre à jour la notification in-app (dedup_key UNIQUE)
+        notification, _created = Notification.objects.update_or_create(
             user=candidature.candidat,
-            titre=message_config['title'],
-            message=message_config['message'],
-            type=message_config['type'],
-            dedup_key=f"candidature_{candidature.id}_{nouveau_statut}"
+            dedup_key=f"candidature_{candidature.id}_{nouveau_statut}",
+            defaults={
+                'titre': message_config['title'],
+                'message': message_config['message'],
+                'type': message_config['type'],
+            },
         )
         
         status_history.notification_envoyee = True

@@ -1109,10 +1109,8 @@
                 <div class="cc-cand-actions">
                   <button type="button" class="cc-act-btn cc-act-recap" (click)="voirRecapitulatif(candidature)"><i class="fas fa-file-alt"></i> Récapitulatif</button>
                   <button type="button" class="cc-act-btn cc-act-edit"
-                    [class.disabled]="!canModifyCandidature(candidature)"
-                    [disabled]="!canModifyCandidature(candidature)"
                     (click)="modifierCandidature(candidature)">
-                    <i class="fas fa-pen"></i> {{ canModifyCandidature(candidature) ? 'Modifier' : 'Expiré' }}
+                    <i class="fas fa-pen"></i> Modifier
                   </button>
                   <button type="button" class="cc-act-btn cc-act-follow" (click)="suivreCandidature(candidature)"><i class="fas fa-chart-line"></i> Suivre</button>
                 </div>
@@ -1180,10 +1178,8 @@
                 <div class="cc-cand-actions">
                   <button type="button" class="cc-act-btn cc-act-recap" (click)="voirRecapitulatif(candidature)"><i class="fas fa-file-alt"></i> Récapitulatif</button>
                   <button type="button" class="cc-act-btn cc-act-edit"
-                    [class.disabled]="!canModifyCandidature(candidature)"
-                    [disabled]="!canModifyCandidature(candidature)"
                     (click)="modifierCandidature(candidature)">
-                    <i class="fas fa-pen"></i> {{ canModifyCandidature(candidature) ? 'Modifier' : 'Expiré' }}
+                    <i class="fas fa-pen"></i> Modifier
                   </button>
                   <button type="button" class="cc-act-btn cc-act-follow" (click)="suivreCandidature(candidature)"><i class="fas fa-chart-line"></i> Suivre</button>
                 </div>
