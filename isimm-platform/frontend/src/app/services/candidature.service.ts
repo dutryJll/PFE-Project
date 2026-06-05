@@ -185,6 +185,33 @@ export class CandidatureService {
     });
   }
 
+  // POUR RESPONSABLE/COMMISSION : analyse OCR par lot sur plusieurs candidatures
+  analyserOcrLot(candidatureIds: number[]): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/analyser-ocr-lot/`,
+      { candidature_ids: candidatureIds },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // Export du rapport de conformité OCR au format Excel
+  exportRapportOcrExcel(candidatureIds: number[]): Observable<Blob> {
+    return this.http.post(
+      `${this.apiUrl}/rapport-conformite-ocr/excel/`,
+      { candidature_ids: candidatureIds },
+      { headers: this.getHeaders(), responseType: 'blob' },
+    );
+  }
+
+  // Export du rapport de conformité OCR au format PDF
+  exportRapportOcrPdf(candidatureIds: number[]): Observable<Blob> {
+    return this.http.post(
+      `${this.apiUrl}/rapport-conformite-ocr/pdf/`,
+      { candidature_ids: candidatureIds },
+      { headers: this.getHeaders(), responseType: 'blob' },
+    );
+  }
+
   // POUR COMMISSION : lister les avis d'une candidature (responsable + membres)
   getAvisCandidature(candidatureId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/${candidatureId}/avis/list/`, {

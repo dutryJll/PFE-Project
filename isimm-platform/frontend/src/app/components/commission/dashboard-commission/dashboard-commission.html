@@ -2085,6 +2085,16 @@
           >
             <i class="fas fa-eye"></i> Consulter
           </button>
+          <!-- NOUVEAU : Analyse OCR par lot -->
+          <button
+            class="cm-banner-btn cm-banner-ocr"
+            type="button"
+            [disabled]="ocrLotLoading"
+            (click)="lancerAnalyseOcrLot()"
+          >
+            <i class="fas" [ngClass]="ocrLotLoading ? 'fa-spinner fa-spin' : 'fa-robot'"></i>
+            {{ ocrLotLoading ? 'Analyse en cours…' : 'Analyser par Lot (OCR)' }}
+          </button>
           <button
             class="cm-banner-btn cm-banner-clear"
             type="button"
@@ -2092,6 +2102,95 @@
           >
             <i class="fas fa-times"></i> Désélectionner
           </button>
+        </div>
+
+        <!-- Modal résultat Analyse OCR par lot -->
+        <div class="ocr-lot-backdrop" *ngIf="ocrLotResultats" (click)="fermerOcrLotResultats()">
+          <div class="ocr-lot-modal" (click)="$event.stopPropagation()">
+            <div class="ocr-lot-head">
+              <h3><i class="fas fa-robot"></i> Résultats Analyse OCR par Lot</h3>
+              <div class="ocr-lot-head-actions">
+                <button
+                  class="ocr-lot-export ocr-lot-export-excel"
+                  type="button"
+                  [disabled]="ocrRapportExportLoading !== null"
+                  (click)="exporterRapportOcr('excel')"
+                  title="Télécharger le rapport au format Excel"
+                >
+                  <i class="fas" [ngClass]="ocrRapportExportLoading === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+                  {{ ocrRapportExportLoading === 'excel' ? 'Génération...' : 'Exporter Excel' }}
+                </button>
+                <button
+                  class="ocr-lot-export ocr-lot-export-pdf"
+                  type="button"
+                  [disabled]="ocrRapportExportLoading !== null"
+                  (click)="exporterRapportOcr('pdf')"
+                  title="Télécharger le rapport au format PDF"
+                >
+                  <i class="fas" [ngClass]="ocrRapportExportLoading === 'pdf' ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+                  {{ ocrRapportExportLoading === 'pdf' ? 'Génération...' : 'Exporter PDF' }}
+                </button>
+                <button class="ocr-lot-close" (click)="fermerOcrLotResultats()">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+            <div class="ocr-lot-body">
+              <div class="ocr-lot-stats">
+                <div class="ocr-lot-stat ocr-lot-stat-total">
+                  <strong>{{ ocrLotResultats.total }}</strong>
+                  <span>Total</span>
+                </div>
+                <div class="ocr-lot-stat ocr-lot-stat-ok">
+                  <strong>{{ ocrLotResultats.analysees }}</strong>
+                  <span>Analysées</span>
+                </div>
+                <div class="ocr-lot-stat ocr-lot-stat-fraud">
+                  <strong>{{ ocrLotResultats.fraudes_detectees }}</strong>
+                  <span>Anomalies</span>
+                </div>
+                <div class="ocr-lot-stat ocr-lot-stat-err">
+                  <strong>{{ ocrLotResultats.erreurs }}</strong>
+                  <span>Erreurs</span>
+                </div>
+              </div>
+              <table class="ocr-lot-table">
+                <thead>
+                  <tr>
+                    <th>Candidat</th>
+                    <th>N° Cand.</th>
+                    <th>Score déclaré</th>
+                    <th>Score OCR</th>
+                    <th>Écart Δ</th>
+                    <th>Moteur</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of ocrLotResultats.resultats" [class.ocr-lot-row-fraud]="r.flag_fraude">
+                    <td>{{ r.candidat_nom || '—' }}</td>
+                    <td>{{ r.numero || '—' }}</td>
+                    <td>{{ r.score_declare != null ? r.score_declare : '—' }}</td>
+                    <td>{{ r.score_extrait != null ? r.score_extrait : '—' }}</td>
+                    <td [class.ocr-lot-delta-bad]="r.flag_fraude">
+                      {{ r.delta != null ? r.delta : '—' }}
+                    </td>
+                    <td>{{ r.moteur || '—' }}</td>
+                    <td>
+                      <span class="ocr-lot-badge"
+                        [class.ocr-lot-bg-fraud]="r.flag_fraude"
+                        [class.ocr-lot-bg-ok]="r.success && !r.flag_fraude"
+                        [class.ocr-lot-bg-err]="!r.success">
+                        <ng-container *ngIf="!r.success">❌ Erreur</ng-container>
+                        <ng-container *ngIf="r.success && r.flag_fraude">⚠️ Anomalie</ng-container>
+                        <ng-container *ngIf="r.success && !r.flag_fraude">✓ Cohérent</ng-container>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 

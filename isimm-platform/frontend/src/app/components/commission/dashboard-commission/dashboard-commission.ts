@@ -730,6 +730,81 @@ export class DashboardCommissionComponent implements OnInit {
   fichiersDeposes: any[] = [];
   fichiersDeposesLoading: boolean = false;
 
+  // --- Analyse OCR par lot ---
+  ocrLotLoading: boolean = false;
+  ocrLotResultats: any = null;
+
+  lancerAnalyseOcrLot(): void {
+    if (this.cmSelectedIds.size === 0 || this.ocrLotLoading) return;
+    const ids = Array.from(this.cmSelectedIds);
+    this.ocrLotLoading = true;
+    this.ocrLotResultats = null;
+    this.toastService.show(`Analyse OCR par lot lancée sur ${ids.length} candidature(s)…`, 'info');
+
+    this.candidatureService.analyserOcrLot(ids).subscribe({
+      next: (res: any) => {
+        this.ocrLotResultats = res;
+        this.ocrLotLoading = false;
+        const msg = `✅ ${res.analysees}/${res.total} analysées — ${res.fraudes_detectees} anomalie(s) détectée(s)`;
+        this.toastService.show(msg, res.fraudes_detectees > 0 ? 'warning' : 'success');
+      },
+      error: (err: any) => {
+        this.ocrLotLoading = false;
+        const msg = err?.error?.error || err?.message || 'Erreur OCR par lot';
+        this.toastService.show(msg, 'error');
+      },
+    });
+  }
+
+  fermerOcrLotResultats(): void {
+    this.ocrLotResultats = null;
+  }
+
+  // ── Export rapport de conformité OCR (Excel / PDF) ──
+  ocrRapportExportLoading: 'excel' | 'pdf' | null = null;
+
+  exporterRapportOcr(format: 'excel' | 'pdf'): void {
+    const ids = Array.from(this.cmSelectedIds);
+    if (ids.length === 0) {
+      this.toastService.show('Aucune candidature sélectionnée.', 'warning');
+      return;
+    }
+    if (this.ocrRapportExportLoading) return;
+    this.ocrRapportExportLoading = format;
+    this.toastService.show(
+      `Génération du rapport de conformité ${format.toUpperCase()}...`,
+      'info',
+    );
+
+    const obs =
+      format === 'excel'
+        ? this.candidatureService.exportRapportOcrExcel(ids)
+        : this.candidatureService.exportRapportOcrPdf(ids);
+
+    obs.subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date()
+          .toISOString()
+          .replace(/[:T]/g, '-')
+          .slice(0, 16);
+        const ext = format === 'excel' ? 'xlsx' : 'pdf';
+        a.href = url;
+        a.download = `Rapport_Conformite_OCR_${stamp}.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.ocrRapportExportLoading = null;
+        this.toastService.show(`✅ Rapport ${format.toUpperCase()} téléchargé.`, 'success');
+      },
+      error: (err) => {
+        this.ocrRapportExportLoading = null;
+        const msg = err?.error?.error || err?.message || 'Erreur export rapport';
+        this.toastService.show(msg, 'error');
+      },
+    });
+  }
+
   ouvrirDossierOCR(c: Candidature): void {
     this.dossierOCRCandidature = c;
     this.dossierOCRActiveTab = 'documents';

@@ -44,14 +44,33 @@ def _build_qr_url(request, etape: str, master_id: int, specialite: str = '') -> 
 def _candidature_to_dict(c: Candidature) -> dict:
     """Sérialise une Candidature en dict pour le générateur PDF."""
     candidat = c.candidat if hasattr(c, 'candidat') else None
+
+    # Extrait la spécialité diplôme depuis DonneesAcademiques.notes_detaillees
+    specialite_diplome = ''
+    try:
+        from .models import DonneesAcademiques
+        da = DonneesAcademiques.objects.filter(candidature=c).first()
+        if da and isinstance(da.notes_detaillees, dict):
+            specialite_diplome = (
+                da.notes_detaillees.get('specialite_diplome')
+                or (da.notes_detaillees.get('payload') or {}).get('specialite_diplome')
+                or ''
+            )
+    except Exception:
+        pass
+
+    # Type candidat : interne si email finit par @isimm.tn, externe sinon
+    candidat_email = (getattr(candidat, 'email', '') or '').lower()
+    type_candidat = 'interne' if candidat_email.endswith('@isimm.tn') else 'externe'
+
     return {
         'num_dossier': getattr(c, 'numero', '') or str(c.id),
         'nom': getattr(candidat, 'last_name', '') if candidat else (getattr(c, 'candidat_nom', '') or ''),
         'prenom': getattr(candidat, 'first_name', '') if candidat else '',
         'cin': getattr(candidat, 'cin', '') if candidat else (getattr(c, 'cin_passeport', '') or ''),
         'score': float(getattr(c, 'score', 0) or 0),
-        'type_candidat': getattr(c, 'type_candidat', 'externe') or 'externe',
-        'specialite_candidat': getattr(c, 'specialite', '') or '',
+        'type_candidat': type_candidat,
+        'specialite_candidat': specialite_diplome or getattr(c, 'specialite', '') or 'Spécialité non renseignée',
     }
 
 

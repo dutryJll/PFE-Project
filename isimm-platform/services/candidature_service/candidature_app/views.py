@@ -6439,3 +6439,405 @@ def _human_size(size_bytes):
     if size_bytes < 1024 * 1024:
         return f'{size_bytes / 1024:.1f} Ko'
     return f'{size_bytes / 1024 / 1024:.1f} Mo'
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# POST /api/candidatures/analyser-ocr-lot/
+# Analyse OCR par lot sur plusieurs candidatures en une seule fois
+# Body : { "candidature_ids": [9, 153, ...] }
+# ──────────────────────────────────────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def analyser_ocr_lot(request):
+    """Lance l'analyse OCR sur une liste de candidatures (1er PDF de chaque dossier)."""
+    import os as _os
+    from django.conf import settings as _settings
+    from .services_ocr_local import OCRDocumentAuditor
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    ids = request.data.get('candidature_ids') or []
+    if not isinstance(ids, list) or not ids:
+        return Response(
+            {'error': 'Le champ candidature_ids doit etre une liste non vide.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    media_root = str(getattr(_settings, 'MEDIA_ROOT', ''))
+    auditor = OCRDocumentAuditor()
+    resultats = []
+    erreurs = 0
+    fraudes = 0
+
+    for cand_id in ids:
+        try:
+            cand = Candidature.objects.select_related('candidat').get(pk=int(cand_id))
+        except (Candidature.DoesNotExist, ValueError, TypeError):
+            resultats.append({
+                'candidature_id': cand_id,
+                'candidat_nom': '',
+                'success': False,
+                'error': 'Candidature introuvable',
+            })
+            erreurs += 1
+            continue
+
+        # Cherche le 1er PDF dans le dossier
+        cand_dir = _os.path.join(media_root, 'dossiers', str(cand.id))
+        pdf_path = None
+        if _os.path.isdir(cand_dir):
+            for subdir in sorted(_os.listdir(cand_dir)):
+                full_subdir = _os.path.join(cand_dir, subdir)
+                if _os.path.isdir(full_subdir):
+                    for fname in sorted(_os.listdir(full_subdir)):
+                        if fname.lower().endswith('.pdf'):
+                            pdf_path = _os.path.join(full_subdir, fname)
+                            break
+                    if pdf_path:
+                        break
+
+        if not pdf_path:
+            resultats.append({
+                'candidature_id': cand.id,
+                'candidat_nom': cand.candidat.get_full_name(),
+                'success': False,
+                'error': 'Aucun PDF depose',
+            })
+            erreurs += 1
+            continue
+
+        try:
+            with open(pdf_path, 'rb') as f:
+                from django.core.files.base import ContentFile
+                file_obj = ContentFile(f.read(), name=_os.path.basename(pdf_path))
+            score_declare = float(cand.score or 0) or None
+            res = auditor.analyser_document(file_obj, score_declare=score_declare)
+            if res.get('flag_fraude'):
+                fraudes += 1
+            resultats.append({
+                'candidature_id': cand.id,
+                'candidat_nom': cand.candidat.get_full_name(),
+                'numero': cand.numero,
+                'success': True,
+                'score_extrait': res.get('score_extrait'),
+                'score_declare': res.get('score_declare'),
+                'delta': res.get('delta'),
+                'flag_fraude': bool(res.get('flag_fraude')),
+                'confiance': res.get('confiance'),
+                'moteur': res.get('moteur'),
+                'fichier': _os.path.basename(pdf_path),
+            })
+        except Exception as exc:
+            logger.exception('OCR lot — erreur sur candidature %s', cand.id)
+            resultats.append({
+                'candidature_id': cand.id,
+                'candidat_nom': cand.candidat.get_full_name(),
+                'success': False,
+                'error': str(exc)[:200],
+            })
+            erreurs += 1
+
+    return Response({
+        'total': len(ids),
+        'analysees': sum(1 for r in resultats if r.get('success')),
+        'erreurs': erreurs,
+        'fraudes_detectees': fraudes,
+        'resultats': resultats,
+    })
+
+
+def _build_rapport_data(request, candidature_ids):
+    """Helper : exécute l'OCR sur les candidatures + retourne (data list + meta).
+
+    Réutilisé par les endpoints Excel et PDF.
+    """
+    import os as _os
+    from django.conf import settings as _settings
+    from .services_ocr_local import OCRDocumentAuditor
+    from django.core.files.base import ContentFile
+
+    media_root = str(getattr(_settings, 'MEDIA_ROOT', ''))
+    auditor = OCRDocumentAuditor()
+    data = []
+
+    for cand_id in candidature_ids:
+        try:
+            cand = Candidature.objects.select_related('candidat', 'master').get(pk=int(cand_id))
+        except (Candidature.DoesNotExist, ValueError, TypeError):
+            continue
+
+        cand_dir = _os.path.join(media_root, 'dossiers', str(cand.id))
+        pdf_path = None
+        if _os.path.isdir(cand_dir):
+            for subdir in sorted(_os.listdir(cand_dir)):
+                full_subdir = _os.path.join(cand_dir, subdir)
+                if _os.path.isdir(full_subdir):
+                    for fname in sorted(_os.listdir(full_subdir)):
+                        if fname.lower().endswith('.pdf'):
+                            pdf_path = _os.path.join(full_subdir, fname)
+                            break
+                    if pdf_path:
+                        break
+
+        row = {
+            'numero':         cand.numero or '',
+            'candidat_nom':   cand.candidat.get_full_name() or cand.candidat.email,
+            'candidat_email': cand.candidat.email,
+            'master':         cand.master.nom if cand.master else '',
+            'score_declare':  float(cand.score or 0),
+            'score_extrait':  None,
+            'delta':          None,
+            'flag_fraude':    False,
+            'moteur':         '—',
+            'statut':         'Pas de PDF',
+            'fichier':        '',
+        }
+        if pdf_path:
+            try:
+                with open(pdf_path, 'rb') as f:
+                    file_obj = ContentFile(f.read(), name=_os.path.basename(pdf_path))
+                res = auditor.analyser_document(file_obj, score_declare=row['score_declare'])
+                row['score_extrait'] = res.get('score_extrait')
+                row['delta'] = res.get('delta')
+                row['flag_fraude'] = bool(res.get('flag_fraude'))
+                row['moteur'] = res.get('moteur') or '—'
+                row['fichier'] = _os.path.basename(pdf_path)
+                if row['score_extrait'] is None:
+                    row['statut'] = 'OCR sans score'
+                elif row['flag_fraude']:
+                    row['statut'] = 'ANOMALIE'
+                else:
+                    row['statut'] = 'Conforme'
+            except Exception as exc:
+                logger.exception('OCR rapport — erreur cand %s', cand.id)
+                row['statut'] = f'Erreur: {str(exc)[:80]}'
+        data.append(row)
+    return data
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# POST /api/candidatures/rapport-conformite-ocr/excel/
+# Génère un rapport Excel de conformité OCR sur les candidatures sélectionnées
+# ──────────────────────────────────────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rapport_conformite_ocr_excel(request):
+    """Export Excel du rapport de conformité OCR."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from django.utils import timezone
+    from django.http import HttpResponse
+    from io import BytesIO
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    ids = request.data.get('candidature_ids') or []
+    if not isinstance(ids, list) or not ids:
+        return Response({'error': 'candidature_ids manquant'}, status=status.HTTP_400_BAD_REQUEST)
+
+    data = _build_rapport_data(request, ids)
+    if not data:
+        return Response({'error': 'Aucune donnée à exporter'}, status=status.HTTP_404_NOT_FOUND)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Rapport Conformité OCR'
+
+    # ── Titre ──
+    ws['A1'] = 'ISIMM — Rapport de Conformité OCR'
+    ws['A1'].font = Font(bold=True, size=16, color='FFFFFF')
+    ws['A1'].fill = PatternFill('solid', fgColor='1E3A8A')
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A1:H1')
+    ws.row_dimensions[1].height = 32
+
+    ws['A2'] = f"Date d'export : {timezone.now().strftime('%d/%m/%Y %H:%M')}"
+    ws['A2'].font = Font(italic=True, size=10, color='64748B')
+    ws.merge_cells('A2:H2')
+
+    # ── Headers ──
+    headers = ['N° Candidature', 'Candidat', 'Email', 'Master',
+               'Score Déclaré', 'Score OCR', 'Écart Δ', 'Statut Conformité']
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill('solid', fgColor='1E40AF')
+    thin = Side(border_style='thin', color='CBD5E1')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+
+    # ── Lignes ──
+    for r_idx, row in enumerate(data, start=5):
+        ws.cell(row=r_idx, column=1, value=row['numero']).border = border
+        ws.cell(row=r_idx, column=2, value=row['candidat_nom']).border = border
+        ws.cell(row=r_idx, column=3, value=row['candidat_email']).border = border
+        ws.cell(row=r_idx, column=4, value=row['master']).border = border
+        ws.cell(row=r_idx, column=5, value=row['score_declare']).border = border
+        ws.cell(row=r_idx, column=6, value=row['score_extrait']).border = border
+        ws.cell(row=r_idx, column=7, value=row['delta']).border = border
+
+        statut_cell = ws.cell(row=r_idx, column=8, value=row['statut'])
+        statut_cell.border = border
+        statut_cell.alignment = Alignment(horizontal='center')
+        statut_cell.font = Font(bold=True)
+        if row['statut'] == 'Conforme':
+            statut_cell.fill = PatternFill('solid', fgColor='D1FAE5')
+            statut_cell.font = Font(bold=True, color='065F46')
+        elif row['statut'] == 'ANOMALIE':
+            statut_cell.fill = PatternFill('solid', fgColor='FEE2E2')
+            statut_cell.font = Font(bold=True, color='991B1B')
+        else:
+            statut_cell.fill = PatternFill('solid', fgColor='FEF3C7')
+            statut_cell.font = Font(bold=True, color='92400E')
+
+    # ── Largeurs colonnes ──
+    widths = {'A': 18, 'B': 28, 'C': 30, 'D': 36, 'E': 14, 'F': 14, 'G': 12, 'H': 22}
+    for col, w in widths.items():
+        ws.column_dimensions[col].width = w
+
+    # ── Récap ──
+    total = len(data)
+    conformes = sum(1 for r in data if r['statut'] == 'Conforme')
+    anomalies = sum(1 for r in data if r['statut'] == 'ANOMALIE')
+    pas_pdf = sum(1 for r in data if 'PDF' in r['statut'])
+
+    last_row = 5 + len(data) + 2
+    ws.cell(row=last_row, column=1, value='SYNTHÈSE :').font = Font(bold=True, size=12)
+    ws.cell(row=last_row+1, column=1, value=f'  Total candidats : {total}')
+    ws.cell(row=last_row+2, column=1, value=f'  Conformes      : {conformes}')
+    ws.cell(row=last_row+3, column=1, value=f'  Anomalies      : {anomalies}')
+    ws.cell(row=last_row+4, column=1, value=f'  Sans PDF       : {pas_pdf}')
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f'Rapport_Conformite_OCR_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    response = HttpResponse(
+        buf.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# POST /api/candidatures/rapport-conformite-ocr/pdf/
+# Génère un rapport PDF de conformité OCR sur les candidatures sélectionnées
+# ──────────────────────────────────────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rapport_conformite_ocr_pdf(request):
+    """Export PDF du rapport de conformité OCR."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet
+    from django.utils import timezone
+    from django.http import HttpResponse
+    from io import BytesIO
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    ids = request.data.get('candidature_ids') or []
+    if not isinstance(ids, list) or not ids:
+        return Response({'error': 'candidature_ids manquant'}, status=status.HTTP_400_BAD_REQUEST)
+
+    data = _build_rapport_data(request, ids)
+    if not data:
+        return Response({'error': 'Aucune donnée à exporter'}, status=status.HTTP_404_NOT_FOUND)
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=landscape(A4),
+        leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm,
+    )
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # ── Titre ──
+    title_style = styles['Title']
+    title_style.fontSize = 18
+    title_style.textColor = colors.HexColor('#1E3A8A')
+    elements.append(Paragraph('<b>ISIMM</b> — Rapport de Conformité OCR', title_style))
+    elements.append(Paragraph(
+        f"Date d'export : {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+        styles['Normal'],
+    ))
+    elements.append(Spacer(1, 0.5*cm))
+
+    # ── Synthèse ──
+    total = len(data)
+    conformes = sum(1 for r in data if r['statut'] == 'Conforme')
+    anomalies = sum(1 for r in data if r['statut'] == 'ANOMALIE')
+    pas_pdf = sum(1 for r in data if 'PDF' in r['statut'])
+
+    synth = (
+        f"<b>Synthèse :</b> Total : <b>{total}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Conformes : <b><font color='#065F46'>{conformes}</font></b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Anomalies : <b><font color='#991B1B'>{anomalies}</font></b> &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Sans PDF : <b><font color='#92400E'>{pas_pdf}</font></b>"
+    )
+    elements.append(Paragraph(synth, styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
+
+    # ── Tableau ──
+    tdata = [['N° Candidature', 'Candidat', 'Email', 'Score Déclaré', 'Score OCR', 'Écart Δ', 'Statut']]
+    for r in data:
+        tdata.append([
+            r['numero'][:20],
+            r['candidat_nom'][:25],
+            r['candidat_email'][:30],
+            f"{r['score_declare']:.2f}" if r['score_declare'] is not None else '—',
+            f"{r['score_extrait']:.2f}" if r['score_extrait'] is not None else '—',
+            f"{r['delta']:.2f}" if r['delta'] is not None else '—',
+            r['statut'][:18],
+        ])
+
+    col_widths = [3.5*cm, 4.5*cm, 5*cm, 2.5*cm, 2.5*cm, 2*cm, 3.5*cm]
+    t = Table(tdata, colWidths=col_widths, repeatRows=1)
+    style = [
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E40AF')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 10),
+        ('FONTSIZE', (0,1), (-1,-1), 9),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+    ]
+    # Couleur statut par ligne
+    for i, r in enumerate(data, start=1):
+        if r['statut'] == 'Conforme':
+            style.append(('BACKGROUND', (6,i), (6,i), colors.HexColor('#D1FAE5')))
+            style.append(('TEXTCOLOR', (6,i), (6,i), colors.HexColor('#065F46')))
+        elif r['statut'] == 'ANOMALIE':
+            style.append(('BACKGROUND', (6,i), (6,i), colors.HexColor('#FEE2E2')))
+            style.append(('TEXTCOLOR', (6,i), (6,i), colors.HexColor('#991B1B')))
+        else:
+            style.append(('BACKGROUND', (6,i), (6,i), colors.HexColor('#FEF3C7')))
+            style.append(('TEXTCOLOR', (6,i), (6,i), colors.HexColor('#92400E')))
+    t.setStyle(TableStyle(style))
+    elements.append(t)
+
+    doc.build(elements)
+    buf.seek(0)
+
+    filename = f'Rapport_Conformite_OCR_{timezone.now().strftime("%Y%m%d_%H%M")}.pdf'
+    response = HttpResponse(buf.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

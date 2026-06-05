@@ -89,39 +89,48 @@ def _build_header_table(
     version: str = 'v1',
 ) -> Table:
     """
-    Entête officielle ISIMM à 3 colonnes :
-      [Logo] | Institution + Titre doc | Référence + QR Code
+    Entête officielle ISIMM à 4 colonnes (format identique au document GFH FOR 09 v1) :
+      [Logo ISIMM] | Institution + Titre doc | Référence (GFH FOR 09 v1) | [Logo Université Monastir]
     """
-    logo_cell = _get_logo_image(logo_path, size_cm=2.2) or Paragraph(
+    # ── Logo ISIMM (gauche) ─────────────────────────────────────
+    logo_isimm = _get_logo_image(logo_path, size_cm=2.4) or Paragraph(
         '<b>ISIMM</b>', styles['logo_fallback']
     )
 
-    institution_lines = (
+    # ── Bloc institution + titre du document (centre-gauche) ────
+    import os as _os
+    institution_html = (
         '<b>INSTITUT SUPÉRIEUR D\'INFORMATIQUE ET DE<br/>'
-        'MATHÉMATIQUES DE MONASTIR</b>'
+        'MATHÉMATIQUES DE MONASTIR</b><br/><br/>'
+        '<font size="9">Liste des étudiants présélectionnés pour le Mastère</font>'
     )
-    institution_cell = Paragraph(institution_lines, styles['header_institution'])
+    institution_cell = Paragraph(institution_html, styles['header_institution'])
 
-    ref_content = [Paragraph(f'<b>{ref_doc}</b>', styles['header_ref'])]
-    if version:
-        ref_content.append(Paragraph(version, styles['header_ref_small']))
-    qr = _build_qr_image(qr_url or '', size_cm=2.0) if qr_url else None
-    if qr:
-        ref_content.append(qr)
+    # ── Référence GFH FOR 09 v1 (centre-droite) ─────────────────
+    ref_html = f'<b>{ref_doc}</b><br/><b>{version}</b>'
+    ref_cell = Paragraph(ref_html, styles['header_ref'])
 
-    data = [[logo_cell, institution_cell, ref_content]]
-    t = Table(data, colWidths=[3 * cm, 11 * cm, 4 * cm])
+    # ── Logo Université de Monastir (droite) ────────────────────
+    logo_uni_path = None
+    if logo_path:
+        uni_candidate = _os.path.join(_os.path.dirname(logo_path), 'logo-universite.png')
+        if _os.path.exists(uni_candidate):
+            logo_uni_path = uni_candidate
+    logo_uni = _get_logo_image(logo_uni_path, size_cm=2.4) or Paragraph(
+        '<b>U. Monastir</b>', styles['logo_fallback']
+    )
+
+    data = [[logo_isimm, institution_cell, ref_cell, logo_uni]]
+    t = Table(data, colWidths=[2.8 * cm, 9 * cm, 3.4 * cm, 2.8 * cm])
     t.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1.2, NAVY),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
-        ('ALIGN', (2, 0), (2, 0), 'CENTER'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ('BACKGROUND', (0, 0), (-1, -1), WHITE),
     ]))
     return t

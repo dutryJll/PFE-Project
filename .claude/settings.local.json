@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(del \"c:\\\\Users\\\\HP\\\\Desktop\\\\PFE\\\\replace_candidatures_section.py\")",
-      "Bash(curl -s \"http://localhost:8002/\" -o NUL -w \"%{http_code}\")"
+      "Bash(curl -s \"http://localhost:8002/\" -o NUL -w \"%{http_code}\")",
+      "Bash(venv/Scripts/python manage.py runserver 8003)"
     ]
   }
 }
