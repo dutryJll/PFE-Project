@@ -63,7 +63,67 @@
           </div>
           <div class="form-group">
             <div class="flbl">Spécialité</div>
-            <input type="text" class="finput" [(ngModel)]="spec" (input)="syncLive()" />
+            <select class="finput" [value]="parcoursCode" disabled>
+              <option *ngIf="currentParcours" [value]="currentParcours.code">
+                {{ currentParcours.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <div class="flbl">
+              Spécialités demandées
+              <button
+                type="button"
+                class="btn btn-sec btn-sm specialites-edit-btn"
+                (click)="toggleSpecialitesEditor()"
+                style="margin-left: 8px"
+              >
+                <i class="fas fa-pen"></i> Éditer
+              </button>
+            </div>
+            <select class="finput" disabled>
+              <option *ngFor="let s of specialitesDemandees" [value]="s">{{ s }}</option>
+              <option *ngIf="specialitesDemandees.length === 0" value="">
+                Aucune spécialité — cliquez sur Éditer
+              </option>
+            </select>
+            <div *ngIf="showSpecialitesEditor" class="specialites-editor-panel">
+              <div class="specialites-editor-list">
+                <div
+                  *ngFor="let s of specialitesDemandees; let i = index"
+                  class="specialites-editor-row"
+                >
+                  <span class="specialites-editor-name">{{ s }}</span>
+                  <button
+                    type="button"
+                    class="del-btn"
+                    (click)="supprimerSpecialiteDemandee(i)"
+                    title="Supprimer"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div *ngIf="specialitesDemandees.length === 0" class="specialites-editor-empty">
+                  Aucune spécialité demandée — ajoutez-en une ci-dessous.
+                </div>
+              </div>
+              <div class="specialites-editor-add">
+                <input
+                  type="text"
+                  class="finput"
+                  placeholder="Ex : Licence en Sciences de l'Informatique..."
+                  [(ngModel)]="nouvelleSpecialiteDemandee"
+                  (keyup.enter)="ajouterSpecialiteDemandee()"
+                />
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  (click)="ajouterSpecialiteDemandee()"
+                >
+                  <i class="fas fa-plus"></i> Ajouter
+                </button>
+              </div>
+            </div>
           </div>
           <div class="form-group full">
             <div class="flbl">Description</div>
@@ -188,7 +248,10 @@
                 />
               </td>
               <td>
-                <input type="text" class="qt-input" [(ngModel)]="q.diplome" (change)="syncLive()" />
+                <select class="qt-input" [(ngModel)]="q.diplome" (change)="syncLive()">
+                  <option value="">— Choisir une spécialité demandée —</option>
+                  <option *ngFor="let s of specialitesDemandees" [value]="s">{{ s }}</option>
+                </select>
               </td>
               <td>
                 <button class="del-btn" (click)="delQuota(i)" title="Supprimer">

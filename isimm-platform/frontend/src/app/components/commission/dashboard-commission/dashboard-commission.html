@@ -15,13 +15,13 @@
         <span class="sidebar-logo-fallback">ISIMM</span>
         <span
           class="sidebar-role-badge"
-          [title]="isResponsable ? 'Responsable Commission' : 'Membre Commission'"
+          [title]="isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master'"
         >
           {{ isResponsable ? '👔' : '💼' }}
         </span>
       </div>
       <p class="sidebar-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
-      <p class="user-role">{{ isResponsable ? 'Commission Responsable' : 'Membre Commission' }}</p>
+      <p class="user-role">{{ isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master' }}</p>
       <div class="user-role-master" *ngIf="isResponsable">
         SPÉCIALITÉ : {{ getDisplayedResponsableSpecialite() || 'Non renseignée' }}
       </div>
@@ -646,7 +646,7 @@
         <div class="notif-hero">
           <div class="notif-hero-left">
             <div class="notif-eyebrow">
-              {{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }} / Notifications
+              {{ isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master' }} / Notifications
             </div>
             <div class="notif-title">Mes Notifications</div>
             <div class="notif-sub">
@@ -735,7 +735,7 @@
         <div class="notif-role-bar">
           <span class="notif-role-chip" [class.notif-role-resp]="isResponsable" [class.notif-role-membre]="!isResponsable">
             <i class="fas" [class.fa-user-tie]="isResponsable" [class.fa-user]="!isResponsable"></i>
-            {{ isResponsable ? 'Notifications Responsable Commission' : 'Notifications Membre Commission' }}
+            {{ 'Notifications ' + (isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master') }}
           </span>
         </div>
 
@@ -800,7 +800,7 @@
             <h2>{{ profileData.first_name }} {{ profileData.last_name }}</h2>
             <p>{{ profileData.email }}</p>
             <span class="profile-role-chip">
-              {{ isResponsable ? 'Responsable Commission' : 'Membre Commission' }}
+              {{ isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master' }}
             </span>
           </div>
         </div>
@@ -1102,13 +1102,22 @@
                 </td>
                 <td>
                   <div class="ofr-actions-col">
-                    <button
-                      class="ofr-action-btn"
-                      type="button"
-                      (click)="ouvrirModalEditionOffre(offre)"
-                    >
-                      Éditer
-                    </button>
+                    <div class="ofr-actions-row">
+                      <button
+                        class="ofr-action-btn"
+                        type="button"
+                        (click)="ouvrirModalEditionOffre(offre)"
+                      >
+                        <i class="fas fa-pen"></i> Éditer
+                      </button>
+                      <button
+                        class="ofr-action-btn ofr-action-delete"
+                        type="button"
+                        (click)="supprimerOffre(offre)"
+                      >
+                        <i class="fas fa-trash"></i> Supprimer
+                      </button>
+                    </div>
                     <div class="ofr-toggle-row">
                       <div class="ofr-field-label" style="margin: 0">Statut</div>
                       <label class="ofr-toggle-wrap">
@@ -1351,19 +1360,99 @@
               </div>
               <div>
                 <label class="ofr-flbl">Type de formation <span class="req">*</span></label>
-                <select class="ofr-finput" [(ngModel)]="nouvelleOffre.type_master">
+                <select
+                  class="ofr-finput"
+                  [(ngModel)]="nouvelleOffre.type_master"
+                  (ngModelChange)="onNouvelleOffreTypeMasterChange()"
+                >
                   <option value="recherche">Master Recherche</option>
                   <option value="professionnel">Master Professionnel</option>
                 </select>
               </div>
               <div>
                 <label class="ofr-flbl">Spécialité</label>
-                <input
-                  type="text"
+                <select
                   class="ofr-finput"
-                  [(ngModel)]="nouvelleOffre.specialite"
-                  placeholder="Ex : Informatique — Réseaux et Sécurité"
-                />
+                  [(ngModel)]="nouvelleOffreParcoursCode"
+                  (ngModelChange)="onNouvelleOffreParcoursChange()"
+                >
+                  <option
+                    *ngFor="let p of nouvelleOffreParcoursOptions()"
+                    [value]="p.code"
+                  >
+                    {{ p.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="ofr-fg-full">
+                <label class="ofr-flbl">
+                  Spécialités demandées
+                  <button
+                    type="button"
+                    class="ofr-btn-secondary specialites-edit-btn"
+                    (click)="toggleNouvelleOffreSpecialitesEditor()"
+                    style="margin-left: 8px; padding: 3px 10px; font-size: 11px"
+                  >
+                    <i class="fas fa-pen"></i> Éditer
+                  </button>
+                </label>
+                <select class="ofr-finput" disabled>
+                  <option
+                    *ngFor="let s of nouvelleOffreSpecialitesDemandees"
+                    [value]="s"
+                  >
+                    {{ s }}
+                  </option>
+                  <option
+                    *ngIf="nouvelleOffreSpecialitesDemandees.length === 0"
+                    value=""
+                  >
+                    Aucune spécialité — cliquez sur Éditer
+                  </option>
+                </select>
+                <div
+                  *ngIf="nouvelleOffreShowSpecialitesEditor"
+                  class="specialites-editor-panel"
+                >
+                  <div class="specialites-editor-list">
+                    <div
+                      *ngFor="let s of nouvelleOffreSpecialitesDemandees; let i = index"
+                      class="specialites-editor-row"
+                    >
+                      <span class="specialites-editor-name">{{ s }}</span>
+                      <button
+                        type="button"
+                        class="ofr-qt-del"
+                        (click)="supprimerNouvelleOffreSpecialite(i)"
+                        title="Supprimer"
+                      >
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                    <div
+                      *ngIf="nouvelleOffreSpecialitesDemandees.length === 0"
+                      class="specialites-editor-empty"
+                    >
+                      Aucune spécialité demandée — ajoutez-en une ci-dessous.
+                    </div>
+                  </div>
+                  <div class="specialites-editor-add">
+                    <input
+                      type="text"
+                      class="ofr-finput"
+                      placeholder="Ex : Licence en Sciences de l'Informatique..."
+                      [(ngModel)]="nouvelleOffreNouvelleSpecialite"
+                      (keyup.enter)="ajouterNouvelleOffreSpecialite()"
+                    />
+                    <button
+                      type="button"
+                      class="ofr-btn-primary"
+                      (click)="ajouterNouvelleOffreSpecialite()"
+                    >
+                      <i class="fas fa-plus"></i> Ajouter
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="ofr-fg-full">
                 <label class="ofr-flbl">Description</label>
@@ -1540,12 +1629,18 @@
                       />
                     </td>
                     <td>
-                      <input
-                        type="text"
+                      <select
                         class="ofr-qt-input"
                         [(ngModel)]="q.diplome"
-                        placeholder="Licence / Master 1..."
-                      />
+                      >
+                        <option value="">— Choisir une spécialité demandée —</option>
+                        <option
+                          *ngFor="let s of nouvelleOffreSpecialitesDemandees"
+                          [value]="s"
+                        >
+                          {{ s }}
+                        </option>
+                      </select>
                     </td>
                     <td>
                       <button class="ofr-qt-del" type="button" (click)="supprimerQuotaNouvelle(qi)">

@@ -663,3 +663,13 @@ textarea.finput {
 .ofe-pdf-upload-label:hover { border-color: #185FA5; background: #EFF6FF; color: #185FA5; }
 .ofe-pdf-remove-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #FECACA; background: #FEF2F2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; transition: all .15s; }
 .ofe-pdf-remove-btn:hover { background: #DC2626; color: #fff; border-color: #DC2626; }
+
+/* Spécialités demandées editor panel */
+.specialites-edit-btn { padding: 3px 10px; font-size: 11px; }
+.specialites-editor-panel { margin-top: 8px; padding: 12px; background: #F8FAFC; border: 1px solid #E2E8F4; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
+.specialites-editor-list { display: flex; flex-direction: column; gap: 6px; }
+.specialites-editor-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: #fff; border: 1px solid #E2E8F4; border-radius: 8px; font-size: 12px; color: #0F1F3D; }
+.specialites-editor-name { flex: 1; }
+.specialites-editor-empty { font-size: 12px; color: #94A3B8; font-style: italic; padding: 8px 0; }
+.specialites-editor-add { display: flex; gap: 8px; align-items: center; }
+.specialites-editor-add .finput { flex: 1; }

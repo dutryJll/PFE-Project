@@ -20,6 +20,11 @@ import { ToastService } from '../../../services/toast.service';
 import { CandidatureService, MasterScoreCoefficients } from '../../../services/candidature.service';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { isPublicOffer } from '../../../shared/public-offer';
+import {
+  PARCOURS_SPECIALITE_CATALOG,
+  resolveParcoursByCode,
+  resolveParcoursByOffreId,
+} from '../../../shared/specialites-demandees-catalog';
 import { environment } from '../../../../environments/environment';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -502,6 +507,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     email: string;
     telephone: string;
     etablissementOrigine: string;
+    etablissementOrigineType: 'ISIMM' | 'Externe' | '';
+    etablissementExterneNom: string;
     specialiteBac: string;
     anneeBac: string;
     moyenneBacPrincipale: string;
@@ -537,6 +544,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     email: '',
     telephone: '',
     etablissementOrigine: 'ISIMM',
+    etablissementOrigineType: 'ISIMM',
+    etablissementExterneNom: '',
     specialiteBac: '',
     anneeBac: '',
     moyenneBacPrincipale: '',
@@ -2471,6 +2480,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       email,
       telephone: phone,
       etablissementOrigine: this.profileData?.etablissement_origine || 'ISIMM',
+      etablissementOrigineType: (this.profileData?.etablissement_origine && this.profileData.etablissement_origine !== 'ISIMM' ? 'Externe' : 'ISIMM'),
+      etablissementExterneNom: (this.profileData?.etablissement_origine && this.profileData.etablissement_origine !== 'ISIMM' ? this.profileData.etablissement_origine : ''),
       specialiteBac: '',
       anneeBac: '',
       moyenneBacPrincipale: '',
@@ -2945,6 +2956,34 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       this.wizardData.specialiteDiplome ===
         'Reussite en 1ere annee du cycle ingenieur (Electronique/Instrumentation) ou equivalent'
     );
+  }
+
+  getSpecialitesDemandeesForOffre(offre: Offre | null | undefined): string[] {
+    if (!offre) return [];
+    const code = String(offre.code || '').toUpperCase();
+    const byCode = code ? resolveParcoursByCode(code) : undefined;
+    if (byCode) return byCode.defaultSpecialitesDemandees;
+    const byId = resolveParcoursByOffreId(offre.id);
+    return byId ? byId.defaultSpecialitesDemandees : [];
+  }
+
+  getWizardSpecialitesDemandees(): string[] {
+    return this.getSpecialitesDemandeesForOffre(this.wizardOffre);
+  }
+
+  onWizardEtablissementTypeChange(): void {
+    if (this.wizardData.etablissementOrigineType === 'ISIMM') {
+      this.wizardData.etablissementOrigine = 'ISIMM';
+      this.wizardData.etablissementExterneNom = '';
+    } else {
+      this.wizardData.etablissementOrigine = this.wizardData.etablissementExterneNom || '';
+    }
+  }
+
+  onWizardEtablissementExterneNomChange(): void {
+    if (this.wizardData.etablissementOrigineType === 'Externe') {
+      this.wizardData.etablissementOrigine = this.wizardData.etablissementExterneNom || '';
+    }
   }
 
   shouldShowWizardMrglFourthYearFields(): boolean {

@@ -25,6 +25,12 @@ import {
   CommissionContextOption,
 } from '../../../services/commission-context.service';
 import { CommissionStateService } from '../../../services/commission-state.service';
+import {
+  PARCOURS_SPECIALITE_CATALOG,
+  ParcoursSpecialiteOption,
+  getParcoursOptionsForType,
+  resolveParcoursByCode,
+} from '../../../shared/specialites-demandees-catalog';
 
 interface Candidature {
   id: number;
@@ -1575,6 +1581,7 @@ export class DashboardCommissionComponent implements OnInit {
     { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', specialite: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert', est_cache: false, est_visible: true },
     { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', sous_type: '', specialite: 'ING_GL', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert', est_cache: false, est_visible: true },
   ];
+  offresPreinscriptionSupprimees: Set<number> = new Set<number>();
   offresMasterCrud: OffreMasterCrudItem[] = [];
   offresMasterCrudFiltrees: OffreMasterCrudItem[] = [];
   offreMasterSearch: string = '';
@@ -2463,6 +2470,10 @@ export class DashboardCommissionComponent implements OnInit {
   nouvelleOffreDateFinVisibilite: string = '';
   nouvelleOffreDateLimitePreinscription: string = '';
   nouvelleOffreDateLimiteDepotDossier: string = '';
+  nouvelleOffreParcoursCode: string = 'MPGL';
+  nouvelleOffreSpecialitesDemandees: string[] = [];
+  nouvelleOffreShowSpecialitesEditor: boolean = false;
+  nouvelleOffreNouvelleSpecialite: string = '';
 
   // Modal avis
   showModalAvis: boolean = false;
@@ -3401,7 +3412,53 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getOffresPreinscriptionForDisplay(): OffrePreinscription[] {
-    return this.getCanonicalOffresPreinscription();
+    return this.getCanonicalOffresPreinscription().filter(
+      (offre) => !this.offresPreinscriptionSupprimees.has(offre.id),
+    );
+  }
+
+  supprimerOffre(offre: OffrePreinscription): void {
+    if (!this.isResponsable) {
+      this.notifyActionBlocked('Action réservée au responsable de commission.');
+      return;
+    }
+
+    if (!offre?.id) {
+      return;
+    }
+
+    if (!confirm(`Supprimer l'offre "${offre.titre}" ?`)) {
+      return;
+    }
+
+    this.offresPreinscriptionSupprimees.add(offre.id);
+
+    const backendOffre = this.offresPreinscription.find((item) => item.id === offre.id);
+    if (backendOffre && !backendOffre.isDemo) {
+      const token = this.authService.getAccessToken();
+      if (token) {
+        this.http
+          .delete(`/api/candidatures/offres-master/${offre.id}/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .subscribe({
+            next: () => {
+              this.toastService.show('Offre supprimée.', 'success');
+              this.loadOffresPreinscription();
+            },
+            error: (error) => {
+              const backendMsg = error?.error?.error || error?.error?.message || '';
+              this.toastService.show(
+                backendMsg || "Impossible de supprimer l'offre côté serveur (masquée localement).",
+                'warning',
+              );
+            },
+          });
+        return;
+      }
+    }
+
+    this.toastService.show('Offre supprimée.', 'success');
   }
 
   hasRealOffresPreinscription(): boolean {
@@ -3850,6 +3907,71 @@ export class DashboardCommissionComponent implements OnInit {
       annee_universitaire: '2026/2027',
       actif: true,
     };
+    this.nouvelleOffreParcoursCode = 'MPGL';
+    this.nouvelleOffreShowSpecialitesEditor = false;
+    this.nouvelleOffreNouvelleSpecialite = '';
+    this.applyNouvelleOffreParcours(this.nouvelleOffreParcoursCode, true);
+  }
+
+  nouvelleOffreParcoursOptions(): ParcoursSpecialiteOption[] {
+    const type = this.nouvelleOffre.type_master === 'recherche' ? 'recherche' : 'professionnel';
+    return getParcoursOptionsForType('master', type);
+  }
+
+  applyNouvelleOffreParcours(code: string, resetSpecialites: boolean): void {
+    const parcours = resolveParcoursByCode(code);
+    if (!parcours) return;
+    this.nouvelleOffreParcoursCode = parcours.code;
+    this.nouvelleOffre.specialite = parcours.label;
+    if (parcours.sousType) {
+      this.nouvelleOffre.type_master = parcours.sousType;
+    }
+    if (resetSpecialites || this.nouvelleOffreSpecialitesDemandees.length === 0) {
+      this.nouvelleOffreSpecialitesDemandees = [...parcours.defaultSpecialitesDemandees];
+    }
+  }
+
+  onNouvelleOffreParcoursChange(): void {
+    this.applyNouvelleOffreParcours(this.nouvelleOffreParcoursCode, true);
+  }
+
+  onNouvelleOffreTypeMasterChange(): void {
+    const opts = this.nouvelleOffreParcoursOptions();
+    if (opts.length === 0) return;
+    const stillValid = opts.some((p) => p.code === this.nouvelleOffreParcoursCode);
+    if (!stillValid) {
+      this.applyNouvelleOffreParcours(opts[0].code, true);
+    }
+  }
+
+  toggleNouvelleOffreSpecialitesEditor(): void {
+    this.nouvelleOffreShowSpecialitesEditor = !this.nouvelleOffreShowSpecialitesEditor;
+  }
+
+  ajouterNouvelleOffreSpecialite(): void {
+    const value = (this.nouvelleOffreNouvelleSpecialite || '').trim();
+    if (!value) return;
+    if (this.nouvelleOffreSpecialitesDemandees.includes(value)) {
+      this.nouvelleOffreNouvelleSpecialite = '';
+      return;
+    }
+    this.nouvelleOffreSpecialitesDemandees = [
+      ...this.nouvelleOffreSpecialitesDemandees,
+      value,
+    ];
+    this.nouvelleOffreNouvelleSpecialite = '';
+  }
+
+  supprimerNouvelleOffreSpecialite(index: number): void {
+    this.nouvelleOffreSpecialitesDemandees = this.nouvelleOffreSpecialitesDemandees.filter(
+      (_, i) => i !== index,
+    );
+    this.nouvelleOffreQuotas = this.nouvelleOffreQuotas.map((q) => {
+      if (!this.nouvelleOffreSpecialitesDemandees.includes(q.diplome)) {
+        return { ...q, diplome: '' };
+      }
+      return q;
+    });
   }
 
   fermerModalNouvelleOffre(): void {
@@ -6188,7 +6310,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getCommissionUserRoleLabel(): string {
-    return this.isResponsable ? 'Commission Responsable' : 'Membre Commission';
+    return this.isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master';
   }
 
   getDisplayedResponsableSpecialite(): string {

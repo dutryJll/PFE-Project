@@ -545,6 +545,17 @@
               <div class="offre-body">
                 <h4>{{ offre.titre }}</h4>
                 <p class="offre-description">{{ offre.description }}</p>
+                <div
+                  class="offre-specialites-demandees"
+                  *ngIf="getSpecialitesDemandeesForOffre(offre).length > 0"
+                >
+                  <div class="specialites-demandees-title">
+                    <i class="fas fa-list-alt"></i> Spécialités demandées
+                  </div>
+                  <ul>
+                    <li *ngFor="let s of getSpecialitesDemandeesForOffre(offre)">{{ s }}</li>
+                  </ul>
+                </div>
                 <div class="offre-info">
                   <div class="info-item">
                     <i class="fas fa-calendar-alt"></i
@@ -611,6 +622,17 @@
               <div class="offre-body">
                 <h4>{{ offre.titre }}</h4>
                 <p class="offre-description">{{ offre.description }}</p>
+                <div
+                  class="offre-specialites-demandees"
+                  *ngIf="getSpecialitesDemandeesForOffre(offre).length > 0"
+                >
+                  <div class="specialites-demandees-title">
+                    <i class="fas fa-list-alt"></i> Spécialités demandées
+                  </div>
+                  <ul>
+                    <li *ngFor="let s of getSpecialitesDemandeesForOffre(offre)">{{ s }}</li>
+                  </ul>
+                </div>
                 <div class="offre-info">
                   <div class="info-item">
                     <i class="fas fa-calendar-alt"></i
@@ -678,6 +700,17 @@
                 <h4>{{ offre.titre }}</h4>
                 <p class="offre-specialite">Specialite : {{ offre.specialite }}</p>
                 <p class="offre-description">{{ offre.description }}</p>
+                <div
+                  class="offre-specialites-demandees"
+                  *ngIf="getSpecialitesDemandeesForOffre(offre).length > 0"
+                >
+                  <div class="specialites-demandees-title">
+                    <i class="fas fa-list-alt"></i> Spécialités demandées
+                  </div>
+                  <ul>
+                    <li *ngFor="let s of getSpecialitesDemandeesForOffre(offre)">{{ s }}</li>
+                  </ul>
+                </div>
                 <div class="offre-info" *ngIf="offre.document_officiel_pdf_url">
                   <div class="info-item">
                     <i class="fas fa-file-pdf"></i>
@@ -2809,12 +2842,24 @@
                 ><i class="fas fa-university"></i> Établissement d'origine
                 <span class="req">*</span></label
               >
-              <input
-                type="text"
-                [(ngModel)]="wizardData.etablissementOrigine"
-                name="wzEtab"
+              <select
+                [(ngModel)]="wizardData.etablissementOrigineType"
+                name="wzEtabType"
+                (ngModelChange)="onWizardEtablissementTypeChange()"
                 (blur)="wizardTouched.etablissementOrigine = true"
-                placeholder="Ex: ISIMM, ENSI..."
+              >
+                <option value="ISIMM">ISIMM</option>
+                <option value="Externe">Externe</option>
+              </select>
+              <input
+                *ngIf="wizardData.etablissementOrigineType === 'Externe'"
+                type="text"
+                [(ngModel)]="wizardData.etablissementExterneNom"
+                name="wzEtabExtNom"
+                (ngModelChange)="onWizardEtablissementExterneNomChange()"
+                (blur)="wizardTouched.etablissementOrigine = true"
+                placeholder="Nom de l'établissement (Ex: ENSI, FST...)"
+                style="margin-top: 6px"
               />
               <span
                 class="wz-error"
@@ -3070,75 +3115,8 @@
                 >
                 <select [(ngModel)]="wizardData.specialiteDiplome" name="wzSpecDiplome">
                   <option value="">— Sélectionner —</option>
-                  <!-- MRGL options -->
-                  <option *ngIf="isWizardMrglOffer()" value="Licence en Informatique : GL & SI">
-                    Licence en Informatique : GL & SI
-                  </option>
-                  <option
-                    *ngIf="isWizardMrglOffer()"
-                    value="Licence en Informatique de Gestion : BI"
-                  >
-                    Licence en Informatique de Gestion : BI
-                  </option>
-                  <!-- MRMI options -->
-                  <option
-                    *ngIf="isWizardMrmiOffer()"
-                    value="Licence en EEA, MIM (Electronique, Systemes Embarques, Metrologie) ou TIC (Reseaux et IoT)"
-                  >
-                    Licence en EEA, MIM ou TIC
-                  </option>
-                  <option
-                    *ngIf="isWizardMrmiOffer()"
-                    value="Licence en Electronique, Automatique ou Mesures et Instrumentation"
-                  >
-                    Licence en Electronique, Automatique ou Mesures
-                  </option>
-                  <option
-                    *ngIf="isWizardMrmiOffer()"
-                    value="Reussite en 1ere annee du cycle ingenieur (Electronique/Instrumentation) ou equivalent"
-                  >
-                    Réussite 1ère année cycle ingénieur
-                  </option>
-                  <!-- MP3I options -->
-                  <option
-                    *ngIf="isWizardMp3iOffer()"
-                    value="Licence en Électronique, Électrotechnique et Automatique (MIM)"
-                  >
-                    Licence en EEA (MIM)
-                  </option>
-                  <option
-                    *ngIf="isWizardMp3iOffer()"
-                    value="Licence en Électronique, Électrotechnique et Automatique (SE)"
-                  >
-                    Licence en EEA (SE)
-                  </option>
-                  <option *ngIf="isWizardMp3iOffer()" value="Licence en TIC">
-                    Licence en TIC
-                  </option>
-                  <option *ngIf="isWizardMp3iOffer()" value="Licence en Mesures et Instrumentation">
-                    Licence en Mesures et Instrumentation
-                  </option>
-                  <option
-                    *ngIf="isWizardMp3iOffer()"
-                    value="Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie"
-                  >
-                    Automatique / Mesures et Métrologie
-                  </option>
-                  <option *ngIf="isWizardMp3iOffer()" value="Licence en Génie Électrique">
-                    Licence en Génie Électrique
-                  </option>
-                  <!-- Fallback for MPGL / MPDS / Ingénieur — NOT for MP3I / MRGL / MRMI -->
-                  <option
-                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer() && !isWizardMp3iOffer()"
-                    value="Genie Logiciel et Sciences de l'Informatique"
-                  >
-                    Génie Logiciel et Sciences de l'Informatique
-                  </option>
-                  <option
-                    *ngIf="!isWizardMrglOffer() && !isWizardMrmiOffer() && !isWizardMp3iOffer()"
-                    value="Sciences de l'Informatique"
-                  >
-                    Sciences de l'Informatique
+                  <option *ngFor="let spec of getWizardSpecialitesDemandees()" [value]="spec">
+                    {{ spec }}
                   </option>
                 </select>
               </div>

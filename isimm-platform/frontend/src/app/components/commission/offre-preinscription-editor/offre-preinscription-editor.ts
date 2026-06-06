@@ -2,9 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { environment } from '../../../../environments/environment';
+import {
+  PARCOURS_SPECIALITE_CATALOG,
+  ParcoursSpecialiteOption,
+  getParcoursOptionsForType,
+  resolveParcoursByCode,
+  resolveParcoursByOffreId,
+} from '../../../shared/specialites-demandees-catalog';
 
 interface Quota {
   cat: string;
@@ -39,6 +46,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
 
   // Form fields
@@ -111,8 +119,74 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   currentStep: number = 1;
   capaciteTotal: number = 23;
 
+  parcoursCode: string = 'MPGL';
+  specialitesDemandees: string[] = [];
+  showSpecialitesEditor: boolean = false;
+  nouvelleSpecialiteDemandee: string = '';
+
+  get parcoursOptions(): ParcoursSpecialiteOption[] {
+    const type = this.typeFormation === 'ingenieur' ? 'cycle_ingenieur' : 'master';
+    return getParcoursOptionsForType(type, this.soustype as any);
+  }
+
+  get currentParcours(): ParcoursSpecialiteOption | undefined {
+    return resolveParcoursByCode(this.parcoursCode);
+  }
+
   ngOnInit(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const offreId = idParam ? Number(idParam) : NaN;
+    const resolved = !isNaN(offreId) ? resolveParcoursByOffreId(offreId) : undefined;
+    if (resolved) {
+      this.applyParcours(resolved.code, true);
+    } else {
+      this.applyParcours(this.parcoursCode, true);
+    }
     this.updateTotal();
+  }
+
+  applyParcours(code: string, resetSpecialites: boolean): void {
+    const parcours = resolveParcoursByCode(code);
+    if (!parcours) return;
+    this.parcoursCode = parcours.code;
+    this.spec = parcours.label;
+    this.typeFormation = parcours.typeFormation === 'cycle_ingenieur' ? 'ingenieur' : 'master';
+    if (parcours.sousType) {
+      this.soustype = parcours.sousType;
+    }
+    if (resetSpecialites || this.specialitesDemandees.length === 0) {
+      this.specialitesDemandees = [...parcours.defaultSpecialitesDemandees];
+    }
+    this.syncLive();
+  }
+
+  onParcoursChange(): void {
+    this.applyParcours(this.parcoursCode, true);
+  }
+
+  toggleSpecialitesEditor(): void {
+    this.showSpecialitesEditor = !this.showSpecialitesEditor;
+  }
+
+  ajouterSpecialiteDemandee(): void {
+    const value = (this.nouvelleSpecialiteDemandee || '').trim();
+    if (!value) return;
+    if (this.specialitesDemandees.includes(value)) {
+      this.nouvelleSpecialiteDemandee = '';
+      return;
+    }
+    this.specialitesDemandees = [...this.specialitesDemandees, value];
+    this.nouvelleSpecialiteDemandee = '';
+  }
+
+  supprimerSpecialiteDemandee(index: number): void {
+    this.specialitesDemandees = this.specialitesDemandees.filter((_, i) => i !== index);
+    this.quotas = this.quotas.map((q) => {
+      if (!this.specialitesDemandees.includes(q.diplome)) {
+        return { ...q, diplome: '' };
+      }
+      return q;
+    });
   }
 
   // Stepper navigation

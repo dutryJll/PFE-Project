@@ -9152,3 +9152,31 @@
   .rc-body { padding: 14px 16px; }
   .rc-header { padding: 16px; }
 }
+
+/* Spécialités demandées on candidate offer cards */
+.offre-specialites-demandees {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border-left: 3px solid #185FA5;
+  border-radius: 6px;
+}
+.specialites-demandees-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #185FA5;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.offre-specialites-demandees ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #0F1F3D;
+  line-height: 1.5;
+}
+.offre-specialites-demandees li {
+  margin-bottom: 2px;
+}
