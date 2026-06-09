@@ -673,3 +673,16 @@ textarea.finput {
 .specialites-editor-empty { font-size: 12px; color: #94A3B8; font-style: italic; padding: 8px 0; }
 .specialites-editor-add { display: flex; gap: 8px; align-items: center; }
 .specialites-editor-add .finput { flex: 1; }
+
+/* Critères d'évaluation step */
+.criteres-intro { background: #EFF6FF; border-left: 3px solid #185FA5; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; color: #0F1F3D; }
+.criteres-intro strong { color: #185FA5; }
+.criteres-intro p { margin: 4px 0 0; color: #475569; line-height: 1.5; }
+.criteres-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.criteres-table thead th { background: #F8FAFC; color: #475569; font-weight: 700; text-align: left; padding: 6px 8px; border-bottom: 1px solid #E2E8F4; font-size: 11px; }
+.criteres-table tbody td { padding: 6px 8px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.formule-help { font-size: 11px; color: #64748B; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.formule-code-chip { display: inline-block; background: #EFF6FF; color: #185FA5; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; font-family: ui-monospace, monospace; }
+.formule-result { margin-top: 8px; padding: 8px 12px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.formule-result.formule-ok { background: #ECFDF5; color: #065F46; border: 1px solid #6EE7B7; }
+.formule-result.formule-err { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }

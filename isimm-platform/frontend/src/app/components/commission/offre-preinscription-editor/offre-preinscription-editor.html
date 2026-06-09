@@ -27,14 +27,18 @@
   <div class="stepper" id="stepper">
     <button class="step-tab" [class.active]="currentStep === 1" id="tab-1" (click)="goStep(1)">
       <div class="step-num" id="sn-1">1</div>
-      Infos générales
+      Informations
     </button>
     <button class="step-tab" [class.active]="currentStep === 2" id="tab-2" (click)="goStep(2)">
       <div class="step-num" id="sn-2">2</div>
-      Calendrier
+      Critères d'évaluation
     </button>
     <button class="step-tab" [class.active]="currentStep === 3" id="tab-3" (click)="goStep(3)">
       <div class="step-num" id="sn-3">3</div>
+      Calendrier
+    </button>
+    <button class="step-tab" [class.active]="currentStep === 4" id="tab-4" (click)="goStep(4)">
+      <div class="step-num" id="sn-4">4</div>
       Quotas &amp; Diplômes
     </button>
   </div>
@@ -182,6 +186,131 @@
       </div>
 
       <div class="step-panel" [class.active]="currentStep === 2" id="panel-2">
+        <div class="criteres-intro">
+          <strong>Critères d'évaluation</strong>
+          <p>
+            Définissez les critères numériques (codes utilisés dans la formule), puis composez la
+            formule de calcul du score. Cette formule sera appliquée automatiquement à chaque
+            préinscription.
+          </p>
+        </div>
+        <table class="criteres-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nom du critère</th>
+              <th>Description</th>
+              <th>Valeur par défaut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of scoreCriteres; let i = index">
+              <td>
+                <input
+                  type="text"
+                  class="qt-input"
+                  [(ngModel)]="c.code"
+                  placeholder="Ex: MG"
+                  style="width: 80px"
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  class="qt-input"
+                  [(ngModel)]="c.label"
+                  placeholder="Ex: Moyenne Générale"
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  class="qt-input"
+                  [(ngModel)]="c.description"
+                  placeholder="Définition / mode de calcul"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="qt-input"
+                  [(ngModel)]="c.defaultValue"
+                  style="width: 80px"
+                />
+              </td>
+              <td>
+                <button class="del-btn" (click)="supprimerCritereScore(i)" title="Supprimer">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 3h8M5 3V2h2v1M4 3v6h4V3"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="scoreCriteres.length === 0">
+              <td colspan="5" style="text-align: center; color: #94A3B8; font-size: 12px; padding: 10px">
+                Aucun critère défini — cliquez sur « Ajouter un critère »
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top: 0.5rem">
+          <button type="button" class="btn btn-sec btn-sm" (click)="ajouterCritereScore()">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <line x1="6" y1="2" x2="6" y2="10"></line>
+              <line x1="2" y1="6" x2="10" y2="6"></line>
+            </svg>
+            Ajouter un critère
+          </button>
+        </div>
+
+        <div class="form-group full" style="margin-top: 1rem">
+          <div class="flbl">Formule de calcul du score</div>
+          <input
+            type="text"
+            class="finput"
+            [(ngModel)]="scoreFormule"
+            placeholder="Ex: MG + BNR + BSP"
+          />
+          <div class="formule-help">
+            Codes disponibles :
+            <span *ngFor="let c of scoreCriteres" class="formule-code-chip">{{ c.code }}</span>
+            <span *ngIf="scoreCriteres.length === 0" style="color: #94A3B8; font-style: italic">
+              Aucun (ajoutez un critère)
+            </span>
+          </div>
+          <div
+            class="formule-result"
+            [class.formule-ok]="evaluerScoreFormule().ok"
+            [class.formule-err]="!evaluerScoreFormule().ok"
+          >
+            <ng-container *ngIf="evaluerScoreFormule().ok">
+              <i class="fas fa-check-circle"></i> Formule valide — score avec valeurs par défaut :
+              <strong>{{ evaluerScoreFormule().value }}</strong>
+            </ng-container>
+            <ng-container *ngIf="!evaluerScoreFormule().ok">
+              <i class="fas fa-exclamation-triangle"></i> {{ evaluerScoreFormule().error }}
+            </ng-container>
+          </div>
+        </div>
+
+        <div class="nav-footer">
+          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(1)">
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M7 2L3 5l4 3"></path>
+            </svg>
+            Précédent
+          </button>
+          <button type="button" class="btn btn-primary btn-primary-large" (click)="goStep(3)">
+            Suivant
+            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 2l4 3-4 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-panel" [class.active]="currentStep === 3" id="panel-3">
         <div class="cal-grid">
           <div class="form-group">
             <div class="flbl">Date début visibilité</div>
@@ -201,13 +330,13 @@
           </div>
         </div>
         <div class="nav-footer">
-          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(1)">
+          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(2)">
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M7 2L3 5l4 3"></path>
             </svg>
             Précédent
           </button>
-          <button type="button" class="btn btn-primary btn-primary-large" (click)="goStep(3)">
+          <button type="button" class="btn btn-primary btn-primary-large" (click)="goStep(4)">
             Suivant
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M3 2l4 3-4 3"></path>
@@ -216,7 +345,7 @@
         </div>
       </div>
 
-      <div class="step-panel" [class.active]="currentStep === 3" id="panel-3">
+      <div class="step-panel" [class.active]="currentStep === 4" id="panel-4">
         <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 0.55rem">
           Tableau dynamique des quotas (ISIMM Internes, Externes...)
         </div>
@@ -289,7 +418,7 @@
           </div>
         </div>
         <div class="nav-footer">
-          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(2)">
+          <button type="button" class="btn btn-sec btn-sm" (click)="goStep(3)">
             <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M7 2L3 5l4 3"></path>
             </svg>

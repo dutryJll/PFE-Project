@@ -8,6 +8,8 @@ import { environment } from '../../../../environments/environment';
 import {
   PARCOURS_SPECIALITE_CATALOG,
   ParcoursSpecialiteOption,
+  ScoreCriterion,
+  evaluateScoreFormule,
   getParcoursOptionsForType,
   resolveParcoursByCode,
   resolveParcoursByOffreId,
@@ -124,6 +126,9 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   showSpecialitesEditor: boolean = false;
   nouvelleSpecialiteDemandee: string = '';
 
+  scoreCriteres: ScoreCriterion[] = [];
+  scoreFormule: string = '';
+
   get parcoursOptions(): ParcoursSpecialiteOption[] {
     const type = this.typeFormation === 'ingenieur' ? 'cycle_ingenieur' : 'master';
     return getParcoursOptionsForType(type, this.soustype as any);
@@ -134,15 +139,17 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const idParam = this.route.snapshot.paramMap.get('id');
-    const offreId = idParam ? Number(idParam) : NaN;
-    const resolved = !isNaN(offreId) ? resolveParcoursByOffreId(offreId) : undefined;
-    if (resolved) {
-      this.applyParcours(resolved.code, true);
-    } else {
-      this.applyParcours(this.parcoursCode, true);
-    }
-    this.updateTotal();
+    this.route.paramMap.subscribe((params) => {
+      const idParam = params.get('id');
+      const offreId = idParam ? Number(idParam) : NaN;
+      const resolved = !isNaN(offreId) ? resolveParcoursByOffreId(offreId) : undefined;
+      if (resolved) {
+        this.applyParcours(resolved.code, true);
+      } else {
+        this.applyParcours(this.parcoursCode, true);
+      }
+      this.updateTotal();
+    });
   }
 
   applyParcours(code: string, resetSpecialites: boolean): void {
@@ -150,6 +157,7 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
     if (!parcours) return;
     this.parcoursCode = parcours.code;
     this.spec = parcours.label;
+    this.titre = parcours.titre;
     this.typeFormation = parcours.typeFormation === 'cycle_ingenieur' ? 'ingenieur' : 'master';
     if (parcours.sousType) {
       this.soustype = parcours.sousType;
@@ -157,7 +165,69 @@ export class OffrePreinscriptionEditorComponent implements OnInit {
     if (resetSpecialites || this.specialitesDemandees.length === 0) {
       this.specialitesDemandees = [...parcours.defaultSpecialitesDemandees];
     }
+    if (resetSpecialites || this.scoreCriteres.length === 0) {
+      this.scoreCriteres = parcours.defaultScoreConfig.criteres.map((c) => ({
+        ...c,
+        paliers: c.paliers ? c.paliers.map((p) => ({ ...p })) : undefined,
+      }));
+      this.scoreFormule = parcours.defaultScoreConfig.formule;
+    }
     this.syncLive();
+  }
+
+  ajouterCritereScore(): void {
+    this.scoreCriteres = [
+      ...this.scoreCriteres,
+      { code: '', label: '', description: '', mode: 'fixe', valeurFixe: 0 },
+    ];
+  }
+
+  supprimerCritereScore(index: number): void {
+    this.scoreCriteres = this.scoreCriteres.filter((_, i) => i !== index);
+  }
+
+  onCritereModeChange(critere: ScoreCriterion): void {
+    if (critere.mode === 'palier') {
+      if (!critere.paliers || critere.paliers.length === 0) {
+        critere.paliers = [{ condition: '', points: 0 }];
+      }
+      critere.formuleCalc = undefined;
+      critere.valeurFixe = undefined;
+    } else if (critere.mode === 'formule') {
+      if (!critere.formuleCalc) critere.formuleCalc = '';
+      critere.paliers = undefined;
+      critere.valeurFixe = undefined;
+    } else if (critere.mode === 'fixe') {
+      if (critere.valeurFixe === undefined) critere.valeurFixe = 0;
+      critere.paliers = undefined;
+      critere.formuleCalc = undefined;
+    }
+  }
+
+  ajouterPalier(critere: ScoreCriterion): void {
+    if (!critere.paliers) critere.paliers = [];
+    critere.paliers.push({ condition: '', points: 0 });
+  }
+
+  supprimerPalier(critere: ScoreCriterion, index: number): void {
+    if (!critere.paliers) return;
+    critere.paliers.splice(index, 1);
+  }
+
+  insererCodeDansFormule(code: string): void {
+    const current = this.scoreFormule || '';
+    const trimmed = current.trimEnd();
+    if (trimmed.length === 0) {
+      this.scoreFormule = code;
+    } else {
+      const lastChar = trimmed.slice(-1);
+      const needsOp = !/[+\-*/(]/.test(lastChar);
+      this.scoreFormule = trimmed + (needsOp ? ' + ' : ' ') + code;
+    }
+  }
+
+  evaluerScoreFormule(): { ok: boolean; value: number | null; error: string | null } {
+    return evaluateScoreFormule(this.scoreFormule, this.scoreCriteres);
   }
 
   onParcoursChange(): void {

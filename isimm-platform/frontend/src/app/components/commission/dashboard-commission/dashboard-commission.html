@@ -1337,12 +1337,24 @@
                 <i *ngIf="nouvelleOffreStep > 2" class="fas fa-check"></i>
                 <span *ngIf="nouvelleOffreStep <= 2">2</span>
               </div>
-              <div class="ofr-step-label">Calendrier</div>
+              <div class="ofr-step-label">Critères d'évaluation</div>
             </div>
             <div class="ofr-step-line" [class.done]="nouvelleOffreStep > 2"></div>
-            <div class="ofr-step-item" [class.active]="nouvelleOffreStep >= 3">
-              <div class="ofr-step-circle"><span>3</span></div>
-              <div class="ofr-step-label">Capacités</div>
+            <div
+              class="ofr-step-item"
+              [class.active]="nouvelleOffreStep >= 3"
+              [class.done]="nouvelleOffreStep > 3"
+            >
+              <div class="ofr-step-circle">
+                <i *ngIf="nouvelleOffreStep > 3" class="fas fa-check"></i>
+                <span *ngIf="nouvelleOffreStep <= 3">3</span>
+              </div>
+              <div class="ofr-step-label">Calendrier</div>
+            </div>
+            <div class="ofr-step-line" [class.done]="nouvelleOffreStep > 3"></div>
+            <div class="ofr-step-item" [class.active]="nouvelleOffreStep >= 4">
+              <div class="ofr-step-circle"><span>4</span></div>
+              <div class="ofr-step-label">Quotas &amp; Diplômes</div>
             </div>
           </div>
 
@@ -1519,8 +1531,126 @@
             </div>
           </div>
 
-          <!-- Panel 2: Calendrier -->
+          <!-- Panel 2: Critères d'évaluation -->
           <div class="ofr-panel" *ngIf="nouvelleOffreStep === 2">
+            <div class="criteres-intro">
+              <strong>Critères d'évaluation</strong>
+              <p>
+                Définissez les critères numériques (codes utilisés dans la formule), puis composez
+                la formule de calcul du score. Cette formule sera appliquée automatiquement à
+                chaque préinscription.
+              </p>
+            </div>
+            <div class="ofr-quota-table-wrap">
+              <table class="ofr-quota-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Nom du critère</th>
+                    <th>Description</th>
+                    <th>Valeur par défaut</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of nouvelleOffreScoreCriteres; let ci = index">
+                    <td>
+                      <input
+                        type="text"
+                        class="ofr-qt-input"
+                        [(ngModel)]="c.code"
+                        placeholder="Ex: MG"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="ofr-qt-input"
+                        [(ngModel)]="c.label"
+                        placeholder="Ex: Moyenne Générale"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="ofr-qt-input"
+                        [(ngModel)]="c.description"
+                        placeholder="Définition / mode de calcul"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        class="ofr-qt-input ofr-qt-num"
+                        [(ngModel)]="c.defaultValue"
+                      />
+                    </td>
+                    <td>
+                      <button
+                        class="ofr-qt-del"
+                        type="button"
+                        (click)="supprimerNouvelleOffreCritereScore(ci)"
+                      >
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="nouvelleOffreScoreCriteres.length === 0">
+                    <td colspan="5" class="ofr-quota-empty">
+                      Aucun critère défini — cliquez sur "Ajouter un critère"
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-top: 8px">
+              <button
+                class="ofr-btn-add-quota"
+                type="button"
+                (click)="ajouterNouvelleOffreCritereScore()"
+              >
+                <i class="fas fa-plus"></i> Ajouter un critère
+              </button>
+            </div>
+            <div class="ofr-fg-full" style="margin-top: 14px">
+              <label class="ofr-flbl">Formule de calcul du score</label>
+              <input
+                type="text"
+                class="ofr-finput"
+                [(ngModel)]="nouvelleOffreScoreFormule"
+                placeholder="Ex: MG + BNR + BSP"
+              />
+              <div class="formule-help">
+                Codes disponibles :
+                <span *ngFor="let c of nouvelleOffreScoreCriteres" class="formule-code-chip">
+                  {{ c.code }}
+                </span>
+                <span
+                  *ngIf="nouvelleOffreScoreCriteres.length === 0"
+                  style="color: #94A3B8; font-style: italic"
+                >
+                  Aucun (ajoutez un critère)
+                </span>
+              </div>
+              <div
+                class="formule-result"
+                [class.formule-ok]="evaluerNouvelleOffreScoreFormule().ok"
+                [class.formule-err]="!evaluerNouvelleOffreScoreFormule().ok"
+              >
+                <ng-container *ngIf="evaluerNouvelleOffreScoreFormule().ok">
+                  <i class="fas fa-check-circle"></i> Formule valide — score avec valeurs par
+                  défaut : <strong>{{ evaluerNouvelleOffreScoreFormule().value }}</strong>
+                </ng-container>
+                <ng-container *ngIf="!evaluerNouvelleOffreScoreFormule().ok">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  {{ evaluerNouvelleOffreScoreFormule().error }}
+                </ng-container>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 3: Calendrier -->
+          <div class="ofr-panel" *ngIf="nouvelleOffreStep === 3">
             <div class="ofr-form-grid">
               <div>
                 <label class="ofr-flbl">Date début de visibilité</label>
@@ -1578,8 +1708,8 @@
             </div>
           </div>
 
-          <!-- Panel 3: Capacités & Quotas -->
-          <div class="ofr-panel" *ngIf="nouvelleOffreStep === 3">
+          <!-- Panel 4: Quotas & Diplômes -->
+          <div class="ofr-panel" *ngIf="nouvelleOffreStep === 4">
             <div class="ofr-quota-header">
               <div>
                 <div class="ofr-flbl" style="margin-bottom: 4px">Quotas par catégorie</div>
@@ -1687,7 +1817,7 @@
               <button
                 class="ofr-btn-secondary"
                 type="button"
-                *ngIf="nouvelleOffreStep < 3"
+                *ngIf="nouvelleOffreStep < 4"
                 (click)="sauvegarderNouvelleOffre()"
               >
                 Enregistrer brouillon
@@ -1695,7 +1825,7 @@
               <button
                 class="ofr-btn-primary"
                 type="button"
-                *ngIf="nouvelleOffreStep < 3"
+                *ngIf="nouvelleOffreStep < 4"
                 (click)="nextStepNouvelleOffre()"
               >
                 Suivant <i class="fas fa-chevron-right"></i>
@@ -1703,7 +1833,7 @@
               <button
                 class="ofr-btn-primary"
                 type="button"
-                *ngIf="nouvelleOffreStep === 3"
+                *ngIf="nouvelleOffreStep === 4"
                 (click)="sauvegarderNouvelleOffre()"
               >
                 <i class="fas fa-paper-plane"></i> Publier maintenant

@@ -281,8 +281,87 @@
 
           <!-- Résultats OCR -->
           <div class="ocr-results" *ngIf="!doc.analyzing && doc.verification">
-            <!-- Données extraites -->
-            <div class="extracted-data" *ngIf="doc.verification.donnees_extraites">
+            <!-- Bandeau de cohérence global -->
+            <div
+              class="ocr-coherence-banner"
+              *ngIf="doc.verification.comparaison && doc.verification.comparaison.length > 0"
+              [class.ocr-coherence-ok]="
+                doc.verification.comparaison &&
+                getNbIncoherences(doc.verification.comparaison) === 0
+              "
+              [class.ocr-coherence-warn]="
+                doc.verification.comparaison &&
+                getNbIncoherences(doc.verification.comparaison) > 0
+              "
+            >
+              <div class="ocr-coherence-icon">
+                <i
+                  class="fas"
+                  [class.fa-shield-alt]="getNbIncoherences(doc.verification.comparaison) === 0"
+                  [class.fa-exclamation-triangle]="getNbIncoherences(doc.verification.comparaison) > 0"
+                ></i>
+              </div>
+              <div class="ocr-coherence-text">
+                <strong *ngIf="getNbIncoherences(doc.verification.comparaison) === 0">
+                  Cohérence totale entre les valeurs déclarées et extraites
+                </strong>
+                <strong *ngIf="getNbIncoherences(doc.verification.comparaison) > 0">
+                  {{ getNbIncoherences(doc.verification.comparaison) }} écart(s) détecté(s)
+                  entre les valeurs déclarées et extraites
+                </strong>
+                <span class="ocr-coherence-sub">
+                  Score de confiance OCR :
+                  <strong>{{ doc.verification.confiance }}%</strong>
+                </span>
+              </div>
+            </div>
+
+            <!-- Tableau comparatif Déclaré vs OCR -->
+            <div class="extracted-data" *ngIf="doc.verification.comparaison && doc.verification.comparaison.length > 0">
+              <h5>
+                <i class="fas fa-balance-scale"></i>
+                Comparaison Déclaré vs OCR
+              </h5>
+              <div class="ocr-compare-table-wrap">
+                <table class="ocr-compare-table">
+                  <thead>
+                    <tr>
+                      <th>Champ analysé</th>
+                      <th>Valeur déclarée</th>
+                      <th>Valeur extraite (OCR)</th>
+                      <th>Écart</th>
+                      <th>Cohérence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let row of doc.verification.comparaison"
+                      [class.ocr-row-ok]="row.coherent"
+                      [class.ocr-row-warn]="!row.coherent"
+                    >
+                      <td class="ocr-cell-champ">{{ row.champ }}</td>
+                      <td class="ocr-cell-num">{{ row.declare }}</td>
+                      <td class="ocr-cell-num">{{ row.ocr }}</td>
+                      <td class="ocr-cell-num ocr-cell-ecart" [class.is-ko]="!row.coherent">
+                        {{ row.ecart }}
+                      </td>
+                      <td>
+                        <span class="ocr-coh-badge" [class.ok]="row.coherent" [class.ko]="!row.coherent">
+                          <i class="fas" [class.fa-check]="row.coherent" [class.fa-times]="!row.coherent"></i>
+                          {{ row.coherent ? 'Conforme' : 'Écart' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Données extraites simples (si pas de comparatif) -->
+            <div
+              class="extracted-data"
+              *ngIf="doc.verification.donnees_extraites && !doc.verification.comparaison"
+            >
               <h5>
                 <i class="fas fa-database"></i>
                 Données extraites

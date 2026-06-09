@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 
 interface Specialite {
@@ -41,11 +42,16 @@ const PARCOURS_META: Record<string, { places: number; date_limite: string; type_
           <h2 class="pm-title">Parcours Mastère — Offres 2025‑2026</h2>
           <p class="pm-subtitle">{{ rows.length }} parcours officiels · Inscriptions ouvertes</p>
         </div>
-        <button class="pm-btn-refresh" (click)="load()" title="Actualiser">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 10a6 6 0 1 0 1-3.2"/><path d="M4 4v3h3"/>
-          </svg>
-        </button>
+        <div class="pm-header-actions">
+          <button type="button" class="btn-primary" (click)="ajouterParcours()">
+            <i class="fas fa-plus"></i> Ajouter un parcours
+          </button>
+          <button class="pm-btn-refresh" (click)="load()" title="Actualiser">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 10a6 6 0 1 0 1-3.2"/><path d="M4 4v3h3"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- ── Loading ───────────────────────────────────────── -->
@@ -183,6 +189,31 @@ const PARCOURS_META: Record<string, { places: number; date_limite: string; type_
       color: #64748b;
       margin: 0;
     }
+    .pm-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 1.1rem;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+      box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.32);
+    }
+    .btn-primary i { font-size: 0.78rem; }
     .pm-btn-refresh {
       background: #f1f5f9;
       border: none;
@@ -440,7 +471,11 @@ export class ParcoursMasterComponent implements OnInit {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
+
+  ajouterParcours() {
+    this.router.navigate(['/admin/parcours-master/new']);
+  }
 
   ngOnInit() {
     this.load();

@@ -31,6 +31,8 @@ interface DocumentOCR {
     statut: string;
     confiance: number;
     donnees_extraites?: any;
+    donnees_declarees?: any;
+    comparaison?: { champ: string; declare: string; ocr: string; ecart: string; coherent: boolean }[];
     verifications?: any[];
     anomalies?: string[];
   };
@@ -319,18 +321,30 @@ export class ExaminerOcrComponent implements OnInit {
       doc.verification = {
         statut: 'valide',
         confiance: 94,
-        donnees_extraites: {
+        donnees_declarees: {
           'Moyenne L1': '14.25',
           'Moyenne L2': '15.80',
           'Moyenne L3': '16.50',
           'Moyenne générale': '15.52',
         },
+        donnees_extraites: {
+          'Moyenne L1': '14.25',
+          'Moyenne L2': '15.80',
+          'Moyenne L3': '16.20',
+          'Moyenne générale': '15.42',
+        },
+        comparaison: [
+          { champ: 'Moyenne L1', declare: '14.25', ocr: '14.25', ecart: '0.00', coherent: true },
+          { champ: 'Moyenne L2', declare: '15.80', ocr: '15.80', ecart: '0.00', coherent: true },
+          { champ: 'Moyenne L3', declare: '16.50', ocr: '16.20', ecart: '−0.30', coherent: false },
+          { champ: 'Moyenne générale', declare: '15.52', ocr: '15.42', ecart: '−0.10', coherent: false },
+        ],
         verifications: [
           { valide: true, description: 'Relevés des 3 années présents' },
           { valide: true, description: 'Tampons universitaires détectés' },
-          { valide: true, description: 'Calcul des moyennes cohérent' },
+          { valide: false, description: 'Écart détecté sur la moyenne L3' },
         ],
-        anomalies: [],
+        anomalies: ['Écart de 0,30 point détecté entre la moyenne L3 déclarée et extraite'],
       };
     } else if (doc.type === 'diplome') {
       doc.verification = {
@@ -499,5 +513,10 @@ export class ExaminerOcrComponent implements OnInit {
   formatLabel(key: string | number | symbol): string {
     const keyStr = String(key);
     return keyStr.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+
+  getNbIncoherences(comparaison: { coherent: boolean }[] | undefined): number {
+    if (!comparaison) return 0;
+    return comparaison.filter((r) => !r.coherent).length;
   }
 }

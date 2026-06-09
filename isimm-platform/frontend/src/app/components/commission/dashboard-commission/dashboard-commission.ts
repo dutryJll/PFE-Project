@@ -28,6 +28,8 @@ import { CommissionStateService } from '../../../services/commission-state.servi
 import {
   PARCOURS_SPECIALITE_CATALOG,
   ParcoursSpecialiteOption,
+  ScoreCriterion,
+  evaluateScoreFormule,
   getParcoursOptionsForType,
   resolveParcoursByCode,
 } from '../../../shared/specialites-demandees-catalog';
@@ -2474,6 +2476,8 @@ export class DashboardCommissionComponent implements OnInit {
   nouvelleOffreSpecialitesDemandees: string[] = [];
   nouvelleOffreShowSpecialitesEditor: boolean = false;
   nouvelleOffreNouvelleSpecialite: string = '';
+  nouvelleOffreScoreCriteres: ScoreCriterion[] = [];
+  nouvelleOffreScoreFormule: string = '';
 
   // Modal avis
   showModalAvis: boolean = false;
@@ -3929,6 +3933,29 @@ export class DashboardCommissionComponent implements OnInit {
     if (resetSpecialites || this.nouvelleOffreSpecialitesDemandees.length === 0) {
       this.nouvelleOffreSpecialitesDemandees = [...parcours.defaultSpecialitesDemandees];
     }
+    if (resetSpecialites || this.nouvelleOffreScoreCriteres.length === 0) {
+      this.nouvelleOffreScoreCriteres = parcours.defaultScoreConfig.criteres.map((c) => ({ ...c }));
+      this.nouvelleOffreScoreFormule = parcours.defaultScoreConfig.formule;
+    }
+  }
+
+  ajouterNouvelleOffreCritereScore(): void {
+    this.nouvelleOffreScoreCriteres = [
+      ...this.nouvelleOffreScoreCriteres,
+      { code: '', label: '', description: '', defaultValue: 0 },
+    ];
+  }
+
+  supprimerNouvelleOffreCritereScore(index: number): void {
+    this.nouvelleOffreScoreCriteres = this.nouvelleOffreScoreCriteres.filter((_, i) => i !== index);
+  }
+
+  evaluerNouvelleOffreScoreFormule(): {
+    ok: boolean;
+    value: number | null;
+    error: string | null;
+  } {
+    return evaluateScoreFormule(this.nouvelleOffreScoreFormule, this.nouvelleOffreScoreCriteres);
   }
 
   onNouvelleOffreParcoursChange(): void {
@@ -3980,7 +4007,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   nextStepNouvelleOffre(): void {
-    if (this.nouvelleOffreStep < 3) this.nouvelleOffreStep++;
+    if (this.nouvelleOffreStep < 4) this.nouvelleOffreStep++;
   }
 
   prevStepNouvelleOffre(): void {
