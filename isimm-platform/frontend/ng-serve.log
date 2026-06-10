@@ -10663,3 +10663,391 @@ Application bundle generation failed. [7.390 seconds] - 2026-06-09T22:23:03.842Z
          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
 
 [39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [4.813 seconds] - 2026-06-09T22:37:16.430Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7798:45:
+[37m      7798 │ ...If="(dossierOCRCandidature?.[32mstatut[37m === 'sous_examen' || dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7798:96:
+[37m      7798 │ ...' || dossierOCRCandidature?.[32mstatut[37m === 'soumis') && fichiersD...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7850:44:
+[37m      7850 │ ...gIf="dossierOCRCandidature?.[32mstatut[37m !== 'sous_examen' && dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7850:95:
+[37m      7850 │ ...!== 'sous_examen' && dossierOCRCandidature?.[32mstatut[37m !== 'soumis'"
+           ╵                                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'ScoreCriterion | { code: string; label: string; description: string; defaultValue: number; }' is not assignable to type 'ScoreCriterion'.
+  Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2353: Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [5.248 seconds] - 2026-06-09T22:50:26.318Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7798:45:
+[37m      7798 │ ...If="(dossierOCRCandidature?.[32mstatut[37m === 'sous_examen' || dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7798:96:
+[37m      7798 │ ...' || dossierOCRCandidature?.[32mstatut[37m === 'soumis') && fichiersD...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7850:44:
+[37m      7850 │ ...gIf="dossierOCRCandidature?.[32mstatut[37m !== 'sous_examen' && dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7850:95:
+[37m      7850 │ ...!== 'sous_examen' && dossierOCRCandidature?.[32mstatut[37m !== 'soumis'"
+           ╵                                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'ScoreCriterion | { code: string; label: string; description: string; defaultValue: number; }' is not assignable to type 'ScoreCriterion'.
+  Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2353: Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+Application bundle generation failed. [110.317 seconds] - 2026-06-09T23:30:32.071Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:45:
+[37m      7820 │ ...If="(dossierOCRCandidature?.[32mstatut[37m === 'sous_examen' || dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:96:
+[37m      7820 │ ...' || dossierOCRCandidature?.[32mstatut[37m === 'soumis') && fichiersD...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:44:
+[37m      7872 │ ...gIf="dossierOCRCandidature?.[32mstatut[37m !== 'sous_examen' && dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:95:
+[37m      7872 │ ...!== 'sous_examen' && dossierOCRCandidature?.[32mstatut[37m !== 'soumis'"
+           ╵                                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'onNouvelleOffreCritereModeChange' does not exist on type 'DashboardCommissionComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:1560:39:
+[37m      1560 │ ...           (ngModelChange)="[32monNouvelleOffreCritereModeChange[37m(c)"
+           ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'supprimerNouvelleOffrePalier' does not exist on type 'DashboardCommissionComponent'. Did you mean 'supprimerNouvelleOffreSpecialite'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:1591:80:
+[37m      1591 │ ...tn" type="button" (click)="[32msupprimerNouvelleOffrePalier[37m(c, pi)">
+           ╵                               [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'ajouterNouvelleOffrePalier' does not exist on type 'DashboardCommissionComponent'. Did you mean 'ajouterNouvelleOffreSpecialite'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:1603:90:
+[37m      1603 │ ...d-quota palier-add-btn" (click)="[32majouterNouvelleOffrePalier[37m(c)">
+           ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'insererCodeDansFormuleModal' does not exist on type 'DashboardCommissionComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:1645:27:
+[37m      1645 │                   (click)="[32minsererCodeDansFormuleModal[37m(c.code)"
+           ╵                            [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  Error occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'ScoreCriterion | { code: string; label: string; description: string; defaultValue: number; }' is not assignable to type 'ScoreCriterion'.
+  Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2353: Object literal may only specify known properties, and 'defaultValue' does not exist in type 'ScoreCriterion'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:3945:46:
+[37m      3945 │       { code: '', label: '', description: '', [32mdefaultValue[37m: 0 },
+           ╵                                               [32m~~~~~~~~~~~~[0m
+
+[39m[22m
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m [36m7.56 MB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m[36m28.97 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m [1m7.59 MB[22m
+
+Application bundle generation complete. [136.984 seconds] - 2026-06-09T23:59:00.624Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:45:
+[37m      7820 │ ...If="(dossierOCRCandidature?.[32mstatut[37m === 'sous_examen' || dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:96:
+[37m      7820 │ ...' || dossierOCRCandidature?.[32mstatut[37m === 'soumis') && fichiersD...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:44:
+[37m      7872 │ ...gIf="dossierOCRCandidature?.[32mstatut[37m !== 'sous_examen' && dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:95:
+[37m      7872 │ ...!== 'sous_examen' && dossierOCRCandidature?.[32mstatut[37m !== 'soumis'"
+           ╵                                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+Page reload sent to client(s).
+[33m>[39m Changes detected. Rebuilding...
+[32m√[39m Changes detected. Rebuilding...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m[1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m [36m7.56 MB[39m[2m | [22m
+
+Application bundle generation complete. [145.306 seconds] - 2026-06-10T00:55:38.662Z
+
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:45:
+[37m      7820 │ ...If="(dossierOCRCandidature?.[32mstatut[37m === 'sous_examen' || dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7820:96:
+[37m      7820 │ ...' || dossierOCRCandidature?.[32mstatut[37m === 'soumis') && fichiersD...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:44:
+[37m      7872 │ ...gIf="dossierOCRCandidature?.[32mstatut[37m !== 'sous_examen' && dossi...
+           ╵                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.html:7872:95:
+[37m      7872 │ ...!== 'sous_examen' && dossierOCRCandidature?.[32mstatut[37m !== 'soumis'"
+           ╵                                                [32m~~~~~~[0m
+
+  Warning occurs in the template of component DashboardCommissionComponent.
+
+    src/app/components/commission/dashboard-commission/dashboard-commission.ts:478:15:
+[37m      478 │   templateUrl: [32m'./dashboard-commission.html'[37m,
+          ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+Page reload sent to client(s).

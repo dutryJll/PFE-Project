@@ -194,73 +194,125 @@
             préinscription.
           </p>
         </div>
-        <table class="criteres-table">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Nom du critère</th>
-              <th>Description</th>
-              <th>Valeur par défaut</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let c of scoreCriteres; let i = index">
-              <td>
+
+        <div class="criteres-list">
+          <div *ngFor="let c of scoreCriteres; let i = index" class="critere-card">
+            <div class="critere-card-head">
+              <div class="critere-head-field">
+                <label class="flbl-sm">Code</label>
                 <input
                   type="text"
-                  class="qt-input"
+                  class="qt-input critere-code-input"
                   [(ngModel)]="c.code"
-                  placeholder="Ex: MG"
-                  style="width: 80px"
+                  placeholder="Ex: M.G"
                 />
-              </td>
-              <td>
+              </div>
+              <div class="critere-head-field critere-head-grow">
+                <label class="flbl-sm">Nom du critère</label>
                 <input
                   type="text"
                   class="qt-input"
                   [(ngModel)]="c.label"
                   placeholder="Ex: Moyenne Générale"
                 />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  class="qt-input"
-                  [(ngModel)]="c.description"
-                  placeholder="Définition / mode de calcul"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  class="qt-input"
-                  [(ngModel)]="c.defaultValue"
-                  style="width: 80px"
-                />
-              </td>
-              <td>
-                <button class="del-btn" (click)="supprimerCritereScore(i)" title="Supprimer">
-                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M2 3h8M5 3V2h2v1M4 3v6h4V3"></path>
-                  </svg>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="scoreCriteres.length === 0">
-              <td colspan="5" style="text-align: center; color: #94A3B8; font-size: 12px; padding: 10px">
-                Aucun critère défini — cliquez sur « Ajouter un critère »
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div style="margin-top: 0.5rem">
+              </div>
+              <div class="critere-head-field">
+                <label class="flbl-sm">Mode de calcul</label>
+                <select
+                  class="qt-input critere-mode-select"
+                  [(ngModel)]="c.mode"
+                  (ngModelChange)="onCritereModeChange(c)"
+                >
+                  <option value="palier">Palier (barème conditionnel)</option>
+                  <option value="formule">Formule (pondérée)</option>
+                  <option value="fixe">Fixe (valeur unique)</option>
+                </select>
+              </div>
+              <button class="critere-del-btn" (click)="supprimerCritereScore(i)" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+
+            <div *ngIf="c.description" class="critere-desc">
+              <i class="fas fa-info-circle"></i> {{ c.description }}
+            </div>
+
+            <div *ngIf="c.mode === 'palier'" class="critere-body">
+              <div class="critere-body-label">Barème par palier</div>
+              <table class="paliers-table">
+                <thead>
+                  <tr>
+                    <th>Condition</th>
+                    <th style="width: 100px">Points</th>
+                    <th style="width: 40px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of c.paliers; let pi = index">
+                    <td>
+                      <input
+                        type="text"
+                        class="qt-input"
+                        [(ngModel)]="p.condition"
+                        placeholder="Ex: 0 redoublement"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.5"
+                        class="qt-input"
+                        [(ngModel)]="p.points"
+                      />
+                    </td>
+                    <td>
+                      <button class="palier-del-btn" (click)="supprimerPalier(c, pi)" title="Retirer">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!c.paliers || c.paliers.length === 0">
+                    <td colspan="3" style="text-align:center;color:#94A3B8;font-style:italic;padding:8px">
+                      Aucun palier — ajoutez-en un ci-dessous.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button type="button" class="btn btn-sec btn-sm palier-add-btn" (click)="ajouterPalier(c)">
+                <i class="fas fa-plus"></i> Ajouter un palier
+              </button>
+            </div>
+
+            <div *ngIf="c.mode === 'formule'" class="critere-body">
+              <div class="critere-body-label">Formule pondérée (variables : l1, l2, l3, bac, math_bac)</div>
+              <input
+                type="text"
+                class="finput"
+                [(ngModel)]="c.formuleCalc"
+                placeholder="Ex: 2*bac + 1.5*l1 + 1*l2 + 0.5*l3"
+              />
+            </div>
+
+            <div *ngIf="c.mode === 'fixe'" class="critere-body">
+              <div class="critere-body-label">Valeur fixe</div>
+              <input
+                type="number"
+                step="0.5"
+                class="qt-input"
+                [(ngModel)]="c.valeurFixe"
+                style="width: 120px"
+              />
+            </div>
+          </div>
+
+          <div *ngIf="scoreCriteres.length === 0" class="criteres-empty">
+            Aucun critère défini — cliquez sur « Ajouter un critère ».
+          </div>
+        </div>
+
+        <div style="margin-top: 0.75rem">
           <button type="button" class="btn btn-sec btn-sm" (click)="ajouterCritereScore()">
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-              <line x1="6" y1="2" x2="6" y2="10"></line>
-              <line x1="2" y1="6" x2="10" y2="6"></line>
-            </svg>
-            Ajouter un critère
+            <i class="fas fa-plus"></i> Ajouter un critère
           </button>
         </div>
 
@@ -270,11 +322,16 @@
             type="text"
             class="finput"
             [(ngModel)]="scoreFormule"
-            placeholder="Ex: MG + BNR + BSP"
+            placeholder="Ex: M.G + B.N.R + B.S.P"
           />
           <div class="formule-help">
-            Codes disponibles :
-            <span *ngFor="let c of scoreCriteres" class="formule-code-chip">{{ c.code }}</span>
+            Codes disponibles (cliquez pour insérer) :
+            <span
+              *ngFor="let c of scoreCriteres"
+              class="formule-code-chip clickable"
+              (click)="insererCodeDansFormule(c.code)"
+              title="Insérer dans la formule"
+            >{{ c.code }}</span>
             <span *ngIf="scoreCriteres.length === 0" style="color: #94A3B8; font-style: italic">
               Aucun (ajoutez un critère)
             </span>

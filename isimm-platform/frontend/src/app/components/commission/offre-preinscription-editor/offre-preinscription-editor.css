@@ -686,3 +686,28 @@ textarea.finput {
 .formule-result { margin-top: 8px; padding: 8px 12px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
 .formule-result.formule-ok { background: #ECFDF5; color: #065F46; border: 1px solid #6EE7B7; }
 .formule-result.formule-err { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+
+/* Critères step v2 — per-mode cards */
+.criteres-list { display: flex; flex-direction: column; gap: 12px; }
+.critere-card { background: #fff; border: 1px solid #E2E8F4; border-radius: 12px; padding: 14px 16px; }
+.critere-card-head { display: flex; gap: 10px; align-items: flex-end; }
+.critere-head-field { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+.critere-head-grow { flex: 1; }
+.flbl-sm { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; }
+.critere-code-input { font-family: ui-monospace, monospace; font-weight: 700; color: #185FA5; width: 110px; }
+.critere-mode-select { min-width: 200px; }
+.critere-del-btn { width: 32px; height: 32px; border-radius: 8px; background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.critere-del-btn:hover { background: #B91C1C; color: #fff; }
+.critere-desc { margin-top: 8px; font-size: 11px; color: #64748B; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #F8FAFC; border-radius: 6px; }
+.critere-body { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #E2E8F4; }
+.critere-body-label { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.paliers-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #FAFBFD; border-radius: 8px; overflow: hidden; }
+.paliers-table thead th { background: #EFF6FF; color: #185FA5; font-weight: 700; padding: 6px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.paliers-table tbody td { padding: 6px 10px; border-bottom: 1px solid #F1F5F9; }
+.paliers-table tbody tr:last-child td { border-bottom: none; }
+.palier-del-btn { width: 24px; height: 24px; border-radius: 6px; background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+.palier-del-btn:hover { background: #B91C1C; color: #fff; }
+.palier-add-btn { margin-top: 6px; }
+.criteres-empty { padding: 20px; text-align: center; color: #94A3B8; font-style: italic; background: #F8FAFC; border: 1px dashed #E2E8F4; border-radius: 10px; font-size: 12px; }
+.formule-code-chip.clickable { cursor: pointer; transition: transform .12s, background .12s; }
+.formule-code-chip.clickable:hover { background: #BFDBFE; transform: translateY(-1px); }

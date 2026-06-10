@@ -3934,7 +3934,10 @@ export class DashboardCommissionComponent implements OnInit {
       this.nouvelleOffreSpecialitesDemandees = [...parcours.defaultSpecialitesDemandees];
     }
     if (resetSpecialites || this.nouvelleOffreScoreCriteres.length === 0) {
-      this.nouvelleOffreScoreCriteres = parcours.defaultScoreConfig.criteres.map((c) => ({ ...c }));
+      this.nouvelleOffreScoreCriteres = parcours.defaultScoreConfig.criteres.map((c) => ({
+        ...c,
+        paliers: c.paliers ? c.paliers.map((p) => ({ ...p })) : undefined,
+      }));
       this.nouvelleOffreScoreFormule = parcours.defaultScoreConfig.formule;
     }
   }
@@ -3942,12 +3945,52 @@ export class DashboardCommissionComponent implements OnInit {
   ajouterNouvelleOffreCritereScore(): void {
     this.nouvelleOffreScoreCriteres = [
       ...this.nouvelleOffreScoreCriteres,
-      { code: '', label: '', description: '', defaultValue: 0 },
+      { code: '', label: '', description: '', mode: 'fixe', valeurFixe: 0 },
     ];
   }
 
   supprimerNouvelleOffreCritereScore(index: number): void {
     this.nouvelleOffreScoreCriteres = this.nouvelleOffreScoreCriteres.filter((_, i) => i !== index);
+  }
+
+  onNouvelleOffreCritereModeChange(critere: ScoreCriterion): void {
+    if (critere.mode === 'palier') {
+      if (!critere.paliers || critere.paliers.length === 0) {
+        critere.paliers = [{ condition: '', points: 0 }];
+      }
+      critere.formuleCalc = undefined;
+      critere.valeurFixe = undefined;
+    } else if (critere.mode === 'formule') {
+      if (!critere.formuleCalc) critere.formuleCalc = '';
+      critere.paliers = undefined;
+      critere.valeurFixe = undefined;
+    } else if (critere.mode === 'fixe') {
+      if (critere.valeurFixe === undefined) critere.valeurFixe = 0;
+      critere.paliers = undefined;
+      critere.formuleCalc = undefined;
+    }
+  }
+
+  ajouterNouvelleOffrePalier(critere: ScoreCriterion): void {
+    if (!critere.paliers) critere.paliers = [];
+    critere.paliers.push({ condition: '', points: 0 });
+  }
+
+  supprimerNouvelleOffrePalier(critere: ScoreCriterion, index: number): void {
+    if (!critere.paliers) return;
+    critere.paliers.splice(index, 1);
+  }
+
+  insererCodeDansFormuleModal(code: string): void {
+    const current = this.nouvelleOffreScoreFormule || '';
+    const trimmed = current.trimEnd();
+    if (trimmed.length === 0) {
+      this.nouvelleOffreScoreFormule = code;
+    } else {
+      const lastChar = trimmed.slice(-1);
+      const needsOp = !/[+\-*/(]/.test(lastChar);
+      this.nouvelleOffreScoreFormule = trimmed + (needsOp ? ' + ' : ' ') + code;
+    }
   }
 
   evaluerNouvelleOffreScoreFormule(): {
