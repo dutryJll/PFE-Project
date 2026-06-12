@@ -60,7 +60,7 @@ export class TranslationService {
 
       // Login page
       'login.back': "Retour à l'accueil",
-      'login.title': "Plateforme d'Admission",
+      'login.title': "Plateforme d'Admission aux masters et cycles d'ingénieurs",
       'login.subtitle': 'ISIMM - Monastir',
       'login.candidate.badge': 'Candidat',
       'login.candidate.title': 'Espace Candidat',
@@ -244,7 +244,7 @@ export class TranslationService {
 
       // Login page
       'login.back': 'Back to home',
-      'login.title': 'Admission Platform',
+      'login.title': "Admission Platform for Master's and Engineering Programs",
       'login.subtitle': 'ISIMM - Monastir',
       'login.candidate.badge': 'Candidate',
       'login.candidate.title': 'Candidate Area',

@@ -656,6 +656,57 @@ def create_candidature(request):
         or request.data.get('score_previsualisation')
     )
 
+    # ──────────────────────────────────────────────────────────────────
+    # ANTI-FRAUDE (Sprint 4) : recalculer le score côté serveur à partir
+    # des critères de l'offre + données candidat puis comparer au score
+    # déclaré. Refuser la création si l'écart dépasse la tolérance.
+    # ──────────────────────────────────────────────────────────────────
+    try:
+        from .score_service import ScoreService
+        if getattr(master, 'criteres', None) and getattr(master, 'score_formule', None):
+            form_data_score = {}
+            if isinstance(academic_data, dict):
+                form_data_score.update({
+                    'moyenne_l1': academic_data.get('moyenne_l1', 0),
+                    'moyenne_l2': academic_data.get('moyenne_l2', 0),
+                    'moyenne_l3': academic_data.get('moyenne_l3', 0),
+                    'moyenne_bac': academic_data.get('moyenne_bac', 0),
+                    'note_maths_bac': academic_data.get('note_maths_bac', 0),
+                    'note_francais_bac': academic_data.get('note_francais_bac', 0),
+                    'note_anglais_bac': academic_data.get('note_anglais_bac', 0),
+                    'nb_redoublements': academic_data.get('nb_redoublements', 0),
+                    'nb_sessions_controle': academic_data.get('nb_sessions_controle', 0),
+                    'annee_diplome': academic_data.get('annee_diplome', 0),
+                    'rang_l1': academic_data.get('rang_l1', 0),
+                    'rang_l2': academic_data.get('rang_l2', 0),
+                    'session_l1': academic_data.get('session_l1'),
+                    'session_l2': academic_data.get('session_l2'),
+                    'session_l1_controle': academic_data.get('session_l1_controle', False),
+                    'session_l2_controle': academic_data.get('session_l2_controle', False),
+                    'session_l3_controle': academic_data.get('session_l3_controle', False),
+                    'certif_b2': academic_data.get('certif_b2', False),
+                })
+            score_backend, _detail = ScoreService.calculer_score_total(master, form_data_score)
+            score_declare = float(score_soumis_front or request.data.get('score_declare') or 0)
+            if ScoreService.detecter_fraude(score_backend, score_declare, tolerance=0.5):
+                return Response(
+                    {
+                        'error': 'Incohérence détectée dans le score déclaré.',
+                        'score_calcule': score_backend,
+                        'score_declare': score_declare,
+                        'ecart': abs(score_backend - score_declare),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Le score officiel sauvegardé est celui recalculé côté serveur
+            score_soumis_front = score_backend
+    except ImportError:
+        # ScoreService non disponible — on continue avec le score déclaré (fallback)
+        pass
+    except Exception:
+        # Toute autre erreur dans le calcul ne bloque pas la création (legacy)
+        pass
+
     candidature = None  # created after validation passes
 
     if isinstance(academic_data, dict):

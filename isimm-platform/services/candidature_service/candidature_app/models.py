@@ -64,6 +64,13 @@ class Master(models.Model):
     coeff_licence = models.DecimalField(max_digits=5, decimal_places=2, default=0.6)
     coeff_examen = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
     bonus_mention = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+
+    # Sprint 4 — Critères et formule de score (définis par le responsable de commission)
+    # ⚠ champ nommé `score_formule` (pas `formule_score`) pour éviter le conflit
+    # avec le related_name='formule_score' de FormuleScore.master.
+    criteres = models.JSONField(default=list, blank=True)
+    score_formule = models.CharField(max_length=500, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -765,10 +772,9 @@ class AvisSelection(models.Model):
                 fields=['commission', 'membre', 'is_global'],
                 name='unique_global_avis_selection',
             ),
-            models.CheckConstraint(
-                condition=~models.Q(statut='defavorable') | ~models.Q(commentaire=''),
-                name='avis_selection_commentaire_required_if_defavorable',
-            ),
+            # NOTE : la contrainte "commentaire requis si défavorable" est
+            # appliquée dans clean() ci-dessous + côté serializer.
+            # (CheckConstraint retiré pour compatibilité Django/Python 3.14)
         ]
         indexes = [
             models.Index(fields=['commission', 'date_avis']),

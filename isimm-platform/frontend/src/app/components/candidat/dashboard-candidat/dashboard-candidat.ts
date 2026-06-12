@@ -24,7 +24,9 @@ import {
   PARCOURS_SPECIALITE_CATALOG,
   resolveParcoursByCode,
   resolveParcoursByOffreId,
+  ScoreCriterion,
 } from '../../../shared/specialites-demandees-catalog';
+import { ScoreService, FormDataCandidat, ScoreDetailItem } from '../../../services/score.service';
 import { environment } from '../../../../environments/environment';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -1037,7 +1039,84 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
     private webSocketService: WebSocketService,
+    private scoreService: ScoreService,
   ) {}
+
+  // ── Score live (Sprint 4) ───────────────────────────────────────────
+  scoreLiveDetail: ScoreDetailItem[] = [];
+  scoreLiveTotal: number | null = null;
+
+  private buildFormDataCandidat(): FormDataCandidat {
+    const sessionToInt = (val: string | undefined, controle: boolean): boolean => {
+      if (controle) return true;
+      return val === 'control';
+    };
+    const sessions = [
+      this.wizardData?.session1Annee,
+      this.wizardData?.session2Annee,
+      this.wizardData?.session3Annee,
+    ];
+    const nbSessionsControle = sessions.filter((s) => s === 'control').length;
+
+    return {
+      moyenne_l1: parseFloat(String(this.wizardData?.moyenne1Annee || 0)) || 0,
+      moyenne_l2: parseFloat(String(this.wizardData?.moyenne2Annee || 0)) || 0,
+      moyenne_l3: parseFloat(String(this.wizardData?.moyenne3Annee || 0)) || 0,
+      moyenne_bac: parseFloat(String(this.wizardData?.moyenneBacPrincipale || 0)) || 0,
+      note_maths_bac: parseFloat(String(this.wizardData?.noteMathBac || 0)) || 0,
+      note_francais_bac: parseFloat(String(this.wizardData?.noteFrancaisBac || 0)) || 0,
+      note_anglais_bac: parseFloat(String(this.wizardData?.noteAnglaisBac || 0)) || 0,
+      nb_redoublements: parseInt(String(this.wizardData?.nombreRedoublement || 0), 10) || 0,
+      nb_sessions_controle: nbSessionsControle,
+      annee_diplome: parseInt(String(this.wizardData?.anneeObtentionDiplome || 0), 10) || 0,
+      session_l1_controle: sessionToInt(this.wizardData?.session1Annee, false),
+      session_l2_controle: sessionToInt(this.wizardData?.session2Annee, false),
+      session_l3_controle: sessionToInt(this.wizardData?.session3Annee, false),
+      certif_b2: this.wizardData?.certificationB2 === 'oui',
+    };
+  }
+
+  private getCurrentOffreCriteres(): ScoreCriterion[] {
+    const code = String(this.wizardOffre?.code || '').toUpperCase();
+    const parcours = code ? resolveParcoursByCode(code) : undefined;
+    return parcours?.defaultScoreConfig.criteres ?? [];
+  }
+
+  private getCurrentOffreFormuleScore(): string {
+    const code = String(this.wizardOffre?.code || '').toUpperCase();
+    const parcours = code ? resolveParcoursByCode(code) : undefined;
+    return parcours?.defaultScoreConfig.formule ?? '';
+  }
+
+  recalculerScoreLive(): void {
+    const criteres = this.getCurrentOffreCriteres();
+    const formule = this.getCurrentOffreFormuleScore();
+    if (!criteres.length || !formule) {
+      this.scoreLiveDetail = [];
+      this.scoreLiveTotal = null;
+      return;
+    }
+    const formData = this.buildFormDataCandidat();
+
+    // ★ Garde : ne calculer le score QUE si au moins une moyenne est saisie.
+    // Évite d'afficher un score négatif par défaut pour MRGL/MRMI à cause des
+    // termes (M.Bac + N.Math − 20)/2 ou des malus.
+    const aucuneSaisie =
+      formData.moyenne_l1 <= 0 &&
+      formData.moyenne_l2 <= 0 &&
+      formData.moyenne_l3 <= 0 &&
+      formData.moyenne_bac <= 0 &&
+      formData.note_maths_bac <= 0;
+    if (aucuneSaisie) {
+      this.scoreLiveDetail = [];
+      this.scoreLiveTotal = null;
+      return;
+    }
+
+    const result = this.scoreService.calculerScoreTotal(criteres, formule, formData);
+    this.scoreLiveDetail = result.detail;
+    this.scoreLiveTotal = result.total;
+  }
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
@@ -2705,6 +2784,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   // Trigger backend score calculation with debounce to avoid excessive API calls
   triggerWizardScoreCalculation(): void {
     this.calculerScoreInstantane();
+    this.recalculerScoreLive();
 
     if (!this.wizardOffre || !this.isWizardStepValid(2)) {
       this.wizardComputedScoreLoading = false;
@@ -2898,7 +2978,11 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   getWizardComputedScore(): number {
-    // Official score from backend when available; otherwise local estimate.
+    // ★ Sprint 4 — prioriser le score live (ScoreService), conserve la valeur
+    // entre étape 2 et étape 3.
+    if (this.scoreLiveTotal !== null && this.scoreLiveTotal !== undefined) {
+      return this.scoreLiveTotal;
+    }
     if (this.wizardComputedScoreBackend !== null) {
       return this.wizardComputedScoreBackend;
     }
@@ -2909,19 +2993,17 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   getWizardComputedScoreDisplay(): string {
+    // ★ Sprint 4 — utiliser le score live calculé en temps réel par ScoreService
+    if (this.scoreLiveTotal !== null && this.scoreLiveTotal !== undefined) {
+      return this.scoreLiveTotal.toFixed(2);
+    }
     if (this.wizardComputedScoreBackend !== null) {
-      return `${this.wizardComputedScoreBackend.toFixed(2)}`;
+      return this.wizardComputedScoreBackend.toFixed(2);
     }
     if (this.wizardComputedScoreInstantane !== null) {
-      return `${this.wizardComputedScoreInstantane.toFixed(2)}`;
+      return this.wizardComputedScoreInstantane.toFixed(2);
     }
-    if (this.wizardComputedScoreLoading) {
-      return '—';
-    }
-    if (this.wizardComputedScoreError) {
-      return '—';
-    }
-    return this.hasWizardScoreInputs() ? 'Calcul...' : '—';
+    return '—';
   }
 
   isWizardCINValid(value: string): boolean {
@@ -3256,6 +3338,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       diplome_reference: this.wizardData.natureDiplome,
       formation_code: formationCode,
       score_previsualisation: scorePrevisualisation,
+      // ★ Sprint 4 — score live recalculé en temps réel (vérification anti-fraude côté Django)
+      score_declare: this.scoreLiveTotal ?? scorePrevisualisation ?? 0,
       academic_data: academicData,
     };
 
@@ -3298,7 +3382,29 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       redoublements: Number(this.wizardData.nombreRedoublement || '0'),
     };
 
+    // ★ Sprint 4 — clés à plat pour le ScoreService backend (anti-fraude)
+    const nbSessionsControle = [
+      this.wizardData.session1Annee,
+      this.wizardData.session2Annee,
+      this.wizardData.session3Annee,
+    ].filter((s) => s === 'control').length;
+
     return {
+      // ── Clés à plat lues par le backend (Sprint 4 anti-fraude) ──
+      moyenne_l1: n(this.wizardData.moyenne1Annee) || 0,
+      moyenne_l2: n(this.wizardData.moyenne2Annee) || 0,
+      moyenne_l3: n(this.wizardData.moyenne3Annee) || 0,
+      moyenne_bac: n(this.wizardData.moyenneBacPrincipale) || 0,
+      note_maths_bac: n(this.wizardData.noteMathBac) || 0,
+      note_francais_bac: n(this.wizardData.noteFrancaisBac) || 0,
+      note_anglais_bac: n(this.wizardData.noteAnglaisBac) || 0,
+      nb_redoublements: Number(this.wizardData.nombreRedoublement || '0'),
+      nb_sessions_controle: nbSessionsControle,
+      annee_diplome: Number(this.wizardData.anneeObtentionDiplome || 0),
+      session_l1_controle: this.wizardData.session1Annee === 'control',
+      session_l2_controle: this.wizardData.session2Annee === 'control',
+      session_l3_controle: this.wizardData.session3Annee === 'control',
+      certif_b2: this.wizardData.certificationB2 === 'oui',
       common,
       glDs: {
         moy1: n(this.wizardData.moyenne1Annee),

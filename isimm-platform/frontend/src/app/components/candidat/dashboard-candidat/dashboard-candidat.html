@@ -3035,7 +3035,8 @@
                   (input)="
                     wizardData.noteFrancaisBac = sanitizeWizardDecimalInput(
                       wizardData.noteFrancaisBac
-                    )
+                    );
+                    triggerWizardScoreCalculation()
                   "
                   (blur)="wizardTouched.noteFrancaisBac = true"
                   placeholder="Ex: 16,00"
@@ -3064,7 +3065,8 @@
                   (input)="
                     wizardData.noteAnglaisBac = sanitizeWizardDecimalInput(
                       wizardData.noteAnglaisBac
-                    )
+                    );
+                    triggerWizardScoreCalculation()
                   "
                   (blur)="wizardTouched.noteAnglaisBac = true"
                   placeholder="Ex: 15,75"
@@ -3090,7 +3092,10 @@
                   <input
                     type="checkbox"
                     [checked]="wizardData.certificationB2 === 'oui'"
-                    (change)="wizardData.certificationB2 = $event.target.checked ? 'oui' : 'non'"
+                    (change)="
+                      wizardData.certificationB2 = $event.target.checked ? 'oui' : 'non';
+                      triggerWizardScoreCalculation()
+                    "
                   />
                   <span class="compact-mark"></span>
                   <span class="compact-label">Possède une certification B2</span>
@@ -3145,7 +3150,8 @@
                     wizardData.anneeObtentionDiplome = sanitizeWizardDigits(
                       wizardData.anneeObtentionDiplome,
                       4
-                    )
+                    );
+                    triggerWizardScoreCalculation()
                   "
                   (blur)="wizardTouched.anneeObtentionDiplome = true"
                   placeholder="Ex: 2024"
@@ -3217,6 +3223,7 @@
                       <select
                         class="session-select"
                         [(ngModel)]="wizardData.session1Annee"
+                        (ngModelChange)="triggerWizardScoreCalculation()"
                         name="wzSes1"
                       >
                         <option value="">—</option>
@@ -3262,6 +3269,7 @@
                       <select
                         class="session-select"
                         [(ngModel)]="wizardData.session2Annee"
+                        (ngModelChange)="triggerWizardScoreCalculation()"
                         name="wzSes2"
                       >
                         <option value="">—</option>
@@ -3307,6 +3315,7 @@
                       <select
                         class="session-select"
                         [(ngModel)]="wizardData.session3Annee"
+                        (ngModelChange)="triggerWizardScoreCalculation()"
                         name="wzSes3"
                       >
                         <option value="">—</option>
@@ -3429,6 +3438,7 @@
                   type="number"
                   min="0"
                   [(ngModel)]="wizardData.nombreRedoublement"
+                  (ngModelChange)="triggerWizardScoreCalculation()"
                   name="wzRedoub"
                   placeholder="0"
                 />
@@ -3439,6 +3449,7 @@
                   type="number"
                   min="0"
                   [(ngModel)]="wizardData.nombreRedoublementIng1"
+                  (ngModelChange)="triggerWizardScoreCalculation()"
                   name="wzRedIng1"
                   placeholder="0"
                 />
@@ -3466,7 +3477,7 @@
               </div>
             </div>
 
-            <!-- Score Live -->
+            <!-- Score Live (legacy) -->
             <div class="wz-score-live-card" *ngIf="getWizardComputedScore() > 0">
               <div class="score-live-left">
                 <i class="fas fa-tachometer-alt"></i>
@@ -3476,6 +3487,31 @@
                 </div>
               </div>
               <div class="score-live-value">{{ getWizardComputedScore().toFixed(2) }}</div>
+            </div>
+
+            <!-- 📊 Widget Score Estimé (Sprint 4) -->
+            <div class="score-estime-widget" *ngIf="scoreLiveDetail.length > 0">
+              <div class="score-estime-header">
+                <i class="fas fa-chart-line"></i>
+                <span>Score estimé en temps réel</span>
+              </div>
+              <div class="score-estime-detail">
+                <div class="score-estime-row" *ngFor="let d of scoreLiveDetail">
+                  <span class="score-estime-code">{{ d.code }}</span>
+                  <span class="score-estime-nom">{{ d.nom }}</span>
+                  <span class="score-estime-valeur">{{ d.valeur | number: '1.2-2' }}</span>
+                </div>
+              </div>
+              <div class="score-estime-total">
+                <span class="score-estime-total-label">SCORE TOTAL</span>
+                <span class="score-estime-total-value">
+                  {{ scoreLiveTotal === null ? '—' : (scoreLiveTotal | number: '1.2-2') }}
+                </span>
+              </div>
+              <div class="score-estime-disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                Score indicatif — sera vérifié et recalculé côté serveur après soumission.
+              </div>
             </div>
           </div>
         </div>
