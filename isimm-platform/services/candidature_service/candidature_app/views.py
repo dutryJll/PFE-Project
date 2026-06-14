@@ -633,6 +633,63 @@ def create_candidature(request):
                 status=status.HTTP_409_CONFLICT
             )
 
+    # ────────────────────────────────────────────────────────────────────
+    # Req-2 (Sprint 2) — Gestion des vœux multi-parcours
+    #   • Cas A (Masters)   : max 3 vœux, classés par priorité, pas de doublon
+    #   • Cas B (Ingénieur) : candidature unique, pas de vœu/filière
+    # ────────────────────────────────────────────────────────────────────
+    specialite_upper = (master.specialite or '').upper()
+    nom_lower = (master.nom or '').lower()
+    is_cycle_ingenieur = (
+        specialite_upper.startswith('ING')
+        or 'ingenieur' in nom_lower
+        or 'ingénieur' in nom_lower
+    )
+
+    if is_cycle_ingenieur:
+        # Cas B — Candidature unique au concours ingénieur (pas de vœu)
+        existing_ing = Candidature.objects.filter(
+            candidat=request.user,
+            master__specialite__istartswith='ING',
+        ).exclude(statut__in=['rejete', 'annulee']).count()
+        if existing_ing >= 1:
+            return Response(
+                {
+                    'error': "Vous êtes déjà inscrit au concours ingénieur. "
+                             "Une seule candidature est autorisée pour ce concours.",
+                    'concours_type': 'ingenieur',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Pour l'ingénieur, choix_priorite n'a pas de sens — forcer à 1
+        request.data['choix_priorite'] = 1
+    else:
+        # Cas A — Maximum 3 vœux Masters par candidat
+        masters_actives = Candidature.objects.filter(
+            candidat=request.user,
+        ).exclude(
+            master__specialite__istartswith='ING',
+        ).exclude(
+            statut__in=['rejete', 'annulee'],
+        )
+        nb_voeux = masters_actives.count()
+        if nb_voeux >= 3:
+            voeux_existants = [
+                {'master': c.master.nom, 'choix': c.choix_priorite, 'statut': c.statut}
+                for c in masters_actives.order_by('choix_priorite')
+            ]
+            return Response(
+                {
+                    'error': "Vous avez atteint la limite de 3 vœux pour les Masters. "
+                             "Annulez une candidature existante avant d'en créer une nouvelle.",
+                    'limite': 3,
+                    'voeux_existants': voeux_existants,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Assignation automatique de la priorité (1, 2 ou 3) selon l'ordre
+        request.data['choix_priorite'] = nb_voeux + 1
+
     # Check: Master is open for applications.
     # The `actif` flag is the authoritative control — if admin keeps it active, deadline is bypassed.
     if not master.actif:
@@ -1524,6 +1581,66 @@ def mes_candidatures(request):
 
     serializer = CandidatureSerializer(candidatures, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reclasser_voeux(request):
+    """Req-2 — Reclasser les 3 vœux Masters par ordre de priorité.
+
+    Payload attendu :
+      { "ordre": [<id_candidature_choix_1>, <id_candidature_choix_2>, <id_candidature_choix_3>] }
+
+    Toutes les candidatures Masters actives du candidat doivent être incluses.
+    Ne s'applique pas aux candidatures Ingénieur (unique, pas de classement).
+    """
+    ordre = request.data.get('ordre', [])
+    if not isinstance(ordre, list) or not ordre:
+        return Response(
+            {'error': "Le champ 'ordre' (liste d'IDs de candidature) est requis."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(ordre) > 3:
+        return Response(
+            {'error': "Maximum 3 vœux autorisés."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    candidatures = list(
+        Candidature.objects.filter(
+            candidat=request.user, id__in=ordre,
+        ).exclude(
+            master__specialite__istartswith='ING',
+        ).exclude(
+            statut__in=['rejete', 'annulee'],
+        )
+    )
+    if len(candidatures) != len(ordre):
+        return Response(
+            {'error': "Certaines candidatures fournies n'existent pas ou ne vous appartiennent pas."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    by_id = {c.id: c for c in candidatures}
+    for new_priorite, cand_id in enumerate(ordre, start=1):
+        c = by_id[cand_id]
+        if not c.peut_etre_modifie():
+            return Response(
+                {'error': f"La candidature {c.numero} n'est plus modifiable (délai dépassé)."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        c.choix_priorite = new_priorite
+        c.save(update_fields=['choix_priorite'])
+
+    return Response(
+        {
+            'message': 'Vœux reclassés avec succès.',
+            'voeux': [
+                {'id': c.id, 'master': c.master.nom, 'choix': c.choix_priorite}
+                for c in sorted(candidatures, key=lambda x: x.choix_priorite)
+            ],
+        }
+    )
 
 
 @api_view(['GET'])
@@ -2553,6 +2670,68 @@ def valider_preselection_commission(request, commission_id):
             ),
         },
         status=status.HTTP_202_ACCEPTED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def valider_preselection_candidature(request, candidature_id):
+    """
+    Valide la présélection d'un candidat spécifique et envoie une notification.
+    Le candidat reçoit un email et une notification WebSocket lui demandant de confirmer son inscription.
+
+    Paramètres optionnels:
+    - recommandation: 'favorable', 'defavorable', 'reserve'
+    - commentaire: Commentaire du responsable
+    """
+    if getattr(request.user, 'role', None) not in ['responsable_commission', 'admin']:
+        return Response({'error': 'Permission refusée'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        candidature = Candidature.objects.get(id=candidature_id)
+    except Candidature.DoesNotExist:
+        return Response({'error': 'Candidature non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Récupérer les paramètres optionnels
+    recommandation = request.data.get('recommandation', 'favorable')
+    commentaire = request.data.get('commentaire', '')
+
+    # Mettre à jour le statut
+    candidature.statut = 'preselectionne'
+    candidature.save(update_fields=['statut'])
+
+    # Envoyer notification au candidat
+    try:
+        from .notifications import envoyer_notification_preselection
+        envoyer_notification_preselection(candidature)
+    except Exception as e:
+        logger.error(f'Erreur envoi notification présélection {candidature_id}: {e}')
+
+    # Créer notification système
+    try:
+        from .models import Notification
+        message = f'Vous avez été présélectionné(e) pour {candidature.master.nom}. Veuillez confirmer votre inscription.'
+        if commentaire:
+            message += f'\n\nCommentaire: {commentaire}'
+
+        Notification.objects.create(
+            utilisateur=candidature.candidat,
+            titre='🎉 Présélection validée',
+            message=message,
+            type_notification='PRESELECTION_VALIDEE',
+            est_lu=False,
+        )
+    except Exception as e:
+        logger.error(f'Erreur création notification {candidature_id}: {e}')
+
+    return Response(
+        {
+            'success': True,
+            'message': f'Présélection validée pour {candidature.candidat_nom}. Notification envoyée.',
+            'statut': candidature.statut,
+            'candidat_nom': candidature.candidat_nom,
+        },
+        status=status.HTTP_200_OK,
     )
 
 
@@ -6499,11 +6678,115 @@ def _human_size(size_bytes):
 # ──────────────────────────────────────────────────────────────────────────
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def export_ocr_excel(request):
+    """Exporte les résultats OCR en fichier Excel."""
+    import openpyxl
+    from openpyxl.styles import PatternFill, Font, Alignment
+    from django.http import HttpResponse
+    import io
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    resultats = request.data.get('resultats', [])
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Rapport OCR'
+
+    headers = ['Candidat', 'N° Candidature', 'Score Déclaré', 'Score OCR', 'Écart', 'Moteur', 'Statut']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = Font(bold=True, color='FFFFFF', size=11)
+        cell.fill = PatternFill(start_color='0F1F3D', end_color='0F1F3D', fill_type='solid')
+        cell.alignment = Alignment(horizontal='center')
+
+    for row, r in enumerate(resultats, 2):
+        statut = r.get('statut', '—')
+        ws.cell(row=row, column=1, value=r.get('candidat_nom', '—'))
+        ws.cell(row=row, column=2, value=r.get('numero', '—'))
+        ws.cell(row=row, column=3, value=r.get('score_declare', '—'))
+        ws.cell(row=row, column=4, value=r.get('score_extrait', '—'))
+        ws.cell(row=row, column=5, value=r.get('ecart', '—'))
+        ws.cell(row=row, column=6, value=r.get('moteur', '—'))
+        cell_statut = ws.cell(row=row, column=7, value=statut)
+        color_map = {'ok': 'D1FAE5', 'anomalie': 'FEF3C7', 'erreur': 'FEE2E2'}
+        color = color_map.get(statut, 'FFFFFF')
+        cell_statut.fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
+
+    for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
+        ws.column_dimensions[col].width = 18
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = HttpResponse(
+        buffer,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="rapport_ocr_lot.xlsx"'
+    return response
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def export_ocr_pdf(request):
+    """Exporte les résultats OCR en fichier PDF."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from django.http import HttpResponse
+    import io
+
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    resultats = request.data.get('resultats', [])
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph('ISIMM — Rapport d\'Analyse OCR par Lot', styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    data = [['Candidat', 'N° Cand.', 'Déclaré', 'OCR', 'Écart', 'Moteur', 'Statut']]
+    for r in resultats:
+        data.append([
+            r.get('candidat_nom', '—'), r.get('numero', '—'),
+            str(r.get('score_declare', '—')), str(r.get('score_extrait', '—')),
+            str(r.get('ecart', '—')), r.get('moteur', '—'), r.get('statut', '—')
+        ])
+
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F1F3D')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="rapport_ocr_lot.pdf"'
+    return response
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def analyser_ocr_lot(request):
-    """Lance l'analyse OCR sur une liste de candidatures (1er PDF de chaque dossier)."""
+    """Lance l'analyse OCR RÉELLE sur une liste de candidatures (pdfplumber)."""
     import os as _os
     from django.conf import settings as _settings
-    from .services_ocr_local import OCRDocumentAuditor
+    from .ocr_service import OCRService
 
     role = getattr(request.user, 'role', None)
     if role not in ('admin', 'responsable_commission', 'commission'):
@@ -6517,10 +6800,9 @@ def analyser_ocr_lot(request):
         )
 
     media_root = str(getattr(_settings, 'MEDIA_ROOT', ''))
-    auditor = OCRDocumentAuditor()
     resultats = []
     erreurs = 0
-    fraudes = 0
+    incoherences = 0
 
     for cand_id in ids:
         try:
@@ -6560,57 +6842,69 @@ def analyser_ocr_lot(request):
             continue
 
         try:
-            with open(pdf_path, 'rb') as f:
-                from django.core.files.base import ContentFile
-                file_obj = ContentFile(f.read(), name=_os.path.basename(pdf_path))
             score_declare = float(cand.score or 0) or None
-            res = auditor.analyser_document(file_obj, score_declare=score_declare)
-            if res.get('flag_fraude'):
-                fraudes += 1
+
+            # ✅ APPEL À OCRService RÉEL (pdfplumber + Req-3)
+            result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+
+            statut = 'ok' if result['statut'] == 'conforme' else ('anomalie' if result['statut'] == 'incoherence' else 'erreur')
+
+            if statut == 'anomalie':
+                incoherences += 1
+
             resultats.append({
                 'candidature_id': cand.id,
                 'candidat_nom': cand.candidat.get_full_name(),
                 'numero': cand.numero,
+                'master': cand.master.nom if cand.master else '',
                 'success': True,
-                'score_extrait': res.get('score_extrait'),
-                'score_declare': res.get('score_declare'),
-                'delta': res.get('delta'),
-                'flag_fraude': bool(res.get('flag_fraude')),
-                'confiance': res.get('confiance'),
-                'moteur': res.get('moteur'),
+                'statut': statut,
+                'score_extrait': result.get('score_extrait'),
+                'score_declare': result.get('score_declare'),
+                'ecart': result.get('ecart'),
+                'confiance': result.get('confiance'),
+                'moteur': result.get('moteur'),  # ✅ "pdfplumber" pas "simulation"
+                'alerte': result.get('alerte'),
                 'fichier': _os.path.basename(pdf_path),
+                'nb_anomalies': len(result.get('anomalies', [])),
             })
         except Exception as exc:
-            logger.exception('OCR lot — erreur sur candidature %s', cand.id)
+            logger.exception('OCR lot réel — erreur sur candidature %s', cand.id)
             resultats.append({
                 'candidature_id': cand.id,
                 'candidat_nom': cand.candidat.get_full_name(),
                 'success': False,
+                'statut': 'erreur',
                 'error': str(exc)[:200],
             })
             erreurs += 1
 
+    conformes = sum(1 for r in resultats if r.get('statut') == 'ok')
+    analysees = conformes + incoherences
+
+    # ✅ RETOURNE LA STRUCTURE ATTENDUE PAR LE FRONTEND
     return Response({
+        'success': True,
+        'message': f'Analyse OCR complétée: {analysees}/{len(ids)} analysées, {incoherences} anomalie(s)',
         'total': len(ids),
-        'analysees': sum(1 for r in resultats if r.get('success')),
-        'erreurs': erreurs,
-        'fraudes_detectees': fraudes,
+        'nb_analysees': analysees,
+        'nb_conformes': conformes,
+        'nb_anomalies': incoherences,
+        'nb_erreurs': erreurs,
         'resultats': resultats,
     })
 
 
 def _build_rapport_data(request, candidature_ids):
-    """Helper : exécute l'OCR sur les candidatures + retourne (data list + meta).
+    """Helper : exécute l'OCR RÉELLE sur les candidatures + retourne (data list + meta).
 
-    Réutilisé par les endpoints Excel et PDF.
+    Utilise OCRService avec pdfplumber (Req-3) — pas simulation.
     """
     import os as _os
     from django.conf import settings as _settings
-    from .services_ocr_local import OCRDocumentAuditor
-    from django.core.files.base import ContentFile
+    from .ocr_service import OCRService
 
     media_root = str(getattr(_settings, 'MEDIA_ROOT', ''))
-    auditor = OCRDocumentAuditor()
     data = []
 
     for cand_id in candidature_ids:
@@ -6632,35 +6926,36 @@ def _build_rapport_data(request, candidature_ids):
                     if pdf_path:
                         break
 
+        score_declare = float(cand.score or 0)
         row = {
             'numero':         cand.numero or '',
             'candidat_nom':   cand.candidat.get_full_name() or cand.candidat.email,
             'candidat_email': cand.candidat.email,
             'master':         cand.master.nom if cand.master else '',
-            'score_declare':  float(cand.score or 0),
+            'score_declare':  score_declare,
             'score_extrait':  None,
-            'delta':          None,
-            'flag_fraude':    False,
+            'ecart':          None,
             'moteur':         '—',
             'statut':         'Pas de PDF',
             'fichier':        '',
         }
         if pdf_path:
             try:
-                with open(pdf_path, 'rb') as f:
-                    file_obj = ContentFile(f.read(), name=_os.path.basename(pdf_path))
-                res = auditor.analyser_document(file_obj, score_declare=row['score_declare'])
-                row['score_extrait'] = res.get('score_extrait')
-                row['delta'] = res.get('delta')
-                row['flag_fraude'] = bool(res.get('flag_fraude'))
-                row['moteur'] = res.get('moteur') or '—'
+                # ✅ APPEL OCRService RÉEL (pdfplumber)
+                result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+
+                row['score_extrait'] = result.get('score_extrait')
+                row['ecart'] = result.get('ecart')
+                row['moteur'] = result.get('moteur') or '—'  # ✅ "pdfplumber" pas "simulation"
                 row['fichier'] = _os.path.basename(pdf_path)
-                if row['score_extrait'] is None:
-                    row['statut'] = 'OCR sans score'
-                elif row['flag_fraude']:
-                    row['statut'] = 'ANOMALIE'
-                else:
+
+                if result['statut'] == 'conforme':
                     row['statut'] = 'Conforme'
+                elif result['statut'] == 'incoherence':
+                    row['statut'] = 'INCOHÉRENCE'
+                else:
+                    row['statut'] = 'Erreur OCR'
+
             except Exception as exc:
                 logger.exception('OCR rapport — erreur cand %s', cand.id)
                 row['statut'] = f'Erreur: {str(exc)[:80]}'
@@ -6892,3 +7187,116 @@ def rapport_conformite_ocr_pdf(request):
     response = HttpResponse(buf.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Sprint 4 — Finaliser dossier de candidature (CORRECTION 1)
+# ──────────────────────────────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def finaliser_dossier(request, candidature_id):
+    """POST /api/candidatures/<id>/finaliser-dossier/
+
+    Le candidat clique « Finaliser mon dossier » → on vérifie que toutes
+    les pièces obligatoires sont déposées puis on passe le statut à
+    `dossier_depose` et on crée une notification de confirmation.
+    """
+    try:
+        candidature = Candidature.objects.select_related('master', 'candidat').get(
+            id=candidature_id,
+        )
+    except Candidature.DoesNotExist:
+        return Response(
+            {'error': 'Candidature introuvable.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Sécurité : seul le candidat propriétaire peut finaliser sa propre candidature
+    if candidature.candidat_id != getattr(request.user, 'id', None):
+        return Response(
+            {'error': "Vous n'êtes pas autorisé à finaliser ce dossier."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # Vérifier statut compatible : seul un dossier 'preselectionne' ou
+    # 'en_attente_dossier' peut être finalisé.
+    if candidature.statut not in ('preselectionne', 'en_attente_dossier'):
+        return Response(
+            {
+                'error': "Le dossier ne peut pas être finalisé dans son statut actuel.",
+                'statut_actuel': candidature.statut,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Vérifier qu'au moins une pièce a été déposée.
+    # Les fichiers candidats sont stockés sur disque via `upload_fichier_dossier` à
+    #   MEDIA_ROOT/dossiers/<candidature_ref>/<type>/<filename>
+    # (et NON pas dans la table Document — qui reste vide). On scanne donc le dossier.
+    from django.conf import settings as _settings
+    import os as _os
+    candidature_ref = str(candidature.id)
+    upload_dir = _os.path.join(
+        getattr(_settings, 'MEDIA_ROOT', ''), 'dossiers', str(candidature_ref),
+    )
+    fichiers_count = 0
+    if _os.path.isdir(upload_dir):
+        for _root, _dirs, _files in _os.walk(upload_dir):
+            for f in _files:
+                if not f.startswith('.'):
+                    fichiers_count += 1
+    # Fallback : si le modèle Document est utilisé (legacy), compter aussi
+    try:
+        from .models import Document as DocumentModel
+        fichiers_count += DocumentModel.objects.filter(
+            candidature=candidature,
+        ).exclude(fichier='').count()
+    except ImportError:
+        pass
+
+    if fichiers_count == 0:
+        return Response(
+            {
+                'error': "Aucun document n'a été déposé. Veuillez déposer vos pièces avant de finaliser.",
+                'debug_upload_dir': upload_dir,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Tout est OK — mettre à jour le statut
+    candidature.statut = 'dossier_depose'
+    candidature.dossier_depose = True
+    if not candidature.date_depot_dossier:
+        candidature.date_depot_dossier = timezone.now()
+    candidature.save(update_fields=['statut', 'dossier_depose', 'date_depot_dossier'])
+
+    # Notification au candidat
+    try:
+        Notification.objects.create(
+            utilisateur=candidature.candidat,
+            titre='Dossier finalisé',
+            message=(
+                f"Votre dossier {candidature.numero or candidature.id} a été "
+                f"finalisé avec succès et est désormais en cours d'examen."
+            ),
+            type_notification='CHANGEMENT_STATUT_DOSSIER',
+            est_lu=False,
+        )
+    except Exception:
+        # La notification est non-bloquante
+        pass
+
+    return Response(
+        {
+            'message': 'Dossier finalisé avec succès. Votre dossier est en cours d\'examen.',
+            'candidature_id': candidature.id,
+            'statut': candidature.statut,
+            'date_depot_dossier': (
+                candidature.date_depot_dossier.isoformat()
+                if candidature.date_depot_dossier
+                else None
+            ),
+        },
+        status=status.HTTP_200_OK,
+    )

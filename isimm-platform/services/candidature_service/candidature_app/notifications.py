@@ -262,3 +262,52 @@ def sync_new_candidature_notification(candidature):
         dedup_key=dedup_key,
         email_html=email_html,
     )
+
+
+def envoyer_notification_preselection(candidature):
+    """
+    Envoie une notification au candidat pour confirmer son inscription suite à sa présélection.
+    """
+    titre = '🎉 Félicitations! Vous avez été présélectionné(e)'
+    message = (
+        f"Bonjour {candidature.candidat.get_full_name()},\n\n"
+        f"Nous sommes heureux de vous informer que vous avez été présélectionné(e) "
+        f"pour le concours {candidature.master.nom}.\n\n"
+        f"Veuillez confirmer votre inscription pour procéder à l'étape suivante.\n\n"
+        f"Numéro de suivi: {candidature.numero}\n\n"
+        "Connectez-vous à votre tableau de bord pour confirmer votre inscription.\n\n"
+        "Cordialement,\n"
+        "ISIMM Admission"
+    )
+
+    email_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <div style="background-color: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: 20px auto;">
+          <h2 style="color: #27ae60;">🎉 Félicitations!</h2>
+          <p>Bonjour <strong>{candidature.candidat.get_full_name()}</strong>,</p>
+          <p style="font-size: 16px;">Nous sommes heureux de vous informer que vous avez été <strong>présélectionné(e)</strong> pour:</p>
+          <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #27ae60; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Master/Concours:</strong> {candidature.master.nom}</p>
+            <p style="margin: 5px 0;"><strong>Numéro de suivi:</strong> {candidature.numero}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> {timezone.now().strftime('%d/%m/%Y')}</p>
+          </div>
+          <p style="font-size: 16px; color: #c0392b;"><strong>Action requise:</strong> Veuillez confirmer votre inscription au plus tôt pour procéder à l'étape suivante.</p>
+          <p><a href="http://localhost:4200/dashboard-candidat" style="background-color: #27ae60; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Accéder à mon tableau de bord</a></p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;"/>
+          <p style="color: #999; font-size: 12px;">ISIMM Admission - Portail des Admissions</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    dedup_key = f"preselection-{candidature.id}"
+
+    creer_notification_avec_email(
+        user=candidature.candidat,
+        titre=titre,
+        message=message,
+        notif_type='success',
+        dedup_key=dedup_key,
+        email_html=email_html,
+    )

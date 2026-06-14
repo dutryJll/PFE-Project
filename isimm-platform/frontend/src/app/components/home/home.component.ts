@@ -211,17 +211,17 @@ export class HomeComponent {
       research: {
         label: this.tr.cards.statusOpen,
         tone: 'success',
-        route: '/preinscription/detail/mrgl',
+        route: '/masters/recherche/exploration',
       },
       professional: {
         label: this.tr.cards.statusOpen,
         tone: 'success',
-        route: '/preinscription/detail/mpds',
+        route: '/masters/professionnel/exploration',
       },
       engineer: {
         label: this.tr.cards.statusSoon,
         tone: 'warning',
-        route: '/preinscription/detail/ing_info_gl',
+        route: '/ingenieur/disponibles',
       },
     };
   }

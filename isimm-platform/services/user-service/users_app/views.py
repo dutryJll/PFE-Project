@@ -87,6 +87,53 @@ class AdminCreateResponsableView(generics.CreateAPIView):
         serializer.save(role='responsable_commission')
 
 
+class AssignerCommissionView(APIView):
+    """PATCH /responsables/<id>/assigner-commission/ — assigne un parcours à un responsable."""
+
+    permission_classes = [AllowAny]  # TODO: restreindre aux admins
+
+    VALID_COMMISSIONS = {'MPGL', 'MPDS', 'MP3I', 'MRGL', 'MRMI', 'ING'}
+
+    def patch(self, request, pk):
+        commission = (request.data.get('commission') or '').strip().upper()
+        if not commission:
+            return Response(
+                {'error': "Le champ 'commission' est obligatoire."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if commission not in self.VALID_COMMISSIONS:
+            return Response(
+                {
+                    'error': f"Commission invalide. Valeurs autorisées : "
+                             f"{sorted(self.VALID_COMMISSIONS)}",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            user = UserProfile.objects.get(pk=pk)
+        except UserProfile.DoesNotExist:
+            return Response(
+                {'error': "Responsable introuvable."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if user.role not in ('responsable_commission', 'commission'):
+            return Response(
+                {'error': "Cet utilisateur n'est pas un responsable de commission."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.commission = commission
+        user.save(update_fields=['commission', 'updated_at'])
+        return Response(
+            {
+                'message': f"Commission {commission} assignée à {user.get_full_name()}.",
+                'id': user.id,
+                'commission': commission,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class AdminDeleteResponsableView(generics.DestroyAPIView):
     """Admin: Delete a responsable user"""
     queryset = UserProfile.objects.filter(role='responsable_commission')

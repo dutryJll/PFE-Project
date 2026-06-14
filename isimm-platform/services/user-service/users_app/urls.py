@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     UserListView, UserProfileView, UserProfileUpdateView, UserDeleteView,
-    AdminCreateResponsableView, AdminDeleteResponsableView, AdminListResponsablesView
+    AdminCreateResponsableView, AdminDeleteResponsableView, AdminListResponsablesView,
+    AssignerCommissionView,
 )
 
 urlpatterns = [
@@ -13,4 +14,6 @@ urlpatterns = [
     path('admin/responsables/', AdminListResponsablesView.as_view(), name='admin-list-responsables'),
     path('admin/responsables/create/', AdminCreateResponsableView.as_view(), name='admin-create-responsable'),
     path('admin/responsables/<int:pk>/delete/', AdminDeleteResponsableView.as_view(), name='admin-delete-responsable'),
+    # Sprint — Assigner une commission à un responsable
+    path('responsables/<int:pk>/assigner-commission/', AssignerCommissionView.as_view(), name='assigner-commission'),
 ]

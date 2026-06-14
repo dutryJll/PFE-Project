@@ -73,13 +73,13 @@ class DepotDossierViewSet(viewsets.ViewSet):
         # Vérifier que la candidature est dans un statut valide
         if candidature.statut not in ['preselectionne', 'en_attente_dossier']:
             return Response({
-                'error': f'La candidature doit être présélectionnée pour soumettre un dossier. Statut actuel: {candidature.statut}'
+                'error': 'Candidature non présélectionnée'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Vérifier la date limite
         if candidature.delai_depot_dossier and timezone.now().date() > candidature.delai_depot_dossier:
             return Response({
-                'error': 'La date limite de dépôt de dossier est dépassée'
+                'error': 'Date limite dépassée'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = DocumentUploadSerializer(
@@ -99,7 +99,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             return Response({
                 'success': True,
                 'document': DocumentSerializer(document).data,
-                'message': 'Document uploadé avec succès. Traitement OCR en cours...'
+                'message': 'Document téléversé. OCR en cours'
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -153,7 +153,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         if dossier.score_completude < 100:
             return Response({
-                'error': f'Le dossier est incomplet ({completude:.0f}% complété)',
+                'error': 'Dossier incomplet',
                 'details': {
                     'documents_attendus': dossier.nb_documents_attendus,
                     'documents_soumis': dossier.nb_documents_soumis,
@@ -182,7 +182,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         return Response({
             'success': True,
-            'message': 'Dossier soumis avec succès',
+            'message': 'Dossier soumis ✓',
             'dossier': {
                 'id': dossier.id,
                 'candidature_numero': candidature.numero,
@@ -204,7 +204,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
             # Vérifier s'il y a une prolongation
             if not candidature.prolongation_delai:
                 return Response({
-                    'error': 'La date limite de modification est dépassée'
+                    'error': 'Modification expirée'
                 }, status=status.HTTP_400_BAD_REQUEST)
         
         # Traiter les documents à ajouter/modifier
@@ -226,7 +226,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         return Response({
             'success': True,
-            'message': 'Dossier ajusté avec succès',
+            'message': 'Dossier ajusté ✓',
             'dossier': DetailedDossierSerializer(dossier).data
         })
     
@@ -246,7 +246,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         dossier = get_object_or_404(Dossier, candidature=candidature)
         if dossier.statut in ['soumis', 'en_verification']:
             return Response({
-                'error': 'Impossible de supprimer un document une fois le dossier soumis'
+                'error': 'Suppression impossible'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Supprimer le fichier
@@ -260,7 +260,7 @@ class DepotDossierViewSet(viewsets.ViewSet):
         
         return Response({
             'success': True,
-            'message': 'Document supprimé avec succès',
+            'message': 'Document supprimé ✓',
             'dossier': DetailedDossierSerializer(dossier).data
         })
 

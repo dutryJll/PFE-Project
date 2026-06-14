@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface LotOcrResultat {
   candidature_id: number;
@@ -27,8 +28,9 @@ export interface LotOcrResponse {
   providedIn: 'root',
 })
 export class OcrService {
-  private apiUrl = 'http://localhost:8005/api/ocr';
-  private candidatureApiUrl = 'http://localhost:8005/api/candidatures';
+  // ✅ Utilise l'environment au lieu de URLs codées en dur
+  private apiUrl = `${environment.candidatureServiceUrl}/ocr`;
+  private candidatureApiUrl = environment.candidatureServiceUrl;
 
   constructor(private http: HttpClient) {}
 

@@ -28,6 +28,15 @@ class UserProfile(models.Model):
     adresse = models.TextField(null=True, blank=True, verbose_name="Adresse")
     ville = models.CharField(max_length=100, null=True, blank=True, verbose_name="Ville")
     code_postal = models.CharField(max_length=10, null=True, blank=True, verbose_name="Code postal")
+
+    # Sprint — Commission assignée (pour rôle responsable_commission / commission)
+    commission = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        verbose_name="Commission / parcours assigné",
+        help_text="Code du parcours : MPGL, MPDS, MP3I, MRGL, MRMI",
+    )
     
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)

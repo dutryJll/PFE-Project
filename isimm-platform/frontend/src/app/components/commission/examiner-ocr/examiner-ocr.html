@@ -261,6 +261,18 @@
                 >
                   Confiance: {{ doc.verification.confiance }}%
                 </span>
+                <!-- Badge mode simulation (visible quand l'OCR n'est pas réellement effectué) -->
+                <span
+                  class="simulation-badge"
+                  *ngIf="
+                    doc.verification.mode_simulation === true ||
+                    doc.verification.moteur === 'simulation'
+                  "
+                  title="Aucun moteur OCR installé sur le serveur. Résultats simulés à but de test."
+                >
+                  <i class="fas fa-flask"></i>
+                  MODE SIMULATION
+                </span>
               </p>
               <p *ngIf="doc.analyzing" class="analyzing">
                 <i class="fas fa-spinner fa-spin"></i>

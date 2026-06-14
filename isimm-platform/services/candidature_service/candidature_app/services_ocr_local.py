@@ -204,6 +204,39 @@ class OCRDocumentAuditor:
             "anomalies": list[dict],
         }
         """
+        # ── Mode SIMULATION (Sprint 4) ────────────────────────────────────────
+        # Activé si OCR_SIMULATION=1 OU aucun moteur OCR installé.
+        force_simulation = os.environ.get('OCR_SIMULATION', '').lower() in ('1', 'true', 'yes')
+        moteur_dispo = (_easyocr_available or _paddleocr_available) and _pdf2image_available
+        if force_simulation or not moteur_dispo:
+            import random as _random
+            sd = None
+            try:
+                sd = float(score_declare) if score_declare is not None else None
+            except (TypeError, ValueError):
+                sd = None
+            if not sd or sd <= 0:
+                sd = round(_random.uniform(11.0, 16.0), 2)
+            ecart = round(_random.uniform(-0.5, 0.5), 2)
+            se = round(sd + ecart, 2)
+            return {
+                'texte_extrait': '[SIMULATION] Aucun moteur OCR installé — données factices.',
+                'score_extrait': se,
+                'score_declare': sd,
+                'delta': abs(ecart),
+                'ecart': abs(ecart),
+                'flag_fraude': abs(ecart) > 0.5,
+                'confiance': round(_random.uniform(0.82, 0.94), 2),
+                'moteur': 'simulation',
+                'mode_simulation': True,
+                'simulation_raison': 'force_env' if force_simulation else 'aucun_moteur',
+                'sha256': 'simulation',
+                'statut': 'conforme' if abs(ecart) <= 0.5 else 'incoherence',
+                'anomalies': [] if abs(ecart) <= 0.5 else [
+                    {'type': 'score_mismatch', 'message': f"[SIMULATION] Écart simulé {abs(ecart):.2f} pt"},
+                ],
+            }
+
         data = fichier.read() if hasattr(fichier, 'read') else bytes(fichier)
         sha = _sha256_fichier(data)
         nom = getattr(fichier, 'name', '') or ''

@@ -5,8 +5,8 @@ import uuid
 class User(AbstractUser):
     ROLE_CHOICES = [
         ('candidat', 'Candidat'),
-        ('commission', 'Membre Commission'),
-        ('responsable_commission', 'Responsable Commission'),  # ✅ AJOUTER
+        ('commission', 'Membre de Commission'),
+        ('responsable_commission', 'Responsable de Commission'),
         ('admin', 'Administrateur'),
     ]
     

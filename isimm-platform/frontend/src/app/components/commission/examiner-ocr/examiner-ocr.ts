@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { SpecialitesService } from '../../../services/specialites.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { OcrService, LotOcrResponse, LotOcrResultat } from '../../../services/ocr';
+import { ToastrService } from 'ngx-toastr';
 
 interface Candidat {
   id: number;
@@ -35,6 +36,12 @@ interface DocumentOCR {
     comparaison?: { champ: string; declare: string; ocr: string; ecart: string; coherent: boolean }[];
     verifications?: any[];
     anomalies?: string[];
+    /** Sprint 4 — mode simulation (aucun moteur OCR installé ou OCR_SIMULATION=1) */
+    mode_simulation?: boolean;
+    /** 'paddleocr' | 'easyocr' | 'simulation' | 'none' */
+    moteur?: string;
+    /** Raison de l'activation du mode simulation */
+    simulation_raison?: string;
   };
 }
 
@@ -87,6 +94,7 @@ export class ExaminerOcrComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private specialitesService: SpecialitesService,
     private ocrService: OcrService,
+    private toast: ToastrService,
   ) {}
 
   ngOnInit(): void {
@@ -276,112 +284,81 @@ export class ExaminerOcrComponent implements OnInit {
   }
 
   analyserDocument(doc: DocumentOCR): void {
-    console.log('🤖 Analyse OCR:', doc.nom);
+    if (!doc.url) {
+      this.toast.error('Aucun fichier à analyser');
+      return;
+    }
 
+    console.log('🤖 Analyse OCR réelle:', doc.nom);
     doc.analyzing = true;
     doc.progress = 0;
 
-    // Simuler la progression de l'analyse
-    const interval = setInterval(() => {
-      doc.progress += 10;
-
-      if (doc.progress >= 100) {
-        clearInterval(interval);
-        doc.analyzing = false;
-        doc.progress = 100;
-
-        // Générer résultats simulés
-        this.genererResultatsOCR(doc);
+    const progressInterval = setInterval(() => {
+      if (doc.progress < 90) {
+        doc.progress += Math.random() * 25;
       }
-    }, 300);
-  }
+    }, 200);
 
-  genererResultatsOCR(doc: DocumentOCR): void {
-    // Résultats simulés selon le type de document
-    if (doc.type === 'cin') {
-      doc.verification = {
-        statut: 'valide',
-        confiance: 98,
-        donnees_extraites: {
-          Nom: 'BEN ALI',
-          Prénom: 'Ahmed',
-          CIN: '12345678',
-          'Date naissance': '15/03/2000',
-          'Lieu naissance': 'Monastir',
-        },
-        verifications: [
-          { valide: true, description: 'Correspondance CIN avec candidature' },
-          { valide: true, description: 'Correspondance nom et prénom' },
-          { valide: true, description: 'Document authentique (tampon détecté)' },
-          { valide: true, description: 'Qualité image suffisante' },
-        ],
-        anomalies: [],
-      };
-    } else if (doc.type === 'releves') {
-      doc.verification = {
-        statut: 'valide',
-        confiance: 94,
-        donnees_declarees: {
-          'Moyenne L1': '14.25',
-          'Moyenne L2': '15.80',
-          'Moyenne L3': '16.50',
-          'Moyenne générale': '15.52',
-        },
-        donnees_extraites: {
-          'Moyenne L1': '14.25',
-          'Moyenne L2': '15.80',
-          'Moyenne L3': '16.20',
-          'Moyenne générale': '15.42',
-        },
-        comparaison: [
-          { champ: 'Moyenne L1', declare: '14.25', ocr: '14.25', ecart: '0.00', coherent: true },
-          { champ: 'Moyenne L2', declare: '15.80', ocr: '15.80', ecart: '0.00', coherent: true },
-          { champ: 'Moyenne L3', declare: '16.50', ocr: '16.20', ecart: '−0.30', coherent: false },
-          { champ: 'Moyenne générale', declare: '15.52', ocr: '15.42', ecart: '−0.10', coherent: false },
-        ],
-        verifications: [
-          { valide: true, description: 'Relevés des 3 années présents' },
-          { valide: true, description: 'Tampons universitaires détectés' },
-          { valide: false, description: 'Écart détecté sur la moyenne L3' },
-        ],
-        anomalies: ['Écart de 0,30 point détecté entre la moyenne L3 déclarée et extraite'],
-      };
-    } else if (doc.type === 'diplome') {
-      doc.verification = {
-        statut: 'invalide',
-        confiance: 65,
-        donnees_extraites: {
-          Diplôme: 'Licence Informatique',
-          Université: 'ISIMM',
-          Année: '2024',
-        },
-        verifications: [
-          { valide: true, description: 'Format PDF valide' },
-          { valide: false, description: 'Tampon universitaire non détecté' },
-          { valide: false, description: 'Signature manquante' },
-        ],
-        anomalies: ["Tampon de l'université non visible", 'Signature du doyen absente'],
-      };
-    } else if (doc.type === 'photo') {
-      doc.verification = {
-        statut: 'valide',
-        confiance: 99,
-        donnees_extraites: {
-          Format: 'JPEG',
-          Dimensions: '600x800 pixels',
-          Qualité: 'Haute',
-        },
-        verifications: [
-          { valide: true, description: 'Visage détecté' },
-          { valide: true, description: 'Fond uni' },
-          { valide: true, description: 'Résolution suffisante' },
-          { valide: true, description: 'Format respecté' },
-        ],
-        anomalies: [],
-      };
-    }
+    // ✅ Appel avec un seul argument (documentId)
+    this.ocrService.analyserDocument(doc.id).subscribe({
+      next: (result: any) => {
+        clearInterval(progressInterval);
+        doc.progress = 100;
+        doc.analyzing = false;
 
-    console.log('✅ Analyse terminée:', doc.verification);
+        const statut = result.statut === 'conforme' ? 'valide' : 'invalide';
+        const confiance = result.confiance || 0;
+
+        doc.verification = {
+          statut,
+          confiance: Math.round(confiance),
+          donnees_extraites: {
+            'Score extrait': result.score_extrait ? result.score_extrait.toFixed(2) : 'N/A',
+            'Score déclaré': result.score_declare ? result.score_declare.toFixed(2) : 'N/A',
+            'Écart': result.ecart ? result.ecart.toFixed(2) : '0.00',
+            'Moteur': result.moteur || 'pdfplumber',
+          },
+          verifications: [
+            {
+              valide: result.statut === 'conforme',
+              description: result.statut === 'conforme'
+                ? 'Moyenne extraite avec succès'
+                : 'Dossier détecté comme suspect',
+            },
+            {
+              valide: (result.confiance || 0) >= 85,
+              description: `Score de confiance: ${confiance}%`,
+            },
+          ],
+          anomalies: result.anomalies || [],
+          moteur: result.moteur,
+          mode_simulation: false,
+        };
+
+        this.toast.success('Analyse OCR terminée avec succès');
+        console.log('✅ Résultats OCR:', doc.verification);
+      },
+      error: (err: any) => {
+        clearInterval(progressInterval);
+        doc.analyzing = false;
+        doc.progress = 0;
+
+        const errorMsg = err?.error?.message || 'Erreur lors de l\'analyse OCR';
+        this.toast.error(errorMsg);
+
+        doc.verification = {
+          statut: 'invalide',
+          confiance: 0,
+          donnees_extraites: {},
+          verifications: [
+            { valide: false, description: `Erreur: ${errorMsg}` },
+          ],
+          anomalies: [errorMsg],
+        };
+
+        console.error('❌ Erreur OCR:', err);
+      },
+    });
   }
 
   analyserTousDocuments(): void {

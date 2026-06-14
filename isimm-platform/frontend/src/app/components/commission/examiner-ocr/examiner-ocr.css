@@ -8,7 +8,7 @@
 /* HEADER */
 /* ============================= */
 .page-header {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #185FA5 0%, #0F3D78 100%);
   color: white;
   padding: 2rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -1428,4 +1428,30 @@
   .ocr-compare-table tbody td {
     padding: 8px 10px;
   }
+}
+
+/* ─── Badge MODE SIMULATION ─── */
+.simulation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #FED7AA, #FB923C);
+  color: #7C2D12;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  border: 1px solid #EA580C;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+  animation: simulation-pulse 2s ease-in-out infinite;
+}
+.simulation-badge i {
+  font-size: 11px;
+}
+@keyframes simulation-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
 }

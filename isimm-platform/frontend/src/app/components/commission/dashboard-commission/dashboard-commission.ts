@@ -69,6 +69,19 @@ interface Candidature {
   observation?: string;
   obs?: string;
   candidat_type?: string;
+  // ✅ AJOUTÉ : Résultats OCR du backend
+  rapport_ocr?: {
+    statut?: 'conforme' | 'incoherence' | 'ocr_error' | 'ocr_no_data';
+    score_extrait?: number;
+    score_declare?: number;
+    ecart?: number;
+    confiance?: number;
+    moteur?: string;
+    alerte?: string;
+    message?: string;
+    texte_extrait?: string;
+    anomalies?: string[];
+  };
 }
 
 type FinalSelectionDecision = '' | 'lp' | 'la' | 'refuse';
@@ -721,8 +734,11 @@ export class DashboardCommissionComponent implements OnInit {
   ocrModalResult: {
     score_extrait: number | null;
     score_declare: number | null;
-    delta: number | null;
-    flag_fraude: boolean;
+    delta?: number | null;
+    ecart?: number | null;
+    alerte?: string | null;
+    statut?: string;
+    flag_fraude?: boolean;
     confiance: number;
     moteur: string;
     anomalies: any[];
@@ -751,10 +767,18 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.candidatureService.analyserOcrLot(ids).subscribe({
       next: (res: any) => {
-        this.ocrLotResultats = res;
+        // Transformer la réponse backend pour matcher le template
+        this.ocrLotResultats = {
+          total: res.total,
+          analysees: res.nb_analysees,
+          fraudes_detectees: res.nb_anomalies,
+          erreurs: res.nb_erreurs,
+          conformes: res.nb_conformes,
+          resultats: res.resultats || [],
+        };
         this.ocrLotLoading = false;
-        const msg = `✅ ${res.analysees}/${res.total} analysées — ${res.fraudes_detectees} anomalie(s) détectée(s)`;
-        this.toastService.show(msg, res.fraudes_detectees > 0 ? 'warning' : 'success');
+        const msg = `✅ ${this.ocrLotResultats.analysees}/${this.ocrLotResultats.total} analysées — ${this.ocrLotResultats.fraudes_detectees} anomalie(s) détectée(s)`;
+        this.toastService.show(msg, this.ocrLotResultats.fraudes_detectees > 0 ? 'warning' : 'success');
       },
       error: (err: any) => {
         this.ocrLotLoading = false;
@@ -766,6 +790,39 @@ export class DashboardCommissionComponent implements OnInit {
 
   fermerOcrLotResultats(): void {
     this.ocrLotResultats = null;
+  }
+
+  ocrLotExportLoading: 'excel' | 'pdf' | null = null;
+
+  exporterOcrLot(format: 'excel' | 'pdf'): void {
+    if (!this.ocrLotResultats || !this.ocrLotResultats.resultats) {
+      this.toastService.show('Aucun résultat à exporter.', 'warning');
+      return;
+    }
+    if (this.ocrLotExportLoading) return;
+    this.ocrLotExportLoading = format;
+
+    const obs = format === 'excel'
+      ? this.candidatureService.exportOcrExcel(this.ocrLotResultats.resultats)
+      : this.candidatureService.exportOcrPdf(this.ocrLotResultats.resultats);
+
+    obs.subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = format === 'excel' ? 'rapport_ocr_lot.xlsx' : 'rapport_ocr_lot.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toastService.show(`Rapport ${format.toUpperCase()} téléchargé.`, 'success');
+        this.ocrLotExportLoading = null;
+      },
+      error: (err: any) => {
+        console.error('Export error:', err);
+        this.toastService.show(`Erreur export ${format.toUpperCase()}.`, 'error');
+        this.ocrLotExportLoading = null;
+      }
+    });
   }
 
   // ── Export rapport de conformité OCR (Excel / PDF) ──
@@ -1233,9 +1290,30 @@ export class DashboardCommissionComponent implements OnInit {
     }
   }
 
+  consultationMassivePrecedent(): void {
+    if (this.consultationMassiveIndex > 0) {
+      this.consultationMassiveIndex--;
+      this.showConsultationMassiveOCRPanel = false;
+    }
+  }
+
   lancerConsultationMassiveOCR(): void {
     this.showConsultationMassiveOCRPanel = true;
     this.toastService.show('Analyse OCR lancée pour ce candidat', 'info');
+  }
+
+  validerPreselectioCandidat(candidatureId: number, commentaire: string = ''): void {
+    this.candidatureService.validerPreselection(candidatureId, '', commentaire).subscribe({
+      next: () => {
+        this.toastService.show('✅ Candidat présélectionné avec succès', 'success');
+        // Passer au candidat suivant
+        this.consultationMassiveSuivant();
+      },
+      error: (err) => {
+        console.error('Erreur validation:', err);
+        this.toastService.show('❌ Erreur lors de la validation', 'error');
+      }
+    });
   }
 
   // --- Candidatures Master cm-* ---
@@ -1534,6 +1612,7 @@ export class DashboardCommissionComponent implements OnInit {
   massiveOCRCurrentIndex: number = 0;
   massiveOCRTitle: string = 'Consultation massive';
   massiveOCROCRDone: { [key: string]: boolean } = {};
+  massiveOCROCRData: { [key: number]: any } = {};  // ✅ Stockage des vraies données OCR
   massiveOCRDecisions: { [key: number]: 'approve' | 'reject' | 'hold' } = {};
   massiveOCRComments: { [key: number]: string } = {};
   massiveOCRSearchFilter: string = '';
@@ -5642,8 +5721,20 @@ export class DashboardCommissionComponent implements OnInit {
     this.toastService.show('Analyse OCR lancée pour ce dossier', 'info');
   }
 
+  // ✅ CORRIGÉ : Retourne TRUE seulement s'il y a vraiment des données OCR
   isOCRDoneForCandidat(candId: number): boolean {
-    return !!this.massiveOCROCRDone[`${candId}_all`];
+    const ocrData = this.massiveOCROCRData[candId];
+    return !!(ocrData && ocrData.moteur && ocrData.moteur !== 'none');
+  }
+
+  // ✅ NOUVEAU : Récupère les vraies données OCR ou null
+  getOCRDataForCandidat(candId: number): any {
+    return this.massiveOCROCRData[candId] || null;
+  }
+
+  // ✅ NOUVEAU : Enregistre les vraies données OCR
+  setOCRDataForCandidat(candId: number, data: any): void {
+    this.massiveOCROCRData[candId] = data;
   }
 
   openPrsSelectionMassiveOCR(): void {

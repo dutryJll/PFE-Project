@@ -18,6 +18,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { CandidatureService, MasterScoreCoefficients } from '../../../services/candidature.service';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { WebSocketService, ConnectionStatus } from '../../../services/websocket.service';
 import { isPublicOffer } from '../../../shared/public-offer';
 import {
@@ -283,6 +284,7 @@ function normalizeActionLabel(value: string): string {
     MatTabsModule,
     MatStepperModule,
     MatTooltipModule,
+    DragDropModule,
   ],
   templateUrl: './dashboard-candidat.html',
   styleUrls: ['./dashboard-candidat.css', './dashboard-candidat-wizard.css', './dashboard-candidat-sections.css'],
@@ -367,9 +369,136 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return Math.round((this.documentsValides / this.documentsTotaux) * 100);
   }
 
+  // Req-2 — Limite des vœux (Cas A Masters)
+  readonly LIMITE_VOEUX_MASTERS = 3;
+
+  /** Compte les candidatures Masters actives (non rejetées/annulées). */
+  get nbVoeuxMastersActifs(): number {
+    return this.mesCandidatures.filter((c) => {
+      const statut = (c.statut || '').toLowerCase();
+      if (['rejete', 'annulee', 'non_admis'].includes(statut)) return false;
+      const spec = String((c as any).master_specialite || '').toUpperCase();
+      return !spec.startsWith('ING');
+    }).length;
+  }
+
+  /** Vrai si la limite de 3 vœux Masters est atteinte. */
+  get limiteVoeuxAtteinte(): boolean {
+    return this.nbVoeuxMastersActifs >= this.LIMITE_VOEUX_MASTERS;
+  }
+
+  /** Label dynamique pour le bouton Postuler. */
+  getLibellePostuler(offre: Offre): string {
+    if (offre?.statut === 'ferme') return 'Fermée';
+    if (this.dejaCandidature(offre.id)) return 'Déjà candidaté';
+    const spec = String((offre as any).specialite || '').toUpperCase();
+    const isIngenieur = spec.startsWith('ING');
+    if (isIngenieur) return 'Postuler au concours';
+    const prochainVoeu = this.nbVoeuxMastersActifs + 1;
+    if (prochainVoeu > this.LIMITE_VOEUX_MASTERS) return 'Limite 3 vœux atteinte';
+    return `Postuler — Vœu ${prochainVoeu}/${this.LIMITE_VOEUX_MASTERS}`;
+  }
+
+  /** Vrai si le bouton doit être bloqué. */
+  isPostulerBloque(offre: Offre): boolean {
+    if (offre?.statut === 'ferme') return true;
+    if (this.dejaCandidature(offre.id)) return true;
+    const spec = String((offre as any).specialite || '').toUpperCase();
+    const isIngenieur = spec.startsWith('ING');
+    if (!isIngenieur && this.limiteVoeuxAtteinte) return true;
+    return false;
+  }
+
+  /** Badge médaille selon priorité du vœu. */
+  getMedailleVoeu(priorite: number | undefined): string {
+    if (priorite === 1) return '🥇';
+    if (priorite === 2) return '🥈';
+    if (priorite === 3) return '🥉';
+    return '🎯';
+  }
+
+  /** Vœux Masters actifs triés par priorité (pour drag & drop). */
+  get voeuxMastersOrdonnes(): Candidature[] {
+    return this.mesCandidatures
+      .filter((c) => {
+        const statut = (c.statut || '').toLowerCase();
+        if (['rejete', 'annulee', 'non_admis'].includes(statut)) return false;
+        const spec = String((c as any).master_specialite || '').toUpperCase();
+        return !spec.startsWith('ING');
+      })
+      .sort((a, b) => (a.choix_priorite || 99) - (b.choix_priorite || 99));
+  }
+
+  /** Drag & drop — réordonner les vœux Masters. */
+  onVoeuDrop(event: CdkDragDrop<Candidature[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const liste = [...this.voeuxMastersOrdonnes];
+    moveItemInArray(liste, event.previousIndex, event.currentIndex);
+    // Mise à jour locale immédiate (optimiste)
+    liste.forEach((c, i) => {
+      const cand = this.mesCandidatures.find((x) => x.id === c.id);
+      if (cand) (cand as any).choix_priorite = i + 1;
+    });
+    // Appel backend
+    const ordre = liste.map((c) => c.id);
+    const token = this.authService.getAccessToken();
+    this.http
+      .post(
+        `${environment.candidatureServiceUrl}/mes-candidatures/reclasser-voeux/`,
+        { ordre },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('Vœux reclassés avec succès', 'success');
+        },
+        error: (err) => {
+          this.toastService.show(
+            err?.error?.error || 'Échec du reclassement, état restauré',
+            'warning',
+          );
+          this.loadMesCandidatures();
+        },
+      });
+  }
+
+  // Req — Statuts qui autorisent le dépôt de dossier
+  readonly STATUTS_DEPOT_AUTORISE = ['preselectionne', 'dossier_depose', 'en_attente_dossier'];
+
   get canDeposerDossier(): boolean {
-    const allowed = ['preselectionne', 'en_attente_dossier'];
-    return this.mesCandidatures.some(c => allowed.includes((c.statut || '').toLowerCase()));
+    return this.mesCandidatures.some((c) =>
+      this.STATUTS_DEPOT_AUTORISE.includes((c.statut || '').toLowerCase()),
+    );
+  }
+
+  /** Liste des candidatures éligibles au dépôt (triées par priorité de vœu). */
+  get candidaturesEligiblesDepot(): Candidature[] {
+    return this.mesCandidatures
+      .filter((c) => this.STATUTS_DEPOT_AUTORISE.includes((c.statut || '').toLowerCase()))
+      .sort((a, b) => (a.choix_priorite || 99) - (b.choix_priorite || 99));
+  }
+
+  /** Mode d'affichage de la page Dossiers de candidature (Req-Dépôt). */
+  get modeAffichageDossiers(): 'aucune' | 'bloquee' | 'unique' | 'selecteur' {
+    const eligibles = this.candidaturesEligiblesDepot.length;
+    if (eligibles === 0) {
+      const enAttente = this.mesCandidatures.some((c) =>
+        ['soumise', 'soumis', 'sous_examen'].includes((c.statut || '').toLowerCase()),
+      );
+      return enAttente ? 'bloquee' : 'aucune';
+    }
+    return eligibles === 1 ? 'unique' : 'selecteur';
+  }
+
+  /** Candidature actuellement sélectionnée pour dépôt (multi-vœux). */
+  candidatureDepotActive: Candidature | null = null;
+
+  choisirVoeuPourDepot(c: Candidature): void {
+    this.candidatureDepotActive = c;
+  }
+
+  retourSelecteurVoeux(): void {
+    this.candidatureDepotActive = null;
   }
 
   get isSelectionne(): boolean {
@@ -720,7 +849,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       numero_dossier: '2603-00002',
       candidature_id: 2,
       numero_candidature: '2603-00002-GL',
-      master_nom: 'Master Intelligence Artificielle',
+      master_nom: 'Mastère Recherche en Génie Logiciel (MRGL)',
       statut: 'en_attente',
       date_soumission: '2026-02-12',
     },
@@ -2749,6 +2878,81 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return /^\d{4}$/.test(String(value || '').trim());
   }
 
+  // ────────────────────────────────────────────────────────────────
+  // Validateurs date_naissance + annee_bac (Sprint contrôle de saisie)
+  // ────────────────────────────────────────────────────────────────
+
+  /**
+   * Renvoie le code d'erreur applicable à la date de naissance, ou null si OK.
+   * Codes : 'required' | 'invalide' | 'futur' | 'tropJeune' | 'tropEleve'
+   */
+  validerDateNaissance(value: string | undefined | null): string | null {
+    if (!value) return 'required';
+    const dateNaissance = new Date(value);
+    if (isNaN(dateNaissance.getTime())) return 'invalide';
+
+    const aujourdHui = new Date();
+    aujourdHui.setHours(0, 0, 0, 0);
+    if (dateNaissance >= aujourdHui) return 'futur';
+
+    let age = aujourdHui.getFullYear() - dateNaissance.getFullYear();
+    const moisDiff = aujourdHui.getMonth() - dateNaissance.getMonth();
+    if (
+      moisDiff < 0 ||
+      (moisDiff === 0 && aujourdHui.getDate() < dateNaissance.getDate())
+    ) {
+      age--;
+    }
+    if (age < 17) return 'tropJeune';
+    if (age > 60) return 'tropEleve';
+    return null;
+  }
+
+  /**
+   * Renvoie le code d'erreur applicable à l'année du Bac, ou null si OK.
+   * Codes : 'required' | 'format' | 'tropAncien' | 'futur' | 'incoherent'
+   */
+  validerAnneeBac(
+    value: string | undefined | null,
+    dateNaissance?: string | undefined | null,
+  ): string | null {
+    if (value === null || value === undefined || String(value).trim() === '') return 'required';
+    const raw = String(value).trim();
+    if (!/^\d{4}$/.test(raw)) return 'format';
+    const annee = parseInt(raw, 10);
+    const anneeActuelle = new Date().getFullYear();
+    if (annee < 1990) return 'tropAncien';
+    if (annee > anneeActuelle) return 'futur';
+
+    if (dateNaissance) {
+      const dn = new Date(dateNaissance);
+      if (!isNaN(dn.getTime())) {
+        const anneeMin = dn.getFullYear() + 17;
+        if (annee < anneeMin) return 'incoherent';
+      }
+    }
+    return null;
+  }
+
+  /** Année minimum cohérente avec la date de naissance (pour message d'erreur). */
+  getAnneeBacMinCoherente(): number | null {
+    const dn = this.wizardData?.dateNaissance;
+    if (!dn) return null;
+    const d = new Date(dn);
+    if (isNaN(d.getTime())) return null;
+    return d.getFullYear() + 17;
+  }
+
+  /** Date max HTML5 pour le champ date_naissance (= aujourd'hui). */
+  get maxDateNaissanceHTML(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  /** Année max pour le champ annee_bac. */
+  get anneeActuelle(): number {
+    return new Date().getFullYear();
+  }
+
   isWizardSubmissionAllowed(): boolean {
     return this.isWizardStepValid(1) && this.isWizardStepValid(2) && this.isWizardStepValid(3);
   }
@@ -3088,7 +3292,8 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         !baseRequired ||
         !this.isValidEmail(this.wizardData.email) ||
         !this.isWizardCINValid(this.wizardData.cinPasseport) ||
-        !this.isWizardPhoneValid(this.wizardData.telephone)
+        !this.isWizardPhoneValid(this.wizardData.telephone) ||
+        this.validerDateNaissance(this.wizardData.dateNaissance) !== null
       ) {
         return false;
       }
@@ -3102,6 +3307,12 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
         this.wizardData.anneeBac,
         this.wizardData.moyenneBacPrincipale,
       ].every((value) => !!String(value || '').trim());
+
+      if (
+        this.validerAnneeBac(this.wizardData.anneeBac, this.wizardData.dateNaissance) !== null
+      ) {
+        return false;
+      }
 
       if (
         !baseBacFieldsValid ||
@@ -4951,7 +5162,7 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     return 'fa-clock';
   }
 
-  // ── Finalisation dossier ──
+  // ── Finalisation dossier ── (Sprint 4 — Correction 1)
   finaliserDossier(): void {
     if (this.completionPercent < 100) {
       this.toastService.show(
@@ -4960,13 +5171,55 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       );
       return;
     }
+
+    // Récupérer la candidature active : soit celle sélectionnée via le sélecteur de vœux,
+    // soit la première éligible au dépôt.
+    const candidature =
+      this.candidatureDepotActive
+      ?? this.candidaturesEligiblesDepot[0]
+      ?? this.mesCandidatures.find((c) =>
+          this.STATUTS_DEPOT_AUTORISE.includes((c.statut || '').toLowerCase()),
+        );
+
+    if (!candidature) {
+      this.toastService.show(
+        'Aucune candidature éligible au dépôt n\'a été trouvée.',
+        'error',
+      );
+      return;
+    }
+
     this.finalisationLoading = true;
-    // Appel API ici — remplacer le setTimeout par l'appel réel
-    // this.dossierService.finaliserDossier(this.selectedDossierNumber).subscribe(...)
-    setTimeout(() => {
-      this.finalisationLoading = false;
-      this.toastService.show('Dossier finalisé avec succès !', 'success');
-    }, 1500);
+    const token = this.authService.getAccessToken();
+    this.http
+      .post<{ message: string; statut: string; candidature_id: number }>(
+        `${environment.candidatureServiceUrl}/candidatures/${candidature.id}/finaliser-dossier/`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: (res) => {
+          this.finalisationLoading = false;
+          // Mise à jour locale du statut pour rafraîchir l'UI immédiatement
+          candidature.statut = res.statut || 'dossier_depose';
+          this.toastService.show(
+            res.message
+              || 'Dossier finalisé avec succès ! Votre dossier est en cours d\'examen.',
+            'success',
+          );
+          // Recharger les listes pour refléter le nouveau statut
+          this.loadMesCandidatures();
+          this.loadMesDossiers();
+        },
+        error: (err) => {
+          this.finalisationLoading = false;
+          const msg =
+            err?.error?.error
+            || err?.error?.message
+            || 'Erreur lors de la finalisation du dossier.';
+          this.toastService.show(msg, 'error');
+        },
+      });
   }
 
   private isAllowedUploadFile(file: File): boolean {

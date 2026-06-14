@@ -64,7 +64,7 @@ class DocumentUploadSerializer(serializers.Serializer):
         """Valider le fichier"""
         # Taille max globale : 10MB
         if file.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("Le fichier ne doit pas dépasser 10MB")
+            raise serializers.ValidationError("Fichier trop volumineux")
         
         return file
     
@@ -90,7 +90,7 @@ class DocumentUploadSerializer(serializers.Serializer):
         ).first()
         if existing:
             raise serializers.ValidationError(
-                f"Ce fichier a déjà été soumis: {existing.candidature.numero}"
+                "Fichier déjà soumis"
             )
         
         # Obtenir l'extension du fichier
@@ -154,7 +154,7 @@ class DepotDossierSerializer(serializers.Serializer):
     def validate(self, data):
         """Valider les documents"""
         if not data.get('documents'):
-            raise serializers.ValidationError("Au moins un document doit être soumis")
+            raise serializers.ValidationError("Ajoutez au moins un document")
         
         return data
 

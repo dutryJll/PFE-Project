@@ -157,7 +157,7 @@ def generer_attestation_pdf(request, candidature_id: int):
 @permission_classes([IsAuthenticated])
 def analyser_ocr_candidature(request, candidature_id: int):
     """
-    Lance l'analyse OCR (PaddleOCR / EasyOCR) sur un document et met à jour
+    Lance l'analyse OCR RÉELLE (pdfplumber + Req-3) sur un document et met à jour
     le champ note_extraite_ocr de la candidature.
 
     Body (multipart/form-data) :
@@ -166,7 +166,9 @@ def analyser_ocr_candidature(request, candidature_id: int):
 
     Si aucun fichier n'est fourni, utilise le premier document du dossier.
     """
-    from .services_ocr_local import OCRDocumentAuditor
+    from .ocr_service import OCRService
+    import tempfile
+    import shutil
 
     try:
         candidature = Candidature.objects.select_related(
@@ -198,8 +200,23 @@ def analyser_ocr_candidature(request, candidature_id: int):
     score_declare = float(candidature.score or 0) or None
 
     try:
-        auditor = OCRDocumentAuditor()
-        result = auditor.analyser_document(fichier, score_declare=score_declare)
+        pdf_path = None
+        if isinstance(fichier, str):
+            pdf_path = str(fichier)
+        else:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                for chunk in fichier.chunks():
+                    tmp.write(chunk)
+                pdf_path = tmp.name
+
+        result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+
+        if not isinstance(fichier, str):
+            try:
+                os.unlink(pdf_path)
+            except Exception:
+                pass
+
     except Exception as exc:
         logger.exception('OCR analyse candidature %s', candidature_id)
         return Response(
@@ -220,7 +237,7 @@ def analyser_ocr_candidature(request, candidature_id: int):
             candidature.score = score_extrait
             fields_updated.append('score')
 
-    if result.get('flag_fraude'):
+    if result.get('alerte'):
         candidature.flag_fraude = True
         fields_updated.append('flag_fraude')
 
@@ -230,15 +247,15 @@ def analyser_ocr_candidature(request, candidature_id: int):
     return Response({
         'candidature_id':      candidature_id,
         'numero':              candidature.numero or str(candidature_id),
-        'score_extrait':       result['score_extrait'],
-        'score_declare':       result['score_declare'],
-        'delta':               result['delta'],
-        'flag_fraude':         result['flag_fraude'],
-        'confiance':           result['confiance'],
-        'moteur':              result['moteur'],
-        'sha256':              result['sha256'],
-        'anomalies':           result['anomalies'],
-        'texte_preview':       (result.get('texte_extrait') or '')[:500],
+        'score_extrait':       result.get('score_extrait'),
+        'score_declare':       result.get('score_declare'),
+        'ecart':               result.get('ecart'),
+        'confiance':           result.get('confiance'),
+        'moteur':              result.get('moteur'),
+        'statut':              result.get('statut'),
+        'alerte':              result.get('alerte'),
+        'anomalies':           result.get('anomalies', []),
+        'texte_extrait':       (result.get('texte_extrait') or '')[:500],
         'fields_updated':      fields_updated,
         'note_extraite_ocr':   float(candidature.note_extraite_ocr or 0),
     })

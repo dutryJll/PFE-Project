@@ -2360,22 +2360,22 @@
                 <button
                   class="ocr-lot-export ocr-lot-export-excel"
                   type="button"
-                  [disabled]="ocrRapportExportLoading !== null"
-                  (click)="exporterRapportOcr('excel')"
+                  [disabled]="ocrLotExportLoading !== null"
+                  (click)="exporterOcrLot('excel')"
                   title="Télécharger le rapport au format Excel"
                 >
-                  <i class="fas" [ngClass]="ocrRapportExportLoading === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
-                  {{ ocrRapportExportLoading === 'excel' ? 'Génération...' : 'Exporter Excel' }}
+                  <i class="fas" [ngClass]="ocrLotExportLoading === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+                  {{ ocrLotExportLoading === 'excel' ? 'Génération...' : 'Exporter Excel' }}
                 </button>
                 <button
                   class="ocr-lot-export ocr-lot-export-pdf"
                   type="button"
-                  [disabled]="ocrRapportExportLoading !== null"
-                  (click)="exporterRapportOcr('pdf')"
+                  [disabled]="ocrLotExportLoading !== null"
+                  (click)="exporterOcrLot('pdf')"
                   title="Télécharger le rapport au format PDF"
                 >
-                  <i class="fas" [ngClass]="ocrRapportExportLoading === 'pdf' ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
-                  {{ ocrRapportExportLoading === 'pdf' ? 'Génération...' : 'Exporter PDF' }}
+                  <i class="fas" [ngClass]="ocrLotExportLoading === 'pdf' ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+                  {{ ocrLotExportLoading === 'pdf' ? 'Génération...' : 'Exporter PDF' }}
                 </button>
                 <button class="ocr-lot-close" (click)="fermerOcrLotResultats()">
                   <i class="fas fa-times"></i>
@@ -2414,23 +2414,23 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let r of ocrLotResultats.resultats" [class.ocr-lot-row-fraud]="r.flag_fraude">
+                  <tr *ngFor="let r of ocrLotResultats.resultats" [class.ocr-lot-row-fraud]="r.statut === 'anomalie'">
                     <td>{{ r.candidat_nom || '—' }}</td>
                     <td>{{ r.numero || '—' }}</td>
                     <td>{{ r.score_declare != null ? r.score_declare : '—' }}</td>
                     <td>{{ r.score_extrait != null ? r.score_extrait : '—' }}</td>
-                    <td [class.ocr-lot-delta-bad]="r.flag_fraude">
-                      {{ r.delta != null ? r.delta : '—' }}
+                    <td [class.ocr-lot-delta-bad]="r.statut === 'anomalie'">
+                      {{ r.ecart != null ? r.ecart : '—' }}
                     </td>
                     <td>{{ r.moteur || '—' }}</td>
                     <td>
                       <span class="ocr-lot-badge"
-                        [class.ocr-lot-bg-fraud]="r.flag_fraude"
-                        [class.ocr-lot-bg-ok]="r.success && !r.flag_fraude"
+                        [class.ocr-lot-bg-fraud]="r.statut === 'anomalie'"
+                        [class.ocr-lot-bg-ok]="r.success && r.statut === 'ok'"
                         [class.ocr-lot-bg-err]="!r.success">
                         <ng-container *ngIf="!r.success">❌ Erreur</ng-container>
-                        <ng-container *ngIf="r.success && r.flag_fraude">⚠️ Anomalie</ng-container>
-                        <ng-container *ngIf="r.success && !r.flag_fraude">✓ Cohérent</ng-container>
+                        <ng-container *ngIf="r.success && r.statut === 'anomalie'">⚠️ Anomalie</ng-container>
+                        <ng-container *ngIf="r.success && r.statut === 'ok'">✓ Cohérent</ng-container>
                       </span>
                     </td>
                   </tr>
@@ -6651,7 +6651,6 @@
                 <th>Téléphone</th>
                 <th>Statut</th>
                 <th>Spécialité</th>
-                <th style="width: 56px">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -6688,48 +6687,6 @@
                     membre.master_rattachement
                   }}</span>
                   <span *ngIf="!membre.master_rattachement" class="mem-spec-dash">—</span>
-                </td>
-                <td>
-                  <div class="action-menu-container">
-                    <button
-                      class="mem-action-btn"
-                      type="button"
-                      aria-label="Actions"
-                      (click)="$event.stopPropagation(); toggleMemberActionMenu(membre.id, $event)"
-                    >
-                      <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                    <div
-                      class="action-menu"
-                      *ngIf="memberActionMenuOpenId === membre.id"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <button type="button" class="menu-item" (click)="openEditMemberModal(membre)">
-                        <i class="fas fa-pen"></i>
-                        <span>Modifier</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="menu-item"
-                        [class.warning]="membre.statut === 'actif'"
-                        (click)="toggleStatutMembre(membre); memberActionMenuOpenId = null"
-                      >
-                        <i
-                          class="fas"
-                          [ngClass]="membre.statut === 'actif' ? 'fa-ban' : 'fa-check-circle'"
-                        ></i>
-                        <span>{{ membre.statut === 'actif' ? 'Désactiver' : 'Activer' }}</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="menu-item danger"
-                        (click)="openDeleteMemberConfirm(membre)"
-                      >
-                        <i class="fas fa-trash"></i>
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  </div>
                 </td>
               </tr>
               <tr *ngIf="!membresFiltres.length">
@@ -7716,14 +7673,14 @@
                   </div>
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Écart Δ</span>
-                    <strong [class.ocr-delta-bad]="ocrModalResult.flag_fraude">
-                      {{ ocrModalResult.delta != null ? ocrModalResult.delta : '—' }}
+                    <strong [class.ocr-delta-bad]="ocrModalResult?.alerte">
+                      {{ ocrModalResult?.ecart != null ? ocrModalResult?.ecart : '—' }}
                     </strong>
                   </div>
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Confiance</span>
-                    <strong [ngClass]="ocrModalConfianceClass">
-                      {{ (ocrModalResult.confiance * 100).toFixed(0) }}%
+                    <strong [ngClass]="(ocrModalResult?.confiance || 0) >= 85 ? 'ocr-conf-high' : (ocrModalResult?.confiance || 0) >= 70 ? 'ocr-conf-medium' : 'ocr-conf-low'">
+                      {{ ocrModalResult?.confiance || 0 }}%
                     </strong>
                   </div>
                   <div class="ocr-real-stat">
@@ -7868,88 +7825,6 @@
               </div>
             </div>
 
-            <ng-container
-              *ngIf="dossierOCRCandidature?.statut !== 'sous_examen' && dossierOCRCandidature?.statut !== 'soumis'"
-            >
-            <div class="ocr-doc-item ocr-s-valid">
-              <div class="ocr-doc-header">
-                <div class="ocr-doc-title">
-                  <i class="fas fa-file-pdf ocr-doc-icon"></i>
-                  <span>Relevé de notes L3</span>
-                  <span class="ocr-doc-badge ocr-badge-valid">Valide</span>
-                </div>
-                <button class="ocr-examine-btn" type="button" (click)="lancerAnalyseOCRDossier()">
-                  <i class="fas fa-robot"></i> Examiner OCR
-                </button>
-              </div>
-              <div class="ocr-panel" *ngIf="showOCRPanel">
-                <div class="ocr-confidence-row">
-                  <span class="ocr-conf-label">Confiance OCR</span>
-                  <span class="ocr-conf-badge ocr-conf-high">94%</span>
-                </div>
-                <div class="ocr-conf-bar-bg">
-                  <div class="ocr-conf-bar-fill" style="width: 94%; background: #10b981"></div>
-                </div>
-                <table class="ocr-compare-table">
-                  <thead>
-                    <tr>
-                      <th>Champ</th>
-                      <th>Déclaré</th>
-                      <th>OCR</th>
-                      <th>Delta</th>
-                      <th>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Nom</td>
-                      <td>{{ dossierOCRCandidature.candidat_nom }}</td>
-                      <td>{{ dossierOCRCandidature.candidat_nom }}</td>
-                      <td>—</td>
-                      <td>
-                        <span class="ocr-verdict ocr-ok"><i class="fas fa-check"></i> OK</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Score</td>
-                      <td>{{ dossierOCRCandidature.score }}</td>
-                      <td>{{ dossierOCRCandidature.score }}</td>
-                      <td>0</td>
-                      <td>
-                        <span class="ocr-verdict ocr-ok"><i class="fas fa-check"></i> OK</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div class="ocr-verdict-final ocr-verdict-ok">
-                  <i class="fas fa-check-circle"></i> Document conforme — aucune anomalie détectée
-                </div>
-              </div>
-            </div>
-
-            <div class="ocr-doc-item ocr-s-pending">
-              <div class="ocr-doc-header">
-                <div class="ocr-doc-title">
-                  <i class="fas fa-file-pdf ocr-doc-icon"></i>
-                  <span>Lettre de motivation</span>
-                  <span class="ocr-doc-badge ocr-badge-pending">En attente</span>
-                </div>
-                <button class="ocr-examine-btn" type="button">
-                  <i class="fas fa-robot"></i> Examiner OCR
-                </button>
-              </div>
-            </div>
-
-            <div class="ocr-doc-item ocr-s-missing">
-              <div class="ocr-doc-header">
-                <div class="ocr-doc-title">
-                  <i class="fas fa-file-pdf ocr-doc-icon"></i>
-                  <span>Certificat de scolarité</span>
-                  <span class="ocr-doc-badge ocr-badge-missing">Manquant</span>
-                </div>
-              </div>
-            </div>
-            </ng-container>
           </div>
 
           <!-- Historique tab -->
@@ -7984,695 +7859,188 @@
     <!-- MODAL : CONSULTATION MASSIVE                                   -->
     <!-- ============================================================ -->
     <div
-      class="consult-massive-backdrop"
+      class="cm-ocr-overlay open"
       *ngIf="showConsultationMassiveModal"
       (click)="fermerConsultationMassive()"
     >
-      <div class="consult-massive-modal" (click)="$event.stopPropagation()">
-        <!-- Topbar -->
-        <div class="consult-massive-topbar">
-          <div class="consult-massive-topbar-left">
-            <button
-              class="consult-massive-close"
-              type="button"
-              (click)="fermerConsultationMassive()"
-            >
-              <i class="fas fa-times"></i>
-            </button>
-            <span class="consult-massive-title">Consultation massive</span>
-            <span class="consult-massive-count"
-              >{{ consultationMassiveCandidates.length }} candidat(s)</span
-            >
-          </div>
-          <button
-            class="consult-massive-btn-all"
-            type="button"
-            (click)="lancerConsultationMassiveOCR()"
-          >
-            <i class="fas fa-robot"></i> Examiner tous par OCR
-          </button>
-        </div>
-
-        <!-- Body -->
-        <div class="consult-massive-body">
-          <!-- Left panel: candidate list -->
-          <div class="consult-massive-list-panel">
-            <div class="consult-massive-search-wrap">
-              <i class="fas fa-search"></i>
-              <input
-                class="consult-massive-search"
-                type="text"
-                placeholder="Rechercher..."
-                [(ngModel)]="consultationMassiveSearch"
-              />
-            </div>
-            <div class="consult-massive-list">
-              <div
-                *ngFor="let c of consultationMassiveFiltered; let idx = index"
-                class="consult-massive-list-item"
-                [class.consult-massive-active]="c === consultationMassiveCurrent"
-                (click)="
-                  consultationMassiveSelectCandidat(consultationMassiveCandidates.indexOf(c))
-                "
-              >
-                <div class="consult-massive-avatar">
-                  {{ (c.candidat_nom || '?')[0].toUpperCase() }}
-                </div>
-                <div class="consult-massive-cand-info">
-                  <div class="consult-massive-cand-name">{{ c.candidat_nom }}</div>
-                  <div class="consult-massive-cand-ref">{{ c.numero }}</div>
-                </div>
-                <span
-                  class="consult-massive-status-dot"
-                  [ngClass]="{
-                    'csm-dot-ok': c.statut === 'preselectionne' || c.statut === 'selectionne',
-                    'csm-dot-warn': c.statut === 'soumis' || c.statut === 'sous_examen',
-                    'csm-dot-err': c.statut === 'rejete',
-                  }"
-                >
-                </span>
-              </div>
-              <div *ngIf="consultationMassiveFiltered.length === 0" class="consult-massive-empty">
-                Aucun résultat
-              </div>
-            </div>
-          </div>
-
-          <!-- Right panel: dossier detail -->
-          <div class="consult-massive-detail-panel" *ngIf="consultationMassiveCurrent">
-            <div class="consult-massive-dossier-top">
-              <div class="consult-massive-dossier-avatar">
-                {{ (consultationMassiveCurrent.candidat_nom || '?')[0].toUpperCase() }}
-              </div>
-              <div class="consult-massive-dossier-info">
-                <div class="consult-massive-dossier-name">
-                  {{ consultationMassiveCurrent.candidat_nom }}
-                </div>
-                <div class="consult-massive-dossier-ref">
-                  {{ consultationMassiveCurrent.numero }}
-                </div>
-                <span class="consult-massive-score-pill">
-                  {{ consultationMassiveCurrent.score | number: '1.1-1' }} / 20
-                </span>
-              </div>
-            </div>
-
-            <!-- OCR analysis -->
-            <div class="consult-massive-docs">
-              <div class="consult-massive-doc-row">
-                <i class="fas fa-file-pdf"></i>
-                <span>Relevé de notes</span>
-                <button
-                  class="consult-massive-ocr-btn"
-                  type="button"
-                  (click)="lancerConsultationMassiveOCR()"
-                >
-                  <i class="fas fa-robot"></i> OCR
-                </button>
-              </div>
-              <div class="consult-massive-doc-row">
-                <i class="fas fa-file-pdf"></i>
-                <span>Lettre de motivation</span>
-                <button class="consult-massive-ocr-btn" type="button">
-                  <i class="fas fa-robot"></i> OCR
-                </button>
-              </div>
-            </div>
-
-            <!-- OCR summary -->
-            <div class="consult-massive-ocr-summary" *ngIf="showConsultationMassiveOCRPanel">
-              <div class="consult-massive-ocr-conf">
-                <span>Confiance moyenne</span>
-                <span class="consult-massive-ocr-pct">91%</span>
-              </div>
-              <div class="consult-massive-ocr-verdict ocr-verdict-ok">
-                <i class="fas fa-check-circle"></i> Dossier conforme
-              </div>
-            </div>
-
-            <!-- Decision -->
-            <div class="consult-massive-decision">
-              <button
-                class="consult-massive-validate"
-                type="button"
-                (click)="
-                  updateCandidatureStatus(consultationMassiveCurrent.id, 'preselectionne');
-                  consultationMassiveSuivant()
-                "
-              >
-                <i class="fas fa-check-circle"></i> Valider
-              </button>
-              <button
-                class="consult-massive-reject"
-                type="button"
-                (click)="
-                  updateCandidatureStatus(consultationMassiveCurrent.id, 'rejete');
-                  consultationMassiveSuivant()
-                "
-              >
-                <i class="fas fa-times-circle"></i> Rejeter
-              </button>
-            </div>
-          </div>
-
-          <div class="consult-massive-empty-detail" *ngIf="!consultationMassiveCurrent">
-            <i class="fas fa-user-slash"></i>
-            <p>Sélectionnez un candidat dans la liste</p>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="consult-massive-footer">
-          <span class="consult-massive-progress">
-            {{ consultationMassiveIndex + 1 }} / {{ consultationMassiveCandidates.length }}
-          </span>
-          <button class="consult-massive-next" type="button" (click)="consultationMassiveSuivant()">
-            Enregistrer &amp; Suivant <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ CONSULTATION MASSIVE OCR ══ -->
-    <div class="cm-ocr-overlay" [class.open]="massiveOCROpen" (click)="closeMassiveOCR()">
       <div class="cm-ocr-shell" (click)="$event.stopPropagation()">
         <!-- Topbar -->
         <div class="cm-ocr-topbar">
           <div class="cm-ocr-topbar-left">
             <div class="cm-ocr-logo">ISIMM</div>
             <div>
-              <div class="cm-ocr-title">{{ massiveOCRTitle }}</div>
+              <div class="cm-ocr-title">Consultation massive — Candidatures Master</div>
               <div class="cm-ocr-subtitle">Analyse documentaire + Examen OCR IA par dossier</div>
             </div>
           </div>
           <div class="cm-ocr-topbar-right">
             <div class="cm-ocr-nav-info">
-              Dossier <strong>{{ massiveOCRCurrentIndex + 1 }}</strong> /
-              <strong>{{ massiveOCRCandidates.length }}</strong>
+              Dossier <strong>{{ consultationMassiveIndex + 1 }}</strong> /
+              <strong>{{ consultationMassiveCandidates.length }}</strong>
             </div>
             <button
-              class="cm-ocr-nav-btn"
               type="button"
-              [disabled]="massiveOCRCurrentIndex === 0"
-              (click)="massiveOCRPrev()"
+              class="cm-ocr-nav-btn"
+              [disabled]="consultationMassiveIndex === 0"
+              (click)="consultationMassivePrecedent()"
             >
               ← Précédent
             </button>
             <button
-              class="cm-ocr-nav-btn"
               type="button"
-              [disabled]="massiveOCRCurrentIndex >= massiveOCRCandidates.length - 1"
-              (click)="massiveOCRNext()"
+              class="cm-ocr-nav-btn"
+              [disabled]="consultationMassiveIndex === consultationMassiveCandidates.length - 1"
+              (click)="consultationMassiveSuivant()"
             >
               Suivant →
             </button>
-            <button class="cm-ocr-close-btn" type="button" (click)="closeMassiveOCR()">✕</button>
+            <button
+              type="button"
+              class="cm-ocr-close-btn"
+              (click)="fermerConsultationMassive()"
+            >
+              ✕
+            </button>
           </div>
         </div>
 
         <!-- Body -->
-        <div class="cm-ocr-body" *ngIf="massiveOCRCandidates.length > 0">
-          <!-- List panel -->
+        <div class="cm-ocr-body">
+          <!-- Left panel: candidate list -->
           <div class="cm-ocr-list-panel">
             <div class="cm-ocr-list-hdr">
               <span class="cm-ocr-list-title">Candidats</span>
-              <span class="cm-ocr-list-count">{{ massiveOCRCandidates.length }}</span>
+              <span class="cm-ocr-list-count">{{ consultationMassiveCandidates.length }}</span>
             </div>
-            <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f4">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 6px;
-                  background: #f4f7fb;
-                  border: 1px solid #e2e8f4;
-                  border-radius: 8px;
-                  padding: 6px 10px;
-                "
-              >
-                <i class="fas fa-search" style="font-size: 11px; color: #94a3b8"></i>
+            <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f4;">
+              <div style="display: flex; align-items: center; gap: 6px; background: #f4f7fb; border: 1px solid #e2e8f4; border-radius: 8px; padding: 6px 10px;">
+                <i class="fas fa-search" style="font-size: 11px; color: #94a3b8;"></i>
                 <input
                   type="text"
-                  style="
-                    border: none;
-                    background: transparent;
-                    font-family: inherit;
-                    font-size: 12px;
-                    outline: none;
-                    width: 100%;
-                  "
                   placeholder="Rechercher..."
-                  [(ngModel)]="massiveOCRSearchFilter"
+                  [(ngModel)]="consultationMassiveSearch"
+                  style="border: none; background: transparent; font-family: inherit; font-size: 12px; outline: none; width: 100%;"
+                  class="ng-untouched ng-pristine ng-valid"
                 />
               </div>
             </div>
             <div class="cm-ocr-list-body">
               <div
-                *ngFor="let c of getMassiveOCRFilteredList(); let idx = index"
+                *ngFor="let c of consultationMassiveFiltered; let idx = index"
                 class="cm-ocr-list-item"
-                [class.active]="massiveOCRCandidates.indexOf(c) === massiveOCRCurrentIndex"
-                (click)="massiveOCRCurrentIndex = massiveOCRCandidates.indexOf(c)"
+                [class.active]="c === consultationMassiveCurrent"
+                (click)="consultationMassiveSelectCandidat(consultationMassiveCandidates.indexOf(c))"
               >
-                <div class="cm-ocr-item-rank">#{{ idx + 1 }}</div>
-                <div class="cm-ocr-item-name">{{ c.candidat_nom || c.nom || '—' }}</div>
-                <div class="cm-ocr-item-ref">{{ c.numero || c.num || c.id }}</div>
+                <div class="cm-ocr-item-rank">#{{ consultationMassiveCandidates.indexOf(c) + 1 }}</div>
+                <div class="cm-ocr-item-name">{{ c.candidat_nom }}</div>
+                <div class="cm-ocr-item-ref">{{ c.numero }}</div>
                 <div class="cm-ocr-item-meta">
-                  <span class="cm-ocr-item-score">{{ c.score || 0 | number: '1.1-2' }} pts</span>
-                  <span *ngIf="isOCRDoneForCandidat(c.id)" class="cm-ocr-done-badge"
-                    >OCR effectué</span
-                  >
-                  <span
-                    *ngIf="getMassiveOCRDecision(c.id) as dec"
-                    [style.background]="
-                      dec === 'approve' ? '#D1FAE5' : dec === 'reject' ? '#FEE2E2' : '#FEF3C7'
-                    "
-                    [style.color]="
-                      dec === 'approve' ? '#065F46' : dec === 'reject' ? '#991B1B' : '#92400E'
-                    "
-                    style="font-size: 10px; padding: 1px 6px; border-radius: 6px"
-                  >
-                    {{ dec === 'approve' ? 'Validé' : dec === 'reject' ? 'Rejeté' : 'Attente' }}
-                  </span>
+                  <span class="cm-ocr-item-score">{{ c.score | number: '1.1-1' }} pts</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Detail panel -->
-          <div class="cm-ocr-detail-panel" *ngIf="getMassiveOCRCurrentCandidate() as cand">
-            <!-- Topbar -->
-            <div class="cm-ocr-detail-topbar">
-              <div style="display: flex; align-items: center; gap: 12px">
+          <!-- Right panel: dossier detail -->
+          <div class="cm-ocr-detail-panel">
+            <div *ngIf="consultationMassiveCurrent" class="cm-ocr-detail-topbar">
+              <div style="display: flex; align-items: center; gap: 12px;">
                 <div class="cm-ocr-detail-avatar">
-                  {{ (cand.candidat_nom || cand.nom || '?')[0]
-                  }}{{ (cand.candidat_nom || cand.nom || '??').split(' ')[1]?.[0] || '' }}
+                  {{ (consultationMassiveCurrent.candidat_nom || '?')[0].toUpperCase() }}
+                  {{ (consultationMassiveCurrent.candidat_nom || '?').split(' ')[1]?.[0]?.toUpperCase() || '' }}
                 </div>
                 <div>
-                  <div class="cm-ocr-detail-name">{{ cand.candidat_nom || cand.nom || '—' }}</div>
-                  <div class="cm-ocr-detail-ref">{{ cand.numero || cand.num || cand.id }}</div>
-                  <div class="cm-ocr-detail-meta">
-                    {{ cand.specialite || cand.spec || '—' }} · Session 2025/2026
-                  </div>
+                  <div class="cm-ocr-detail-name">{{ consultationMassiveCurrent.candidat_nom }}</div>
+                  <div class="cm-ocr-detail-ref">{{ consultationMassiveCurrent.numero }}</div>
+                  <div class="cm-ocr-detail-meta">Génie Logiciel · Session 2025/2026</div>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px">
+              <div style="display: flex; align-items: center; gap: 8px;">
                 <div class="cm-ocr-score-pill">
-                  <span class="cm-ocr-score-val">{{ cand.score || 0 | number: '1.1-2' }}</span>
+                  <span class="cm-ocr-score-val">{{ consultationMassiveCurrent.score | number: '1.1-1' }}</span>
                   <span class="cm-ocr-score-lbl">Score</span>
                 </div>
-                <button
-                  class="cm-ocr-nav-btn"
-                  type="button"
-                  style="background: #f4f7fb; color: #0f1f3d; border: 1px solid #e2e8f4"
-                  (click)="ouvrirDossierOCR(cand)"
-                >
-                  <i class="fas fa-file-alt" style="font-size: 11px"></i> Voir dossier
+                <button type="button" class="cm-ocr-nav-btn" style="background: #f4f7fb; color: #0f1f3d; border: 1px solid #e2e8f4;">
+                  <i class="fas fa-file-alt" style="font-size: 11px;"></i> Voir dossier
                 </button>
               </div>
             </div>
 
-            <!-- Content grid -->
-            <div class="cm-ocr-content">
-              <!-- Info sidebar -->
+            <div class="cm-ocr-content" *ngIf="consultationMassiveCurrent">
               <div class="cm-ocr-info-sidebar">
                 <div class="cm-ocr-info-card">
                   <div class="cm-ocr-info-title">Informations</div>
                   <div class="cm-ocr-info-row">
-                    <i
-                      class="fas fa-envelope"
-                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
-                    ></i>
-                    <span>{{ cand.candidat_email || cand.email || '—' }}</span>
+                    <i class="fas fa-envelope" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>{{ consultationMassiveCurrent.candidat_email || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i
-                      class="fas fa-graduation-cap"
-                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
-                    ></i>
-                    <span>{{ cand.specialite || cand.spec || '—' }}</span>
+                    <i class="fas fa-graduation-cap" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>{{ consultationMassiveCurrent.master_nom || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i
-                      class="fas fa-tag"
-                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
-                    ></i>
-                    <span>{{ cand.type_candidat || '—' }}</span>
+                    <i class="fas fa-tag" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>{{ consultationMassiveCurrent.specialite || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i
-                      class="fas fa-calendar"
-                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
-                    ></i>
-                    <span>Soumis le {{ cand.date_soumission || cand.date_creation || '—' }}</span>
+                    <i class="fas fa-calendar" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>Soumis le {{ consultationMassiveCurrent.date_soumission ? (consultationMassiveCurrent.date_soumission | date: 'dd/MM/yyyy') : '—' }}</span>
                   </div>
                 </div>
-
                 <div class="cm-ocr-info-card">
                   <div class="cm-ocr-info-title">Statut dossier</div>
-                  <div style="margin-top: 6px">
-                    <span
-                      class="prs-badge"
-                      style="font-size: 12px; padding: 4px 10px"
-                      [ngClass]="
-                        cand.statut === 'preselectionne' || cand.statut === 'lp'
-                          ? 'prs-badge-presel'
-                          : cand.statut === 'rejete' || cand.statut === 'refuse'
-                            ? 'prs-badge-reject'
-                            : 'prs-badge-wait'
-                      "
-                    >
-                      {{ getStatusDisplayLabel(cand.statut) || cand.statut || '—' }}
-                    </span>
-                  </div>
-                  <div *ngIf="getMassiveOCRDecision(cand.id) as dec" style="margin-top: 8px">
-                    <div class="cm-ocr-info-title" style="margin-bottom: 4px">
-                      Décision commission
-                    </div>
-                    <span
-                      [style.background]="
-                        dec === 'approve' ? '#D1FAE5' : dec === 'reject' ? '#FEE2E2' : '#FEF3C7'
-                      "
-                      [style.color]="
-                        dec === 'approve' ? '#065F46' : dec === 'reject' ? '#991B1B' : '#92400E'
-                      "
-                      style="
-                        padding: 4px 10px;
-                        border-radius: 8px;
-                        font-size: 12px;
-                        font-weight: 500;
-                      "
-                    >
-                      {{
-                        dec === 'approve'
-                          ? '✓ Validé'
-                          : dec === 'reject'
-                            ? '✗ Rejeté'
-                            : '⏸ En attente'
-                      }}
+                  <div style="margin-top: 6px;">
+                    <span class="prs-badge" [ngClass]="'prs-badge-' + (consultationMassiveCurrent.statut || 'soumis')" style="font-size: 12px; padding: 4px 10px;">
+                      {{ getStatusDisplayLabel(consultationMassiveCurrent.statut) }}
                     </span>
                   </div>
                 </div>
-
                 <div class="cm-ocr-decision-card">
                   <div class="cm-ocr-info-title">Décision commission</div>
-                  <textarea
-                    class="cm-ocr-comment"
-                    rows="3"
-                    placeholder="Commentaire..."
-                    [(ngModel)]="massiveOCRComments[cand.id]"
-                  ></textarea>
+                  <textarea rows="3" placeholder="Commentaire..." class="cm-ocr-comment ng-untouched ng-pristine ng-valid"></textarea>
                   <div class="cm-ocr-decision-btns">
                     <button
-                      class="cm-ocr-btn-dec cm-ocr-btn-approve"
                       type="button"
-                      (click)="decideMassiveOCRCandidate('approve')"
+                      class="cm-ocr-btn-dec cm-ocr-btn-approve"
+                      (click)="validerPreselectioCandidat(consultationMassiveCurrent.id)"
                     >
                       <i class="fas fa-check"></i> Valider dossier
                     </button>
                     <button
-                      class="cm-ocr-btn-dec cm-ocr-btn-reject"
                       type="button"
-                      (click)="decideMassiveOCRCandidate('reject')"
+                      class="cm-ocr-btn-dec cm-ocr-btn-reject"
+                      (click)="updateCandidatureStatus(consultationMassiveCurrent.id, 'rejete')"
                     >
                       <i class="fas fa-times"></i> Rejeter
                     </button>
-                    <button
-                      class="cm-ocr-btn-dec cm-ocr-btn-hold"
-                      type="button"
-                      (click)="decideMassiveOCRCandidate('hold')"
-                    >
+                    <button type="button" class="cm-ocr-btn-dec cm-ocr-btn-hold">
                       ⏸ Mettre en attente
                     </button>
                   </div>
                 </div>
               </div>
-
-              <!-- Documents + OCR -->
               <div class="cm-ocr-docs">
                 <div class="cm-ocr-docs-hdr">
                   <div class="cm-ocr-docs-title">Documents du dossier</div>
-                  <button
-                    class="cm-ocr-btn-ocr-all"
-                    type="button"
-                    (click)="lancerOCRMassifCandidat(cand.id)"
-                  >
-                    <i class="fas fa-robot" style="font-size: 11px"></i>
-                    {{ isOCRDoneForCandidat(cand.id) ? '✓ OCR effectué' : 'Examiner tous par OCR' }}
+                  <button type="button" class="cm-ocr-btn-ocr-all" (click)="lancerConsultationMassiveOCR()">
+                    <i class="fas fa-robot" style="font-size: 11px;"></i> Examiner tous par OCR
                   </button>
                 </div>
-
-                <!-- OCR Summary bar -->
-                <div
-                  *ngIf="isOCRDoneForCandidat(cand.id)"
-                  style="
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 9px 14px;
-                    background: linear-gradient(
-                      135deg,
-                      rgba(24, 95, 165, 0.05),
-                      rgba(124, 58, 237, 0.07)
-                    );
-                    border: 1px solid #c4b5fd;
-                    border-radius: 10px;
-                    margin-bottom: 12px;
-                  "
-                >
-                  <div
-                    style="
-                      width: 28px;
-                      height: 28px;
-                      border-radius: 7px;
-                      background: linear-gradient(135deg, #185fa5, #7c3aed);
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      flex-shrink: 0;
-                    "
-                  >
-                    <i class="fas fa-robot" style="color: #fff; font-size: 12px"></i>
-                  </div>
-                  <div>
-                    <div style="font-size: 12px; font-weight: 500; color: #0f1f3d">
-                      Synthèse OCR IA — Dossier analysé
-                    </div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 1px">
-                      Moteurs : EasyOCR / PaddleOCR · Analyse locale sécurisée
-                    </div>
-                  </div>
-                  <span
-                    style="
-                      display: inline-flex;
-                      align-items: center;
-                      gap: 4px;
-                      padding: 3px 9px;
-                      border-radius: 10px;
-                      font-size: 11px;
-                      font-weight: 500;
-                      background: #f5f3ff;
-                      border: 1px solid #c4b5fd;
-                      color: #7c3aed;
-                      flex-shrink: 0;
-                    "
-                  >
-                    OCR complet
-                  </span>
-                </div>
-
-                <!-- Dossier documents list -->
-                <div *ngFor="let doc of cand.dossier_documents || []" style="margin-bottom: 10px">
-                  <div
-                    style="
-                      border: 1px solid #e2e8f4;
-                      border-radius: 10px;
-                      overflow: hidden;
-                      border-left: 3px solid #185fa5;
-                    "
-                  >
-                    <div
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        padding: 10px 14px;
-                        background: #fff;
-                      "
-                    >
-                      <div
-                        style="
-                          width: 32px;
-                          height: 32px;
-                          border-radius: 8px;
-                          background: #eff6ff;
-                          display: flex;
-                          align-items: center;
-                          justify-content: center;
-                          flex-shrink: 0;
-                        "
-                      >
-                        <i class="fas fa-file-pdf" style="color: #185fa5; font-size: 13px"></i>
-                      </div>
-                      <div style="flex: 1">
-                        <div style="font-size: 12px; font-weight: 500; color: #0f1f3d">
-                          {{ doc.nom || doc.name }}
-                        </div>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 1px">
-                          {{ doc.taille || '' }}
-                        </div>
-                      </div>
-                      <span
-                        style="
-                          background: #d1fae5;
-                          color: #065f46;
-                          font-size: 10px;
-                          font-weight: 500;
-                          padding: 2px 8px;
-                          border-radius: 16px;
-                        "
-                        >Validé</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Placeholder when no documents loaded -->
-                <div
-                  *ngIf="!cand.dossier_documents?.length"
-                  style="
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 40px 20px;
-                    background: #f8fafc;
-                    border-radius: 12px;
-                    border: 1px dashed #cbd5e1;
-                    text-align: center;
-                  "
-                >
-                  <i
-                    class="fas fa-folder-open"
-                    style="font-size: 32px; color: #94a3b8; margin-bottom: 12px"
-                  ></i>
-                  <div
-                    style="font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px"
-                  >
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: center;">
+                  <i class="fas fa-folder-open" style="font-size: 32px; color: #94a3b8; margin-bottom: 12px;"></i>
+                  <div style="font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px;">
                     Documents du dossier
                   </div>
-                  <div style="font-size: 12px; color: #94a3b8; margin-bottom: 16px">
-                    Cliquez sur "Voir dossier" pour accéder aux pièces justificatives et lancer
-                    l'analyse OCR.
+                  <div style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
+                    Cliquez sur "Voir dossier" pour accéder aux pièces justificatives et lancer l'analyse OCR.
                   </div>
-                  <button class="cm-ocr-btn-ocr-all" type="button" (click)="ouvrirDossierOCR(cand)">
-                    <i class="fas fa-file-alt" style="font-size: 11px"></i> Ouvrir le dossier
-                    complet
+                  <button type="button" class="cm-ocr-btn-ocr-all">
+                    <i class="fas fa-file-alt" style="font-size: 11px;"></i> Ouvrir le dossier complet
                   </button>
                 </div>
-
-                <!-- OCR Result box when done -->
-                <div
-                  *ngIf="isOCRDoneForCandidat(cand.id)"
-                  class="cm-ocr-result-box"
-                  style="margin-top: 12px"
-                >
-                  <div class="cm-ocr-result-hdr">
-                    <div class="cm-ocr-result-title">
-                      <i
-                        class="fas fa-robot"
-                        style="color: #7c3aed; font-size: 11px; margin-right: 5px"
-                      ></i>
-                      Analyse IA — Résultat OCR
-                    </div>
-                    <span class="cm-ocr-conf-badge" style="background: #d1fae5; color: #065f46"
-                      >Confiance 94%</span
-                    >
-                  </div>
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      padding: 7px 9px;
-                      background: #f4f7fb;
-                      border-radius: 8px;
-                      margin-bottom: 8px;
-                    "
-                  >
-                    <span style="font-size: 10px; color: #64748b; flex-shrink: 0"
-                      >Score de confiance</span
-                    >
-                    <div
-                      style="
-                        flex: 1;
-                        height: 5px;
-                        background: #e2e8f4;
-                        border-radius: 3px;
-                        overflow: hidden;
-                      "
-                    >
-                      <div
-                        style="height: 5px; border-radius: 3px; background: #10b981; width: 94%"
-                      ></div>
-                    </div>
-                    <span style="font-size: 11px; font-weight: 500; color: #0f1f3d; flex-shrink: 0"
-                      >94%</span
-                    >
-                  </div>
-                  <div
-                    style="
-                      display: flex;
-                      align-items: flex-start;
-                      gap: 6px;
-                      padding: 8px 10px;
-                      border-radius: 8px;
-                      font-size: 12px;
-                      background: #d1fae5;
-                      color: #065f46;
-                      border: 1px solid #6ee7b7;
-                    "
-                  >
-                    <i class="fas fa-check-circle" style="flex-shrink: 0; margin-top: 1px"></i>
-                    <div>
-                      <span style="font-weight: 500; display: block; margin-bottom: 1px"
-                        >Dossier conforme — validation automatique possible</span
-                      >
-                      <span style="font-size: 10px; opacity: 0.8"
-                        >Tous les champs correspondent aux données déclarées par le candidat.</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                      font-size: 11px;
-                      color: #64748b;
-                      padding: 5px 9px;
-                      background: #f4f7fb;
-                      border-radius: 7px;
-                      margin-top: 8px;
-                    "
-                  >
-                    <span>Moteur utilisé</span>
-                    <span
-                      style="
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 3px;
-                        padding: 2px 8px;
-                        background: rgba(124, 58, 237, 0.08);
-                        border: 1px solid #c4b5fd;
-                        border-radius: 8px;
-                        font-size: 10px;
-                        font-weight: 500;
-                        color: #7c3aed;
-                      "
-                    >
-                      ✦ EasyOCR / PaddleOCR
-                    </span>
-                  </div>
+                <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f0f9ff; border: 1px dashed #bfdbfe; border-radius: 8px; color: #1e40af; font-size: 12px; margin-top: 12px;">
+                  <i class="fas fa-info-circle"></i>
+                  <span>Aucune analyse OCR effectuée — ouvrez le dossier pour analyser les documents</span>
                 </div>
               </div>
             </div>
@@ -8682,40 +8050,21 @@
         <!-- Footer -->
         <div class="cm-ocr-footer">
           <div class="cm-ocr-footer-info">
-            <i class="fas fa-info-circle" style="color: #64748b"></i>
+            <i class="fas fa-info-circle" style="color: #64748b;"></i>
             Mode consultation — modifications enregistrées automatiquement
           </div>
           <div class="cm-ocr-footer-right">
             <button
               type="button"
-              style="
-                padding: 8px 16px;
-                background: transparent;
-                border: 1px solid #e2e8f4;
-                border-radius: 8px;
-                font-family: inherit;
-                font-size: 13px;
-                color: #64748b;
-                cursor: pointer;
-              "
-              (click)="closeMassiveOCR()"
+              style="padding: 8px 16px; background: transparent; border: 1px solid #e2e8f4; border-radius: 8px; font-family: inherit; font-size: 13px; color: #64748b; cursor: pointer;"
+              (click)="fermerConsultationMassive()"
             >
               Fermer
             </button>
             <button
               type="button"
-              style="
-                padding: 8px 20px;
-                background: #185fa5;
-                border: none;
-                border-radius: 8px;
-                font-family: inherit;
-                font-size: 13px;
-                font-weight: 500;
-                color: #fff;
-                cursor: pointer;
-              "
-              (click)="massiveOCRSaveAndNext()"
+              style="padding: 8px 20px; background: #185fa5; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 500; color: #fff; cursor: pointer;"
+              (click)="consultationMassiveSuivant()"
             >
               Enregistrer &amp; Suivant →
             </button>
@@ -8723,5 +8072,6 @@
         </div>
       </div>
     </div>
+
   </main>
 </div>

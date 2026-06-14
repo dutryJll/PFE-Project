@@ -625,4 +625,29 @@ export class CandidatureService {
       headers: this.getHeaders(),
     });
   }
+
+  // Valider la présélection d'une candidature (avec notification)
+  validerPreselection(candidatureId: number, recommandation?: string, commentaire?: string): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${candidatureId}/valider-preselection/`,
+      { recommandation: recommandation || '', commentaire: commentaire || '' },
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // Exporter résultats OCR en Excel
+  exportOcrExcel(resultats: any[]): Observable<Blob> {
+    return this.http.post(`${this.apiUrl}/export-ocr-excel/`, { resultats }, {
+      headers: this.getHeaders(),
+      responseType: 'blob',
+    });
+  }
+
+  // Exporter résultats OCR en PDF
+  exportOcrPdf(resultats: any[]): Observable<Blob> {
+    return this.http.post(`${this.apiUrl}/export-ocr-pdf/`, { resultats }, {
+      headers: this.getHeaders(),
+      responseType: 'blob',
+    });
+  }
 }

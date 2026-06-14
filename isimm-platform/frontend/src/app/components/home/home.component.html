@@ -41,26 +41,6 @@
       </ul>
 
       <div class="nav-actions">
-        <div class="lang-dropdown" (click)="$event.stopPropagation()">
-          <a
-            class="dropdown-toggle nav-link"
-            href="#"
-            role="menuitem"
-            aria-label="Langue"
-            aria-haspopup="true"
-            [attr.aria-expanded]="showLangMenu"
-            (click)="toggleLanguageMenu($event)"
-          >
-            {{ tr.nav.languageLabel }}
-            <b class="caret"></b>
-          </a>
-
-          <div class="lang-menu" *ngIf="showLangMenu">
-            <a href="#" (click)="selectLanguage('fr', $event)">{{ tr.nav.languageFr }}</a>
-            <a href="#" (click)="selectLanguage('en', $event)">{{ tr.nav.languageEn }}</a>
-          </div>
-        </div>
-
         <a routerLink="/login" class="btn-connexion">
           <i class="fas fa-user-lock"></i>
           <span>{{ tr.nav.login }}</span>

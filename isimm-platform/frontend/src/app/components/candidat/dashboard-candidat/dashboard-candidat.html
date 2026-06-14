@@ -507,7 +507,7 @@
         <div class="offres-hero">
           <div class="offres-hero-content">
             <p class="offres-kicker">Admission 2026</p>
-            <h2>Appels d'inscription - Masters et Cycle Ingénieur</h2>
+            <h2 style="color: #ffffff;">Appels d'inscription - Masters et Cycle Ingénieur</h2>
             <p class="offres-subtitle">
               Choisissez votre parcours, consultez le statut d'ouverture et postulez en quelques
               clics.
@@ -585,21 +585,17 @@
                 </button>
                 <button
                   class="btn-postuler"
-                  [disabled]="
-                    !actionPermissions.preinscription ||
-                    offre.statut === 'ferme' ||
-                    dejaCandidature(offre.id)
+                  [class.btn-blocked]="isPostulerBloque(offre) && !dejaCandidature(offre.id)"
+                  [disabled]="!actionPermissions.preinscription || isPostulerBloque(offre)"
+                  [title]="
+                    limiteVoeuxAtteinte && !dejaCandidature(offre.id) && offre.statut !== 'ferme'
+                      ? 'Limite de 3 vœux Masters atteinte. Annulez une candidature avant d\'en créer une nouvelle.'
+                      : ''
                   "
                   (click)="postulerOffre(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
-                  {{
-                    offre.statut === 'ferme'
-                      ? 'Fermee'
-                      : dejaCandidature(offre.id)
-                        ? 'Deje candidate'
-                        : 'Postuler'
-                  }}
+                  {{ getLibellePostuler(offre) }}
                 </button>
               </div>
             </div>
@@ -662,21 +658,17 @@
                 </button>
                 <button
                   class="btn-postuler"
-                  [disabled]="
-                    !actionPermissions.preinscription ||
-                    offre.statut === 'ferme' ||
-                    dejaCandidature(offre.id)
+                  [class.btn-blocked]="isPostulerBloque(offre) && !dejaCandidature(offre.id)"
+                  [disabled]="!actionPermissions.preinscription || isPostulerBloque(offre)"
+                  [title]="
+                    limiteVoeuxAtteinte && !dejaCandidature(offre.id) && offre.statut !== 'ferme'
+                      ? 'Limite de 3 vœux Masters atteinte. Annulez une candidature avant d\'en créer une nouvelle.'
+                      : ''
                   "
                   (click)="postulerOffre(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
-                  {{
-                    offre.statut === 'ferme'
-                      ? 'Fermee'
-                      : dejaCandidature(offre.id)
-                        ? 'Deje candidate'
-                        : 'Postuler'
-                  }}
+                  {{ getLibellePostuler(offre) }}
                 </button>
               </div>
             </div>
@@ -731,21 +723,17 @@
                 </button>
                 <button
                   class="btn-postuler"
-                  [disabled]="
-                    !actionPermissions.preinscription ||
-                    offre.statut === 'ferme' ||
-                    dejaCandidature(offre.id)
+                  [class.btn-blocked]="isPostulerBloque(offre) && !dejaCandidature(offre.id)"
+                  [disabled]="!actionPermissions.preinscription || isPostulerBloque(offre)"
+                  [title]="
+                    limiteVoeuxAtteinte && !dejaCandidature(offre.id) && offre.statut !== 'ferme'
+                      ? 'Limite de 3 vœux Masters atteinte. Annulez une candidature avant d\'en créer une nouvelle.'
+                      : ''
                   "
                   (click)="postulerOffre(offre)"
                 >
                   <i class="fas fa-paper-plane"></i>
-                  {{
-                    offre.statut === 'ferme'
-                      ? 'Fermee'
-                      : dejaCandidature(offre.id)
-                        ? 'Deje candidate'
-                        : 'Postuler'
-                  }}
+                  {{ getLibellePostuler(offre) }}
                 </button>
               </div>
             </div>
@@ -1095,9 +1083,6 @@
                     <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
                   </div>
                 </div>
-                <span class="cc-alert-pill" *ngIf="hasMissingPieces(candidature)">
-                  <i class="fas fa-exclamation-triangle"></i> Pièces manquantes
-                </span>
               </div>
               <div class="status-stepper">
                 <div class="status-step"
@@ -1169,7 +1154,6 @@
                     <span class="cc-chip" [ngClass]="'cc-chip-status-' + (candidature.statut || 'soumis')">{{ getStatutLabel(candidature.statut) }}</span>
                   </div>
                 </div>
-                <span class="cc-alert-pill" *ngIf="hasMissingPieces(candidature)"><i class="fas fa-exclamation-triangle"></i> Pièces manquantes</span>
               </div>
               <div class="status-stepper">
                 <div class="status-step" *ngFor="let step of getCandidatureStatusStepper(candidature); let si = index"
@@ -1324,6 +1308,59 @@
             <strong>Dépôt de dossier non disponible</strong>
             <p>Le dépôt de pièces est accessible uniquement lorsque votre candidature est <strong>Présélectionnée</strong> ou en statut <strong>En attente de dossier</strong>.</p>
           </div>
+        </div>
+
+        <!-- ★ Req-Dépôt — Sélecteur de vœux (2+ candidatures présélectionnées) -->
+        <div
+          *ngIf="modeAffichageDossiers === 'selecteur' && !candidatureDepotActive"
+          class="voeux-selecteur"
+        >
+          <div class="selecteur-header">
+            <div class="selecteur-icon">🎉</div>
+            <div>
+              <div class="selecteur-title">
+                Félicitations ! Vous êtes présélectionné(e) pour
+                {{ candidaturesEligiblesDepot.length }} parcours.
+              </div>
+              <div class="selecteur-subtitle">
+                Choisissez pour quel parcours déposer vos documents. Vous pouvez déposer pour chaque
+                parcours séparément.
+              </div>
+            </div>
+          </div>
+
+          <div class="voeux-cards">
+            <div
+              class="voeu-card-depot"
+              *ngFor="let c of candidaturesEligiblesDepot"
+              (click)="choisirVoeuPourDepot(c)"
+            >
+              <div class="voeu-rang-badge">
+                <span *ngIf="c.choix_priorite === 1">🥇</span>
+                <span *ngIf="c.choix_priorite === 2">🥈</span>
+                <span *ngIf="c.choix_priorite === 3">🥉</span>
+                Vœu {{ c.choix_priorite }}
+              </div>
+              <div class="voeu-details">
+                <div class="voeu-master-nom">{{ c.master_nom }}</div>
+                <div class="voeu-candidature-num">{{ c.numero }}</div>
+              </div>
+              <div class="voeu-statut-col">
+                <span class="statut-badge statut-preselectionne">✓ Présélectionné</span>
+              </div>
+              <div class="voeu-action">Déposer →</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ★ Req-Dépôt — Barre retour quand un vœu est actif -->
+        <div *ngIf="candidatureDepotActive" class="retour-bar">
+          <button class="btn-retour" (click)="retourSelecteurVoeux()">← Changer de vœu</button>
+          <span class="voeu-actif-info">
+            <i class="fas fa-folder-open"></i>
+            {{ candidatureDepotActive.master_nom }}
+            — Vœu {{ candidatureDepotActive.choix_priorite }}
+          </span>
         </div>
 
         <div class="dossier-toolbar">
@@ -2178,12 +2215,48 @@
           Mode simulation actif: 4 scenarios de test sont affiches (avec etats en rouge).
         </div>
 
+        <!-- ★ Req-2 — Reclasser les vœux Masters par drag & drop -->
+        <div class="voeux-reorder-card" *ngIf="voeuxMastersOrdonnes.length >= 2">
+          <div class="voeux-reorder-head">
+            <i class="fas fa-grip-vertical"></i>
+            <div>
+              <strong>Réordonner vos vœux Masters</strong>
+              <small
+                >Glissez-déposez pour changer l'ordre de priorité. Le vœu n°1 est votre choix
+                principal.</small
+              >
+            </div>
+          </div>
+          <ul class="voeux-list" cdkDropList (cdkDropListDropped)="onVoeuDrop($event)">
+            <li class="voeux-list-item" *ngFor="let v of voeuxMastersOrdonnes" cdkDrag>
+              <span class="voeux-drag-handle" cdkDragHandle><i class="fas fa-grip-vertical"></i></span>
+              <span class="voeux-medaille">{{ getMedailleVoeu(v.choix_priorite) }}</span>
+              <span class="voeux-priorite">Vœu {{ v.choix_priorite }}</span>
+              <span class="voeux-master">{{ v.master_nom }}</span>
+              <span class="voeux-numero">{{ v.numero }}</span>
+            </li>
+          </ul>
+        </div>
+
         <div class="suivi-layout">
           <div class="suivi-col">
             <h3>Suivi des candidatures</h3>
             <div class="suivi-card" *ngFor="let candidature of mesCandidatures">
               <div class="suivi-head">
-                <strong>{{ candidature.master_nom }}</strong>
+                <div class="suivi-head-titre">
+                  <span
+                    *ngIf="candidature.choix_priorite && candidature.choix_priorite <= 3"
+                    class="voeu-medaille-badge"
+                    [class.voeu-or]="candidature.choix_priorite === 1"
+                    [class.voeu-argent]="candidature.choix_priorite === 2"
+                    [class.voeu-bronze]="candidature.choix_priorite === 3"
+                    [title]="'Vœu n°' + candidature.choix_priorite"
+                  >
+                    {{ getMedailleVoeu(candidature.choix_priorite) }}
+                    Vœu {{ candidature.choix_priorite }}
+                  </span>
+                  <strong>{{ candidature.master_nom }}</strong>
+                </div>
                 <span>{{ candidature.numero }}</span>
               </div>
               <div class="timeline-card">
@@ -2745,7 +2818,9 @@
               </div>
               <div
                 class="wz-field"
-                [class.wz-field--error]="wizardTouched.dateNaissance && !wizardData.dateNaissance"
+                [class.wz-field--error]="
+                  wizardTouched.dateNaissance && validerDateNaissance(wizardData.dateNaissance)
+                "
               >
                 <label
                   ><i class="fas fa-calendar-alt"></i> Date de naissance
@@ -2755,13 +2830,53 @@
                   type="date"
                   [(ngModel)]="wizardData.dateNaissance"
                   name="wzDob"
+                  [max]="maxDateNaissanceHTML"
                   (blur)="wizardTouched.dateNaissance = true"
                 />
                 <span
                   class="wz-error"
-                  *ngIf="wizardTouched.dateNaissance && !wizardData.dateNaissance"
+                  *ngIf="
+                    wizardTouched.dateNaissance &&
+                    validerDateNaissance(wizardData.dateNaissance) === 'required'
+                  "
                 >
-                  La date de naissance est obligatoire
+                  ⚠️ La date de naissance est obligatoire
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.dateNaissance &&
+                    validerDateNaissance(wizardData.dateNaissance) === 'invalide'
+                  "
+                >
+                  ⚠️ Date invalide — vérifiez le format
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.dateNaissance &&
+                    validerDateNaissance(wizardData.dateNaissance) === 'futur'
+                  "
+                >
+                  ⚠️ La date de naissance ne peut pas être dans le futur
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.dateNaissance &&
+                    validerDateNaissance(wizardData.dateNaissance) === 'tropJeune'
+                  "
+                >
+                  ⚠️ Vous devez avoir au moins 17 ans pour postuler
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.dateNaissance &&
+                    validerDateNaissance(wizardData.dateNaissance) === 'tropEleve'
+                  "
+                >
+                  ⚠️ Veuillez vérifier votre date de naissance
                 </span>
               </div>
             </div>
@@ -2950,14 +3065,54 @@
                   (blur)="wizardTouched.anneeBac = true"
                   placeholder="Ex: 2022"
                   [class.input-error]="
-                    wizardTouched.anneeBac && !isWizardYearValid(wizardData.anneeBac)
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance)
                   "
                 />
                 <span
                   class="wz-error"
-                  *ngIf="wizardTouched.anneeBac && !isWizardYearValid(wizardData.anneeBac)"
+                  *ngIf="
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance) === 'required'
+                  "
                 >
-                  L'année du Bac doit contenir 4 chiffres
+                  ⚠️ L'année du Bac est obligatoire
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance) === 'format'
+                  "
+                >
+                  ⚠️ Format invalide — 4 chiffres requis (ex : 2022)
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance) === 'tropAncien'
+                  "
+                >
+                  ⚠️ L'année du Bac ne peut pas être avant 1990
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance) === 'futur'
+                  "
+                >
+                  ⚠️ L'année du Bac ne peut pas être dans le futur
+                </span>
+                <span
+                  class="wz-error"
+                  *ngIf="
+                    wizardTouched.anneeBac &&
+                    validerAnneeBac(wizardData.anneeBac, wizardData.dateNaissance) === 'incoherent'
+                  "
+                >
+                  ⚠️ L'année du Bac doit être ≥ {{ getAnneeBacMinCoherente() }} selon votre date de naissance
                 </span>
               </div>
               <div class="wz-field">

@@ -9,11 +9,12 @@ import {
   CommissionContextService,
   CommissionContextOption,
 } from './services/commission-context.service';
+import { DialogHostComponent } from './shared/dialog-host/dialog-host.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, FormsModule],
+  imports: [CommonModule, RouterOutlet, FormsModule, DialogHostComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

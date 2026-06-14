@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
+import { DialogService } from '../../../services/dialog.service';
+import { ToastService } from '../../../services/toast.service';
+import { environment } from '../../../environments/environment';
 
 interface MembreCommission {
   id: number;
@@ -63,7 +66,18 @@ export class GestionCommissionComponent implements OnInit {
     private router: Router,
     private http: HttpClient,
     private authService: AuthService,
+    private dialog: DialogService,
+    private toast: ToastService,
   ) {}
+
+  /** Liste des parcours disponibles pour assigner une commission. */
+  readonly parcoursOptions = [
+    { value: 'MPGL', label: 'MPGL — Master Professionnel Génie Logiciel' },
+    { value: 'MPDS', label: 'MPDS — Mastère Professionnel Sciences de Données' },
+    { value: 'MP3I', label: 'MP3I — Mastère Professionnel 3I' },
+    { value: 'MRGL', label: 'MRGL — Mastère Recherche Génie Logiciel' },
+    { value: 'MRMI', label: 'MRMI — Mastère Recherche Micro-électronique' },
+  ];
 
   ngOnInit(): void {
     const token = this.authService.getAccessToken();
@@ -361,37 +375,66 @@ export class GestionCommissionComponent implements OnInit {
     this.showActionsMenu = null;
   }
 
-  designerResponsable(membre: MembreCommission): void {
-    const newResponsable = prompt(
-      `Designer ${membre.first_name} ${membre.last_name} comme responsable.\n\nEntrez son nom complet :`,
-      `${membre.first_name} ${membre.last_name}`,
+  async designerResponsable(membre: MembreCommission): Promise<void> {
+    this.showActionsMenu = null;
+    const parcoursCode = await this.dialog.prompt(
+      `Assigner une commission à ${membre.first_name} ${membre.last_name}`,
+      "Choisissez le parcours pour lequel cette personne sera responsable de commission.",
+      {
+        selectOptions: this.parcoursOptions,
+        okLabel: 'Confirmer',
+        variant: 'info',
+      },
     );
-    if (newResponsable && newResponsable.trim()) {
-      this.showActionsMenu = null;
-      alert(`✅ ${newResponsable} a été désigné comme responsable.`);
-      // TODO: appel backend pour persister la modification
-    }
+    if (!parcoursCode) return;
+
+    const token = this.authService.getAccessToken();
+    this.http
+      .patch(
+        `${environment.userServiceUrl}/responsables/${membre.id}/assigner-commission/`,
+        { commission: parcoursCode },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .subscribe({
+        next: () => {
+          this.toast.show(
+            `Commission ${parcoursCode} assignée à ${membre.first_name} ${membre.last_name}`,
+            'success',
+          );
+          this.loadMembres();
+        },
+        error: (err) => {
+          this.toast.show(
+            err?.error?.error || `Échec de l'assignation de la commission ${parcoursCode}`,
+            'error',
+          );
+        },
+      });
   }
 
-  cloturerMandat(membre: MembreCommission): void {
-    const confirm_action = confirm(
-      `⚠️ Clôturer le mandat de ${membre.first_name} ${membre.last_name} ?\n\nCette action marquera son mandat comme clos.`,
+  async cloturerMandat(membre: MembreCommission): Promise<void> {
+    this.showActionsMenu = null;
+    const ok = await this.dialog.confirm(
+      `Clôturer le mandat de ${membre.first_name} ${membre.last_name} ?`,
+      "Cette action marquera son mandat comme clos. L'utilisateur conserve son accès mais ne peut plus modifier les commissions.",
+      { variant: 'warning', okLabel: 'Clôturer' },
     );
-    if (confirm_action) {
-      this.showActionsMenu = null;
-      alert(
-        `✅ Le mandat de ${membre.first_name} ${membre.last_name} a été clôturé.\n\nL'utilisateur conserve son accès mais ne peut plus modifier les commissions.`,
+    if (ok) {
+      this.toast.show(
+        `Le mandat de ${membre.first_name} ${membre.last_name} a été clôturé.`,
+        'success',
       );
       // TODO: appel backend pour persister l'état 'mandat_clos'
     }
   }
 
-  supprimerMembre(membre: MembreCommission): void {
-    if (
-      confirm(
-        `⚠️ Supprimer définitivement ${membre.first_name} ${membre.last_name} ?\n\nCette action est irréversible.`,
-      )
-    ) {
+  async supprimerMembre(membre: MembreCommission): Promise<void> {
+    const ok = await this.dialog.confirm(
+      `Supprimer définitivement ${membre.first_name} ${membre.last_name} ?`,
+      'Cette action est irréversible.',
+      { variant: 'danger', okLabel: 'Supprimer' },
+    );
+    if (ok) {
       // En mode fallback (backend indisponible), supprimer localement pour éviter un faux blocage UI.
       if (this.isUsingFallbackData) {
         const index = this.membres.indexOf(membre);

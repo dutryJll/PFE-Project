@@ -8,55 +8,6 @@
     </p>
   </section>
 
-  <div class="stat-row">
-    <div class="scard">
-      <div class="sicon si-blue">
-        <svg viewBox="0 0 16 16" fill="none" stroke="#185FA5" stroke-width="1.5">
-          <path d="M4 1h6l4 4v10H4V1z"></path>
-          <path d="M10 1v4h4"></path>
-        </svg>
-      </div>
-      <div>
-        <div class="snum" id="sc-total">6</div>
-        <div class="slbl">Total candidats</div>
-      </div>
-    </div>
-    <div class="scard">
-      <div class="sicon si-teal">
-        <svg viewBox="0 0 16 16" fill="none" stroke="#0F6E56" stroke-width="1.5">
-          <circle cx="8" cy="5" r="3"></circle>
-          <path d="M2 14c0-3 3-5 6-5s6 2 6 5"></path>
-        </svg>
-      </div>
-      <div>
-        <div class="snum">4</div>
-        <div class="slbl">Candidats internes</div>
-      </div>
-    </div>
-    <div class="scard">
-      <div class="sicon si-amber">
-        <svg viewBox="0 0 16 16" fill="none" stroke="#BA7517" stroke-width="1.5">
-          <circle cx="8" cy="8" r="6"></circle>
-          <path d="M8 5v3l2 2"></path>
-        </svg>
-      </div>
-      <div>
-        <div class="snum">16.85</div>
-        <div class="slbl">Moyenne des scores</div>
-      </div>
-    </div>
-    <div class="scard">
-      <div class="sicon si-purple">
-        <svg viewBox="0 0 16 16" fill="none" stroke="#534AB7" stroke-width="1.5">
-          <path d="M3 8l4 4 6-6"></path>
-        </svg>
-      </div>
-      <div>
-        <div class="snum">1</div>
-        <div class="slbl">Présélectionnés</div>
-      </div>
-    </div>
-  </div>
 
   <section class="cards-grid">
     <article class="catalog-card">
@@ -71,7 +22,7 @@
         <li>Admission selon règlement du concours</li>
       </ul>
       <div class="actions">
-        <a class="btn primary" [routerLink]="['/masters/ingenieur/exploration']">Explorer</a>
+        <a class="btn primary" [routerLink]="['/ingenieur/disponibles']">Explorer</a>
         <a
           class="btn secondary"
           [routerLink]="['/candidature']"
@@ -83,6 +34,6 @@
   </section>
 
   <div class="back-link">
-    <a [routerLink]="['/choisir-candidature']"><i class="fas fa-arrow-left"></i> Retour au choix</a>
+    <a [routerLink]="['/']"><i class="fas fa-arrow-left"></i> Retour à l'accueil</a>
   </div>
 </div>

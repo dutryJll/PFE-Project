@@ -91,6 +91,9 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .info-card::before {
@@ -268,4 +271,66 @@
 
 .back-link a:hover {
   text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0f0f7;
+  flex-wrap: wrap;
+}
+
+.info-card h2 {
+  color: #0a5f76;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #d4f0f8;
+  font-size: 1.3rem;
+}
+
+.info-card h3 {
+  color: #0a7f9f;
+  font-size: 1.05rem;
+  margin-top: 1.2rem;
+  margin-bottom: 0.6rem;
+  font-weight: 700;
+}
+
+.info-card ul,
+.info-card ol {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.5rem;
+  color: #446f83;
+  line-height: 1.6;
+}
+
+.info-card li {
+  margin-bottom: 0.4rem;
+}
+
+.criteria-table {
+  margin: 1rem 0;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.criteria-table th,
+.criteria-table td {
+  padding: 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid #e0f0f7;
+  color: #446f83;
+}
+
+.criteria-table th {
+  background: #f0fbfd;
+  color: #0a5f76;
+  font-weight: 700;
+}
+
+.criteria-table tbody tr:hover {
+  background: #f8fcfe;
 }

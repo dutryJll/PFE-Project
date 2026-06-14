@@ -9392,3 +9392,264 @@
   flex-shrink: 0;
   margin-top: 2px;
 }
+
+/* ═══════════════════════════════════════════════
+   Req-Dépôt — Sélecteur de vœux (multi-parcours)
+   ═══════════════════════════════════════════════ */
+.voeux-selecteur { max-width: 720px; margin: 16px auto; }
+
+.selecteur-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #F0FDF4, #ECFDF5);
+  border: 1px solid #6EE7B7;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+.selecteur-icon { font-size: 32px; flex-shrink: 0; }
+.selecteur-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #065F46;
+  margin-bottom: 6px;
+}
+.selecteur-subtitle {
+  font-size: 13px;
+  color: #047857;
+  line-height: 1.5;
+}
+
+.voeux-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.voeu-card-depot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F4;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.voeu-card-depot:hover {
+  border-color: #185FA5;
+  background: #EFF6FF;
+  transform: translateX(5px);
+  box-shadow: 0 4px 16px rgba(24, 95, 165, 0.12);
+}
+.voeu-rang-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  min-width: 46px;
+  flex-shrink: 0;
+}
+.voeu-rang-badge span { font-size: 22px; }
+.voeu-details { flex: 1; }
+.voeu-master-nom { font-size: 15px; font-weight: 600; color: #0F1F3D; }
+.voeu-candidature-num {
+  font-size: 12px;
+  color: #64748B;
+  font-family: monospace;
+  margin-top: 2px;
+}
+.voeu-statut-col { flex-shrink: 0; }
+.statut-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.statut-preselectionne { background: #D1FAE5; color: #065F46; }
+.voeu-action {
+  font-size: 13px;
+  font-weight: 500;
+  color: #185FA5;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.voeu-card-depot:hover .voeu-action { color: #0F1F3D; }
+
+/* Barre de retour quand un vœu est actif */
+.retour-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  margin: 12px 0 16px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+}
+.btn-retour {
+  padding: 7px 16px;
+  background: #185FA5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.btn-retour:hover { background: #0F1F3D; }
+.voeu-actif-info { font-size: 13px; color: #1E40AF; }
+
+/* ═══════════════════════════════════════════════
+   Req-2 — Badge médaille de vœu + bouton Postuler
+   ═══════════════════════════════════════════════ */
+.btn-postuler.btn-blocked {
+  background: #94A3B8 !important;
+  color: #fff !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+.btn-postuler.btn-blocked:hover {
+  background: #94A3B8 !important;
+}
+
+.suivi-head-titre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.voeu-medaille-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.voeu-medaille-badge.voeu-or {
+  background: linear-gradient(135deg, #FEF3C7, #FCD34D);
+  color: #92400E;
+  border-color: #F59E0B;
+}
+.voeu-medaille-badge.voeu-argent {
+  background: linear-gradient(135deg, #F1F5F9, #CBD5E1);
+  color: #475569;
+  border-color: #94A3B8;
+}
+.voeu-medaille-badge.voeu-bronze {
+  background: linear-gradient(135deg, #FED7AA, #FB923C);
+  color: #7C2D12;
+  border-color: #EA580C;
+}
+
+/* ═══════════════════════════════════════════════
+   Réordonner les vœux (drag & drop CDK)
+   ═══════════════════════════════════════════════ */
+.voeux-reorder-card {
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border: 1px solid #93C5FD;
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+}
+.voeux-reorder-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.voeux-reorder-head i {
+  font-size: 20px;
+  color: #1E40AF;
+  flex-shrink: 0;
+}
+.voeux-reorder-head strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E3A8A;
+}
+.voeux-reorder-head small {
+  display: block;
+  font-size: 12px;
+  color: #1E40AF;
+  margin-top: 2px;
+}
+
+.voeux-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.voeux-list-item {
+  display: grid;
+  grid-template-columns: 32px 32px 80px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid #BFDBFE;
+  border-radius: 10px;
+  cursor: move;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.voeux-list-item:hover {
+  border-color: #2563EB;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+.voeux-drag-handle {
+  color: #64748B;
+  font-size: 14px;
+  cursor: grab;
+  user-select: none;
+}
+.voeux-drag-handle:active { cursor: grabbing; }
+.voeux-medaille { font-size: 20px; line-height: 1; }
+.voeux-priorite {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E40AF;
+  background: #DBEAFE;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-align: center;
+}
+.voeux-master {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F1F3D;
+}
+.voeux-numero {
+  font-size: 11px;
+  color: #64748B;
+  font-family: monospace;
+}
+
+/* Animation CDK pendant le drag */
+.cdk-drag-preview {
+  box-shadow: 0 8px 24px rgba(15, 31, 61, 0.25);
+  border-radius: 10px;
+}
+.cdk-drag-placeholder {
+  opacity: 0.35;
+  background: #DBEAFE !important;
+  border-style: dashed !important;
+}
+.voeux-list.cdk-drop-list-dragging .voeux-list-item:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}

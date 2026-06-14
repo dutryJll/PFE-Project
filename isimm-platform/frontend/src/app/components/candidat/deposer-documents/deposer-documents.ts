@@ -78,7 +78,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
         type === 'photo' ? 2 * 1024 * 1024 : (type === 'releves' ? 10 : 5) * 1024 * 1024;
 
       if (file.size > maxSize) {
-        alert(`Le fichier est trop volumineux. Taille max: ${maxSize / (1024 * 1024)} MB`);
+        alert('Fichier trop volumineux');
         return;
       }
 
@@ -174,7 +174,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
 
   soumettre(): void {
     if (this.documentsUploaded < 4) {
-      alert('Veuillez télécharger tous les documents requis');
+      alert('Téléchargez tous les documents');
       return;
     }
 
@@ -195,7 +195,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
         if (!cible?.id) {
           this.isSubmitting = false;
           this.submitProgress = 0;
-          alert('❌ Aucune candidature trouvée pour le dépôt de dossier.');
+          alert('Aucune candidature trouvée');
           return;
         }
 
@@ -226,7 +226,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
               this.uploadStepLabel = 'Dossier soumis';
               this.syncPerDocumentProgress(100);
               this.isSubmitting = false;
-              alert('✅ Dossier déposé avec succès !');
+              alert('Dossier soumis ✓');
               this.router.navigate(['/candidat/dashboard']);
             }
           },
@@ -237,9 +237,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
             this.syncPerDocumentProgress(0);
             console.error('Erreur dépôt dossier:', error);
             const backendMessage = error?.error?.error;
-            alert(
-              `❌ Erreur lors du dépôt du dossier.${backendMessage ? `\n${backendMessage}` : ''}`,
-            );
+            alert(`Échec du dépôt.${backendMessage ? `\n${backendMessage}` : ''}`);
           },
         });
       },
@@ -249,7 +247,7 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
         this.uploadStepLabel = 'Erreur de chargement';
         this.syncPerDocumentProgress(0);
         console.error('Erreur chargement candidatures:', error);
-        alert('❌ Impossible de charger vos candidatures.');
+        alert('Impossible de charger les candidatures.');
       },
     });
   }

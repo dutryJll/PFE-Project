@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
 })
 export class EngineerExplorationComponent {
   concoursInfo = {
-    titre: 'Concours d acces au Cycle Ingenieur en Informatique (Genie Logiciel)',
+    titre: 'Concours Cycle d\'Ingénieur en Sciences Appliquées et Technologie',
     annee: 'Annee universitaire 2025-2026',
     autorite:
       'Concours sur dossiers ouvert par le Ministere de l Enseignement Superieur et de la Recherche Scientifique.',
