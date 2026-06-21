@@ -1,12 +1,13 @@
 """
 Contrôleur : générateur PDF officiel ISIMM
-GET /api/documents/generer-pdf
+GET /api/candidatures/documents/generer-pdf
 """
 import logging
 import os
 from datetime import date
 
 from django.conf import settings
+from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -17,6 +18,20 @@ logger = logging.getLogger(__name__)
 
 from .models import Candidature, MembreCommission
 from .exports_isimm_official import ISIMMPDFGenerator
+
+MPGL_PARCOURS_LABEL = "Master Génie Logiciel et Systèmes d'Information"
+MPGL_SPECIALITES_DIPLOME = [
+    "Génie Logiciel et Systèmes d'Information",
+    "Genie Logiciel et Systemes d'Information",
+    "Génie Logiciel",
+    "Genie Logiciel",
+    "Licence Appliquée en Développement des Systèmes Informatiques",
+    "Developpement des Systemes Informatiques",
+    "Big Data et Analyse de Données",
+    "Big Data et Analyse de Donnees",
+    "Business Computing",
+    "Informatique de Gestion",
+]
 
 
 def _get_logo_path() -> str | None:
@@ -35,7 +50,7 @@ def _get_logo_path() -> str | None:
 def _build_qr_url(request, etape: str, master_id: int, specialite: str = '') -> str:
     """Construit l'URL de vérification intégrée dans le QR code."""
     base = request.build_absolute_uri('/').rstrip('/')
-    url = f'{base}/api/documents/verifier-liste/?etape={etape}&master={master_id}'
+    url = f'{base}/api/candidatures/documents/verifier-liste/?etape={etape}&master={master_id}'
     if specialite:
         url += f'&specialite={specialite}'
     return url
@@ -51,13 +66,37 @@ def _candidature_to_dict(c: Candidature) -> dict:
         from .models import DonneesAcademiques
         da = DonneesAcademiques.objects.filter(candidature=c).first()
         if da and isinstance(da.notes_detaillees, dict):
-            specialite_diplome = (
-                da.notes_detaillees.get('specialite_diplome')
-                or (da.notes_detaillees.get('payload') or {}).get('specialite_diplome')
-                or ''
-            )
+            notes = da.notes_detaillees
+            payload = notes.get('payload', {}) if isinstance(notes.get('payload'), dict) else {}
+            for key in (
+                'selected_diplome',
+                'specialiteLicence',
+                'specialite_diplome_obtenu',   # ← clé réelle du formulaire candidat
+                'specialiteDiplomeObtenu',
+                'specialite_diplome',
+                'specialiteDiplome',
+                'licenceSpecialite',
+                'specialite',
+                'specialite_autre',            # MOD v4 §5 — texte libre « Autre »
+                'specialiteDiplomeAutre',
+                'diplome',
+                'diplome_reference',
+            ):
+                value = payload.get(key) or notes.get(key)
+                if isinstance(value, str) and value.strip():
+                    specialite_diplome = value.strip()
+                    break
     except Exception:
         pass
+
+    # MOD v6 §5 — Fallback sur la spécialité déclarée directement sur la candidature
+    # (jamais sur le quota/master tant que le candidat a renseigné une valeur).
+    if not specialite_diplome:
+        for attr in ('specialite', 'specialite_diplome', 'specialite_diplome_obtenu'):
+            val = getattr(c, attr, '') or ''
+            if isinstance(val, str) and val.strip():
+                specialite_diplome = val.strip()
+                break
 
     # Type candidat : interne si email finit par @isimm.tn, externe sinon
     candidat_email = (getattr(candidat, 'email', '') or '').lower()
@@ -70,8 +109,26 @@ def _candidature_to_dict(c: Candidature) -> dict:
         'cin': getattr(candidat, 'cin', '') if candidat else (getattr(c, 'cin_passeport', '') or ''),
         'score': float(getattr(c, 'score', 0) or 0),
         'type_candidat': type_candidat,
-        'specialite_candidat': specialite_diplome or getattr(c, 'specialite', '') or 'Spécialité non renseignée',
+        'specialite_candidat': specialite_diplome or getattr(c.master, 'specialite', '') or getattr(c.master, 'nom', '') or 'Spécialité non précisée par le candidat',
     }
+
+
+def _mpgl_parcours_filter() -> Q:
+    query = (
+        Q(master__specialite__iexact='MPGL')
+        | Q(master__specialite__iexact='MPDS')
+        | Q(master__nom__icontains='Génie Logiciel')
+        | Q(master__nom__icontains='Genie Logiciel')
+        | Q(master__nom__icontains="Systèmes d'Information")
+        | Q(master__nom__icontains="Systemes d'Information")
+        | Q(master__nom__icontains='Big Data')
+        | Q(master__nom__icontains='Analyse de Données')
+        | Q(master__nom__icontains='Analyse de Donnees')
+        | Q(master__specialite__icontains='Génie Logiciel')
+        | Q(master__specialite__icontains='Genie Logiciel')
+        | Q(master__specialite__icontains='Big Data')
+    )
+    return query
 
 
 @api_view(['GET'])
@@ -96,7 +153,9 @@ def generer_pdf_officiel(request):
     # ── Paramètres ────────────────────────────────────────────────────────────
     etape = request.query_params.get('etape', 'PRESELECTION').upper()
     master_id_str = request.query_params.get('master_id', '').strip()
+    parcours = request.query_params.get('parcours', '').strip().upper()
     specialite_filter = request.query_params.get('specialite', '').strip()
+    candidature_ids_raw = request.query_params.get('candidature_ids', '').strip()
     annee = request.query_params.get('annee', f'{date.today().year - 1}-{date.today().year}')
 
     if not master_id_str or not master_id_str.isdigit():
@@ -129,10 +188,23 @@ def generer_pdf_officiel(request):
             )
 
     # ── Récupération des candidatures filtrées ────────────────────────────────
-    statuts_presel = ['preselectionne', 'selectionne']
-    statuts_selection = ['selectionne', 'admis', 'en_attente_liste']
+    # MOD — Le PDF officiel doit contenir TOUS les candidats affichés dans l'écran
+    # Présélection / Sélection (pas seulement ceux déjà marqués « preselectionne »),
+    # sinon le PDF ne contenait qu'un seul candidat. On inclut donc tous les
+    # candidats encore « en lice » et on exclut uniquement les rejetés/annulés.
+    statuts_presel = [
+        'preselectionne', 'selectionne', 'en_attente', 'en_attente_dossier',
+        'dossier_depose', 'dossier_non_depose', 'sous_examen', 'soumis', 'inscrit',
+    ]
+    statuts_selection = [
+        'selectionne', 'admis', 'en_attente_liste', 'en_attente', 'preselectionne', 'inscrit',
+    ]
 
-    qs = Candidature.objects.filter(master_id=master_id).select_related('candidat')
+    qs = Candidature.objects.select_related('candidat', 'master')
+    if parcours == 'MPGL':
+        qs = qs.filter(_mpgl_parcours_filter())
+    else:
+        qs = qs.filter(master_id=master_id)
 
     if etape in ('INGENIEUR',):
         qs = qs.filter(type_concours='ingenieur')
@@ -142,12 +214,33 @@ def generer_pdf_officiel(request):
     else:
         qs = qs.filter(statut__in=statuts_selection)
 
-    if specialite_filter:
-        qs = qs.filter(specialite__icontains=specialite_filter)
+    candidature_ids = []
+    if candidature_ids_raw:
+        try:
+            candidature_ids = [
+                int(value)
+                for value in candidature_ids_raw.replace(';', ',').split(',')
+                if value.strip()
+            ]
+        except ValueError:
+            return Response(
+                {'error': 'candidature_ids contient une valeur invalide.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if candidature_ids:
+        qs = qs.filter(id__in=candidature_ids)
 
     qs = qs.order_by('-score')
 
     candidates_data = [_candidature_to_dict(c) for c in qs]
+    if specialite_filter:
+        specialite_filter_lower = specialite_filter.lower()
+        candidates_data = [
+            c
+            for c in candidates_data
+            if specialite_filter_lower in (c.get('specialite_candidat') or '').lower()
+        ]
 
     if not candidates_data:
         return Response(
@@ -163,9 +256,9 @@ def generer_pdf_officiel(request):
     try:
         from .models import Master
         master = Master.objects.get(pk=master_id)
-        master_nom = master.nom
+        master_nom = MPGL_PARCOURS_LABEL if parcours == 'MPGL' else master.nom
     except Exception:
-        master_nom = f'Master #{master_id}'
+        master_nom = MPGL_PARCOURS_LABEL if parcours == 'MPGL' else f'Master #{master_id}'
 
     # ── Génération du PDF ─────────────────────────────────────────────────────
     qr_url = _build_qr_url(request, etape, master_id, specialite_filter)

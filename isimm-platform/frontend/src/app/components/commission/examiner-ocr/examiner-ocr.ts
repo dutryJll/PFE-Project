@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { SpecialitesService } from '../../../services/specialites.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { OcrService, LotOcrResponse, LotOcrResultat } from '../../../services/ocr';
+import { OcrService, LotOcrResponse, LotOcrResultat, OcrExtractResult } from '../../../services/ocr';
 import { ToastrService } from 'ngx-toastr';
 
 interface Candidat {
@@ -30,18 +30,26 @@ interface DocumentOCR {
   progress: number;
   verification?: {
     statut: string;
+    message?: string;
     confiance: number;
-    donnees_extraites?: any;
-    donnees_declarees?: any;
-    comparaison?: { champ: string; declare: string; ocr: string; ecart: string; coherent: boolean }[];
-    verifications?: any[];
+    score_extrait?: number | null;
+    score_declare?: number | null;
+    ecart?: number | null;
+    alerte?: string | null;
     anomalies?: string[];
-    /** Sprint 4 — mode simulation (aucun moteur OCR installé ou OCR_SIMULATION=1) */
-    mode_simulation?: boolean;
-    /** 'paddleocr' | 'easyocr' | 'simulation' | 'none' */
     moteur?: string;
-    /** Raison de l'activation du mode simulation */
-    simulation_raison?: string;
+    texte_extrait?: string;
+    detail_notes?: {
+      l1: number;
+      l2: number;
+      l3: number;
+      mg: number;
+      bnr: number;
+      bsp: number;
+      redoublements: number;
+      sessions: number;
+      score_recalcule: number;
+    };
   };
 }
 
@@ -86,8 +94,14 @@ export class ExaminerOcrComponent implements OnInit {
   selectedIds: Set<number> = new Set();
   lotEnCours: boolean = false;
   lotResultats: LotOcrResultat[] = [];
-  lotResume: Omit<LotOcrResponse, 'resultats'> | null = null;
+  lotResume: LotOcrResponse | null = null;
   lotErreur: string | null = null;
+
+  // MOD v7 §7.1 — OCR : vérification de la correspondance de spécialité (relevé)
+  specOcrFile: File | null = null;
+  specOcrDeclaree: string = '';
+  specOcrLoading: boolean = false;
+  specOcrResult: OcrExtractResult | null = null;
 
   constructor(
     private router: Router,
@@ -184,8 +198,41 @@ export class ExaminerOcrComponent implements OnInit {
     }
   }
 
+  // ── MOD v7 §7.1 — OCR correspondance de spécialité ──────────────────────────
+  onSpecOcrFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.specOcrFile = input.files && input.files.length ? input.files[0] : null;
+    this.specOcrResult = null;
+  }
+
+  analyserSpecialiteOcr(): void {
+    if (!this.specOcrFile) {
+      this.toast.warning('Veuillez choisir un relevé de notes (PDF ou image).');
+      return;
+    }
+    const declaree = (this.specOcrDeclaree || this.candidatSelectionne?.master_nom || '').trim();
+    this.specOcrLoading = true;
+    this.specOcrResult = null;
+    this.ocrService.extraireReleve(this.specOcrFile, declaree, '').subscribe({
+      next: (res) => {
+        this.specOcrResult = res;
+        this.specOcrLoading = false;
+        if (res.alerte) {
+          this.toast.warning('Spécialité détectée ne correspond pas à la déclaration.');
+        } else {
+          this.toast.success('Spécialité détectée : correspond à la déclaration.');
+        }
+      },
+      error: () => {
+        this.specOcrLoading = false;
+        this.toast.error("Erreur lors de l'analyse OCR du relevé.");
+      },
+    });
+  }
+
   get toutSelectionneLabel(): string {
-    return this.selectedIds.size === this.candidatsFiltres.length && this.candidatsFiltres.length > 0
+    return this.selectedIds.size === this.candidatsFiltres.length &&
+      this.candidatsFiltres.length > 0
       ? 'Tout désélectionner'
       : 'Tout sélectionner';
   }
@@ -204,17 +251,10 @@ export class ExaminerOcrComponent implements OnInit {
     this.ocrService.analyserLot(ids).subscribe({
       next: (response: LotOcrResponse) => {
         this.lotEnCours = false;
-        this.lotResultats = response.resultats;
-        this.lotResume = {
-          success: response.success,
-          message: response.message,
-          nb_total: response.nb_total,
-          nb_conformes: response.nb_conformes,
-          nb_incoherences: response.nb_incoherences,
-          nb_erreurs: response.nb_erreurs,
-        };
+        this.lotResultats = response.resultats || [];
+        this.lotResume = response;
         // Met à jour le statut local des candidats analysés
-        response.resultats.forEach((r) => {
+        this.lotResultats.forEach((r) => {
           const candidat = this.candidatsEnAttente.find((c) => c.id === r.candidature_id);
           if (candidat) {
             candidat.statut_analyse = r.statut === 'ok' ? 'analyse_ok' : 'probleme';
@@ -227,7 +267,7 @@ export class ExaminerOcrComponent implements OnInit {
       error: (err: any) => {
         this.lotEnCours = false;
         this.lotErreur =
-          err?.error?.error ?? 'Erreur lors de l\'analyse OCR en lot. Veuillez réessayer.';
+          err?.error?.error ?? "Erreur lors de l'analyse OCR en lot. Veuillez réessayer.";
       },
     });
   }
@@ -306,33 +346,25 @@ export class ExaminerOcrComponent implements OnInit {
         doc.progress = 100;
         doc.analyzing = false;
 
-        const statut = result.statut === 'conforme' ? 'valide' : 'invalide';
-        const confiance = result.confiance || 0;
+        const statut = result?.statut === 'conforme' ? 'valide' : 'invalide';
+        const confiance = Number(result?.confiance ?? 0);
 
         doc.verification = {
           statut,
+          message:
+            result?.message ||
+            result?.alerte ||
+            (statut === 'valide' ? 'Moyenne extraite avec succès' : 'OCR à vérifier'),
           confiance: Math.round(confiance),
-          donnees_extraites: {
-            'Score extrait': result.score_extrait ? result.score_extrait.toFixed(2) : 'N/A',
-            'Score déclaré': result.score_declare ? result.score_declare.toFixed(2) : 'N/A',
-            'Écart': result.ecart ? result.ecart.toFixed(2) : '0.00',
-            'Moteur': result.moteur || 'pdfplumber',
-          },
-          verifications: [
-            {
-              valide: result.statut === 'conforme',
-              description: result.statut === 'conforme'
-                ? 'Moyenne extraite avec succès'
-                : 'Dossier détecté comme suspect',
-            },
-            {
-              valide: (result.confiance || 0) >= 85,
-              description: `Score de confiance: ${confiance}%`,
-            },
-          ],
-          anomalies: result.anomalies || [],
-          moteur: result.moteur,
-          mode_simulation: false,
+          score_extrait: result?.score_extrait ?? null,
+          score_declare: result?.score_declare ?? null,
+          ecart: result?.ecart ?? null,
+          alerte: result?.alerte ?? null,
+          anomalies: this.normalizeAnomalies(result?.anomalies),
+          moteur: result?.moteur || 'pdfplumber',
+          texte_extrait: result?.texte_extrait || '',
+          // ✅ Détail des notes extraites (L1/L2/L3 + M.G/B.N.R/B.S.P)
+          detail_notes: result?.detail_notes ?? undefined,
         };
 
         this.toast.success('Analyse OCR terminée avec succès');
@@ -343,17 +375,16 @@ export class ExaminerOcrComponent implements OnInit {
         doc.analyzing = false;
         doc.progress = 0;
 
-        const errorMsg = err?.error?.message || 'Erreur lors de l\'analyse OCR';
+        const errorMsg = err?.error?.message || "Erreur lors de l'analyse OCR";
         this.toast.error(errorMsg);
 
         doc.verification = {
           statut: 'invalide',
+          message: errorMsg,
           confiance: 0,
-          donnees_extraites: {},
-          verifications: [
-            { valide: false, description: `Erreur: ${errorMsg}` },
-          ],
           anomalies: [errorMsg],
+          moteur: 'pdfplumber',
+          texte_extrait: '',
         };
 
         console.error('❌ Erreur OCR:', err);
@@ -467,6 +498,28 @@ export class ExaminerOcrComponent implements OnInit {
     alert('Rapport PDF téléchargé !');
   }
 
+  // MOD v7 §7.4 — Export du rapport de conformité OCR (Excel/PDF) depuis le lot.
+  exporterRapportConformite(format: 'excel' | 'pdf'): void {
+    if (!this.lotResultats.length) {
+      this.toast.warning("Lancez d'abord une analyse par lot.");
+      return;
+    }
+    this.ocrService.exporterRapportLot(this.lotResultats, format).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport_conformite_ocr.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        this.toast.success('Rapport de conformité exporté.');
+      },
+      error: () => this.toast.error("Erreur lors de l'export du rapport."),
+    });
+  }
+
   voirDocument(doc: DocumentOCR): void {
     this.documentViewer = {
       ...doc,
@@ -495,5 +548,27 @@ export class ExaminerOcrComponent implements OnInit {
   getNbIncoherences(comparaison: { coherent: boolean }[] | undefined): number {
     if (!comparaison) return 0;
     return comparaison.filter((r) => !r.coherent).length;
+  }
+
+  normalizeAnomalies(anomalies: any): string[] {
+    if (!anomalies) return [];
+
+    if (Array.isArray(anomalies)) {
+      return anomalies
+        .map((item) => {
+          if (typeof item === 'string') {
+            return item;
+          }
+
+          if (item && typeof item === 'object') {
+            return item.message || item.type || JSON.stringify(item);
+          }
+
+          return '';
+        })
+        .filter((item) => item.trim().length > 0);
+    }
+
+    return [String(anomalies)];
   }
 }

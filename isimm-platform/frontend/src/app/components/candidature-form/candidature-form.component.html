@@ -131,23 +131,36 @@
           <div class="form-group">
             <label>Date de naissance <span class="req">*</span></label>
             <input type="date" [(ngModel)]="formData.dateNaissance" name="dateNaissance" required />
+            <small class="field-error" *ngIf="formData.dateNaissance && !isAgeValid()">
+              <i class="fas fa-exclamation-circle"></i> L'âge doit être compris entre 16 et 60 ans.
+            </small>
           </div>
 
           <div class="form-group">
             <label>Numéro CIN <span class="req">*</span></label>
             <input type="text" [(ngModel)]="formData.cin" name="cin" placeholder="8 chiffres" maxlength="8" required />
-            <small>Carte d'identité nationale (8 chiffres)</small>
+            <small *ngIf="!formData.cin || isCinValid()">Carte d'identité nationale (8 chiffres)</small>
+            <small class="field-error" *ngIf="formData.cin && !isCinValid()">
+              <i class="fas fa-exclamation-circle"></i> La CIN doit contenir exactement 8 chiffres.
+            </small>
           </div>
 
           <div class="form-group">
             <label>Adresse e-mail <span class="req">*</span></label>
             <input type="email" [(ngModel)]="formData.email" name="email" placeholder="exemple@email.com" required />
-            <small>Cet email servira d'identifiant de connexion</small>
+            <small *ngIf="!formData.email || isEmailValid()">Cet email servira d'identifiant de connexion</small>
+            <small class="field-error" *ngIf="formData.email && !isEmailValid()">
+              <i class="fas fa-exclamation-circle"></i> Adresse e-mail invalide.
+            </small>
           </div>
 
           <div class="form-group">
             <label>Numéro de téléphone <span class="req">*</span></label>
-            <input type="tel" [(ngModel)]="formData.telephone" name="telephone" placeholder="+216 XX XXX XXX" required />
+            <input type="tel" [(ngModel)]="formData.telephone" name="telephone" placeholder="ex : 22123456" required />
+            <small *ngIf="!formData.telephone || isTelephoneValid()">8 chiffres, commence par 2-9 (format tunisien)</small>
+            <small class="field-error" *ngIf="formData.telephone && !isTelephoneValid()">
+              <i class="fas fa-exclamation-circle"></i> Numéro tunisien invalide (8 chiffres, commence par 2-9).
+            </small>
           </div>
         </div>
       </div>
@@ -171,80 +184,68 @@
             </select>
           </div>
 
-          <div class="form-group full-width">
-            <label>Établissement d'origine <span class="req">*</span></label>
-            <div class="radio-group-inline">
-              <label class="radio-option-card" [class.selected]="formData.natureCandidature === 'Étudiant ISIMM'">
-                <input type="radio" [(ngModel)]="formData.natureCandidature" name="natureCandidature"
-                  value="Étudiant ISIMM" (change)="onNatureCandidatureChange('Étudiant ISIMM')" />
-                <span class="radio-icon">🎓</span>
-                <span>Étudiant ISIMM</span>
-              </label>
-              <label class="radio-option-card" [class.selected]="formData.natureCandidature === 'Étudiant Externe'">
-                <input type="radio" [(ngModel)]="formData.natureCandidature" name="natureCandidature"
-                  value="Étudiant Externe" (change)="onNatureCandidatureChange('Étudiant Externe')" />
-                <span class="radio-icon">🏫</span>
-                <span>Étudiant Externe</span>
-              </label>
-            </div>
-            <input *ngIf="isEtudiantExterneSelected()" type="text"
-              [(ngModel)]="formData.etablissementUniversitaireOrigine"
-              name="etablissementUniversitaireOrigine"
-              placeholder="Nom de l'établissement externe" class="mt-2" required />
+          <!-- MOD 1 — Cascade Université + Établissement (remplace les anciens radios ISIMM/Externe) -->
+          <div class="form-group">
+            <label>Université <span class="req">*</span></label>
+            <select [(ngModel)]="formData.universite" name="universite"
+              (ngModelChange)="onUniversiteChange()" required>
+              <option value="">— Sélectionner —</option>
+              <option *ngFor="let uni of UNIVERSITIES_LIST" [value]="uni">{{ uni }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Établissement <span class="req">*</span></label>
+            <select [(ngModel)]="formData.etablissement" name="etablissement"
+              (ngModelChange)="onEtablissementChange()" [disabled]="!formData.universite" required>
+              <option value="" *ngIf="formData.universite">— Sélectionner —</option>
+              <option value="" *ngIf="!formData.universite">— Choisir d'abord une université —</option>
+              <option *ngFor="let etab of getEtablissementsForUniversite()" [value]="etab">{{ etab }}</option>
+            </select>
+            <small *ngIf="formData.isISIMM" class="isimm-detected" style="color:#059669;font-weight:600;display:inline-flex;align-items:center;gap:5px;margin-top:4px">
+              <i class="fas fa-check-circle"></i> Étudiant ISIMM détecté automatiquement
+            </small>
           </div>
 
           <div class="form-group">
             <label>Année du baccalauréat <span class="req">*</span></label>
-            <input type="number" [(ngModel)]="formData.anneeBac" name="anneeBac" min="1990" max="2099" required />
+            <input type="number" [(ngModel)]="formData.anneeBac" name="anneeBac" min="1980" max="2099" required />
+            <small class="field-error" *ngIf="formData.anneeBac && !isAnneeBacValid()">
+              <i class="fas fa-exclamation-circle"></i> Année Bac invalide (1980 – année courante).
+            </small>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" *ngIf="typeCandidature !== 'master'">
             <label>Moyenne du baccalauréat (session principale) <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.moyenneBacSessionPrincipale"
               name="moyenneBacSessionPrincipale" step="0.01" min="0" max="20" required />
           </div>
 
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
-            <label>Note en mathématiques (bac) <span class="req">*</span></label>
-            <input type="number" [(ngModel)]="formData.noteMathBac" name="noteMathBac" step="0.01" min="0" max="20" required />
-          </div>
-
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
-            <label>Note en français (bac) <span class="req">*</span></label>
-            <input type="number" [(ngModel)]="formData.noteFrancaisBac" name="noteFrancaisBac" step="0.01" min="0" max="20" required />
-          </div>
-
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
-            <label>Note en anglais (bac) <span class="req">*</span></label>
-            <input type="number" [(ngModel)]="formData.noteAnglaisBac" name="noteAnglaisBac" step="0.01" min="0" max="20" required />
-          </div>
-
-          <div class="form-group" *ngIf="masterParcours === 'mrgl'">
-            <label>Certification B2 (anglais) <span class="req">*</span></label>
-            <select [(ngModel)]="formData.certificationB2" name="certificationB2" required>
-              <option value="">— Sélectionner —</option>
-              <option value="non">Non</option>
-              <option value="oui">Oui</option>
-            </select>
-          </div>
-
-          <div class="form-group full-width info-banner" *ngIf="masterParcours === 'mrgl'">
-            <i class="fas fa-info-circle"></i>
-            La moyenne du bac et la note en mathématiques sont celles de la session principale.
-          </div>
-
           <div class="form-group">
             <label>Spécialité du diplôme obtenu <span class="req">*</span></label>
-            <select [(ngModel)]="formData.specialiteDiplomeObtenu" name="specialiteDiplomeObtenu" required>
+            <select [(ngModel)]="formData.specialiteDiplomeObtenu" name="specialiteDiplomeObtenu"
+              (ngModelChange)="onSpecialiteDiplomeChange()" required>
               <option value="">— Sélectionner —</option>
               <option *ngFor="let option of getSpecialiteDiplomeOptions()" [value]="option">{{ option }}</option>
+              <!-- MOD v4 §5 — option Autre -->
+              <option [value]="SPECIALITE_AUTRE">{{ SPECIALITE_AUTRE }}</option>
             </select>
+          </div>
+
+          <!-- MOD v4 §5 — champ texte conditionnel si « Autre » -->
+          <div class="form-group" *ngIf="isSpecialiteAutre()">
+            <label>Précisez votre spécialité <span class="req">*</span></label>
+            <input type="text" [(ngModel)]="formData.specialiteDiplomeAutre" name="specialiteDiplomeAutre"
+              placeholder="Ex : Licence en Réseaux et Sécurité" required />
           </div>
 
           <div class="form-group">
             <label>Année d'obtention du dernier diplôme <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.anneeObtentionDernierDiplome"
-              name="anneeObtentionDernierDiplome" min="1990" max="2099" required />
+              name="anneeObtentionDernierDiplome" min="1980" max="2099" required />
+            <small class="field-error" *ngIf="formData.anneeObtentionDernierDiplome && !isAnneeDiplomeValid()">
+              <i class="fas fa-exclamation-circle"></i> Année diplôme invalide (≥ Année Bac + 2, ≤ année courante + 1).
+            </small>
           </div>
 
           <div class="form-group" *ngIf="isProfessionalMasterSelected()">
@@ -263,6 +264,24 @@
             </select>
           </div>
 
+          <!-- MOD v4 §6 — Maîtrise incompatible avec ce parcours -->
+          <div class="form-group full-width maitrise-incompat" *ngIf="showMaitriseIncompatibility()">
+            <i class="fas fa-ban"></i>
+            <div>
+              <strong>Incompatibilité détectée.</strong>
+              Le Mastère <strong>{{ getParcoursLabel() }}</strong> n'accepte pas les titulaires d'une
+              Maîtrise. Veuillez sélectionner un autre parcours ou vérifier votre diplôme.
+            </div>
+          </div>
+
+          <!-- MOD v4 §6 — Formule de score appliquée (MRGL Licence vs Maîtrise) -->
+          <div class="form-group full-width formula-tag" *ngIf="masterParcours === 'mrgl' && formData.natureDiplome">
+            <i class="fas fa-calculator"></i>
+            Formule appliquée :
+            <strong *ngIf="!isMaitriseSelected()">Score Licence (avec B_AD)</strong>
+            <strong *ngIf="isMaitriseSelected()">Score Maîtrise (M4 inclus, sans B_AD)</strong>
+          </div>
+
           <div class="form-group" *ngIf="typeCandidature === 'ingenieur'">
             <label>Catégorie de candidature ingénieur <span class="req">*</span></label>
             <select [(ngModel)]="formData.categorieIngenieur" name="categorieIngenieur" required>
@@ -271,11 +290,6 @@
             </select>
           </div>
 
-          <div class="form-group" *ngIf="isEtudiantExterneSelected()">
-            <label>Spécialité (étudiant externe) <span class="req">*</span></label>
-            <input type="text" [(ngModel)]="formData.specialiteExterne" name="specialiteExterne"
-              placeholder="Spécialité du diplôme" required />
-          </div>
         </div>
       </div>
 
@@ -290,7 +304,104 @@
         </div>
 
         <div class="form-grid">
-          <div class="form-group">
+          <!-- MOD 2B (v5) — Tableau DYNAMIQUE de critères candidat (SANS coefficient) -->
+          <div class="form-group full-width criteria-table-block" *ngIf="isMasterCriteriaMode()">
+            <div class="criteria-table-head">
+              <i class="fas fa-table"></i> Critères demandés pour ce parcours
+            </div>
+            <p class="criteria-table-note">
+              Renseignez la valeur de chaque critère. Les coefficients sont définis par le
+              Responsable et ne sont jamais affichés ici.
+            </p>
+
+            <div class="criteria-table-wrap">
+              <table class="criteria-table criteria-table--dyn">
+                <thead>
+                  <tr>
+                    <th>Critère</th>
+                    <th>Votre valeur <span class="req">*</span></th>
+                    <th class="crit-act-col"><i class="fas fa-bolt"></i></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- État vide -->
+                  <tr *ngIf="criteresAjoutes.length === 0 && !showNewRow">
+                    <td colspan="3" class="criteria-empty">
+                      Aucun critère ajouté — cliquez sur « + Ajouter un critère » ci-dessous.
+                    </td>
+                  </tr>
+
+                  <!-- Lignes ajoutées -->
+                  <tr *ngFor="let row of criteresAjoutes; let i = index">
+                    <td class="criteria-label">{{ row.label }}</td>
+                    <td>
+                      <input *ngIf="row.inputType === 'number'" type="number" min="0" max="20" step="0.01"
+                        [(ngModel)]="row.value" [name]="'crit_' + row.code"
+                        (ngModelChange)="onRowValueChange(row)" placeholder="0.00 – 20.00" />
+                      <input *ngIf="row.inputType === 'count'" type="number" min="0" max="10" step="1"
+                        [(ngModel)]="row.value" [name]="'crit_' + row.code"
+                        (ngModelChange)="onRowValueChange(row)" placeholder="0, 1, 2…" />
+                      <select *ngIf="row.inputType === 'yesno'" [(ngModel)]="row.value"
+                        [name]="'crit_' + row.code" (ngModelChange)="onRowValueChange(row)">
+                        <option value="">— Choisir —</option>
+                        <option value="oui">Oui</option>
+                        <option value="non">Non</option>
+                      </select>
+                      <small class="criteria-row-error" *ngIf="row.error">{{ row.error }}</small>
+                    </td>
+                    <td class="crit-act-col">
+                      <button type="button" class="criteria-del-btn" (click)="removeRow(i)"
+                        title="Supprimer ce critère"><i class="fas fa-trash"></i></button>
+                    </td>
+                  </tr>
+
+                  <!-- Ligne d'ajout en cours -->
+                  <tr *ngIf="showNewRow" class="criteria-new-row">
+                    <td>
+                      <select [(ngModel)]="newCritCode" name="newCritCode" (ngModelChange)="onNewCritChange()">
+                        <option value="">— Sélectionner un critère —</option>
+                        <option *ngFor="let opt of criteresDisponibles" [value]="opt.code">{{ opt.label }}</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" [(ngModel)]="newCritValue" name="newCritValue"
+                        [placeholder]="newCritPlaceholder || 'valeur'" />
+                    </td>
+                    <td class="crit-act-col">
+                      <div class="criteria-new-actions">
+                        <button type="button" class="criteria-ok-btn" (click)="confirmNewRow()"
+                          title="Valider"><i class="fas fa-check"></i></button>
+                        <button type="button" class="criteria-cancel-btn" (click)="cancelNewRow()"
+                          title="Annuler"><i class="fas fa-times"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="criteria-add-row">
+              <button type="button" class="criteria-add-btn" (click)="addRow()"
+                [disabled]="criteresDisponibles.length === 0 || showNewRow">
+                <i class="fas fa-plus"></i> Ajouter un critère
+              </button>
+              <span class="criteria-progress" *ngIf="criteresAjoutes.length > 0"
+                [class.complete]="criteresAjoutes.length === totalCriteres">
+                {{ criteresAjoutes.length }} / {{ totalCriteres }} critère(s) ajouté(s)
+              </span>
+            </div>
+
+            <div class="criteria-lock-note">
+              <i class="fas fa-lock"></i> Coefficients définis par le Responsable — jamais affichés
+              ici. Le score est calculé automatiquement par le système.
+            </div>
+
+            <div class="criteria-validation-error" *ngIf="validationError">
+              <i class="fas fa-exclamation-triangle"></i> {{ validationError }}
+            </div>
+          </div>
+
+          <div class="form-group" *ngIf="!isMasterCriteriaMode()">
             <label>Moyenne 1<sup>ère</sup> année <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.moyenne1ereAnnee" name="moyenne1ereAnnee"
               step="0.01" min="0" max="20" required />
@@ -304,7 +415,7 @@
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" *ngIf="!isMasterCriteriaMode()">
             <label>Moyenne 2<sup>ème</sup> année <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.moyenne2emeAnnee" name="moyenne2emeAnnee"
               step="0.01" min="0" max="20" required />
@@ -318,7 +429,7 @@
             </select>
           </div>
 
-          <div class="form-group" *ngIf="shouldShowTroisiemeAnneeFields()">
+          <div class="form-group" *ngIf="shouldShowTroisiemeAnneeFields() && !isMasterCriteriaMode()">
             <label>Moyenne 3<sup>ème</sup> année <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.moyenne3emeAnnee" name="moyenne3emeAnnee"
               step="0.01" min="0" max="20" required />
@@ -352,7 +463,7 @@
               name="moyenneSemestre1TroisiemeAnnee" step="0.01" min="0" max="20" required />
           </div>
 
-          <div class="form-group">
+          <div class="form-group" *ngIf="!isMasterCriteriaMode()">
             <label>Nombre d'années de redoublement <span class="req">*</span></label>
             <input type="number" [(ngModel)]="formData.nombreAnneesRedoublement"
               name="nombreAnneesRedoublement" min="0" required />
@@ -455,11 +566,14 @@
               <span class="spi-label">Moyenne académique</span>
               <strong class="spi-value">{{ getAcademicAveragePreview() ?? '—' }}</strong>
             </div>
-            <div class="score-preview-item score-total">
-              <span class="spi-label">Score estimatif</span>
+            <div class="score-preview-item score-total" [title]="getScoreFormulaLabel()">
+              <span class="spi-label">Score estimatif <i class="fas fa-info-circle" [title]="getScoreFormulaLabel()"></i></span>
               <strong class="spi-value spi-main">{{ getEstimatedScoreDisplay() }}</strong>
             </div>
           </div>
+          <p class="score-preview-note" style="margin-top:6px">
+            <i class="fas fa-info-circle"></i> {{ getScoreFormulaLabel() }}
+          </p>
         </div>
       </div>
 

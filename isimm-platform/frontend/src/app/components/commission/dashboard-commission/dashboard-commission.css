@@ -1697,6 +1697,49 @@
   font-size: 13px;
 }
 
+/* Cas 1 commission : affichage nom + spécialité */
+.commission-single {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  margin-top: 4px;
+}
+
+.commission-single-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.commission-single-text small {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.6);
+}
+
+/* Chargement des commissions */
+.commission-loading-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 4px;
+}
+
+.commission-loading-notice i {
+  font-size: 13px;
+}
+
 /* ========================================
    NAVIGATION
 ======================================== */
@@ -12540,3 +12583,29 @@ textarea.ofr-finput { resize: vertical; min-height: 72px; }
 .criteres-empty { padding: 20px; text-align: center; color: #94A3B8; font-style: italic; background: #F8FAFC; border: 1px dashed #E2E8F4; border-radius: 10px; font-size: 12px; }
 .formule-code-chip.clickable { cursor: pointer; transition: transform .12s, background .12s; }
 .formule-code-chip.clickable:hover { background: #BFDBFE; transform: translateY(-1px); }
+
+/* MOD 2A — Tableau critères + coefficients (Responsable uniquement) */
+.criteres-coef-wrap { overflow: auto; border: 1px solid #E2E8F4; border-radius: 10px; }
+.criteres-coef-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
+.criteres-coef-table thead th { background: #0F1F3D; color: #fff; padding: 9px 11px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.criteres-coef-table thead th .fa-lock { color: #5EEAD4; margin-right: 4px; }
+.criteres-coef-table tbody td { padding: 8px 11px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+.criteres-coef-table tbody tr:last-child td { border-bottom: none; }
+.criteres-coef-table tbody tr:nth-child(even) td { background: #FAFBFD; }
+.critere-coef-input { width: 90px; font-weight: 700; color: #0D9488; border-color: #5EEAD4 !important; }
+.critere-code-chip { font-family: ui-monospace, monospace; font-weight: 700; color: #185FA5; background: #EFF6FF; padding: 2px 7px; border-radius: 5px; font-size: 11px; }
+.critere-act-group { display: flex; gap: 6px; }
+.critere-edit-btn { width: 32px; height: 32px; border-radius: 8px; background: #F1F5F9; color: #475569; border: 1px solid #E2E8F4; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
+.critere-edit-btn:hover { background: #185FA5; color: #fff; border-color: #185FA5; }
+.critere-dup-warn { margin-top: 4px; font-size: 10px; color: #B91C1C; display: flex; align-items: center; gap: 4px; }
+.criteres-empty-cell { padding: 20px; text-align: center; color: #94A3B8; font-style: italic; font-size: 12px; }
+.critere-lock-note { margin-top: 8px; padding: 7px 11px; background: #F0FDFA; border: 1px dashed #5EEAD4; border-radius: 8px; font-size: 11px; color: #0D9488; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+/* ── OCR : tableau détail des notes extraites (L1/L2/L3 + M.G/B.N.R/B.S.P) ── */
+.ocr-detail-notes { margin-top: 14px; padding: 14px; background: #F8FAFC; border: 1px solid #E2E8F4; border-radius: 12px; }
+.ocr-detail-notes .detail-title { font-size: 13px; font-weight: 600; color: #0F1F3D; margin-bottom: 10px; }
+.ocr-detail-notes .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ocr-detail-notes .detail-table td { padding: 7px 10px; border-bottom: 1px solid #E2E8F4; }
+.ocr-detail-notes .detail-table td:last-child { text-align: right; font-family: monospace; font-weight: 500; }
+.ocr-detail-notes .detail-table tr.highlight td { background: #EFF6FF; color: #185FA5; font-weight: 600; }
+.ocr-detail-notes .detail-table tr.total td { background: #0F1F3D; color: #fff; font-weight: 700; font-size: 15px; }

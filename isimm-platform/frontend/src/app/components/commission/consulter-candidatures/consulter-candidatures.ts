@@ -258,9 +258,11 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
     this.router.navigate(['/consultation-dossier', candidature.id]);
   }
 
-  deciderCandidature(candidature: Candidature, decision: CommissionDecision): void {
-    const motifRejet = decision === 'refuser' ? 'Refus commission.' : '';
-
+  deciderCandidature(
+    candidature: Candidature,
+    decision: CommissionDecision,
+    motifRejet: string = '',
+  ): void {
     this.candidatureService
       .deciderCandidatureCommission(candidature.id, decision, motifRejet)
       .subscribe({
@@ -274,6 +276,10 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
           this.appliquerFiltres();
           this.syncSelectedCandidature();
         },
+        error: (err) => {
+          // MOD v5 §G — message clair si la justification est manquante côté serveur
+          alert(err?.error?.error || 'Erreur lors de la décision.');
+        },
       });
   }
 
@@ -281,8 +287,14 @@ ${r.anomalies.length > 0 ? '\n⚠️ ' + r.anomalies.join('\n⚠️ ') : '✅ Au
     this.deciderCandidature(candidature, 'accepter');
   }
 
+  // MOD v5 §G — Rejet avec justification obligatoire (motif saisi par le responsable).
   refuser(candidature: Candidature): void {
-    this.deciderCandidature(candidature, 'refuser');
+    const motif = (window.prompt('Motif du rejet (obligatoire, au moins 10 caractères) :', '') || '').trim();
+    if (motif.length < 10) {
+      alert('Justification obligatoire pour un rejet (au moins 10 caractères).');
+      return;
+    }
+    this.deciderCandidature(candidature, 'refuser', motif);
   }
 
   deposerDossier(candidature: Candidature): void {

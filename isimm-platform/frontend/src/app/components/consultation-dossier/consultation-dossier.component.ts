@@ -152,7 +152,7 @@ export class ConsultationDossierComponent implements OnInit {
 
   get candidatureScore(): string {
     return this.candidat?.score !== undefined && this.candidat?.score !== null
-      ? Number(this.candidat.score).toFixed(1)
+      ? Number(this.candidat.score).toFixed(2)
       : '--';
   }
 

@@ -6,22 +6,45 @@ import { environment } from '../../environments/environment';
 export interface LotOcrResultat {
   candidature_id: number;
   candidat_nom: string;
+  numero?: string;
   master: string;
-  statut: 'ok' | 'anomalie' | 'incomplet' | 'erreur';
-  flag_fraude: boolean;
+  success: boolean;
+  statut: 'ok' | 'anomalie' | 'erreur';
+  score_extrait?: number | null;
+  score_declare?: number | null;
+  ecart?: number | null;
+  confiance?: number | null;
+  moteur?: string;
+  alerte?: string | null;
   nb_anomalies: number;
-  rapport: any;
   message?: string;
+  error?: string;
+  fichier?: string;
 }
 
 export interface LotOcrResponse {
   success: boolean;
   message: string;
-  nb_total: number;
+  total: number;
+  nb_analysees: number;
   nb_conformes: number;
-  nb_incoherences: number;
+  nb_anomalies: number;
   nb_erreurs: number;
   resultats: LotOcrResultat[];
+}
+
+// v4 §7 — Résultat d'extraction spécialité + type de diplôme (relevé de notes)
+export interface OcrExtractResult {
+  statut?: string;
+  message?: string;
+  specialite_detectee: string | null;
+  type_diplome_detecte: string | null;
+  specialite_declaree?: string;
+  type_diplome_declare?: string;
+  correspondance_specialite: boolean;
+  correspondance_type: boolean;
+  alerte: boolean;
+  texte_brut?: string;
 }
 
 @Injectable({
@@ -72,6 +95,32 @@ export class OcrService {
       `${this.candidatureApiUrl}/ocr/analyser-lot/`,
       { candidature_ids: candidatureIds },
       { headers: this.getHeaders() },
+    );
+  }
+
+  // v4 §7 — Extraire spécialité + type de diplôme d'un relevé et comparer à la déclaration
+  extraireReleve(
+    fichier: File,
+    specialiteDeclaree: string,
+    typeDiplomeDeclare: string,
+  ): Observable<OcrExtractResult> {
+    const fd = new FormData();
+    fd.append('fichier', fichier);
+    fd.append('specialite_declaree', specialiteDeclaree || '');
+    fd.append('type_diplome_declare', typeDiplomeDeclare || '');
+    return this.http.post<OcrExtractResult>(
+      `${this.candidatureApiUrl}/candidatures/ocr/extract/`,
+      fd,
+      { headers: this.getHeaders() },
+    );
+  }
+
+  // v7 §7.4 — Exporter le rapport de conformité OCR (résultats du lot) en Excel ou PDF
+  exporterRapportLot(resultats: LotOcrResultat[], format: 'excel' | 'pdf'): Observable<Blob> {
+    return this.http.post(
+      `${this.candidatureApiUrl}/candidatures/export-ocr-${format}/`,
+      { resultats },
+      { headers: this.getHeaders(), responseType: 'blob' },
     );
   }
 

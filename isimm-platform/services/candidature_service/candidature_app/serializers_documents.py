@@ -53,51 +53,95 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 
 class DocumentUploadSerializer(serializers.Serializer):
-    """Serializer pour l'upload de documents avec validation"""
+    """Serializer pour l'upload de documents avec validation (PARTIE B)."""
     type_document = serializers.PrimaryKeyRelatedField(
         queryset=DocumentType.objects.all()
     )
     fichier = serializers.FileField(required=True)
     description = serializers.CharField(required=False, allow_blank=True)
-    
-    def validate_fichier(self, file):
-        """Valider le fichier"""
-        # Taille max globale : 10MB
-        if file.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("Fichier trop volumineux")
-        
-        return file
-    
+
+    # Formats globalement acceptés
+    FORMATS_GLOBAUX = {'pdf', 'jpg', 'jpeg', 'png'}
+    # Pièces qui DOIVENT être des PDF (contenu)
+    TYPES_PDF_OBLIGATOIRE = {
+        'formulaire_candidature', 'diplomes_bac', 'releves_bac', 'cv',
+    }
+
+    def _extension(self, file):
+        _, ext = os.path.splitext(file.name)
+        return ext.lstrip('.').lower()
+
+    def validate(self, data):
+        """Validation croisée fichier + type de pièce."""
+        file = data['fichier']
+        type_document = data['type_document']
+        code = type_document.type_document
+        ext = self._extension(file)
+
+        # 1) Taille max (selon config du type, défaut 5 Mo)
+        max_mb = getattr(type_document, 'taille_max_mb', 5) or 5
+        if file.size > max_mb * 1024 * 1024:
+            raise serializers.ValidationError(
+                {'fichier': f'Fichier trop volumineux (max {max_mb} Mo).'}
+            )
+
+        # 2) Format global autorisé
+        formats_type = set(getattr(type_document, 'formats_acceptes', []) or [])
+        formats_autorises = formats_type or self.FORMATS_GLOBAUX
+        if ext not in formats_autorises:
+            raise serializers.ValidationError(
+                {'fichier': 'Ce fichier ne correspond pas au type attendu.'}
+            )
+
+        # 3) Contenu : PDF obligatoire pour relevés / diplômes / formulaire / CV
+        if code in self.TYPES_PDF_OBLIGATOIRE and ext != 'pdf':
+            raise serializers.ValidationError(
+                {'fichier': 'Cette pièce doit être un document PDF (les images ne sont pas acceptées).'}
+            )
+
+        return data
+
     def create(self, validated_data):
         """Créer le document"""
         candidature = self.context.get('candidature')
         type_document = validated_data['type_document']
         fichier = validated_data['fichier']
         description = validated_data.get('description', '')
-        
-        # Calculer un checksum stable par candidature + type documentaire.
+
+        # Empreinte du CONTENU (indépendante du type)
         file_hash = hashlib.sha256()
         for chunk in fichier.chunks():
             file_hash.update(chunk)
-        checksum_source = f"{file_hash.hexdigest()}:{candidature.id}:{type_document.id}"
+        content_hash = file_hash.hexdigest()
+
+        # Checksum stable par candidature + type (clé unique en base)
+        checksum_source = f"{content_hash}:{candidature.id}:{type_document.id}"
         checksum = hashlib.sha256(checksum_source.encode('utf-8')).hexdigest()
-        
-        # Vérifier si le fichier existe déjà
-        existing = Document.objects.filter(
+
+        # a) Même fichier déjà soumis pour CE type
+        if Document.objects.filter(
             candidature=candidature,
             type_document=type_document,
             checksum_sha256=checksum,
-        ).first()
-        if existing:
+        ).exists():
             raise serializers.ValidationError(
-                "Fichier déjà soumis"
+                {'fichier': 'Ce fichier a déjà été soumis pour cette pièce.'}
             )
-        
-        # Obtenir l'extension du fichier
-        _, file_extension = os.path.splitext(fichier.name)
-        format_fichier = file_extension.lstrip('.').lower()
-        
-        # Créer le document
+
+        # b) PARTIE B : même fichier (contenu) déposé pour une AUTRE pièce
+        for doc in Document.objects.filter(candidature=candidature).exclude(
+            type_document=type_document
+        ):
+            autre_source = f"{content_hash}:{candidature.id}:{doc.type_document_id}"
+            autre_checksum = hashlib.sha256(autre_source.encode('utf-8')).hexdigest()
+            if doc.checksum_sha256 == autre_checksum:
+                raise serializers.ValidationError(
+                    {'fichier': 'Ce fichier a déjà été déposé pour une autre pièce du dossier.'}
+                )
+
+        # Extension
+        format_fichier = self._extension(fichier)
+
         document = Document.objects.create(
             candidature=candidature,
             type_document=type_document,
@@ -109,7 +153,7 @@ class DocumentUploadSerializer(serializers.Serializer):
             checksum_sha256=checksum,
             statut='en_attente'
         )
-        
+
         return document
 
 

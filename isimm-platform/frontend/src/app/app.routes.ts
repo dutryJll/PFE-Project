@@ -34,6 +34,7 @@ import { ConsulterDossierComponent } from './components/candidat/consulter-dossi
 import { DeposerDocumentsComponent } from './components/candidat/deposer-documents/deposer-documents';
 import { ChoixCandidatureComponent } from './components/choix-candidature/choix-candidature';
 import { NouvelleReclamationComponent } from './components/candidat/nouvelle-reclamation/nouvelle-reclamation';
+import { InscriptionOnlineComponent } from './components/candidat/inscription-online/inscription-online';
 import { GuideEtudiantComponent } from './components/guide-etudiant/guide-etudiant';
 import { MasterCatalogComponent } from './components/master-catalog/master-catalog.component';
 import { IngenieurCatalogComponent } from './components/ingenieur-catalog/ingenieur-catalog.component';
@@ -74,6 +75,7 @@ import { GererInscriptionsComponent } from './components/commission/gerer-inscri
 import { OffrePreinscriptionEditorComponent } from './components/commission/offre-preinscription-editor/offre-preinscription-editor';
 import { OfferCreationWizardComponent } from './components/commission/offer-creation-wizard/offer-creation-wizard';
 import { GestionCommissionComponent } from './components/admin/gestion-commission/gestion-commission.component';
+import { ImportInscriptionsComponent } from './components/responsable/import-inscriptions/import-inscriptions';
 
 import { DeposerDossierCommissionComponent } from './components/commission/deposer-dossier-commission/deposer-dossier-commission';
 import { PreselectionDashboardComponent } from './components/commission/preselection-dashboard/preselection-dashboard.component';
@@ -228,6 +230,22 @@ export const routes: Routes = [
     component: NouvelleReclamationComponent,
     canActivate: [authGuard, roleGuard, actionGuard],
     data: { roles: ['candidat'], actions: ['Déposer réclamation'] },
+  },
+  {
+    path: 'candidat/inscription-online/:id',
+    component: InscriptionOnlineComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['candidat'] },
+  },
+
+  // ========================================
+  // ROUTES RESPONSABLE
+  // ========================================
+  {
+    path: 'responsable/import-inscriptions',
+    component: ImportInscriptionsComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['responsable_commission', 'admin'] },
   },
 
   // ========================================

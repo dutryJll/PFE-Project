@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 
 from . import views
 from . import views_export
+from . import views_inscription_online
+from . import views_commission_membre
 from .views_parcours import ParcoursAdmissionViewSet
 from . import views_pdf_official
 from . import views_attestation
@@ -125,6 +127,17 @@ urlpatterns = router.urls + [
     path('<int:candidature_id>/statut/changer/', views.changer_statut_candidature_endpoint, name='changer_statut_candidature'),
     path('<int:candidature_id>/statut/historique/', views.recuperer_historique_statuts_endpoint, name='recuperer_historique_statuts'),
 
+    # ── Workflow d'inscription en ligne ──────────────────────────────────────
+    path('<int:candidature_id>/saisir-numero/', views_inscription_online.saisir_numero_inscription, name='saisir_numero_inscription'),
+    path('verifier-excel-inscriptions/', views_inscription_online.verifier_excel_inscriptions, name='verifier_excel_inscriptions'),
+    # v7 §6.5 — Comparer la liste des inscrits importée aux admis → « admis non inscrits »
+    path('comparer-inscrits-admis/', views_inscription_online.comparer_inscrits_admis, name='comparer_inscrits_admis'),
+
+    # ── Commission membre ────────────────────────────────────────────────────
+    path('commissions/mes-commissions-membre/', views_commission_membre.mes_commissions_membre, name='mes_commissions_membre'),
+    path('commissions/ma-commission-principale-membre/', views_commission_membre.ma_commission_principale_membre, name='ma_commission_principale_membre'),
+    path('par-commission/<int:commission_id>/', views_commission_membre.get_candidatures_by_commission, name='get_candidatures_by_commission'),
+
     # ── Générateur PDF officiel ISIMM (GFH FOR 09 v1) ─────────────────────────
     path('documents/generer-pdf/', views_pdf_official.generer_pdf_officiel, name='generer_pdf_officiel'),
     path('documents/verifier-liste/', views_pdf_official.verifier_liste, name='verifier_liste'),
@@ -133,6 +146,9 @@ urlpatterns = router.urls + [
     # ── Attestation individuelle + OCR par candidature ─────────────────────────
     path('<int:candidature_id>/generer-pdf/', views_attestation.generer_attestation_pdf, name='generer_attestation_pdf'),
     path('<int:candidature_id>/analyser-ocr/', views_attestation.analyser_ocr_candidature, name='analyser_ocr_candidature'),
+
+    # ── v4 §7 — OCR extraction spécialité + type de diplôme (relevé de notes) ───
+    path('ocr/extract/', views_attestation.ocr_extract, name='ocr_extract'),
 ]
 
 

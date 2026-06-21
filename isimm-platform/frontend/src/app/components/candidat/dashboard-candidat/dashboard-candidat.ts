@@ -32,6 +32,12 @@ import { environment } from '../../../../environments/environment';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {
+  UNIVERSITIES_DATA,
+  UNIVERSITIES_LIST,
+  isISIMMSelection,
+  getEtablissementsForUniversite,
+} from '../../../shared/constants/universities';
 
 interface Candidature {
   id: number;
@@ -630,6 +636,56 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   wizardUploadedFiles: Array<File | null> = [];
   wizardDragOverIndex: number | null = null;
   wizardSubmitting: boolean = false;
+  // MOD 1 — Données cascade Université / Établissement (exposées au template)
+  readonly UNIVERSITIES_LIST: string[] = UNIVERSITIES_LIST;
+
+  getWizardEtablissements(): string[] {
+    return getEtablissementsForUniversite(this.wizardData.universite || '');
+  }
+
+  /**
+   * MOD 1 — Quand l'utilisateur change d'université, on réinitialise
+   * l'établissement et le flag isISIMM (la nouvelle université peut ne pas
+   * proposer le même établissement).
+   */
+  onWizardUniversiteChange(): void {
+    this.wizardData.etablissement = '';
+    this.wizardData.isISIMM = false;
+    // Compat ascendante avec l'ancien champ natureCandidature
+    this.wizardData.natureCandidature = '';
+  }
+
+  /**
+   * MOD 1 — Quand l'utilisateur sélectionne un établissement, on calcule
+   * le flag isISIMM et on synchronise les anciens champs (etablissementOrigine,
+   * natureCandidature, etablissementExterne) pour rester compatible avec le
+   * reste du wizard et le payload envoyé à l'API.
+   */
+  onWizardEtablissementChange(): void {
+    const uni = this.wizardData.universite || '';
+    const etab = this.wizardData.etablissement || '';
+    this.wizardData.isISIMM = isISIMMSelection(uni, etab);
+
+    // Synchronisation avec les anciens champs (préserve le calcul de score
+    // et les vues qui se basent sur etablissementOrigine / natureCandidature).
+    if (this.wizardData.isISIMM) {
+      this.wizardData.etablissementOrigine = 'ISIMM';
+      this.wizardData.etablissementOrigineType = 'ISIMM';
+      this.wizardData.natureCandidature = 'Étudiant ISIMM';
+      this.wizardData.etablissementExterne = '';
+    } else if (etab) {
+      this.wizardData.etablissementOrigine = etab;
+      this.wizardData.etablissementOrigineType = 'Externe';
+      this.wizardData.natureCandidature = 'Étudiant Externe';
+      this.wizardData.etablissementExterne = etab;
+    }
+
+    // Recalculer le score live si la fonction existe
+    if (typeof this.triggerWizardScoreCalculation === 'function') {
+      this.triggerWizardScoreCalculation();
+    }
+  }
+
   wizardData: {
     nom: string;
     prenom: string;
@@ -659,6 +715,10 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     natureCandidature: 'Étudiant ISIMM' | 'Étudiant Externe' | '';
     etablissementExterne: string;
     specialiteExterne: string;
+    // MOD 1 — Cascade Université / Établissement
+    universite: string;
+    etablissement: string;
+    isISIMM: boolean;
     moyenne4Annee: string;
     session4Annee: 'Principale' | 'control' | '';
     nombreRedoublement: string;
@@ -696,6 +756,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     natureCandidature: '',
     etablissementExterne: '',
     specialiteExterne: '',
+    universite: '',
+    etablissement: '',
+    isISIMM: false,
     moyenne4Annee: '',
     session4Annee: '',
     nombreRedoublement: '',
@@ -1512,12 +1575,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
   }
 
   ouvrirFormulaireReclamation(): void {
-    if (!this.actionPermissions.deposerReclamation) {
-      this.notifyActionBlocked("Dépôt de réclamation désactivé par l'administration.");
-      return;
-    }
-
-    this.router.navigate(['/candidat/reclamations/nouvelle']);
+    // MOD v5 §C — Ouvre la réclamation dans un dialog inline (même page) au lieu
+    // de rediriger vers /candidat/reclamations/nouvelle.
+    this.ouvrirModalReclamation();
   }
 
   switchView(view: CandidatView, options?: { preserveDossierSelection?: boolean }): void {
@@ -2709,6 +2769,9 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
       natureCandidature: '',
       etablissementExterne: '',
       specialiteExterne: '',
+      universite: '',
+      etablissement: '',
+      isISIMM: false,
       moyenne4Annee: '',
       session4Annee: '',
       nombreRedoublement: '',
@@ -3879,60 +3942,104 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
     }
 
     this.savingInscriptionNumberId = candidature.id;
-    this.candidatureService
-      .updateCandidature(candidature.id, {
-        numero_inscription_universitaire: numero,
-        statut_inscription: candidature.statut_inscription || 'en_attente',
-      })
-      .subscribe({
-        next: (response: any) => {
-          candidature.numero_inscription_universitaire =
-            response?.numero_inscription_universitaire || numero;
-          this.mesCandidatures = this.mesCandidatures.map((item) =>
-            item.id === candidature.id
-              ? {
-                  ...item,
-                  numero_inscription_universitaire: candidature.numero_inscription_universitaire,
-                }
-              : item,
-          );
-          this.toastService.show('Numéro d’inscription synchronisé avec succès.', 'success');
-          this.savingInscriptionNumberId = null;
-        },
-        error: (error) => {
-          console.error('Erreur synchronisation numéro inscription:', error);
-          this.toastService.show(
-            'Synchronisation non confirmée côté serveur, valeur conservée localement.',
-            'warning',
-          );
-          this.savingInscriptionNumberId = null;
-        },
-      });
+    // Endpoint dédié : enregistre le N° + passe le statut à 'en_attente_verification'
+    this.candidatureService.saisirNumeroInscription(candidature.id, numero).subscribe({
+      next: (response: any) => {
+        candidature.numero_inscription_universitaire = numero;
+        candidature.statut_inscription =
+          response?.statut_inscription || 'en_attente_verification';
+        this.mesCandidatures = this.mesCandidatures.map((item) =>
+          item.id === candidature.id
+            ? {
+                ...item,
+                numero_inscription_universitaire: numero,
+                statut_inscription: candidature.statut_inscription,
+              }
+            : item,
+        );
+        this.toastService.show(
+          response?.message || 'Numéro enregistré. En attente de vérification.',
+          'success',
+        );
+        this.savingInscriptionNumberId = null;
+      },
+      error: (error) => {
+        console.error('Erreur saisie numéro inscription:', error);
+        this.toastService.show(
+          error?.error?.error || 'Erreur lors de l’enregistrement du numéro.',
+          'error',
+        );
+        this.savingInscriptionNumberId = null;
+      },
+    });
   }
 
   getStatutFinalInscription(candidature: Candidature): string {
     const status = this.normalizeStatus(candidature.statut_inscription || candidature.statut);
 
-    if (['paiement_soumis', 'en_attente', 'soumis'].includes(status)) {
-      return 'En attente de paiement';
+    if (['inscrit', 'valide', 'confirme'].includes(status)) {
+      return 'Inscrit';
     }
 
-    if (['valide', 'confirme', 'inscrit', 'selectionne', 'admis'].includes(status)) {
-      return 'Inscrite';
+    if (['en_attente_verification', 'paiement_soumis', 'soumis'].includes(status)) {
+      return 'En attente de vérification';
+    }
+
+    if (['inscription_saisie'].includes(status)) {
+      return 'Inscription saisie';
     }
 
     if (['rejete', 'rejetee', 'non_admis'].includes(status)) {
       return 'Rejetée (Délai dépassé)';
     }
 
-    return 'En attente de paiement';
+    return 'Sélectionné';
   }
 
   getStatutFinalInscriptionClass(candidature: Candidature): string {
     const label = this.getStatutFinalInscription(candidature);
-    if (label === 'Inscrite') return 'badge-success';
+    if (label === 'Inscrit') return 'badge-success';
     if (label.startsWith('Rejetée')) return 'badge-danger';
-    return 'badge-warning';
+    if (label === 'En attente de vérification') return 'badge-warning';
+    return 'badge-info';
+  }
+
+  // ── Stepper d'inscription dynamique (reflète statut_inscription) ──────────
+  /** Étape courante (1..4) d'après le statut d'inscription représentatif. */
+  get inscriptionStepIndex(): number {
+    const repr =
+      this.selectedCandidatureForInscription ||
+      this.admittedCandidatures.find((c) =>
+        ['inscrit', 'en_attente_verification', 'inscription_saisie'].includes(
+          this.normalizeStatus(c.statut_inscription || ''),
+        ),
+      ) ||
+      this.admittedCandidatures[0];
+
+    const statut = this.normalizeStatus(repr?.statut_inscription || '');
+    switch (statut) {
+      case 'inscrit':
+        return 4;
+      case 'en_attente_verification':
+        return 3;
+      case 'inscription_saisie':
+        return 2;
+      default:
+        return 1; // selectionne / défaut
+    }
+  }
+
+  /** Classe d'une étape du stepper : 'insc-step--done' | 'insc-step--active' | ''. */
+  getInscriptionStepClass(step: number): string {
+    const current = this.inscriptionStepIndex;
+    if (step < current) return 'insc-step--done';
+    if (step === current) return 'insc-step--active';
+    return '';
+  }
+
+  /** Classe d'un connecteur (entre l'étape `step` et la suivante). */
+  getInscriptionConnectorClass(step: number): string {
+    return step < this.inscriptionStepIndex ? 'insc-step-connector--done' : '';
   }
 
   hasAttestationPaiement(candidature: Candidature): boolean {
@@ -4914,8 +5021,15 @@ export class DashboardCandidatComponent implements OnInit, OnDestroy {
 
     const token = this.authService.getAccessToken();
 
+    // MOD v5 §C — mêmes champs/contrat que la page éprouvée (FormData) pour garantir
+    // que la création fonctionne exactement comme avant.
+    const payload = new FormData();
+    payload.append('master_id', String(Number(this.nouvelleReclamation.master_id)));
+    payload.append('objet', this.nouvelleReclamation.objet);
+    payload.append('motif', String(this.nouvelleReclamation.motif || '').trim());
+
     this.http
-      .post(`${this.serviceApiBase}/reclamations/creer/`, this.nouvelleReclamation, {
+      .post(`${this.serviceApiBase}/reclamations/creer/`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({

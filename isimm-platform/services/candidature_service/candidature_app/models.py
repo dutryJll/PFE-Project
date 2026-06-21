@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -286,6 +286,27 @@ class Candidature(models.Model):
     statut = models.CharField(max_length=30, choices=STATUT_CHOICES, default='soumis')
     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     classement = models.IntegerField(null=True, blank=True)
+
+    # ── Workflow d'inscription en ligne ──
+    STATUT_INSCRIPTION_CHOICES = [
+        ('selectionne', 'Sélectionné'),
+        ('inscription_saisie', 'Inscription saisie'),
+        ('en_attente_verification', 'En attente de vérification'),
+        ('inscrit', 'Inscrit confirmé'),
+    ]
+    statut_inscription = models.CharField(
+        max_length=30,
+        choices=STATUT_INSCRIPTION_CHOICES,
+        default='selectionne',
+        help_text="Statut du processus d'inscription en ligne"
+    )
+    numero_inscription = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Numéro d'inscription universitaire saisi par le candidat"
+    )
+    date_saisie_inscription = models.DateTimeField(null=True, blank=True)
     
     date_soumission = models.DateTimeField(auto_now_add=True)
     date_limite_modification = models.DateTimeField(null=True, blank=True)
@@ -1832,16 +1853,22 @@ def archiver_candidatures_annee_precedente():
 
 
 class DocumentType(models.Model):
-    """Types de documents accept�s par master"""
+    """Types de pièces du dossier de candidature (liste officielle ISIMM).
+
+    6 pièces officielles. La pièce ``attestation_retrait`` est optionnelle
+    (le cas échéant), les 5 autres sont obligatoires.
+    """
     TYPE_CHOICES = [
-        ('diplome', 'Dipl�me'),
-        ('releve_notes', 'Relev� de notes'),
-        ('cv', 'Curriculum Vitae'),
-        ('lettre_motivation', 'Lettre de motivation'),
-        ('certificat_langue', 'Certificat de langue'),
-        ('attestation_travail', 'Attestation de travail'),
-        ('autre', 'Autre'),
+        ('formulaire_candidature', 'Les formulaires de candidature aux masters'),
+        ('cin', "Copie de la Carte d'Identité Nationale (CIN)"),
+        ('diplomes_bac', "Diplômes obtenus depuis l'année du baccalauréat"),
+        ('releves_bac', "Relevés de notes depuis l'année du baccalauréat"),
+        ('attestation_retrait', "Attestation(s) de retrait d'inscription et/ou de réorientation (le cas échéant)"),
+        ('cv', 'Curriculum Vitae (CV)'),
     ]
+
+    # Pièces optionnelles (toutes les autres sont obligatoires par défaut)
+    TYPES_OPTIONNELS = ['attestation_retrait']
     
     master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='types_documents')
     type_document = models.CharField(max_length=50, choices=TYPE_CHOICES)

@@ -15,6 +15,20 @@ interface FilePreview {
   previewUrl: string | null;
 }
 
+/** Définition d'une pièce officielle du dossier ISIMM */
+interface PieceDef {
+  key: string;
+  titre: string;
+  description: string;
+  icon: string;
+  iconClass: string;
+  obligatoire: boolean;
+  accept: string; // attribut accept de l'input
+  allowedExt: string[]; // extensions autorisées (PARTIE B)
+  pdfOnly: boolean; // doit obligatoirement être un PDF (PARTIE B)
+  maxSizeMo: number;
+}
+
 @Component({
   selector: 'app-deposer-documents',
   standalone: true,
@@ -23,33 +37,94 @@ interface FilePreview {
   styleUrl: './deposer-documents.css',
 })
 export class DeposerDocumentsComponent implements OnInit, OnDestroy {
-  readonly requiredDocumentTypes = ['cin', 'releves', 'diplome', 'photo'];
+  // ── PARTIE A : liste officielle des 6 pièces ────────────────────────────
+  readonly pieces: PieceDef[] = [
+    {
+      key: 'formulaire_candidature',
+      titre: 'Les formulaires de candidature aux masters',
+      description: 'Format : PDF | Taille max : 5 Mo',
+      icon: 'fas fa-file-signature',
+      iconClass: 'upload-dossier__icon--formulaire',
+      obligatoire: true,
+      accept: '.pdf',
+      allowedExt: ['pdf'],
+      pdfOnly: true,
+      maxSizeMo: 5,
+    },
+    {
+      key: 'cin',
+      titre: "Copie de la Carte d'Identité Nationale (CIN)",
+      description: 'Formats : PDF, JPG, PNG | Taille max : 5 Mo',
+      icon: 'fas fa-id-card',
+      iconClass: 'upload-dossier__icon--cin',
+      obligatoire: true,
+      accept: '.pdf,.jpg,.jpeg,.png',
+      allowedExt: ['pdf', 'jpg', 'jpeg', 'png'],
+      pdfOnly: false,
+      maxSizeMo: 5,
+    },
+    {
+      key: 'diplomes_bac',
+      titre: "Diplômes obtenus depuis l'année du baccalauréat",
+      description: 'Format : PDF | Taille max : 5 Mo',
+      icon: 'fas fa-graduation-cap',
+      iconClass: 'upload-dossier__icon--diplome',
+      obligatoire: true,
+      accept: '.pdf',
+      allowedExt: ['pdf'],
+      pdfOnly: true,
+      maxSizeMo: 5,
+    },
+    {
+      key: 'releves_bac',
+      titre: "Relevés de notes depuis l'année du baccalauréat",
+      description: 'Format : PDF | Taille max : 10 Mo',
+      icon: 'fas fa-chart-line',
+      iconClass: 'upload-dossier__icon--releves',
+      obligatoire: true,
+      accept: '.pdf',
+      allowedExt: ['pdf'],
+      pdfOnly: true,
+      maxSizeMo: 10,
+    },
+    {
+      key: 'attestation_retrait',
+      titre:
+        "Attestation(s) de retrait d'inscription et/ou de réorientation (le cas échéant)",
+      description: 'Optionnel | Formats : PDF, JPG, PNG | Taille max : 5 Mo',
+      icon: 'fas fa-file-circle-exclamation',
+      iconClass: 'upload-dossier__icon--attestation',
+      obligatoire: false,
+      accept: '.pdf,.jpg,.jpeg,.png',
+      allowedExt: ['pdf', 'jpg', 'jpeg', 'png'],
+      pdfOnly: false,
+      maxSizeMo: 5,
+    },
+    {
+      key: 'cv',
+      titre: 'Curriculum Vitae (CV)',
+      description: 'Format : PDF | Taille max : 5 Mo',
+      icon: 'fas fa-file-lines',
+      iconClass: 'upload-dossier__icon--cv',
+      obligatoire: true,
+      accept: '.pdf',
+      allowedExt: ['pdf'],
+      pdfOnly: true,
+      maxSizeMo: 5,
+    },
+  ];
 
-  selectedFiles: { [key: string]: File | null } = {
-    cin: null,
-    releves: null,
-    diplome: null,
-    photo: null,
-  };
+  selectedFiles: { [key: string]: File | null } = {};
+  filePreviews: { [key: string]: FilePreview | null } = {};
+  uploadProgressByType: { [key: string]: number } = {};
+  fileErrors: { [key: string]: string } = {};
+  /** PARTIE B : empreintes SHA-256 par pièce (anti-doublon) */
+  private fileHashes: { [key: string]: string } = {};
 
-  filePreviews: { [key: string]: FilePreview | null } = {
-    cin: null,
-    releves: null,
-    diplome: null,
-    photo: null,
-  };
-
-  photoPreview: string | null = null;
   documentsUploaded: number = 0;
   isSubmitting: boolean = false;
   submitProgress: number = 0;
   uploadStepLabel: string = 'En attente';
-  uploadProgressByType: { [key: string]: number } = {
-    cin: 0,
-    releves: 0,
-    diplome: 0,
-    photo: 0,
-  };
 
   availableSpecialites: string[] = [];
   selectedSpecialite: string = '';
@@ -58,7 +133,15 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
     private router: Router,
     private candidatureService: CandidatureService,
     private specialitesService: SpecialitesService,
-  ) {}
+  ) {
+    // Initialiser les maps pour chaque pièce
+    this.pieces.forEach((p) => {
+      this.selectedFiles[p.key] = null;
+      this.filePreviews[p.key] = null;
+      this.uploadProgressByType[p.key] = 0;
+      this.fileErrors[p.key] = '';
+    });
+  }
 
   ngOnInit(): void {
     this.specialitesService.getSpecialitesData().subscribe(() => {
@@ -70,49 +153,109 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
     this.clearAllObjectUrls();
   }
 
-  onFileSelected(event: any, type: string): void {
-    const file = event.target.files[0];
-    if (file) {
-      // Vérifier la taille
-      const maxSize =
-        type === 'photo' ? 2 * 1024 * 1024 : (type === 'releves' ? 10 : 5) * 1024 * 1024;
-
-      if (file.size > maxSize) {
-        alert('Fichier trop volumineux');
-        return;
-      }
-
-      this.selectedFiles[type] = file;
-      this.filePreviews[type] = this.buildFilePreview(file);
-      this.uploadProgressByType[type] = 0;
-      this.updateProgress();
-
-      console.log(`✅ Fichier sélectionné (${type}):`, file.name);
-
-      // Prévisualisation photo
-      if (type === 'photo') {
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          this.photoPreview = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    }
+  /** Nombre de pièces obligatoires */
+  get nbObligatoires(): number {
+    return this.pieces.filter((p) => p.obligatoire).length;
   }
 
-  removeFile(type: string): void {
-    this.revokePreviewUrl(type);
-    this.selectedFiles[type] = null;
-    this.filePreviews[type] = null;
-    this.uploadProgressByType[type] = 0;
-    if (type === 'photo') {
-      this.photoPreview = null;
+  /** Nombre de pièces obligatoires effectivement déposées */
+  get nbObligatoiresDeposees(): number {
+    return this.pieces.filter((p) => p.obligatoire && this.hasFile(p.key)).length;
+  }
+
+  get toutesObligatoiresPresentes(): boolean {
+    return this.nbObligatoiresDeposees >= this.nbObligatoires;
+  }
+
+  // ── PARTIE B : sélection + validation du fichier ──────────────────────────
+  async onFileSelected(event: any, piece: PieceDef): Promise<void> {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file) return;
+
+    this.fileErrors[piece.key] = '';
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+
+    // 1) Format global autorisé
+    if (!piece.allowedExt.includes(ext)) {
+      this.rejeter(piece, event, 'Ce fichier ne correspond pas au type attendu');
+      return;
     }
+
+    // 2) Contenu : PDF obligatoire pour relevés / diplômes / formulaire / CV
+    const isPdf = ext === 'pdf' || file.type === 'application/pdf';
+    if (piece.pdfOnly && !isPdf) {
+      this.rejeter(
+        piece,
+        event,
+        'Cette pièce doit être un document PDF (les images ne sont pas acceptées).',
+      );
+      return;
+    }
+
+    // 3) Taille max
+    const maxBytes = piece.maxSizeMo * 1024 * 1024;
+    if (file.size > maxBytes) {
+      this.rejeter(piece, event, `Fichier trop volumineux (max ${piece.maxSizeMo} Mo).`);
+      return;
+    }
+
+    // 4) Anti-doublon : même fichier déposé pour 2 pièces différentes
+    const hash = await this.computeHash(file);
+    const doublonKey = Object.keys(this.fileHashes).find(
+      (k) => k !== piece.key && this.fileHashes[k] === hash,
+    );
+    if (doublonKey) {
+      const autre = this.pieces.find((p) => p.key === doublonKey);
+      this.rejeter(
+        piece,
+        event,
+        `Ce fichier a déjà été déposé pour « ${autre?.titre ?? 'une autre pièce'} ».`,
+      );
+      return;
+    }
+
+    // ✅ Validé
+    this.revokePreviewUrl(piece.key);
+    this.selectedFiles[piece.key] = file;
+    this.filePreviews[piece.key] = this.buildFilePreview(file);
+    this.fileHashes[piece.key] = hash;
+    this.uploadProgressByType[piece.key] = 0;
     this.updateProgress();
   }
 
-  hasFile(type: string): boolean {
-    return !!this.selectedFiles[type];
+  private rejeter(piece: PieceDef, event: any, message: string): void {
+    this.fileErrors[piece.key] = message;
+    // réinitialiser l'input pour permettre de re-sélectionner le même fichier
+    if (event?.target) event.target.value = '';
+  }
+
+  /** Calcule l'empreinte SHA-256 du contenu (anti-doublon) */
+  private async computeHash(file: File): Promise<string> {
+    try {
+      const buffer = await file.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', buffer);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      // fallback si crypto.subtle indisponible (contexte non sécurisé)
+      return `${file.name}:${file.size}:${file.lastModified}`;
+    }
+  }
+
+  removeFile(key: string): void {
+    this.revokePreviewUrl(key);
+    this.selectedFiles[key] = null;
+    this.filePreviews[key] = null;
+    this.uploadProgressByType[key] = 0;
+    this.fileErrors[key] = '';
+    delete this.fileHashes[key];
+    this.updateProgress();
+  }
+
+  hasFile(key: string): boolean {
+    return !!this.selectedFiles[key];
   }
 
   getFileSize(file: File | null): string {
@@ -127,27 +270,20 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
     this.documentsUploaded = Object.values(this.selectedFiles).filter((f) => f !== null).length;
   }
 
-  previewFor(type: string): FilePreview | null {
-    return this.filePreviews[type] || null;
+  previewFor(key: string): FilePreview | null {
+    return this.filePreviews[key] || null;
   }
 
-  progressFor(type: string): number {
-    if (!this.hasFile(type)) {
-      return 0;
-    }
-
-    if (!this.isSubmitting && this.submitProgress === 0) {
-      return 100;
-    }
-
-    return this.uploadProgressByType[type] ?? 0;
+  progressFor(key: string): number {
+    if (!this.hasFile(key)) return 0;
+    if (!this.isSubmitting && this.submitProgress === 0) return 100;
+    return this.uploadProgressByType[key] ?? 0;
   }
 
   private syncPerDocumentProgress(progress: number): void {
-    const activeTypes = this.requiredDocumentTypes.filter((type) => this.hasFile(type));
-    activeTypes.forEach((type) => {
-      this.uploadProgressByType[type] = progress;
-    });
+    this.pieces
+      .filter((p) => this.hasFile(p.key))
+      .forEach((p) => (this.uploadProgressByType[p.key] = progress));
   }
 
   private buildFilePreview(file: File): FilePreview {
@@ -161,20 +297,20 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
     };
   }
 
-  private revokePreviewUrl(type: string): void {
-    const preview = this.filePreviews[type];
+  private revokePreviewUrl(key: string): void {
+    const preview = this.filePreviews[key];
     if (preview?.previewUrl) {
       URL.revokeObjectURL(preview.previewUrl);
     }
   }
 
   private clearAllObjectUrls(): void {
-    Object.keys(this.filePreviews).forEach((type) => this.revokePreviewUrl(type));
+    Object.keys(this.filePreviews).forEach((key) => this.revokePreviewUrl(key));
   }
 
   soumettre(): void {
-    if (this.documentsUploaded < 4) {
-      alert('Téléchargez tous les documents');
+    if (!this.toutesObligatoiresPresentes) {
+      alert('Veuillez déposer toutes les pièces obligatoires.');
       return;
     }
 
@@ -183,7 +319,6 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
     this.uploadStepLabel = 'Préparation du dépôt';
     this.syncPerDocumentProgress(10);
 
-    // Charger la candidature active, puis déposer le dossier sur l'API dédiée.
     this.candidatureService.getMesCandidatures().subscribe({
       next: (items: any) => {
         const candidatures = Array.isArray(items) ? items : [];
@@ -199,7 +334,10 @@ export class DeposerDocumentsComponent implements OnInit, OnDestroy {
           return;
         }
 
-        const documents = Object.keys(this.selectedFiles).filter((k) => !!this.selectedFiles[k]);
+        const documents = this.pieces
+          .filter((p) => this.hasFile(p.key))
+          .map((p) => p.key);
+
         const payload = {
           formulaire: {
             cin: this.selectedFiles['cin']?.name ?? 'cin',

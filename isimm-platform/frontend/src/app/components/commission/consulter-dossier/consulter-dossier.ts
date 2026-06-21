@@ -426,7 +426,7 @@ export class ConsulterDossierComponent implements OnInit {
     if (this.candidat?.score === null || this.candidat?.score === undefined) {
       return '--';
     }
-    return Number(this.candidat.score).toFixed(1);
+    return Number(this.candidat.score).toFixed(2);
   }
 
   get scoreMention(): string {

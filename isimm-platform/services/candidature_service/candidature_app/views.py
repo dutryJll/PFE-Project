@@ -43,6 +43,7 @@ from .models import (
     InscriptionRapprochementAudit,
     Notification,
     SpecialiteParcoursMapping,
+    StatusHistory,
 )
 from .services import (
     GestionListesService,
@@ -78,13 +79,27 @@ logger = logging.getLogger(__name__)
 
 
 def _ranked_candidatures_queryset(queryset):
-    return queryset.annotate(
-        classement_calcule=Window(
-            expression=Rank(),
-            partition_by=[F('master')],
-            order_by=F('score').desc(nulls_last=True),
-        )
-    )
+    candidatures = list(queryset)
+    grouped = {}
+
+    for candidature in candidatures:
+        candidature.classement_calcule = None
+        if candidature.master_id and candidature.score is not None:
+            grouped.setdefault(candidature.master_id, []).append(candidature)
+
+    for rows in grouped.values():
+        rows.sort(key=lambda c: (float(c.score or 0), c.date_soumission or timezone.datetime.min), reverse=True)
+        previous_score = None
+        current_rank = 0
+
+        for index, candidature in enumerate(rows, start=1):
+            score = candidature.score
+            if previous_score is None or score != previous_score:
+                current_rank = index
+                previous_score = score
+            candidature.classement_calcule = current_rank
+
+    return candidatures
 
 
 def _refresh_classement_for_queryset(queryset):
@@ -1573,7 +1588,7 @@ def modifier_candidature(request, candidature_id):
 def mes_candidatures(request):
     candidatures = Candidature.objects.filter(candidat=request.user).select_related('candidat', 'master')
     _refresh_classement_for_queryset(candidatures)
-    candidatures = _ranked_candidatures_queryset(candidatures).order_by('-date_soumission')
+    candidatures = _ranked_candidatures_queryset(candidatures.order_by('-date_soumission'))
 
     for candidature in candidatures:
         if getattr(candidature, 'classement_calcule', None) is not None:
@@ -1669,16 +1684,13 @@ def candidatures_responsable(request):
 
     candidatures_qs = Candidature.objects.select_related(
         'candidat', 'master', 'concours', 'donnees_academiques',
-    ).order_by(
-        F('score').desc(nulls_last=True),
-        '-date_soumission',
-    )
+    ).order_by('-score', '-date_soumission')
 
-    if master_ids is not None:
+    # Les commissions assignées (MembreCommission) font autorité sur le périmètre.
+    # La spécialité n'est utilisée qu'en repli (responsable sans commission liée).
+    if master_ids:
         candidatures_qs = candidatures_qs.filter(master_id__in=master_ids)
-
-    # Filtrage dynamique par specialite — s'applique a tous les parcours sans hardcoding
-    if specialite_user and role not in ['admin']:
+    elif specialite_user and role not in ['admin']:
         candidatures_qs = candidatures_qs.filter(master__specialite__icontains=specialite_user)
 
     if master_id and master_id != 'all':
@@ -2537,6 +2549,16 @@ def commission_decision_candidature(request, candidature_id):
     if not nouveau_statut:
         return Response(
             {'error': "decision invalide. Valeurs attendues: accepter ou refuser."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # MOD v5 §G — Justification obligatoire pour un rejet.
+    if nouveau_statut == 'rejete' and len(motif_rejet) < 10:
+        return Response(
+            {
+                'error': 'Justification obligatoire pour un rejet (au moins 10 caractères).',
+                'code': 'JUSTIFICATION_REQUISE',
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -4789,6 +4811,37 @@ def repondre_reclamation(request, reclamation_id):
     reclamation.date_traitement = timezone.now()
     reclamation.save(update_fields=['reponse', 'statut', 'traitee_par', 'date_traitement', 'updated_at'])
 
+    # MOD v5 §I — Le responsable peut changer le statut de la candidature lors du
+    # traitement de la réclamation (ex. lever un rejet → présélectionné), historisé.
+    statut_modifie = None
+    nouveau_statut = str(request.data.get('nouveau_statut') or '').strip().lower()
+    STATUTS_RECLAMATION = {'preselectionne', 'en_attente', 'rejete', 'selectionne', 'sous_examen'}
+    if nouveau_statut in STATUTS_RECLAMATION:
+        cand = reclamation.candidature
+        ancien = cand.statut
+        if ancien != nouveau_statut:
+            cand.statut = nouveau_statut
+            update_fields = ['statut', 'updated_at']
+            if nouveau_statut != 'rejete' and getattr(cand, 'motif_rejet', ''):
+                cand.motif_rejet = ''
+                update_fields.append('motif_rejet')
+            if hasattr(cand, 'date_changement_statut'):
+                cand.date_changement_statut = timezone.now()
+                update_fields.append('date_changement_statut')
+            cand.save(update_fields=update_fields)
+            try:
+                StatusHistory.objects.create(
+                    candidature=cand,
+                    ancien_statut=ancien,
+                    nouveau_statut=nouveau_statut,
+                    raison=str(request.data.get('raison_changement') or '').strip()
+                    or f"Changement via réclamation {reclamation.identifiant}",
+                    changed_by=request.user,
+                )
+            except Exception as exc:
+                logger.warning("Historisation statut réclamation %s échouée: %s", reclamation.id, exc)
+            statut_modifie = {'ancien': ancien, 'nouveau': nouveau_statut}
+
     candidat = reclamation.candidature.candidat
     titre = f"Réclamation traitée - {reclamation.identifiant}"
     message = (
@@ -4827,6 +4880,8 @@ def repondre_reclamation(request, reclamation_id):
             'reclamation_id': reclamation.id,
             'statut': reclamation.statut,
             'reponse': reclamation.reponse,
+            'statut_candidature': reclamation.candidature.statut,
+            'statut_modifie': statut_modifie,
         },
         status=status.HTTP_200_OK,
     )
@@ -6644,13 +6699,15 @@ def list_fichiers_deposes(request, candidature_id):
                 except OSError:
                     size, mtime = 0, 0
                 rel_path = f'dossiers/{candidature.id}/{doc_type_dir}/{filename}'
+                # MOD v6 §4 — URL absolue (http://host:8003/media/...) pour éviter le
+                # 404 quand le front (port 4200) ouvre une URL relative /media/.
                 fichiers.append({
                     'type_document': doc_type_dir.replace('_', ' '),
                     'nom_fichier': filename,
                     'taille_octets': size,
                     'taille_human': _human_size(size),
                     'date_upload': mtime,
-                    'url': f'{media_url}/{rel_path}',
+                    'url': request.build_absolute_uri(f'{media_url}/{rel_path}'),
                     'extension': (filename.rsplit('.', 1)[-1] or '').lower(),
                 })
 
@@ -6802,7 +6859,7 @@ def analyser_ocr_lot(request):
     media_root = str(getattr(_settings, 'MEDIA_ROOT', ''))
     resultats = []
     erreurs = 0
-    incoherences = 0
+    anomalies = 0
 
     for cand_id in ids:
         try:
@@ -6812,6 +6869,8 @@ def analyser_ocr_lot(request):
                 'candidature_id': cand_id,
                 'candidat_nom': '',
                 'success': False,
+                'statut': 'erreur',
+                'message': 'Candidature introuvable',
                 'error': 'Candidature introuvable',
             })
             erreurs += 1
@@ -6836,6 +6895,8 @@ def analyser_ocr_lot(request):
                 'candidature_id': cand.id,
                 'candidat_nom': cand.candidat.get_full_name(),
                 'success': False,
+                'statut': 'erreur',
+                'message': 'Aucun PDF depose',
                 'error': 'Aucun PDF depose',
             })
             erreurs += 1
@@ -6844,13 +6905,13 @@ def analyser_ocr_lot(request):
         try:
             score_declare = float(cand.score or 0) or None
 
-            # ✅ APPEL À OCRService RÉEL (pdfplumber + Req-3)
-            result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+            # ✅ APPEL À OCRService RÉEL (pdfplumber + L1/L2/L3 + recalcul score)
+            result = OCRService.analyser_releve_complet(pdf_path, score_declare or 0)
 
-            statut = 'ok' if result['statut'] == 'conforme' else ('anomalie' if result['statut'] == 'incoherence' else 'erreur')
+            statut = 'ok' if result.get('statut') == 'conforme' else ('anomalie' if result.get('statut') == 'incoherence' else 'erreur')
 
             if statut == 'anomalie':
-                incoherences += 1
+                anomalies += 1
 
             resultats.append({
                 'candidature_id': cand.id,
@@ -6865,6 +6926,9 @@ def analyser_ocr_lot(request):
                 'confiance': result.get('confiance'),
                 'moteur': result.get('moteur'),  # ✅ "pdfplumber" pas "simulation"
                 'alerte': result.get('alerte'),
+                'message': result.get('alerte') or '',
+                # ✅ Détail des notes extraites (L1/L2/L3 + M.G/B.N.R/B.S.P)
+                'detail_notes': result.get('detail_notes'),
                 'fichier': _os.path.basename(pdf_path),
                 'nb_anomalies': len(result.get('anomalies', [])),
             })
@@ -6875,21 +6939,22 @@ def analyser_ocr_lot(request):
                 'candidat_nom': cand.candidat.get_full_name(),
                 'success': False,
                 'statut': 'erreur',
+                'message': str(exc)[:200],
                 'error': str(exc)[:200],
             })
             erreurs += 1
 
     conformes = sum(1 for r in resultats if r.get('statut') == 'ok')
-    analysees = conformes + incoherences
+    analysees = conformes + anomalies
 
     # ✅ RETOURNE LA STRUCTURE ATTENDUE PAR LE FRONTEND
     return Response({
         'success': True,
-        'message': f'Analyse OCR complétée: {analysees}/{len(ids)} analysées, {incoherences} anomalie(s)',
+        'message': f'Analyse OCR complétée: {analysees}/{len(ids)} analysées, {anomalies} anomalie(s)',
         'total': len(ids),
         'nb_analysees': analysees,
         'nb_conformes': conformes,
-        'nb_anomalies': incoherences,
+        'nb_anomalies': anomalies,
         'nb_erreurs': erreurs,
         'resultats': resultats,
     })
@@ -6941,13 +7006,14 @@ def _build_rapport_data(request, candidature_ids):
         }
         if pdf_path:
             try:
-                # ✅ APPEL OCRService RÉEL (pdfplumber)
-                result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+                # ✅ APPEL OCRService RÉEL (pdfplumber + recalcul score complet)
+                result = OCRService.analyser_releve_complet(pdf_path, score_declare or 0)
 
                 row['score_extrait'] = result.get('score_extrait')
                 row['ecart'] = result.get('ecart')
                 row['moteur'] = result.get('moteur') or '—'  # ✅ "pdfplumber" pas "simulation"
                 row['fichier'] = _os.path.basename(pdf_path)
+                row['detail_notes'] = result.get('detail_notes')
 
                 if result['statut'] == 'conforme':
                     row['statut'] = 'Conforme'

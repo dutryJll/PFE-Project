@@ -921,15 +921,21 @@ export class ListeSelection implements OnInit {
   }
 
   private getFinalSelectionExportRows(): FinalSelectionCandidate[] {
+    // MOD v6 §6 — La liste / PV officiel doit contenir TOUS les candidats admis
+    // (Liste Principale 'lp' + Liste d'Attente 'la'), pas uniquement les lignes
+    // cochées (sinon le PDF ne contenait qu'un seul candidat).
+    const admitted = this.finalSelectionFiltered.filter(
+      (candidate) => candidate.statut === 'lp' || candidate.statut === 'la',
+    );
+    if (admitted.length > 0) {
+      return admitted;
+    }
+
+    // Repli : lignes explicitement sélectionnées, sinon toute la liste filtrée.
     const selectedRows = this.finalSelectionFiltered.filter((candidate) =>
       this.finalSelectionSelectedIds.has(candidate.id),
     );
-
-    if (selectedRows.length > 0) {
-      return selectedRows;
-    }
-
-    return this.finalSelectionFiltered.slice(0, 20);
+    return selectedRows.length > 0 ? selectedRows : this.finalSelectionFiltered.slice(0, 50);
   }
 
   private createFinalSelectionExportHost(
@@ -1000,7 +1006,7 @@ export class ListeSelection implements OnInit {
                 <td style="padding:10px;word-break:break-all;">${candidate.num}</td>
                 <td style="padding:10px;">${candidate.prenom} ${candidate.nom}</td>
                 <td style="padding:10px;">${candidate.spec}</td>
-                <td style="padding:10px;text-align:center;font-weight:700;">${candidate.score.toFixed(1)}</td>
+                <td style="padding:10px;text-align:center;font-weight:700;">${candidate.score.toFixed(2)}</td>
                 <td style="padding:10px;text-align:center;">${candidate.presel.toUpperCase()}</td>
                 <td style="padding:10px;text-align:center;">${candidate.statut.toUpperCase()}</td>
               </tr>`,

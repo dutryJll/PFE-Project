@@ -650,4 +650,83 @@ export class CandidatureService {
       responseType: 'blob',
     });
   }
+
+  // Workflow d'inscription en ligne
+  saisirNumeroInscription(candidatureId: number, numeroInscription: string): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${candidatureId}/saisir-numero/`,
+      { numero_inscription: numeroInscription },
+      { headers: this.getHeaders() }
+    );
+  }
+
+  verifierExcelInscriptions(fichier: File, masterId?: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('fichier', fichier);
+    if (masterId) {
+      formData.append('master_id', masterId.toString());
+    }
+    return this.http.post(
+      `${this.apiUrl}/verifier-excel-inscriptions/`,
+      formData,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  // v7 §6.5 — Compare la liste importée aux admis → « admis non inscrits »
+  comparerInscritsAdmis(fichier: File, masterId?: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('fichier', fichier);
+    if (masterId) {
+      formData.append('master_id', masterId.toString());
+    }
+    return this.http.post(
+      `${this.apiUrl}/comparer-inscrits-admis/`,
+      formData,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // MULTI-COMMISSION SUPPORT
+  // ──────────────────────────────────────────────────────────────────────
+
+  mesCommissions(): Observable<any> {
+    return this.http.get(
+      `${this.apiUrl}/commissions/mes-commissions-membre/`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  getCandidaturesByCommission(commissionId: number): Observable<any> {
+    return this.http.get(
+      `${this.apiUrl}/par-commission/${commissionId}/`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  getDossiersByCommission(candidatureId: number, commissionId: number): Observable<any> {
+    let params = new HttpParams().set('commission_id', commissionId.toString());
+    return this.http.get(
+      `${this.apiUrl}/${candidatureId}/dossier/`,
+      { headers: this.getHeaders(), params }
+    );
+  }
+
+  setSelectedCommission(commissionId: number): void {
+    if (commissionId) {
+      sessionStorage.setItem('selectedCommissionId', commissionId.toString());
+      localStorage.setItem('active_commission_id', commissionId.toString());
+    }
+  }
+
+  getSelectedCommission(): number | null {
+    const stored = sessionStorage.getItem('selectedCommissionId');
+    return stored ? parseInt(stored, 10) : null;
+  }
+
+  clearSelectedCommission(): void {
+    sessionStorage.removeItem('selectedCommissionId');
+    localStorage.removeItem('active_commission_id');
+  }
 }

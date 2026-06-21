@@ -12,6 +12,17 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth.service';
 import { CandidatureService } from '../../services/candidature.service';
+import {
+  UNIVERSITIES_LIST,
+  getEtablissementsForUniversite,
+  isISIMMSelection,
+} from '../../shared/constants/universities';
+import {
+  CritereOption,
+  CritereInputType,
+  PARCOURS_CRITERIA_DEFAULT,
+  getCritereByCode,
+} from '../../shared/constants/criteria';
 
 interface Specialite {
   id: string;
@@ -21,6 +32,15 @@ interface Specialite {
 interface FormationOption {
   code: string;
   label: string;
+}
+
+// MOD 2B (v5) — Ligne du tableau dynamique de critères côté candidat.
+interface CritereRow {
+  code: string;
+  label: string;
+  inputType: CritereInputType;
+  value: string;
+  error?: string;
 }
 
 @Component({
@@ -56,7 +76,13 @@ export class CandidatureFormComponent implements OnInit {
     noteAnglaisBac: null as number | null,
     certificationB2: '',
     etablissementUniversitaireOrigine: '',
+    // MOD 1 — Cascade Université / Établissement (remplace les radios ISIMM/Externe)
+    universite: '',
+    etablissement: '',
+    isISIMM: false,
     specialiteDiplomeObtenu: '',
+    // MOD v4 §5 — Texte libre si « Autre » est choisi comme spécialité
+    specialiteDiplomeAutre: '',
     anneeObtentionDernierDiplome: '',
     natureDiplome: '',
     typeLicence: '',
@@ -73,6 +99,8 @@ export class CandidatureFormComponent implements OnInit {
     etablissementExterne: '',
     specialiteExterne: '',
     nombreAnneesRedoublement: '0',
+    // MOD 2B — Nombre de sessions de contrôle (critère NSC, sans coefficient côté candidat)
+    nombreSessionsControle: '0',
     classement1ereAnnee: '',
     classement2emeAnnee: '',
     moyenneSessionPrincipale1ereAnnee: null as number | null,
@@ -213,6 +241,9 @@ export class CandidatureFormComponent implements OnInit {
       ) {
         this.formData.specialiteDiplomeObtenu = '';
       }
+
+      // MOD 2B — (ré)initialise le tableau dynamique de critères selon le parcours
+      this.initCandidatCriteres();
     });
 
     // Initialiser le formulaire
@@ -374,21 +405,308 @@ export class CandidatureFormComponent implements OnInit {
     return this.specialiteDiplomeOptionsMrgl;
   }
 
-  onNatureCandidatureChange(value: string): void {
-    this.formData.natureCandidature = value;
-    if (value === 'Étudiant ISIMM') {
+  // MOD 1 — Liste des universités exposée au template (cascade)
+  readonly UNIVERSITIES_LIST: string[] = UNIVERSITIES_LIST;
+
+  /** MOD 1 — Établissements disponibles pour l'université sélectionnée. */
+  getEtablissementsForUniversite(): string[] {
+    return getEtablissementsForUniversite(this.formData.universite || '');
+  }
+
+  /**
+   * MOD 1 — Changement d'université : on réinitialise l'établissement et le
+   * flag isISIMM (la nouvelle université peut ne pas proposer ISIMM).
+   */
+  onUniversiteChange(): void {
+    this.formData.etablissement = '';
+    this.formData.isISIMM = false;
+    this.syncEtablissementOrigine();
+  }
+
+  /**
+   * MOD 1 — Sélection de l'établissement : on calcule isISIMM puis on
+   * synchronise les anciens champs (natureCandidature, etablissement*) pour
+   * préserver le reste du formulaire et le payload envoyé à l'API.
+   */
+  onEtablissementChange(): void {
+    this.formData.isISIMM = isISIMMSelection(
+      this.formData.universite || '',
+      this.formData.etablissement || '',
+    );
+    this.syncEtablissementOrigine();
+  }
+
+  /**
+   * MOD 1 — Synchronise les champs hérités à partir de la cascade
+   * Université / Établissement (compatibilité ascendante).
+   */
+  private syncEtablissementOrigine(): void {
+    const etab = this.formData.etablissement || '';
+    if (this.formData.isISIMM) {
+      this.formData.natureCandidature = 'Étudiant ISIMM';
       this.formData.etablissementUniversitaireOrigine = 'ISIMM';
       this.formData.etablissementExterne = '';
-      this.formData.specialiteExterne = '';
+    } else if (etab) {
+      this.formData.natureCandidature = 'Étudiant Externe';
+      this.formData.etablissementUniversitaireOrigine = etab;
+      this.formData.etablissementExterne = etab;
     } else {
+      this.formData.natureCandidature = '';
       this.formData.etablissementUniversitaireOrigine = '';
+      this.formData.etablissementExterne = '';
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  MOD 2B — Tableau de saisie candidat (SANS coefficient)
+  //  Le candidat remplit uniquement la VALEUR de chaque critère.
+  //  Le coefficient reste côté Responsable / serveur.
+  // ─────────────────────────────────────────────────────────────
+
+  // ── État du tableau dynamique (v5) ──
+  /** Critères déjà ajoutés par le candidat (lignes du tableau). */
+  criteresAjoutes: CritereRow[] = [];
+  /** Critères encore disponibles dans le dropdown « + Ajouter ». */
+  criteresDisponibles: CritereOption[] = [];
+  /** Tous les critères configurés pour ce parcours. */
+  allCriteres: CritereOption[] = [];
+  totalCriteres = 0;
+
+  /** Ligne d'ajout en cours (affichée après clic sur « + Ajouter un critère »). */
+  showNewRow = false;
+  newCritCode = '';
+  newCritValue = '';
+  newCritPlaceholder = '';
+  validationError = '';
+
+  /** Mapping code parcours du formulaire → clé de la config critères. */
+  private readonly PARCOURS_CRITERIA_KEY: Record<string, string> = {
+    mrgl: 'mrgl',
+    mrmi: 'micro',
+    mpgl: 'gl',
+    mpds: 'ds',
+    mp3i: '3i',
+  };
+
+  /** Liste des critères à saisir pour le parcours master courant. */
+  getCandidatCriteres(): CritereOption[] {
+    if (this.typeCandidature !== 'master') return [];
+    const key = this.PARCOURS_CRITERIA_KEY[this.masterParcours] || '';
+    const codes = PARCOURS_CRITERIA_DEFAULT[key] || [];
+    return codes
+      .map((code) => getCritereByCode(code))
+      .filter((c): c is CritereOption => !!c);
+  }
+
+  /** true si on est en mode « tableau de critères » (master avec parcours connu). */
+  isMasterCriteriaMode(): boolean {
+    return this.typeCandidature === 'master' && this.getCandidatCriteres().length > 0;
+  }
+
+  /**
+   * MOD 2B (v5) — Initialise le tableau DYNAMIQUE : il démarre vide, tous les
+   * critères du parcours sont placés dans le dropdown « + Ajouter un critère ».
+   */
+  private initCandidatCriteres(): void {
+    this.criteresAjoutes = [];
+    this.showNewRow = false;
+    this.newCritCode = '';
+    this.newCritValue = '';
+    this.validationError = '';
+    this.allCriteres = this.getCandidatCriteres();
+    this.criteresDisponibles = [...this.allCriteres];
+    this.totalCriteres = this.allCriteres.length;
+  }
+
+  /** Clic « + Ajouter un critère » → ouvre la ligne de sélection. */
+  addRow(): void {
+    if (!this.criteresDisponibles.length) {
+      this.validationError = 'Tous les critères disponibles ont déjà été ajoutés.';
+      return;
+    }
+    this.showNewRow = true;
+    this.newCritCode = '';
+    this.newCritValue = '';
+    this.newCritPlaceholder = '';
+    this.validationError = '';
+  }
+
+  /** Met à jour le placeholder selon le type du critère choisi. */
+  onNewCritChange(): void {
+    const crit = this.allCriteres.find((c) => c.code === this.newCritCode);
+    this.newCritPlaceholder = crit
+      ? crit.inputType === 'number'
+        ? '0.00 – 20.00'
+        : crit.inputType === 'count'
+          ? '0, 1, 2…'
+          : 'Oui / Non'
+      : '';
+  }
+
+  /** Valide la ligne d'ajout : crée la ligne et retire le critère du dropdown. */
+  confirmNewRow(): void {
+    if (!this.newCritCode) return;
+    if (String(this.newCritValue).trim() === '') return;
+    const crit = this.allCriteres.find((c) => c.code === this.newCritCode);
+    if (!crit) return;
+    this.criteresAjoutes.push({
+      code: crit.code,
+      label: crit.label,
+      inputType: crit.inputType,
+      value: String(this.newCritValue),
+    });
+    this.syncRowToFormData(crit.code, this.newCritValue);
+    this.criteresDisponibles = this.criteresDisponibles.filter((c) => c.code !== crit.code);
+    this.showNewRow = false;
+    this.newCritCode = '';
+    this.newCritValue = '';
+    this.validationError = '';
+  }
+
+  /** Annule la ligne d'ajout en cours. */
+  cancelNewRow(): void {
+    this.showNewRow = false;
+    this.newCritCode = '';
+    this.newCritValue = '';
+  }
+
+  /** 🗑 — supprime une ligne et remet le critère dans le dropdown. */
+  removeRow(index: number): void {
+    const removed = this.criteresAjoutes.splice(index, 1)[0];
+    if (!removed) return;
+    this.syncRowToFormData(removed.code, ''); // efface la valeur dans formData
+    const original = this.allCriteres.find((c) => c.code === removed.code);
+    if (original) {
+      this.criteresDisponibles.push(original);
+      this.criteresDisponibles.sort(
+        (a, b) =>
+          this.allCriteres.findIndex((c) => c.code === a.code) -
+          this.allCriteres.findIndex((c) => c.code === b.code),
+      );
+    }
+  }
+
+  /** Édition inline de la valeur d'une ligne déjà ajoutée. */
+  onRowValueChange(row: CritereRow): void {
+    this.validateRow(row);
+    this.syncRowToFormData(row.code, row.value);
+  }
+
+  /** Validation locale d'une ligne (plage 0–20 / 0–10). */
+  validateRow(row: CritereRow): void {
+    const v = String(row.value ?? '').trim();
+    if (v === '') {
+      row.error = 'Champ obligatoire';
+      return;
+    }
+    if (row.inputType === 'number') {
+      const n = parseFloat(v);
+      if (Number.isNaN(n) || n < 0 || n > 20) {
+        row.error = 'Valeur entre 0 et 20';
+        return;
+      }
+    }
+    if (row.inputType === 'count') {
+      const n = parseInt(v, 10);
+      if (Number.isNaN(n) || n < 0 || n > 10) {
+        row.error = 'Valeur entre 0 et 10';
+        return;
+      }
+    }
+    row.error = '';
+  }
+
+  private toNote(raw: any): number | null {
+    if (raw === '' || raw === null || raw === undefined) return null;
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  private toStr(raw: any): string {
+    return raw === null || raw === undefined ? '' : String(raw);
+  }
+
+  /** Mappe un code critère vers le champ formData attendu par l'API / le score. */
+  private syncRowToFormData(code: string, raw: any): void {
+    switch (code) {
+      case 'M_BAC':
+        this.formData.moyenneBacSessionPrincipale = this.toNote(raw);
+        break;
+      case 'N_MATH':
+        this.formData.noteMathBac = this.toNote(raw);
+        break;
+      case 'N_FR':
+        this.formData.noteFrancaisBac = this.toNote(raw);
+        break;
+      case 'N_ANG':
+        this.formData.noteAnglaisBac = this.toNote(raw);
+        break;
+      case 'CERT_B2':
+        this.formData.certificationB2 = this.toStr(raw);
+        break;
+      case 'M1':
+        this.formData.moyenne1ereAnnee = this.toNote(raw);
+        break;
+      case 'M2':
+        this.formData.moyenne2emeAnnee = this.toNote(raw);
+        break;
+      case 'M3':
+        this.formData.moyenne3emeAnnee = this.toNote(raw);
+        break;
+      case 'NR':
+        this.formData.nombreAnneesRedoublement = this.toStr(raw);
+        break;
+      case 'NSC':
+        this.formData.nombreSessionsControle = this.toStr(raw);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Validation MOD 2B : tous les critères requis du parcours doivent avoir été
+   * ajoutés, et chaque valeur saisie doit être non vide et valide.
+   */
+  validateCriteriaTable(): boolean {
+    this.validationError = '';
+    const missing = this.allCriteres.filter(
+      (c) => !this.criteresAjoutes.find((r) => r.code === c.code),
+    );
+    if (missing.length > 0) {
+      this.validationError =
+        'Critères manquants : ' +
+        missing.map((c) => c.label).join(', ') +
+        '. Veuillez les ajouter avant de continuer.';
+      return false;
+    }
+    for (const row of this.criteresAjoutes) {
+      this.validateRow(row);
+      if (row.error) {
+        this.validationError = 'Certaines valeurs sont invalides ou vides.';
+        return false;
+      }
+    }
+    return true;
   }
 
   getNatureDiplomeOptions(): string[] {
     return this.typeCandidature === 'ingenieur'
       ? this.natureDiplomeOptionsIngenieur
       : this.natureDiplomeOptions;
+  }
+
+  // MOD v4 §5 — Option « Autre » dans la spécialité du diplôme.
+  readonly SPECIALITE_AUTRE = 'Autre — préciser ci-dessous';
+
+  isSpecialiteAutre(): boolean {
+    return this.formData.specialiteDiplomeObtenu === this.SPECIALITE_AUTRE;
+  }
+
+  onSpecialiteDiplomeChange(): void {
+    if (!this.isSpecialiteAutre()) {
+      this.formData.specialiteDiplomeAutre = '';
+    }
   }
 
   isIngenieurCategorie2Selected(): boolean {
@@ -441,7 +759,69 @@ export class CandidatureFormComponent implements OnInit {
   }
 
   shouldShowMrglFourthYearFields(): boolean {
-    return this.masterParcours === 'mrgl' && this.formData.natureDiplome === 'Maitrise';
+    return this.masterParcours === 'mrgl' && this.isMaitriseSelected();
+  }
+
+  /**
+   * MOD v4 §6 — Seul MRGL accepte une Maîtrise. Pour GL/DS/3I/MRMI, sélectionner
+   * « Maîtrise » affiche une alerte d'incompatibilité et bloque « Suivant ».
+   */
+  showMaitriseIncompatibility(): boolean {
+    return (
+      this.typeCandidature === 'master' &&
+      this.isMaitriseSelected() &&
+      this.masterParcours !== '' &&
+      this.masterParcours !== 'mrgl'
+    );
+  }
+
+  /** Libellé du parcours courant (pour le message d'incompatibilité). */
+  getParcoursLabel(): string {
+    const map: Record<string, string> = {
+      mrgl: 'MRGL',
+      mrmi: 'MRMI',
+      mpgl: 'GL',
+      mpds: 'DS',
+      mp3i: '3I',
+    };
+    return map[this.masterParcours] || this.masterParcours.toUpperCase();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  MOD v4 §4 — Validations étendues (CIN, téléphone, âge, années)
+  // ─────────────────────────────────────────────────────────────
+  isCinValid(): boolean {
+    return /^\d{8}$/.test((this.formData.cin || '').trim());
+  }
+
+  isTelephoneValid(): boolean {
+    return /^[2-9]\d{7}$/.test((this.formData.telephone || '').replace(/\s/g, ''));
+  }
+
+  isEmailValid(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((this.formData.email || '').trim());
+  }
+
+  /** Âge entre 16 et 60 ans à partir de la date de naissance. */
+  isAgeValid(): boolean {
+    if (!this.formData.dateNaissance) return false;
+    const dob = new Date(this.formData.dateNaissance);
+    if (Number.isNaN(dob.getTime())) return false;
+    const age = (Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000);
+    return age >= 16 && age <= 60;
+  }
+
+  isAnneeBacValid(): boolean {
+    const an = this.num(this.formData.anneeBac);
+    const cur = new Date().getFullYear();
+    return an >= 1980 && an <= cur;
+  }
+
+  isAnneeDiplomeValid(): boolean {
+    const an = this.num(this.formData.anneeObtentionDernierDiplome);
+    const anBac = this.num(this.formData.anneeBac) || 1980;
+    const cur = new Date().getFullYear();
+    return an >= anBac + 2 && an <= cur + 1;
   }
 
   private isValidNote(value: number | null): boolean {
@@ -490,35 +870,43 @@ export class CandidatureFormComponent implements OnInit {
       return (
         this.formData.prenom.trim() !== '' &&
         this.formData.nom.trim() !== '' &&
-        this.formData.dateNaissance.trim() !== '' &&
-        this.formData.cin.trim() !== '' &&
-        this.formData.email.trim() !== '' &&
-        this.formData.telephone.trim() !== ''
+        this.isAgeValid() &&
+        this.isCinValid() &&
+        this.isEmailValid() &&
+        this.isTelephoneValid()
       );
     }
 
     if (step === 2) {
+      // MOD 2B — Pour un master, la moyenne du bac et les notes du bac sont
+      // saisies dans le tableau de critères (étape 3). On ne les exige plus ici.
+      const moyenneBacOk =
+        this.typeCandidature === 'master'
+          ? true
+          : this.formData.moyenneBacSessionPrincipale !== null;
+
+      // MOD v4 §6 — Maîtrise incompatible avec GL/DS/3I/MRMI → blocage.
+      if (this.showMaitriseIncompatibility()) {
+        return false;
+      }
+
       const baseValid =
         this.formData.specialiteBac.trim() !== '' &&
-        this.formData.anneeBac !== '' &&
-        this.formData.moyenneBacSessionPrincipale !== null &&
-        this.formData.natureCandidature.trim() !== '' &&
-        this.formData.etablissementUniversitaireOrigine.trim() !== '' &&
+        this.isAnneeBacValid() &&
+        moyenneBacOk &&
+        this.formData.universite.trim() !== '' &&
+        this.formData.etablissement.trim() !== '' &&
         this.formData.specialiteDiplomeObtenu.trim() !== '' &&
-        this.formData.anneeObtentionDernierDiplome !== '' &&
+        this.isAnneeDiplomeValid() &&
         this.formData.natureDiplome.trim() !== '';
 
       if (!baseValid) {
         return false;
       }
 
-      if (this.masterParcours === 'mrgl') {
-        return (
-          this.formData.noteMathBac !== null &&
-          this.formData.noteFrancaisBac !== null &&
-          this.formData.noteAnglaisBac !== null &&
-          this.formData.certificationB2.trim() !== ''
-        );
+      // MOD v4 §5 — Si « Autre » est choisi, la précision est obligatoire.
+      if (this.isSpecialiteAutre() && this.formData.specialiteDiplomeAutre.trim() === '') {
+        return false;
       }
 
       if (this.isProfessionalMasterSelected()) {
@@ -529,6 +917,39 @@ export class CandidatureFormComponent implements OnInit {
     }
 
     if (step === 3) {
+      // MOD 2B — Mode master : les moyennes/notes proviennent du tableau de
+      // critères. On valide que toutes les valeurs sont remplies, les sessions
+      // de réussite restant des champs distincts à conserver.
+      if (this.isMasterCriteriaMode()) {
+        if (!this.validateCriteriaTable() || !this.validateScoresRange()) {
+          return false;
+        }
+        if (
+          this.formData.sessionReussite1ereAnnee.trim() === '' ||
+          this.formData.sessionReussite2emeAnnee.trim() === ''
+        ) {
+          return false;
+        }
+        if (
+          this.shouldShowTroisiemeAnneeFields() &&
+          this.formData.sessionReussite3emeAnnee.trim() === ''
+        ) {
+          return false;
+        }
+        if (this.shouldShowMrglFourthYearFields()) {
+          if (
+            this.formData.moyenne4emeAnnee === null ||
+            this.formData.sessionReussite4emeAnnee.trim() === ''
+          ) {
+            return false;
+          }
+        }
+        if (this.isEtudiantExterneSelected()) {
+          return this.formData.etablissementExterne.trim() !== '';
+        }
+        return true;
+      }
+
       const requiredAcademicFields =
         this.formData.moyenne1ereAnnee !== null &&
         this.formData.sessionReussite1ereAnnee.trim() !== '' &&
@@ -559,10 +980,7 @@ export class CandidatureFormComponent implements OnInit {
       }
 
       if (this.isEtudiantExterneSelected()) {
-        return (
-          this.formData.etablissementExterne.trim() !== '' &&
-          this.formData.specialiteExterne.trim() !== ''
-        );
+        return this.formData.etablissementExterne.trim() !== '';
       }
 
       return true;
@@ -609,27 +1027,131 @@ export class CandidatureFormComponent implements OnInit {
     return Number((total / scores.length).toFixed(2));
   }
 
-  getEstimatedScorePreview(): number | null {
-    if (this.formData.moyenneBacSessionPrincipale === null) {
-      return null;
-    }
+  // ─────────────────────────────────────────────────────────────
+  //  MOD v4 §2 — Formules de score vérifiées (source PDF) par parcours.
+  //  Le score n'est PAS sur 20 (peut dépasser 100 pts).
+  // ─────────────────────────────────────────────────────────────
 
-    const academicAvg = this.getAcademicAveragePreview();
-    if (academicAvg === null) {
-      return null;
-    }
+  /** Mapping code parcours du formulaire → clé de formule de score. */
+  private readonly SCORE_PARCOURS_KEY: Record<string, 'gl' | 'ds' | '3i' | 'mrgl' | 'mrmi'> = {
+    mrgl: 'mrgl',
+    mrmi: 'mrmi',
+    mpgl: 'gl',
+    mpds: 'ds',
+    mp3i: '3i',
+  };
 
-    const redoublementPenalty =
-      Math.min(Number(this.formData.nombreAnneesRedoublement || '0'), 3) * 0.25;
-    const weightedScore =
-      this.formData.moyenneBacSessionPrincipale * 0.4 + academicAvg * 0.6 - redoublementPenalty;
-
-    return Number(Math.max(0, weightedScore).toFixed(2));
+  private num(v: unknown): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
   }
 
+  /** true si la nature du diplôme sélectionnée est une Maîtrise (accents tolérés). */
+  isMaitriseSelected(): boolean {
+    return (this.formData.natureDiplome || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .includes('maitrise');
+  }
+
+  /** Nombre de sessions de contrôle (réussite en contrôle) par année L1/L2/L3. */
+  private controleParAnnee(): { l1: number; l2: number; l3: number } {
+    const isCtrl = (s: string) =>
+      (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() === 'controle' ? 1 : 0;
+    return {
+      l1: isCtrl(this.formData.sessionReussite1ereAnnee),
+      l2: isCtrl(this.formData.sessionReussite2emeAnnee),
+      l3: isCtrl(this.formData.sessionReussite3emeAnnee),
+    };
+  }
+
+  /** Score estimatif brut selon la formule vérifiée du parcours (ou null si incomplet). */
+  getEstimatedScorePreview(): number | null {
+    const key = this.SCORE_PARCOURS_KEY[this.masterParcours];
+    if (!key) return null;
+
+    const l1 = this.formData.moyenne1ereAnnee;
+    const l2 = this.formData.moyenne2emeAnnee;
+    const l3 = this.formData.moyenne3emeAnnee;
+    const bac = this.formData.moyenneBacSessionPrincipale;
+    const nbRedoub = this.num(this.formData.nombreAnneesRedoublement);
+    const nbSess = this.num(this.formData.nombreSessionsControle);
+
+    if (key === 'gl' || key === 'ds') {
+      if (l1 === null || l2 === null || l3 === null) return null;
+      const mg = (l1 + l2 + l3) / 3;
+      const bnr = nbRedoub === 0 ? 5 : nbRedoub === 1 ? 3 : 0;
+      const bsp = nbSess === 0 ? 3 : nbSess === 1 ? 2 : 0;
+      return this.round2(mg + bnr + bsp);
+    }
+
+    if (key === '3i') {
+      if (l1 === null || l2 === null || l3 === null || bac === null) return null;
+      const mp = 2 * bac + 1.5 * l1 + 1 * l2 + 0.5 * l3;
+      const mr = -1 * nbRedoub;
+      const c = this.controleParAnnee();
+      const mc = -1 * (c.l1 + c.l2 + c.l3);
+      return this.round2(mp + mr + mc);
+    }
+
+    if (key === 'mrgl') {
+      if (l1 === null || l2 === null || l3 === null || bac === null) return null;
+      const bnr = nbRedoub === 0 ? 5 : nbRedoub === 1 ? 1.5 : 0;
+      const bsp = nbSess === 0 ? 3 : nbSess === 1 ? 1 : 0;
+      const bl =
+        this.num(this.formData.noteFrancaisBac) >= 12 ||
+        this.num(this.formData.noteAnglaisBac) >= 12 ||
+        this.formData.certificationB2 === 'oui'
+          ? 1
+          : 0;
+      const bacBonus = (bac + this.num(this.formData.noteMathBac) - 20) / 2;
+      if (this.isMaitriseSelected()) {
+        const l4 = this.num(this.formData.moyenne4emeAnnee);
+        return this.round2(1.5 * l1 + 2 * l2 + 2 * l3 + l4 + bnr + bsp + bacBonus + bl);
+      }
+      const an = this.num(this.formData.anneeObtentionDernierDiplome);
+      const bad = an === 2025 || an === 2023 ? 4 : an >= 2020 && an <= 2022 ? 2 : 0;
+      return this.round2(1.5 * l1 + 2 * l2 + l3 + bnr + bsp + bacBonus + bl + bad);
+    }
+
+    // mrmi
+    if (l1 === null || l2 === null || l3 === null || bac === null) return null;
+    const mp = 0.5 * bac + 1 * l1 + 1.5 * l2 + 2 * l3;
+    const mr = -4 * nbRedoub;
+    const c = this.controleParAnnee();
+    const mc = -1 * c.l1 + -1.5 * c.l2 + -2 * c.l3;
+    return this.round2(mp + mr + mc);
+  }
+
+  private round2(v: number): number {
+    return Math.round(Math.max(0, v) * 100) / 100;
+  }
+
+  /** MOD v4 §1 — Affichage du score SANS « / 20 ». */
   getEstimatedScoreDisplay(): string {
     const score = this.getEstimatedScorePreview();
-    return score === null ? 'En attente des notes' : `${score.toFixed(2)} / 20`;
+    return score === null ? 'En attente des notes' : `${score.toFixed(2)} pts`;
+  }
+
+  /** MOD v4 §1 — Détail de la formule appliquée (tooltip au survol du score). */
+  getScoreFormulaLabel(): string {
+    const key = this.SCORE_PARCOURS_KEY[this.masterParcours];
+    switch (key) {
+      case 'gl':
+      case 'ds':
+        return 'Score = M.G + B.N.R + B.S.P  (M.G = (L1+L2+L3)/3)';
+      case '3i':
+        return 'Score = (2×Bac + 1.5×L1 + L2 + 0.5×L3) − redoublements − contrôles';
+      case 'mrgl':
+        return this.isMaitriseSelected()
+          ? 'Score (Maîtrise) = 1.5×M1 + 2×M2 + 2×M3 + M4 + B_NR + B_SP + BacBonus + B_L'
+          : 'Score (Licence) = 1.5×M1 + 2×M2 + M3 + B_NR + B_SP + BacBonus + B_L + B_AD';
+      case 'mrmi':
+        return 'Score = 0.5×Bac + L1 + 1.5×L2 + 2×L3(S5) − 4×redoublements − malus contrôles';
+      default:
+        return 'Formule de score appliquée par le système.';
+    }
   }
 
   copyGeneratedPassword(): void {
@@ -695,10 +1217,16 @@ export class CandidatureFormComponent implements OnInit {
       return;
     }
 
+    // MOD 2B — En mode master, les notes/moyennes proviennent du tableau de critères.
+    if (this.isMasterCriteriaMode() && !this.validateCriteriaTable()) {
+      this.errorMessage = 'Veuillez remplir tous les critères demandés dans le tableau.';
+      return;
+    }
+
     if (
       !this.formData.specialiteBac ||
       !this.formData.anneeBac ||
-      this.formData.moyenneBacSessionPrincipale === null ||
+      (this.typeCandidature !== 'master' && this.formData.moyenneBacSessionPrincipale === null) ||
       !this.formData.etablissementUniversitaireOrigine ||
       !this.formData.specialiteDiplomeObtenu ||
       !this.formData.anneeObtentionDernierDiplome ||
@@ -720,9 +1248,8 @@ export class CandidatureFormComponent implements OnInit {
     }
 
     if (this.isEtudiantExterneSelected()) {
-      if (!this.formData.etablissementExterne.trim() || !this.formData.specialiteExterne.trim()) {
-        this.errorMessage =
-          "Veuillez renseigner l'établissement et la spécialité pour un étudiant externe.";
+      if (!this.formData.etablissementExterne.trim()) {
+        this.errorMessage = "Veuillez renseigner l'établissement d'origine.";
         return;
       }
     }
@@ -877,6 +1404,7 @@ export class CandidatureFormComponent implements OnInit {
         classement_2eme_annee: this.formData.classement2emeAnnee,
         nature_candidature: this.formData.natureCandidature,
         nombre_annees_redoublement: Number(this.formData.nombreAnneesRedoublement || '0'),
+        nombre_sessions_controle: Number(this.formData.nombreSessionsControle || '0'),
         moyenne_session_principale_1ere_annee: this.formData.moyenneSessionPrincipale1ereAnnee,
         moyenne_session_controle_1ere_annee: this.formData.moyenneSessionControle1ereAnnee,
         moyenne_session_principale_2eme_annee: this.formData.moyenneSessionPrincipale2emeAnnee,

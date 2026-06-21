@@ -720,3 +720,117 @@
 
   .success-hero { grid-template-columns: 1fr; }
 }
+
+/* ── MOD 2B — Tableau de saisie candidat (sans coefficient) ── */
+.criteria-table-block { grid-column: 1 / -1; }
+.criteria-table-head {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.95rem; font-weight: 700; color: var(--text-primary);
+}
+.criteria-table-head i { color: var(--accent); }
+.criteria-table-note {
+  margin: 0.35rem 0 0.8rem;
+  font-size: 0.8rem; color: var(--text-secondary);
+}
+.criteria-table-wrap {
+  overflow: auto;
+  border: 1.5px solid var(--field-border);
+  border-radius: 12px;
+}
+.criteria-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.criteria-table thead th {
+  background: var(--accent);
+  color: #ffffff;
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.criteria-table tbody td {
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.criteria-table tbody tr:last-child td { border-bottom: none; }
+.criteria-table tbody tr:nth-child(even) td { background: var(--field-bg); }
+.criteria-table .criteria-label { font-weight: 600; color: var(--text-primary); }
+.criteria-table td input,
+.criteria-table td select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1.5px solid var(--field-border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+.criteria-table td input:focus,
+.criteria-table td select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
+
+/* ── MOD 2B v5 — tableau dynamique (+ ajouter / supprimer) ── */
+.criteria-table .crit-act-col { width: 56px; text-align: center; }
+.criteria-table thead th.crit-act-col { text-align: center; }
+.criteria-empty {
+  text-align: center; color: var(--text-secondary);
+  font-style: italic; font-size: 0.84rem; padding: 1.1rem 0.9rem;
+}
+.criteria-row-error { display: block; margin-top: 0.25rem; color: var(--red, #DC2626); font-size: 0.72rem; }
+.criteria-new-row td { background: rgba(var(--accent-rgb), 0.06); }
+.criteria-del-btn, .criteria-ok-btn, .criteria-cancel-btn {
+  width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; border: 1px solid transparent; transition: all 0.15s;
+}
+.criteria-del-btn { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
+.criteria-del-btn:hover { background: #B91C1C; color: #fff; }
+.criteria-ok-btn { background: #ECFDF5; color: #059669; border-color: #6EE7B7; }
+.criteria-ok-btn:hover { background: #059669; color: #fff; }
+.criteria-cancel-btn { background: #fff; color: var(--text-secondary); border-color: var(--field-border); }
+.criteria-cancel-btn:hover { background: var(--s2, #F1F5F9); }
+.criteria-new-actions { display: inline-flex; gap: 5px; }
+.criteria-add-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.7rem; }
+.criteria-add-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.5rem 0.95rem; border: none; border-radius: 8px; cursor: pointer;
+  background: #059669; color: #fff; font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  transition: background 0.15s;
+}
+.criteria-add-btn:hover:not(:disabled) { background: #047857; }
+.criteria-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.criteria-progress { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+.criteria-progress.complete { color: #059669; }
+.criteria-lock-note {
+  margin-top: 0.7rem; padding: 0.5rem 0.8rem;
+  background: var(--teal-bg, #F0FDFA); border: 1.5px dashed var(--teal-bd, #5EEAD4);
+  border-radius: 8px; font-size: 0.78rem; color: var(--teal, #0D9488); font-weight: 600;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.criteria-validation-error {
+  margin-top: 0.7rem; padding: 0.5rem 0.8rem;
+  background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px;
+  font-size: 0.8rem; color: #991B1B; display: flex; align-items: center; gap: 0.4rem;
+}
+
+/* ── MOD v4 — validations inline + maîtrise + formule ── */
+.field-error {
+  margin-top: 4px; color: #c0392b; font-size: 0.74rem; font-weight: 600;
+  display: flex; align-items: center; gap: 5px;
+}
+.maitrise-incompat {
+  grid-column: 1 / -1; display: flex; gap: 10px; align-items: flex-start;
+  padding: 0.7rem 0.9rem; background: #fde8e8; border: 1.5px solid #f5b5b5;
+  border-radius: 10px; color: #7a1f1f; font-size: 0.85rem;
+}
+.maitrise-incompat i { color: #c0392b; font-size: 1.05rem; margin-top: 2px; }
+.formula-tag {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+  padding: 0.55rem 0.9rem; background: var(--field-bg, #f7fbff);
+  border: 1px dashed var(--field-border, #cfe2f3); border-radius: 8px;
+  color: var(--text-secondary, #4e6a82); font-size: 0.82rem;
+}
+.formula-tag i { color: var(--accent); }

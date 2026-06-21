@@ -5,9 +5,9 @@
         <i class="fas fa-arrow-left"></i>
       </button>
       <div>
-        <h1 class="upload-dossier__title">Deposer mes documents</h1>
+        <h1 class="upload-dossier__title">Déposer mes documents</h1>
         <p class="upload-dossier__subtitle">
-          Telechargez les documents requis pour votre candidature
+          Téléchargez les pièces requises pour votre candidature
         </p>
       </div>
       <div
@@ -26,206 +26,79 @@
   <section class="upload-dossier__progress-card">
     <div class="upload-dossier__progress-head">
       <h3>Progression du dossier</h3>
-      <span>{{ documentsUploaded }}/4 documents</span>
+      <span>{{ nbObligatoiresDeposees }}/{{ nbObligatoires }} pièces obligatoires</span>
     </div>
-    <mat-progress-bar mode="determinate" [value]="(documentsUploaded / 4) * 100"></mat-progress-bar>
+    <mat-progress-bar
+      mode="determinate"
+      [value]="(nbObligatoiresDeposees / nbObligatoires) * 100"
+    ></mat-progress-bar>
   </section>
 
   <main class="upload-dossier__content">
-    <article class="upload-dossier__card">
+    <!-- ── PARTIE A : boucle sur les 6 pièces officielles ── -->
+    <article class="upload-dossier__card" *ngFor="let piece of pieces">
       <div class="upload-dossier__card-head">
-        <div class="upload-dossier__icon upload-dossier__icon--cin">
-          <i class="fas fa-id-card"></i>
+        <div class="upload-dossier__icon" [ngClass]="piece.iconClass">
+          <i [class]="piece.icon"></i>
         </div>
         <div class="upload-dossier__meta">
-          <h3>Carte d'identite nationale (CIN)</h3>
-          <p>Formats: PDF, JPG, PNG | Taille max: 5 MB</p>
+          <h3>
+            {{ piece.titre }}
+            <span class="upload-dossier__badge-opt" *ngIf="!piece.obligatoire">Optionnel</span>
+            <span class="upload-dossier__badge-req" *ngIf="piece.obligatoire">Obligatoire</span>
+          </h3>
+          <p>{{ piece.description }}</p>
         </div>
-        <div class="upload-dossier__status" *ngIf="hasFile('cin')">
+        <div class="upload-dossier__status" *ngIf="hasFile(piece.key)">
           <i class="fas fa-check-circle"></i>
         </div>
       </div>
 
-      <div class="upload-dossier__drop" *ngIf="!hasFile('cin')" (click)="fileInputCin.click()">
+      <!-- Zone de dépôt -->
+      <div class="upload-dossier__drop" *ngIf="!hasFile(piece.key)" (click)="fileInput.click()">
         <i class="fas fa-cloud-upload-alt"></i>
         <p>Cliquez pour ajouter un fichier</p>
         <input
-          #fileInputCin
+          #fileInput
           type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          (change)="onFileSelected($event, 'cin')"
+          [accept]="piece.accept"
+          (change)="onFileSelected($event, piece)"
           hidden
         />
       </div>
 
-      <div class="upload-dossier__preview" *ngIf="hasFile('cin') && previewFor('cin') as preview">
+      <!-- PARTIE B : message d'erreur de validation -->
+      <div class="upload-dossier__error" *ngIf="fileErrors[piece.key]">
+        <i class="fas fa-triangle-exclamation"></i>
+        {{ fileErrors[piece.key] }}
+      </div>
+
+      <!-- Aperçu du fichier déposé -->
+      <div
+        class="upload-dossier__preview"
+        *ngIf="hasFile(piece.key) && previewFor(piece.key) as preview"
+      >
         <img
           *ngIf="preview.isImage && preview.previewUrl"
           [src]="preview.previewUrl"
-          alt="Apercu CIN"
+          [alt]="'Aperçu ' + piece.titre"
           class="upload-dossier__thumb"
         />
-        <div class="upload-dossier__file">
-          <strong>{{ preview.fileName }}</strong>
-          <small>{{ preview.fileSize }} - {{ preview.mimeType }}</small>
-          <div class="upload-dossier__file-progress">
-            <mat-progress-bar mode="determinate" [value]="progressFor('cin')"></mat-progress-bar>
-            <span>{{ progressFor('cin') }}%</span>
-          </div>
+        <div class="upload-dossier__file-icon" *ngIf="!preview.isImage">
+          <i class="fas fa-file-pdf"></i>
         </div>
-        <button class="upload-dossier__remove" (click)="removeFile('cin')" type="button">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </article>
-
-    <article class="upload-dossier__card">
-      <div class="upload-dossier__card-head">
-        <div class="upload-dossier__icon upload-dossier__icon--releves">
-          <i class="fas fa-chart-line"></i>
-        </div>
-        <div class="upload-dossier__meta">
-          <h3>Releves de notes (L1, L2, L3)</h3>
-          <p>Un seul PDF pour tous les releves | Taille max: 10 MB</p>
-        </div>
-        <div class="upload-dossier__status" *ngIf="hasFile('releves')">
-          <i class="fas fa-check-circle"></i>
-        </div>
-      </div>
-
-      <div
-        class="upload-dossier__drop"
-        *ngIf="!hasFile('releves')"
-        (click)="fileInputReleves.click()"
-      >
-        <i class="fas fa-cloud-upload-alt"></i>
-        <p>Cliquez pour ajouter un fichier</p>
-        <input
-          #fileInputReleves
-          type="file"
-          accept=".pdf"
-          (change)="onFileSelected($event, 'releves')"
-          hidden
-        />
-      </div>
-
-      <div
-        class="upload-dossier__preview"
-        *ngIf="hasFile('releves') && previewFor('releves') as preview"
-      >
         <div class="upload-dossier__file">
           <strong>{{ preview.fileName }}</strong>
           <small>{{ preview.fileSize }} - {{ preview.mimeType }}</small>
           <div class="upload-dossier__file-progress">
             <mat-progress-bar
               mode="determinate"
-              [value]="progressFor('releves')"
+              [value]="progressFor(piece.key)"
             ></mat-progress-bar>
-            <span>{{ progressFor('releves') }}%</span>
+            <span>{{ progressFor(piece.key) }}%</span>
           </div>
         </div>
-        <button class="upload-dossier__remove" (click)="removeFile('releves')" type="button">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </article>
-
-    <article class="upload-dossier__card">
-      <div class="upload-dossier__card-head">
-        <div class="upload-dossier__icon upload-dossier__icon--diplome">
-          <i class="fas fa-graduation-cap"></i>
-        </div>
-        <div class="upload-dossier__meta">
-          <h3>Diplome de Licence</h3>
-          <p>Format: PDF | Taille max: 5 MB</p>
-        </div>
-        <div class="upload-dossier__status" *ngIf="hasFile('diplome')">
-          <i class="fas fa-check-circle"></i>
-        </div>
-      </div>
-
-      <div
-        class="upload-dossier__drop"
-        *ngIf="!hasFile('diplome')"
-        (click)="fileInputDiplome.click()"
-      >
-        <i class="fas fa-cloud-upload-alt"></i>
-        <p>Cliquez pour ajouter un fichier</p>
-        <input
-          #fileInputDiplome
-          type="file"
-          accept=".pdf"
-          (change)="onFileSelected($event, 'diplome')"
-          hidden
-        />
-      </div>
-
-      <div
-        class="upload-dossier__preview"
-        *ngIf="hasFile('diplome') && previewFor('diplome') as preview"
-      >
-        <div class="upload-dossier__file">
-          <strong>{{ preview.fileName }}</strong>
-          <small>{{ preview.fileSize }} - {{ preview.mimeType }}</small>
-          <div class="upload-dossier__file-progress">
-            <mat-progress-bar
-              mode="determinate"
-              [value]="progressFor('diplome')"
-            ></mat-progress-bar>
-            <span>{{ progressFor('diplome') }}%</span>
-          </div>
-        </div>
-        <button class="upload-dossier__remove" (click)="removeFile('diplome')" type="button">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </article>
-
-    <article class="upload-dossier__card">
-      <div class="upload-dossier__card-head">
-        <div class="upload-dossier__icon upload-dossier__icon--photo">
-          <i class="fas fa-camera"></i>
-        </div>
-        <div class="upload-dossier__meta">
-          <h3>Photo d'identite</h3>
-          <p>Formats: JPG, PNG | Taille max: 2 MB</p>
-        </div>
-        <div class="upload-dossier__status" *ngIf="hasFile('photo')">
-          <i class="fas fa-check-circle"></i>
-        </div>
-      </div>
-
-      <div class="upload-dossier__drop" *ngIf="!hasFile('photo')" (click)="fileInputPhoto.click()">
-        <i class="fas fa-cloud-upload-alt"></i>
-        <p>Cliquez pour ajouter un fichier</p>
-        <input
-          #fileInputPhoto
-          type="file"
-          accept=".jpg,.jpeg,.png"
-          (change)="onFileSelected($event, 'photo')"
-          hidden
-        />
-      </div>
-
-      <div
-        class="upload-dossier__preview"
-        *ngIf="hasFile('photo') && previewFor('photo') as preview"
-      >
-        <img
-          *ngIf="photoPreview"
-          [src]="photoPreview"
-          alt="Apercu Photo"
-          class="upload-dossier__thumb"
-        />
-        <div class="upload-dossier__file">
-          <strong>{{ preview.fileName }}</strong>
-          <small>{{ preview.fileSize }} - {{ preview.mimeType }}</small>
-          <div class="upload-dossier__file-progress">
-            <mat-progress-bar mode="determinate" [value]="progressFor('photo')"></mat-progress-bar>
-            <span>{{ progressFor('photo') }}%</span>
-          </div>
-        </div>
-        <button class="upload-dossier__remove" (click)="removeFile('photo')" type="button">
+        <button class="upload-dossier__remove" (click)="removeFile(piece.key)" type="button">
           <i class="fas fa-trash"></i>
         </button>
       </div>
@@ -235,15 +108,16 @@
       <button
         class="upload-dossier__submit-btn"
         (click)="soumettre()"
-        [disabled]="documentsUploaded < 4 || isSubmitting"
+        [disabled]="!toutesObligatoiresPresentes || isSubmitting"
         type="button"
       >
         <i class="fas fa-check"></i>
-        Soumettre tous les documents
+        Soumettre le dossier
       </button>
 
-      <p class="upload-dossier__hint" *ngIf="documentsUploaded < 4">
-        Veuillez telecharger tous les documents requis ({{ 4 - documentsUploaded }} restant)
+      <p class="upload-dossier__hint" *ngIf="!toutesObligatoiresPresentes">
+        Veuillez déposer toutes les pièces obligatoires
+        ({{ nbObligatoires - nbObligatoiresDeposees }} restante(s))
       </p>
 
       <div class="upload-dossier__submit-progress" *ngIf="isSubmitting">

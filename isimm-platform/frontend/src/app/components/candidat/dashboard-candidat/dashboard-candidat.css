@@ -215,6 +215,14 @@
   border-radius: 12px;
   font-weight: 700;
 }
+.badge-info {
+  display: inline-block;
+  padding: 6px 10px;
+  background: #eff6ff;
+  color: #185fa5;
+  border-radius: 12px;
+  font-weight: 700;
+}
 .btn-action.deposer {
   display: inline-flex;
   align-items: center;
@@ -9653,3 +9661,55 @@
 .voeux-list.cdk-drop-list-dragging .voeux-list-item:not(.cdk-drag-placeholder) {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
+
+/* MOD v5 §C — Dialog inline « Nouvelle réclamation » */
+.recl-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.recl-modal {
+  background: #fff; border-radius: 14px; width: 100%; max-width: 560px;
+  max-height: 90vh; overflow: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.recl-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.3rem; border-bottom: 1px solid #e2e8f0;
+}
+.recl-modal-header h3 {
+  margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f1f3d;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.recl-modal-header h3 i { color: #c8972b; }
+.recl-modal-close {
+  background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 8px;
+  cursor: pointer; color: #475569; font-size: 0.9rem;
+}
+.recl-modal-close:hover { background: #e2e8f0; color: #0f172a; }
+.recl-modal-body { padding: 1.3rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.recl-fg { display: flex; flex-direction: column; gap: 0.35rem; }
+.recl-fg label { font-size: 0.85rem; font-weight: 600; color: #334155; }
+.recl-fg .req { color: #dc2626; }
+.recl-fg select, .recl-fg textarea {
+  width: 100%; padding: 0.55rem 0.7rem; border: 1.5px solid #cbd5e1;
+  border-radius: 8px; font-family: inherit; font-size: 0.9rem; color: #0f172a; background: #fff;
+}
+.recl-fg select:focus, .recl-fg textarea:focus {
+  outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.recl-modal-footer {
+  display: flex; justify-content: flex-end; gap: 0.6rem;
+  padding: 1rem 1.3rem; border-top: 1px solid #e2e8f0;
+}
+.recl-btn-cancel {
+  padding: 0.55rem 1.1rem; border-radius: 8px; border: 1px solid #cbd5e1;
+  background: #fff; color: #475569; font-weight: 600; cursor: pointer; font-size: 0.88rem;
+}
+.recl-btn-cancel:hover { background: #f1f5f9; }
+.recl-btn-submit {
+  padding: 0.55rem 1.1rem; border-radius: 8px; border: none;
+  background: #1d4ed8; color: #fff; font-weight: 600; cursor: pointer; font-size: 0.88rem;
+  display: inline-flex; align-items: center; gap: 0.45rem;
+}
+.recl-btn-submit:hover { background: #1e40af; }

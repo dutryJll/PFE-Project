@@ -12,7 +12,8 @@ import os
 from django.conf import settings
 from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -209,7 +210,7 @@ def analyser_ocr_candidature(request, candidature_id: int):
                     tmp.write(chunk)
                 pdf_path = tmp.name
 
-        result = OCRService.analyser_releve_notes(pdf_path, score_declare)
+        result = OCRService.analyser_releve_complet(pdf_path, score_declare)
 
         if not isinstance(fichier, str):
             try:
@@ -255,10 +256,76 @@ def analyser_ocr_candidature(request, candidature_id: int):
         'statut':              result.get('statut'),
         'alerte':              result.get('alerte'),
         'anomalies':           result.get('anomalies', []),
+        # ✅ Détail des notes extraites (L1/L2/L3 + M.G/B.N.R/B.S.P + score recalculé)
+        'detail_notes':        result.get('detail_notes'),
         'texte_extrait':       (result.get('texte_extrait') or '')[:500],
         'fields_updated':      fields_updated,
         'note_extraite_ocr':   float(candidature.note_extraite_ocr or 0),
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POST /api/candidatures/ocr/extract/   (v4 §7)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def ocr_extract(request):
+    """
+    v4 §7 — Extrait la spécialité + le type de diplôme d'un relevé de notes
+    (PDF ou image) et les compare avec ce que le candidat a déclaré.
+
+    Body (multipart/form-data) :
+        fichier               : PDF ou image du relevé de notes (obligatoire)
+        specialite_declaree   : spécialité déclarée dans le formulaire (optionnel)
+        type_diplome_declare  : 'licence' | 'maitrise' (optionnel)
+
+    Retour : { specialite_detectee, type_diplome_detecte,
+               correspondance_specialite, correspondance_type, alerte, texte_brut }
+    """
+    from .ocr_service import OCRService
+    import tempfile
+
+    fichier = request.FILES.get('fichier')
+    if not fichier:
+        return Response({'erreur': 'Aucun fichier fourni'}, status=status.HTTP_400_BAD_REQUEST)
+
+    specialite_declaree = request.data.get('specialite_declaree', '') or ''
+    type_diplome_declare = request.data.get('type_diplome_declare', '') or ''
+
+    content_type = (getattr(fichier, 'content_type', '') or '').lower()
+    name_lower = (getattr(fichier, 'name', '') or '').lower()
+    is_pdf = 'pdf' in content_type or name_lower.endswith('.pdf')
+    suffix = '.pdf' if is_pdf else (os.path.splitext(name_lower)[1] or '.png')
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            for chunk in fichier.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        result = OCRService.analyser_specialite_type_diplome(
+            tmp_path,
+            specialite_declaree=specialite_declaree,
+            type_diplome_declare=type_diplome_declare,
+            is_pdf=is_pdf,
+        )
+    except Exception as exc:
+        logger.exception('OCR extract specialite/diplome')
+        return Response(
+            {'erreur': f'Erreur OCR : {exc}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+    return Response(result)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

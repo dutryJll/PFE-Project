@@ -91,7 +91,7 @@
         {{ selectedCandidature.type_candidature === 'master' ? 'Master' : 'Ingénieur' }}
       </p>
       <p><strong>Spécialité:</strong> {{ selectedCandidature.specialite || '-' }}</p>
-      <p><strong>Score:</strong> {{ selectedCandidature.score || '--' }}/20</p>
+      <p><strong>Score:</strong> {{ selectedCandidature.score || '--' }} pts</p>
       <p><strong>Statut:</strong> {{ selectedCandidature.statut }}</p>
 
       <button class="btn-back-list" (click)="retourListe()">
@@ -178,7 +178,7 @@
                 [class.bien]="(candidature.score ?? 0) >= 14 && (candidature.score ?? 0) < 16"
                 [class.passable]="(candidature.score ?? 0) < 14"
               >
-                {{ candidature.score || '--' }}/20
+                {{ candidature.score || '--' }} pts
               </span>
             </td>
           </ng-container>

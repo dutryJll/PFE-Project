@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
@@ -33,6 +33,25 @@ import {
   getParcoursOptionsForType,
   resolveParcoursByCode,
 } from '../../../shared/specialites-demandees-catalog';
+import {
+  CRITERIA_OPTIONS,
+  CritereOption,
+  CritereConfig,
+  buildFormulaPreview,
+  getCritereByCode,
+} from '../../../shared/constants/criteria';
+
+interface OcrDetailNotes {
+  l1: number;
+  l2: number;
+  l3: number;
+  mg: number;
+  bnr: number;
+  bsp: number;
+  redoublements: number;
+  sessions: number;
+  score_recalcule: number;
+}
 
 interface Candidature {
   id: number;
@@ -589,36 +608,36 @@ export class DashboardCommissionComponent implements OnInit {
 
   // Mapping spécialités par parcours (matrice restrictive officielle ISIMM)
   readonly specialiteParParcours: Record<string, string[]> = {
-    'MPGL': [
-      'Licence en Sciences de l\'Informatique génie logiciel',
+    MPGL: [
+      "Licence en Sciences de l'Informatique génie logiciel",
       'Informatique de Gestion',
-      'Génie logiciel et systèmes d\'information',
+      "Génie logiciel et systèmes d'information",
       'Génie logiciel',
       'Licence appliquée en développement des systèmes informatiques',
       'Big data et Analyse de données',
       'Business Computing',
     ],
-    'MPDS': [
+    MPDS: [
       'Licence en Mathématiques Appliquées',
-      'Mathématique appliquée spécialité statistique de l\'environnement',
+      "Mathématique appliquée spécialité statistique de l'environnement",
       'Mathématiques et applications',
-      'Licence en Sciences de l\'Informatique génie logiciel',
+      "Licence en Sciences de l'Informatique génie logiciel",
       'Informatique de Gestion',
-      'Génie logiciel et systèmes d\'information',
+      "Génie logiciel et systèmes d'information",
       'Génie logiciel',
       'Licence appliquée en développement des systèmes informatiques',
       'Big data et Analyse de données',
       'Business Computing',
     ],
-    'MP3I': [
+    MP3I: [
       'Licence en Électronique, Électrotechnique et Automatique (MIM)',
       'Licence en Électronique, Électrotechnique et Automatique (SE)',
-      'Licence en Technologies de l\'Information et de la Communication (TIC)',
+      "Licence en Technologies de l'Information et de la Communication (TIC)",
       'Licence en Mesures et Instrumentation',
       'Licence en EEA (Spécialité Automatique et Informatique Industrielle ou Mesures et Métrologie)',
       'Licence en Génie Électrique (Spécialité Automatique et Informatique Industrielle)',
     ],
-    'MRGL': [
+    MRGL: [
       'Licence en Informatique : Maîtrise en Informatique',
       'Licence en Informatique ou Informatique de Gestion',
       'Maîtrise en Informatique ou Informatique de Gestion',
@@ -627,9 +646,9 @@ export class DashboardCommissionComponent implements OnInit {
       'Licence en Électronique, Automatique ou Mesures et Instrumentation',
       'Réussite en 1ère année du cycle ingénieur (Électronique/Instrumentation) ou équivalent',
     ],
-    'ING': [
+    ING: [
       'Génie Logiciel (Informatique)',
-      'Diplôme en ingénierie système d\'information',
+      "Diplôme en ingénierie système d'information",
       'Diplôme en ingénierie système informatique',
     ],
   };
@@ -640,8 +659,10 @@ export class DashboardCommissionComponent implements OnInit {
     if (n.includes('3i') || n.includes('instrumentation')) return 'MP3I';
     if (n.includes('recherche') && n.includes('gl')) return 'MRGL';
     if (n.includes('recherche') && n.includes('logiciel')) return 'MRGL';
-    if (n.includes('data science') || n.includes('mpds') || n.includes('sciences de données')) return 'MPDS';
-    if (n.includes('génie logiciel') || n.includes('mpgl') || n.includes('genie logiciel')) return 'MPGL';
+    if (n.includes('data science') || n.includes('mpds') || n.includes('sciences de données'))
+      return 'MPDS';
+    if (n.includes('génie logiciel') || n.includes('mpgl') || n.includes('genie logiciel'))
+      return 'MPGL';
     if (n.includes('ingénieur') || n.includes('ingenieur') || n.includes('cycle ing')) return 'ING';
     return '';
   }
@@ -662,7 +683,7 @@ export class DashboardCommissionComponent implements OnInit {
       masterNom = m?.nom || '';
     }
     const code = this.detectParcoursCode(masterNom);
-    return code ? (this.specialiteParParcours[code] || []) : [];
+    return code ? this.specialiteParParcours[code] || [] : [];
   }
   filtreAnneeUniversitaire: 'courante' | 'precedente' | 'toutes' = 'courante';
   filtrePorteeOffres: 'specialite' | 'toutes_ouvertes' = 'specialite';
@@ -675,12 +696,12 @@ export class DashboardCommissionComponent implements OnInit {
   selectedPreselectionCandidateIds: number[] = [];
 
   // Présélection membre state
-  prsMembreSearch: string = "";
-  prsMembreSpecFilter: string = "";
-  prsMembreTypeFilter: string = "";
+  prsMembreSearch: string = '';
+  prsMembreSpecFilter: string = '';
+  prsMembreTypeFilter: string = '';
   prsMembreScoreMin: number | null = null;
   prsMembreScoreMax: number | null = null;
-  avisGlobalMembre: string = "";
+  avisGlobalMembre: string = '';
   membreAvisSelectedIds: number[] = [];
   prsMembreGenerateListOpen: boolean = false;
 
@@ -726,7 +747,7 @@ export class DashboardCommissionComponent implements OnInit {
   dossierOCRDocumentIndex: number = 0;
   showOCRPanel: boolean = false;
 
-  // --- OCR réel (pdf2image + PaddleOCR) ---
+  // --- OCR réel du dossier ---
   ocrModalFile: File | null = null;
   ocrModalFileName: string = '';
   ocrModalLoading: boolean = false;
@@ -741,8 +762,9 @@ export class DashboardCommissionComponent implements OnInit {
     flag_fraude?: boolean;
     confiance: number;
     moteur: string;
-    anomalies: any[];
+    anomalies: string[];
     texte_preview: string;
+    detail_notes?: OcrDetailNotes | null;
   } | null = null;
 
   // --- PDF Officiel + QR Code ---
@@ -767,18 +789,24 @@ export class DashboardCommissionComponent implements OnInit {
 
     this.candidatureService.analyserOcrLot(ids).subscribe({
       next: (res: any) => {
-        // Transformer la réponse backend pour matcher le template
         this.ocrLotResultats = {
+          success: res.success,
+          message: res.message,
           total: res.total,
-          analysees: res.nb_analysees,
-          fraudes_detectees: res.nb_anomalies,
-          erreurs: res.nb_erreurs,
-          conformes: res.nb_conformes,
+          nb_analysees: res.nb_analysees,
+          nb_conformes: res.nb_conformes,
+          nb_anomalies: res.nb_anomalies,
+          nb_erreurs: res.nb_erreurs,
           resultats: res.resultats || [],
         };
         this.ocrLotLoading = false;
-        const msg = `✅ ${this.ocrLotResultats.analysees}/${this.ocrLotResultats.total} analysées — ${this.ocrLotResultats.fraudes_detectees} anomalie(s) détectée(s)`;
-        this.toastService.show(msg, this.ocrLotResultats.fraudes_detectees > 0 ? 'warning' : 'success');
+        const msg = `✅ ${this.ocrLotResultats.nb_analysees}/${this.ocrLotResultats.total} analysées — ${this.ocrLotResultats.nb_anomalies} anomalie(s)`;
+        this.toastService.show(
+          msg,
+          this.ocrLotResultats.nb_anomalies > 0 || this.ocrLotResultats.nb_erreurs > 0
+            ? 'warning'
+            : 'success',
+        );
       },
       error: (err: any) => {
         this.ocrLotLoading = false;
@@ -786,6 +814,51 @@ export class DashboardCommissionComponent implements OnInit {
         this.toastService.show(msg, 'error');
       },
     });
+  }
+
+  private mapOcrDetailResult(res: any): {
+    score_extrait: number | null;
+    score_declare: number | null;
+    delta?: number | null;
+    ecart?: number | null;
+    alerte?: string | null;
+    statut?: string;
+    flag_fraude?: boolean;
+    confiance: number;
+    moteur: string;
+    anomalies: string[];
+    texte_preview: string;
+    detail_notes?: OcrDetailNotes | null;
+  } {
+    const scoreExtrait = res?.score_extrait ?? null;
+    const scoreDeclare = res?.score_declare ?? null;
+    const ecart = res?.ecart ?? res?.delta ?? null;
+    const anomalies = Array.isArray(res?.anomalies)
+      ? res.anomalies
+          .map((item: any) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') {
+              return item.message || item.type || JSON.stringify(item);
+            }
+            return '';
+          })
+          .filter((item: string) => item.trim().length > 0)
+      : [];
+
+    return {
+      score_extrait: scoreExtrait,
+      score_declare: scoreDeclare,
+      delta: ecart,
+      ecart,
+      alerte: res?.alerte ?? null,
+      statut: res?.statut,
+      flag_fraude: Boolean(res?.flag_fraude || res?.alerte || anomalies.length > 0),
+      confiance: Number(res?.confiance ?? 0),
+      moteur: res?.moteur || 'pdfplumber',
+      anomalies,
+      texte_preview: res?.texte_preview || res?.texte_extrait || '',
+      detail_notes: res?.detail_notes ?? null,
+    };
   }
 
   fermerOcrLotResultats(): void {
@@ -802,9 +875,10 @@ export class DashboardCommissionComponent implements OnInit {
     if (this.ocrLotExportLoading) return;
     this.ocrLotExportLoading = format;
 
-    const obs = format === 'excel'
-      ? this.candidatureService.exportOcrExcel(this.ocrLotResultats.resultats)
-      : this.candidatureService.exportOcrPdf(this.ocrLotResultats.resultats);
+    const obs =
+      format === 'excel'
+        ? this.candidatureService.exportOcrExcel(this.ocrLotResultats.resultats)
+        : this.candidatureService.exportOcrPdf(this.ocrLotResultats.resultats);
 
     obs.subscribe({
       next: (blob: Blob) => {
@@ -821,7 +895,7 @@ export class DashboardCommissionComponent implements OnInit {
         console.error('Export error:', err);
         this.toastService.show(`Erreur export ${format.toUpperCase()}.`, 'error');
         this.ocrLotExportLoading = null;
-      }
+      },
     });
   }
 
@@ -850,10 +924,7 @@ export class DashboardCommissionComponent implements OnInit {
       next: (blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const stamp = new Date()
-          .toISOString()
-          .replace(/[:T]/g, '-')
-          .slice(0, 16);
+        const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
         const ext = format === 'excel' ? 'xlsx' : 'pdf';
         a.href = url;
         a.download = `Rapport_Conformite_OCR_${stamp}.${ext}`;
@@ -926,8 +997,9 @@ export class DashboardCommissionComponent implements OnInit {
       this.ouvrirDossierOCR(fake);
       return;
     }
-    const c = this.candidatures?.find((x) => x.id === id)
-      || this.selectionCandidates?.find((x) => x.id === id);
+    const c =
+      this.candidatures?.find((x) => x.id === id) ||
+      this.selectionCandidates?.find((x) => x.id === id);
     if (c) this.ouvrirDossierOCR(c);
   }
 
@@ -945,12 +1017,10 @@ export class DashboardCommissionComponent implements OnInit {
     const cand = this.dossierOCRCandidature;
 
     // Cible le premier PDF déposé par le candidat
-    const fichier = (this.fichiersDeposes || []).find(
-      (f) => f.extension === 'pdf',
-    );
+    const fichier = (this.fichiersDeposes || []).find((f) => f.extension === 'pdf');
     if (!fichier) {
       this.toastService.show(
-        'Aucun PDF déposé par ce candidat. Utilisez la zone d\'upload OCR au-dessus.',
+        "Aucun PDF déposé par ce candidat. Utilisez la zone d'upload OCR au-dessus.",
         'warning',
       );
       return;
@@ -970,21 +1040,10 @@ export class DashboardCommissionComponent implements OnInit {
       })
       .then((blob) => {
         const file = new File([blob], fichier.nom_fichier, { type: 'application/pdf' });
-        return this.candidatureService
-          .analyserOcrCandidature(cand.id, file, false)
-          .toPromise();
+        return this.candidatureService.analyserOcrCandidature(cand.id, file, false).toPromise();
       })
       .then((res: any) => {
-        this.ocrModalResult = {
-          score_extrait: res?.score_extrait ?? null,
-          score_declare: res?.score_declare ?? null,
-          delta: res?.delta ?? null,
-          flag_fraude: !!res?.flag_fraude,
-          confiance: Number(res?.confiance ?? 0),
-          moteur: res?.moteur || '—',
-          anomalies: res?.anomalies || [],
-          texte_preview: res?.texte_preview || '',
-        };
+        this.ocrModalResult = this.mapOcrDetailResult(res);
         this.showOCRPanel = true; // Affiche aussi le panel mock pour layout
         this.ocrModalLoading = false;
         const score = this.ocrModalResult.score_extrait;
@@ -1002,7 +1061,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // OCR RÉEL — Upload PDF + pdf2image + PaddleOCR
+  // OCR réel du dossier — upload PDF et analyse OCR
   // ──────────────────────────────────────────────────────────────────
   onOcrModalFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -1020,19 +1079,14 @@ export class DashboardCommissionComponent implements OnInit {
     const candidatureId = this.dossierOCRCandidature.id;
 
     this.candidatureService
-      .analyserOcrCandidature(candidatureId, this.ocrModalFile || undefined, this.ocrModalUpdateScore)
+      .analyserOcrCandidature(
+        candidatureId,
+        this.ocrModalFile || undefined,
+        this.ocrModalUpdateScore,
+      )
       .subscribe({
         next: (res: any) => {
-          this.ocrModalResult = {
-            score_extrait: res.score_extrait,
-            score_declare: res.score_declare,
-            delta: res.delta,
-            flag_fraude: !!res.flag_fraude,
-            confiance: Number(res.confiance ?? 0),
-            moteur: res.moteur || '—',
-            anomalies: res.anomalies || [],
-            texte_preview: res.texte_preview || '',
-          };
+          this.ocrModalResult = this.mapOcrDetailResult(res);
           if (this.ocrModalUpdateScore && res.score_extrait != null && this.dossierOCRCandidature) {
             this.dossierOCRCandidature.score = res.score_extrait;
           }
@@ -1116,15 +1170,23 @@ export class DashboardCommissionComponent implements OnInit {
 
   statutLabelDisplay(statut: string): string {
     switch ((statut || '').toLowerCase()) {
-      case 'preselectionne':  return 'Présélectionné';
-      case 'selectionne':     return 'Sélectionné';
+      case 'preselectionne':
+        return 'Présélectionné';
+      case 'selectionne':
+        return 'Sélectionné';
       case 'rejete':
-      case 'refuse':          return 'Refusé';
-      case 'sous_examen':     return 'Sous examen';
-      case 'dossier_depose':  return 'Dossier déposé';
-      case 'soumis':          return 'Soumis';
-      case 'inscrit':         return 'Inscrit';
-      default:                return statut || '—';
+      case 'refuse':
+        return 'Refusé';
+      case 'sous_examen':
+        return 'Sous examen';
+      case 'dossier_depose':
+        return 'Dossier déposé';
+      case 'soumis':
+        return 'Soumis';
+      case 'inscrit':
+        return 'Inscrit';
+      default:
+        return statut || '—';
     }
   }
 
@@ -1139,7 +1201,10 @@ export class DashboardCommissionComponent implements OnInit {
         const idxR = this.candidaturesResponsable.findIndex((c) => c.id === cand.id);
         if (idxR >= 0) this.candidaturesResponsable[idxR].statut = 'preselectionne';
         // 2) Toast + fermeture modal
-        this.toastService.show(`✅ ${cand.candidat_nom} validé — bascule vers Présélection.`, 'success');
+        this.toastService.show(
+          `✅ ${cand.candidat_nom} validé — bascule vers Présélection.`,
+          'success',
+        );
         this.fermerDossierOCR();
         // 3) Refresh + recalcul des compteurs nav
         this.loadCandidaturesResponsable();
@@ -1210,8 +1275,8 @@ export class DashboardCommissionComponent implements OnInit {
         const rect = btn.getBoundingClientRect();
         // Menu en position fixed : au-dessus à gauche du bouton
         this.prsKebabPos = {
-          top: rect.top - 145,  // 145px = hauteur estimée du menu (3 items)
-          left: rect.left - 180,  // décale vers la gauche
+          top: rect.top - 145, // 145px = hauteur estimée du menu (3 items)
+          left: rect.left - 180, // décale vers la gauche
         };
         // Si pas assez de place en haut, ouvre vers le bas
         if (this.prsKebabPos.top < 10) {
@@ -1233,9 +1298,13 @@ export class DashboardCommissionComponent implements OnInit {
     const rec = this.reclamations.find((r) => r.id === id);
     if (rec) rec.etat = etat as Reclamation['etat'];
     this.http
-      .patch(`/api/reclamations/${id}/`, { etat }, {
-        headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` },
-      })
+      .patch(
+        `/api/reclamations/${id}/`,
+        { etat },
+        {
+          headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` },
+        },
+      )
       .subscribe({
         next: () => this.toastService.show('État réclamation mis à jour.', 'success'),
         error: () => this.toastService.show('Erreur mise à jour réclamation.', 'error'),
@@ -1257,9 +1326,7 @@ export class DashboardCommissionComponent implements OnInit {
     const s = this.consultationMassiveSearch.toLowerCase();
     if (!s) return this.consultationMassiveCandidates;
     return this.consultationMassiveCandidates.filter(
-      (c) =>
-        c.candidat_nom.toLowerCase().includes(s) ||
-        c.numero.toLowerCase().includes(s),
+      (c) => c.candidat_nom.toLowerCase().includes(s) || c.numero.toLowerCase().includes(s),
     );
   }
 
@@ -1312,7 +1379,7 @@ export class DashboardCommissionComponent implements OnInit {
       error: (err) => {
         console.error('Erreur validation:', err);
         this.toastService.show('❌ Erreur lors de la validation', 'error');
-      }
+      },
     });
   }
 
@@ -1612,7 +1679,7 @@ export class DashboardCommissionComponent implements OnInit {
   massiveOCRCurrentIndex: number = 0;
   massiveOCRTitle: string = 'Consultation massive';
   massiveOCROCRDone: { [key: string]: boolean } = {};
-  massiveOCROCRData: { [key: number]: any } = {};  // ✅ Stockage des vraies données OCR
+  massiveOCROCRData: { [key: number]: any } = {}; // ✅ Stockage des vraies données OCR
   massiveOCRDecisions: { [key: number]: 'approve' | 'reject' | 'hold' } = {};
   massiveOCRComments: { [key: number]: string } = {};
   massiveOCRSearchFilter: string = '';
@@ -1655,12 +1722,84 @@ export class DashboardCommissionComponent implements OnInit {
   masterOptions: MasterOption[] = [];
   offreOptions: OffreOption[] = [];
   offresPreinscription: OffrePreinscription[] = [
-    { id: 1, titre: 'Mastere Professionnel Genie Logiciel (MPGL)', type: 'master', sous_type: 'professionnel', specialite: 'MPGL', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
-    { id: 2, titre: 'Mastere Professionnel en sciences de donnees (MPDS)', type: 'master', sous_type: 'professionnel', specialite: 'MPDS', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
-    { id: 3, titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'master', sous_type: 'professionnel', specialite: 'MP3I', description: '', date_limite: '2026-07-20', places: 25, statut: 'ouvert', est_cache: false, est_visible: true },
-    { id: 4, titre: 'Mastere Recherche en Genie logiciel (MRGL)', type: 'master', sous_type: 'recherche', specialite: 'MRGL', description: '', date_limite: '2026-07-22', places: 111, statut: 'ouvert', est_cache: false, est_visible: true },
-    { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', specialite: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert', est_cache: false, est_visible: true },
-    { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', sous_type: '', specialite: 'ING_GL', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert', est_cache: false, est_visible: true },
+    {
+      id: 1,
+      titre: 'Mastere Professionnel Genie Logiciel (MPGL)',
+      type: 'master',
+      sous_type: 'professionnel',
+      specialite: 'MPGL',
+      description: '',
+      date_limite: '2026-07-22',
+      places: 35,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
+    {
+      id: 2,
+      titre: 'Mastere Professionnel en sciences de donnees (MPDS)',
+      type: 'master',
+      sous_type: 'professionnel',
+      specialite: 'MPDS',
+      description: '',
+      date_limite: '2026-07-22',
+      places: 35,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
+    {
+      id: 3,
+      titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)',
+      type: 'master',
+      sous_type: 'professionnel',
+      specialite: 'MP3I',
+      description: '',
+      date_limite: '2026-07-20',
+      places: 25,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
+    {
+      id: 4,
+      titre: 'Mastere Recherche en Genie logiciel (MRGL)',
+      type: 'master',
+      sous_type: 'recherche',
+      specialite: 'MRGL',
+      description: '',
+      date_limite: '2026-07-22',
+      places: 111,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
+    {
+      id: 5,
+      titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)',
+      type: 'master',
+      sous_type: 'recherche',
+      specialite: 'MRMI',
+      description: '',
+      date_limite: '2026-07-20',
+      places: 29,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
+    {
+      id: 6,
+      titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)',
+      type: 'cycle_ingenieur',
+      sous_type: '',
+      specialite: 'ING_GL',
+      description: '',
+      date_limite: '2026-08-08',
+      places: 65,
+      statut: 'ouvert',
+      est_cache: false,
+      est_visible: true,
+    },
   ];
   offresPreinscriptionSupprimees: Set<number> = new Set<number>();
   offresMasterCrud: OffreMasterCrudItem[] = [];
@@ -1994,7 +2133,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   updateFinalSelectionStatus(candidate: FinalSelectionCandidate, value: string): void {
-    const c = this.finalSelectionCandidates.find(x => x.id === candidate.id);
+    const c = this.finalSelectionCandidates.find((x) => x.id === candidate.id);
     if (c) c.statut = value as FinalSelectionDecision;
     this.updateFinalSelectionFiltered();
   }
@@ -2016,7 +2155,7 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getDistinctSpecialites(): string[] {
-    const all = this.candidaturesFiltrees.map(c => c.specialite || '').filter(s => !!s);
+    const all = this.candidaturesFiltrees.map((c) => c.specialite || '').filter((s) => !!s);
     return [...new Set(all)];
   }
 
@@ -2247,7 +2386,10 @@ export class DashboardCommissionComponent implements OnInit {
       const c = this.finalSelectionFiltered.find((r) => r.id === id);
       if (c) c.statut = 'lp';
     });
-    this.toastService.show(`${this.finalSelectionSelectedIds.size} candidat(s) validé(s).`, 'success');
+    this.toastService.show(
+      `${this.finalSelectionSelectedIds.size} candidat(s) validé(s).`,
+      'success',
+    );
     this.finalSelectionSelectedIds.clear();
   }
 
@@ -2558,6 +2700,12 @@ export class DashboardCommissionComponent implements OnInit {
   nouvelleOffreScoreCriteres: ScoreCriterion[] = [];
   nouvelleOffreScoreFormule: string = '';
 
+  // ─── MOD 2A — Tableau critères + coefficients (Espace Responsable UNIQUEMENT) ───
+  // Le coefficient n'est jamais exposé au candidat ; le système l'utilise pour
+  // calculer le score (valeur × coefficient).
+  readonly CRITERIA_OPTIONS: CritereOption[] = CRITERIA_OPTIONS;
+  nouvelleOffreCriteres: CritereConfig[] = [];
+
   // Modal avis
   showModalAvis: boolean = false;
   candidatureSelectionnee: Candidature | null = null;
@@ -2568,7 +2716,7 @@ export class DashboardCommissionComponent implements OnInit {
   get avisFavorablesCount(): number {
     const id = this.candidatureSelectionnee?.id;
     if (!id) return 0;
-    return (this.candidatureVotes[id] || []).filter(v => v.recommandation === 'favorable').length;
+    return (this.candidatureVotes[id] || []).filter((v) => v.recommandation === 'favorable').length;
   }
 
   get avisTotal(): number {
@@ -2605,9 +2753,9 @@ export class DashboardCommissionComponent implements OnInit {
 
   /** Liste stricte des spécialités diplôme pour le master MPGL (filtre + tableau). */
   readonly SPECIALITES_DIPLOME_MPGL: string[] = [
-    'Licence en Sciences de l\'Informatique génie logiciel',
+    "Licence en Sciences de l'Informatique génie logiciel",
     'Informatique de Gestion',
-    'Génie logiciel et systèmes d\'information',
+    "Génie logiciel et systèmes d'information",
     'Génie logiciel',
     'Licence appliquée en développement des systèmes informatiques',
     'Big data et Analyse de données',
@@ -2703,6 +2851,7 @@ export class DashboardCommissionComponent implements OnInit {
       this.activeCommissionCategory = this.getCommissionCategoryFromId(commissionId);
       this.refreshCommissionScopedData();
     });
+
     this.loadUserCommissions();
 
     // Prefer to source specialities from SpecialitesService when available
@@ -2980,18 +3129,88 @@ export class DashboardCommissionComponent implements OnInit {
     const yesterday = new Date(Date.now() - 86400000).toISOString();
     if (this.isResponsable) {
       return [
-        { id: 1, titre: 'Phase de présélection ouverte', message: 'La phase de présélection pour Master GL 2025/2026 est maintenant active. Vérifiez les dossiers des candidats.', date: now, type: 'info', lue: false },
-        { id: 2, titre: 'Quota atteint — Master DS', message: '45 candidats ont été présélectionnés. Le quota de 50 places est presque atteint.', date: now, type: 'warning', lue: false },
-        { id: 3, titre: 'Réclamation en attente', message: 'Une réclamation de Amina Ben Salah concernant son score est en attente de traitement.', date: yesterday, type: 'danger', lue: false },
-        { id: 4, titre: 'Décision finale validée', message: 'La liste de sélection finale pour Ingénieur GL a été publiée avec succès.', date: yesterday, type: 'success', lue: true },
-        { id: 5, titre: 'Nouveau membre ajouté', message: 'Dr. Karim Mansouri a rejoint la commission Master GL en tant que membre évaluateur.', date: yesterday, type: 'info', lue: true },
+        {
+          id: 1,
+          titre: 'Phase de présélection ouverte',
+          message:
+            'La phase de présélection pour Master GL 2025/2026 est maintenant active. Vérifiez les dossiers des candidats.',
+          date: now,
+          type: 'info',
+          lue: false,
+        },
+        {
+          id: 2,
+          titre: 'Quota atteint — Master DS',
+          message:
+            '45 candidats ont été présélectionnés. Le quota de 50 places est presque atteint.',
+          date: now,
+          type: 'warning',
+          lue: false,
+        },
+        {
+          id: 3,
+          titre: 'Réclamation en attente',
+          message:
+            'Une réclamation de Amina Ben Salah concernant son score est en attente de traitement.',
+          date: yesterday,
+          type: 'danger',
+          lue: false,
+        },
+        {
+          id: 4,
+          titre: 'Décision finale validée',
+          message: 'La liste de sélection finale pour Ingénieur GL a été publiée avec succès.',
+          date: yesterday,
+          type: 'success',
+          lue: true,
+        },
+        {
+          id: 5,
+          titre: 'Nouveau membre ajouté',
+          message:
+            'Dr. Karim Mansouri a rejoint la commission Master GL en tant que membre évaluateur.',
+          date: yesterday,
+          type: 'info',
+          lue: true,
+        },
       ];
     } else {
       return [
-        { id: 1, titre: 'Nouvelle candidature à évaluer', message: 'Vous avez 3 nouveaux dossiers à examiner pour la commission Master DS. Merci de soumettre vos avis avant la date limite.', date: now, type: 'info', lue: false },
-        { id: 2, titre: 'Délai d\'avis approche', message: 'La date limite pour soumettre vos avis sur la cohorte Master GL 2025/2026 est dans 2 jours.', date: now, type: 'warning', lue: false },
-        { id: 3, titre: 'Réunion commission planifiée', message: 'Une réunion de délibération est planifiée le 05/06/2026 à 10h00. Votre présence est requise.', date: yesterday, type: 'info', lue: false },
-        { id: 4, titre: 'Avis enregistré', message: 'Votre avis favorable sur la candidature CAND-2026-0042 a bien été enregistré.', date: yesterday, type: 'success', lue: true },
+        {
+          id: 1,
+          titre: 'Nouvelle candidature à évaluer',
+          message:
+            'Vous avez 3 nouveaux dossiers à examiner pour la commission Master DS. Merci de soumettre vos avis avant la date limite.',
+          date: now,
+          type: 'info',
+          lue: false,
+        },
+        {
+          id: 2,
+          titre: "Délai d'avis approche",
+          message:
+            'La date limite pour soumettre vos avis sur la cohorte Master GL 2025/2026 est dans 2 jours.',
+          date: now,
+          type: 'warning',
+          lue: false,
+        },
+        {
+          id: 3,
+          titre: 'Réunion commission planifiée',
+          message:
+            'Une réunion de délibération est planifiée le 05/06/2026 à 10h00. Votre présence est requise.',
+          date: yesterday,
+          type: 'info',
+          lue: false,
+        },
+        {
+          id: 4,
+          titre: 'Avis enregistré',
+          message: 'Votre avis favorable sur la candidature CAND-2026-0042 a bien été enregistré.',
+          date: yesterday,
+          type: 'success',
+          lue: true,
+        },
       ];
     }
   }
@@ -3198,16 +3417,14 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .get<OffrePreinscription[]>(
-        '/api/candidatures/offres-inscription-responsable/',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .get<OffrePreinscription[]>('/api/candidatures/offres-inscription-responsable/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: (data) => {
           const received = data || [];
-          this.offresPreinscription = received.length > 0 ? received : this.getCanonicalOffresPreinscription();
+          this.offresPreinscription =
+            received.length > 0 ? received : this.getCanonicalOffresPreinscription();
 
           this.offreOptions = this.offresPreinscription.map((offre) => ({
             id: offre.id,
@@ -3235,10 +3452,51 @@ export class DashboardCommissionComponent implements OnInit {
           this.offresPreinscription = this.getCanonicalOffresPreinscription();
           this.offreOptions = this.offresPreinscription.map((offre) => ({
             id: offre.id,
-            nom: offre.type === 'cycle_ingenieur' ? `${offre.titre} (Cycle Ingenieur)` : `${offre.titre} (Master)`,
+            nom:
+              offre.type === 'cycle_ingenieur'
+                ? `${offre.titre} (Cycle Ingenieur)`
+                : `${offre.titre} (Master)`,
           }));
         },
       });
+  }
+
+  // ── Offres filtrées par la commission active (espace membre) ──────────────
+  /** Normalise: minuscules + sans accents + espaces compactés. */
+  private normaliserTexte(s: string): string {
+    return (s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  /** Une offre correspond-elle au master de la commission active ? */
+  private offreCorrespondCommission(offre: OffrePreinscription, refMaster: string): boolean {
+    const hay = this.normaliserTexte(`${offre.specialite} ${offre.titre} ${offre.sous_type}`);
+    const motsRef = refMaster.split(' ').filter((m) => m.length > 3);
+    // correspondance si au moins un mot significatif du master est présent dans l'offre
+    return motsRef.some((mot) => hay.includes(mot));
+  }
+
+  /** Offres visibles : toutes pour le responsable, filtrées par commission pour le membre. */
+  get offresPreinscriptionFiltrees(): OffrePreinscription[] {
+    if (this.isResponsable) {
+      return this.offresPreinscription;
+    }
+    const commission = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
+    const refMaster = this.normaliserTexte(
+      `${commission?.master_nom || ''} ${commission?.nom || ''}`,
+    );
+    if (!refMaster) {
+      return this.offresPreinscription;
+    }
+    const filtrees = this.offresPreinscription.filter((o) =>
+      this.offreCorrespondCommission(o, refMaster),
+    );
+    // fallback : si rien ne matche, montrer tout (évite un écran vide)
+    return filtrees.length ? filtrees : this.offresPreinscription;
   }
 
   private sortRowsByScoreDesc(rows: Candidature[]): Candidature[] {
@@ -3430,13 +3688,9 @@ export class DashboardCommissionComponent implements OnInit {
     }
 
     this.http
-      .put<OffreMasterCrudItem>(
-        `/api/candidatures/offres-master/${offreId}/`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .put<OffreMasterCrudItem>(`/api/candidatures/offres-master/${offreId}/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: () => {
           this.toastService.show('Offre mise à jour.', 'success');
@@ -3485,12 +3739,84 @@ export class DashboardCommissionComponent implements OnInit {
 
   private getCanonicalOffresPreinscription(): OffrePreinscription[] {
     return [
-      { id: 1, titre: 'Mastere Professionnel Genie Logiciel (MPGL)', type: 'master', sous_type: 'professionnel', specialite: 'MPGL', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
-      { id: 2, titre: 'Mastere Professionnel en sciences de donnees (MPDS)', type: 'master', sous_type: 'professionnel', specialite: 'MPDS', description: '', date_limite: '2026-07-22', places: 35, statut: 'ouvert', est_cache: false, est_visible: true },
-      { id: 3, titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)', type: 'master', sous_type: 'professionnel', specialite: 'MP3I', description: '', date_limite: '2026-07-20', places: 25, statut: 'ouvert', est_cache: false, est_visible: true },
-      { id: 4, titre: 'Mastere Recherche en Genie logiciel (MRGL)', type: 'master', sous_type: 'recherche', specialite: 'MRGL', description: '', date_limite: '2026-07-22', places: 111, statut: 'ouvert', est_cache: false, est_visible: true },
-      { id: 5, titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)', type: 'master', sous_type: 'recherche', specialite: 'MRMI', description: '', date_limite: '2026-07-20', places: 29, statut: 'ouvert', est_cache: false, est_visible: true },
-      { id: 6, titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)', type: 'cycle_ingenieur', sous_type: '', specialite: 'ING_GL', description: '', date_limite: '2026-08-08', places: 65, statut: 'ouvert', est_cache: false, est_visible: true },
+      {
+        id: 1,
+        titre: 'Mastere Professionnel Genie Logiciel (MPGL)',
+        type: 'master',
+        sous_type: 'professionnel',
+        specialite: 'MPGL',
+        description: '',
+        date_limite: '2026-07-22',
+        places: 35,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
+      {
+        id: 2,
+        titre: 'Mastere Professionnel en sciences de donnees (MPDS)',
+        type: 'master',
+        sous_type: 'professionnel',
+        specialite: 'MPDS',
+        description: '',
+        date_limite: '2026-07-22',
+        places: 35,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
+      {
+        id: 3,
+        titre: 'Mastere Professionnel en Ingenieries en Instrumentation industrielle (MP3I)',
+        type: 'master',
+        sous_type: 'professionnel',
+        specialite: 'MP3I',
+        description: '',
+        date_limite: '2026-07-20',
+        places: 25,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
+      {
+        id: 4,
+        titre: 'Mastere Recherche en Genie logiciel (MRGL)',
+        type: 'master',
+        sous_type: 'recherche',
+        specialite: 'MRGL',
+        description: '',
+        date_limite: '2026-07-22',
+        places: 111,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
+      {
+        id: 5,
+        titre: 'Mastere Recherche en micro-electronique et instrumentation (MRMI)',
+        type: 'master',
+        sous_type: 'recherche',
+        specialite: 'MRMI',
+        description: '',
+        date_limite: '2026-07-20',
+        places: 29,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
+      {
+        id: 6,
+        titre: 'Ingenieur en sciences Appliquees et Technologie - Genie Logiciel (ING-GL)',
+        type: 'cycle_ingenieur',
+        sous_type: '',
+        specialite: 'ING_GL',
+        description: '',
+        date_limite: '2026-08-08',
+        places: 65,
+        statut: 'ouvert',
+        est_cache: false,
+        est_visible: true,
+      },
     ];
   }
 
@@ -3628,7 +3954,9 @@ export class DashboardCommissionComponent implements OnInit {
     const token = this.authService.getAccessToken();
     if (!token) return;
     this.http
-      .get<any>('/api/candidatures/responsable/mes-masters/', { headers: { Authorization: `Bearer ${token}` } })
+      .get<any>('/api/candidatures/responsable/mes-masters/', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: (response) => {
           const masters: any[] = response?.masters || [];
@@ -3672,7 +4000,8 @@ export class DashboardCommissionComponent implements OnInit {
         next: (data) => {
           const apiRows = data || [];
           this.responsableCandidaturesFromApi = true;
-          this.candidaturesResponsable = apiRows.length > 0 ? this.sortRowsByScoreDesc(apiRows) : [];
+          this.candidaturesResponsable =
+            apiRows.length > 0 ? this.sortRowsByScoreDesc(apiRows) : [];
           this.candidaturesResponsableFiltrees = [...this.candidaturesResponsable];
           this.appliquerFiltresResponsable();
         },
@@ -3691,6 +4020,25 @@ export class DashboardCommissionComponent implements OnInit {
       this.candidaturesFiltrees = [];
       return;
     }
+
+    // ✅ Filtrer par la commission active : changer de commission recharge la liste.
+    if (this.activeCommissionId) {
+      this.candidatureService.getCandidaturesByCommission(this.activeCommissionId).subscribe({
+        next: (data: any) => {
+          this.candidatures = data?.candidatures || [];
+          this.candidaturesFiltrees = [...this.candidatures];
+          this.appliquerFiltres();
+        },
+        error: () => {
+          this.candidatures = [];
+          this.candidaturesFiltrees = [];
+          this.appliquerFiltres();
+        },
+      });
+      return;
+    }
+
+    // Fallback (aucune commission active) : endpoint général
     this.http
       .get<any[]>('/api/candidatures/responsable/candidatures/', {
         headers: { Authorization: `Bearer ${token}` },
@@ -3809,13 +4157,9 @@ export class DashboardCommissionComponent implements OnInit {
     this.configSaving = true;
 
     this.http
-      .put(
-        `/api/candidatures/configuration/${this.selectedConfigMasterId}/`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .put(`/api/candidatures/configuration/${this.selectedConfigMasterId}/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: () => {
           this.toastService.show('Configuration des appels enregistrée.', 'success');
@@ -3993,6 +4337,7 @@ export class DashboardCommissionComponent implements OnInit {
     this.nouvelleOffreParcoursCode = 'MPGL';
     this.nouvelleOffreShowSpecialitesEditor = false;
     this.nouvelleOffreNouvelleSpecialite = '';
+    this.nouvelleOffreCriteres = [];
     this.applyNouvelleOffreParcours(this.nouvelleOffreParcoursCode, true);
   }
 
@@ -4030,6 +4375,58 @@ export class DashboardCommissionComponent implements OnInit {
 
   supprimerNouvelleOffreCritereScore(index: number): void {
     this.nouvelleOffreScoreCriteres = this.nouvelleOffreScoreCriteres.filter((_, i) => i !== index);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  MOD 2A — Tableau critères + coefficients (Responsable seulement)
+  // ─────────────────────────────────────────────────────────────
+  /** Ajoute une ligne vide au tableau des critères. */
+  ajouterNouvelleOffreCritere(): void {
+    this.nouvelleOffreCriteres = [
+      ...this.nouvelleOffreCriteres,
+      { code: '', label: '', coefficient: 1, valeur: '', category: 'bac' },
+    ];
+  }
+
+  /** Supprime la ligne du critère et met à jour l'aperçu de la formule. */
+  supprimerNouvelleOffreCritere(index: number): void {
+    this.nouvelleOffreCriteres = this.nouvelleOffreCriteres.filter((_, i) => i !== index);
+  }
+
+  /** Auto-remplit le label + la catégorie quand le critère est sélectionné. */
+  onNouvelleOffreCritereCodeChange(critere: CritereConfig): void {
+    const opt = getCritereByCode(critere.code);
+    if (opt) {
+      critere.label = opt.label;
+      critere.category = opt.category;
+    }
+  }
+
+  /** Bouton ✎ — édition rapide du coefficient et de la valeur/seuil via prompt. */
+  modifierNouvelleOffreCritere(critere: CritereConfig): void {
+    const nc = window.prompt('Coefficient :', String(critere.coefficient));
+    if (nc !== null && nc.trim() !== '') {
+      const parsed = Number(nc);
+      if (!Number.isNaN(parsed)) critere.coefficient = parsed;
+    }
+    const nv = window.prompt('Valeur / Seuil :', critere.valeur);
+    if (nv !== null) critere.valeur = nv;
+  }
+
+  /** Aperçu temps réel de la formule du score (avec coefficients). */
+  nouvelleOffreFormulePreview(): string {
+    return buildFormulaPreview(this.nouvelleOffreCriteres);
+  }
+
+  /** true si le même critère est sélectionné plus d'une fois (alerte doublon). */
+  critereDejaSelectionne(code: string): boolean {
+    if (!code) return false;
+    return this.nouvelleOffreCriteres.filter((c) => c.code === code).length > 1;
+  }
+
+  /** Validation MOD 2A : au moins un critère valide avant de passer à l'étape suivante. */
+  nouvelleOffreCriteresValides(): boolean {
+    return this.nouvelleOffreCriteres.some((c) => !!c.code);
   }
 
   onNouvelleOffreCritereModeChange(critere: ScoreCriterion): void {
@@ -4104,10 +4501,7 @@ export class DashboardCommissionComponent implements OnInit {
       this.nouvelleOffreNouvelleSpecialite = '';
       return;
     }
-    this.nouvelleOffreSpecialitesDemandees = [
-      ...this.nouvelleOffreSpecialitesDemandees,
-      value,
-    ];
+    this.nouvelleOffreSpecialitesDemandees = [...this.nouvelleOffreSpecialitesDemandees, value];
     this.nouvelleOffreNouvelleSpecialite = '';
   }
 
@@ -4183,11 +4577,9 @@ export class DashboardCommissionComponent implements OnInit {
     formData.append('document_pdf', file);
 
     this.http
-      .post(
-        `/api/candidatures/configuration/${this.selectedOffreId}/document-pdf/`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
+      .post(`/api/candidatures/configuration/${this.selectedOffreId}/document-pdf/`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .subscribe({
         next: (response: any) => {
           this.offresPreinscription = this.offresPreinscription.map((offre) =>
@@ -4509,9 +4901,10 @@ export class DashboardCommissionComponent implements OnInit {
     if (view === 'configuration-appels') {
       // Allow responsables, and also allow commission members who belong to
       // at least one commission (so they can view offers for their speciality).
+      // ⚠️ Le rôle d'un membre de commission est 'commission' (pas 'membre').
       return (
         this.isResponsable ||
-        (this.currentUser?.role === 'membre' &&
+        (['commission', 'membre'].includes(this.currentUser?.role) &&
           Array.isArray(this.availableCommissions) &&
           this.availableCommissions.length > 0)
       );
@@ -4602,7 +4995,9 @@ export class DashboardCommissionComponent implements OnInit {
     // 1. Definitive: MembreCommission API returned master records
     if (this.userMasterNoms.length > 0) return true;
     // 2. Reliable: user profile specialite contains master/mastère keyword or known formation code
-    const spec = String(this.currentUser?.specialite || '').toLowerCase().trim();
+    const spec = String(this.currentUser?.specialite || '')
+      .toLowerCase()
+      .trim();
     if (spec) {
       const masterCodes = ['mpgl', 'mpds', 'mp3i', 'mrgl', 'mrmi'];
       if (
@@ -4967,8 +5362,9 @@ export class DashboardCommissionComponent implements OnInit {
    */
   decisionFinaleSelectionner(): void {
     if (this.finalDecisionLoading) return;
-    const candidats = this.getVisibleCandidaturesForTable()
-      .filter((c) => c.statut === 'preselectionne');
+    const candidats = this.getVisibleCandidaturesForTable().filter(
+      (c) => c.statut === 'preselectionne',
+    );
     if (candidats.length === 0) {
       this.toastService.show('Aucun candidat présélectionné à sélectionner.', 'warning');
       this.closeFinalDecisionModal();
@@ -5014,14 +5410,17 @@ export class DashboardCommissionComponent implements OnInit {
    */
   decisionFinaleRejeter(): void {
     if (this.finalDecisionLoading) return;
-    const candidats = this.getVisibleCandidaturesForTable()
-      .filter((c) => c.statut === 'preselectionne');
+    const candidats = this.getVisibleCandidaturesForTable().filter(
+      (c) => c.statut === 'preselectionne',
+    );
     if (candidats.length === 0) {
       this.toastService.show('Aucun candidat à rejeter.', 'warning');
       this.closeFinalDecisionModal();
       return;
     }
-    if (!window.confirm(`Rejeter ${candidats.length} candidat(s) ? Cette action est irréversible.`)) {
+    if (
+      !window.confirm(`Rejeter ${candidats.length} candidat(s) ? Cette action est irréversible.`)
+    ) {
       return;
     }
     this.finalDecisionLoading = true;
@@ -5154,7 +5553,9 @@ export class DashboardCommissionComponent implements OnInit {
     this.exportCandidatures('master', 'xlsx');
   }
 
-  genererPDFOfficielISIMM(etape: 'PRESELECTION' | 'SELECTION' | 'MASTER' | 'INGENIEUR' = 'PRESELECTION'): void {
+  genererPDFOfficielISIMM(
+    etape: 'PRESELECTION' | 'SELECTION' | 'MASTER' | 'INGENIEUR' = 'PRESELECTION',
+  ): void {
     this.generateListOpen = false;
     try {
       const token = this.authService.getAccessToken();
@@ -5164,44 +5565,93 @@ export class DashboardCommissionComponent implements OnInit {
       }
       // FIX : convertir commission ID -> master ID via availableCommissions (master_id fourni par my-commissions API)
       const activeComm = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
-      const masterId = activeComm?.master_id
-        ?? (Number.isFinite(Number(this.selectedMasterForCandidatures)) ? Number(this.selectedMasterForCandidatures) : null);
+      const masterId =
+        activeComm?.master_id ??
+        (Number.isFinite(Number(this.selectedMasterForCandidatures))
+          ? Number(this.selectedMasterForCandidatures)
+          : null);
       if (!masterId) {
-        this.toastService.show('Veuillez sélectionner une commission avant de générer le PDF.', 'warning');
+        this.toastService.show(
+          'Veuillez sélectionner une commission avant de générer le PDF.',
+          'warning',
+        );
         return;
       }
-      const specialite = etape === 'SELECTION'
-        ? (this.finalSelectionFilters.specialite !== 'all' ? this.finalSelectionFilters.specialite : '')
-        : (this.filtres?.specialite || '');
+      const useMpglParcoursScope = this.shouldUseMpglParcoursPdfScope();
+      const specialite =
+        useMpglParcoursScope
+          ? ''
+          : etape === 'SELECTION'
+          ? this.finalSelectionFilters.specialite !== 'all'
+            ? this.finalSelectionFilters.specialite
+            : ''
+          : this.filtres?.specialite || '';
       const annee = this.finalSelectionFilters.session || '2025-2026';
 
       const params = new URLSearchParams({ etape, master_id: String(masterId), annee });
+      if (useMpglParcoursScope) params.append('parcours', 'MPGL');
       if (specialite) params.append('specialite', specialite);
 
       const url = `/api/candidatures/documents/generer-pdf/?${params}`;
       this.toastService.show('Génération du PDF officiel ISIMM...', 'info');
 
-      this.http.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob',
-      }).subscribe({
-        next: (blob) => {
-          const urlBlob = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = urlBlob;
-          link.download = `ISIMM_${etape}_${annee.replace('/', '-')}.pdf`;
-          link.click();
-          window.URL.revokeObjectURL(urlBlob);
-          this.toastService.show('✅ PDF officiel ISIMM généré avec succès', 'success');
-        },
-        error: (err) => {
-          console.error('PDF officiel error:', err);
-          this.toastService.show("❌ Erreur lors de la génération du PDF officiel", 'error');
-        },
-      });
+      this.http
+        .get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob',
+        })
+        .subscribe({
+          next: (blob) => {
+            const urlBlob = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = urlBlob;
+            link.download = `ISIMM_${etape}_${annee.replace('/', '-')}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(urlBlob);
+            this.toastService.show('✅ PDF officiel ISIMM généré avec succès', 'success');
+          },
+          error: async (err) => {
+            console.error('PDF officiel error:', err);
+            const message = await this.extractPdfGenerationErrorMessage(err);
+            this.toastService.show(message, 'error');
+          },
+        });
     } catch (e) {
       console.error('genererPDFOfficielISIMM error:', e);
     }
+  }
+
+  private shouldUseMpglParcoursPdfScope(): boolean {
+    const email = String(this.currentUser?.email || '').trim().toLowerCase();
+    const label = `${this.getDisplayedResponsableSpecialite()} ${this.getUserMasterOrSpecialiteLabel()}`
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+    return (
+      this.isResponsable &&
+      (email.endsWith('@isimm.tn') ||
+        label.includes('mpgl') ||
+        label.includes('genie logiciel') ||
+        label.includes("systemes d'information"))
+    );
+  }
+
+  private async extractPdfGenerationErrorMessage(err: any): Promise<string> {
+    const fallback = 'Erreur lors de la génération du PDF officiel.';
+    const error = err?.error;
+
+    if (error instanceof Blob) {
+      try {
+        const text = await error.text();
+        const parsed = JSON.parse(text);
+        return parsed?.error || parsed?.detail || fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    return error?.error || error?.detail || err?.message || fallback;
   }
 
   clearSelection(): void {
@@ -5679,9 +6129,10 @@ export class DashboardCommissionComponent implements OnInit {
   getMassiveOCRFilteredList(): any[] {
     if (!this.massiveOCRSearchFilter) return this.massiveOCRCandidates;
     const f = this.massiveOCRSearchFilter.toLowerCase();
-    return this.massiveOCRCandidates.filter(c =>
-      (c.candidat_nom || c.nom || '').toLowerCase().includes(f) ||
-      (c.numero || c.num || '').toLowerCase().includes(f)
+    return this.massiveOCRCandidates.filter(
+      (c) =>
+        (c.candidat_nom || c.nom || '').toLowerCase().includes(f) ||
+        (c.numero || c.num || '').toLowerCase().includes(f),
     );
   }
 
@@ -5690,7 +6141,8 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   massiveOCRNext(): void {
-    if (this.massiveOCRCurrentIndex < this.massiveOCRCandidates.length - 1) this.massiveOCRCurrentIndex++;
+    if (this.massiveOCRCurrentIndex < this.massiveOCRCandidates.length - 1)
+      this.massiveOCRCurrentIndex++;
   }
 
   massiveOCRSaveAndNext(): void {
@@ -5743,13 +6195,15 @@ export class DashboardCommissionComponent implements OnInit {
       this.toastService.show('Sélectionnez au moins un candidat.', 'warning');
       return;
     }
-    const candidates = this.getVisibleCandidaturesForTable().filter(c => ids.includes(Number(c.id)));
+    const candidates = this.getVisibleCandidaturesForTable().filter((c) =>
+      ids.includes(Number(c.id)),
+    );
     this.openMassiveOCR(candidates, 'Consultation massive — Présélection');
   }
 
   openFinalSelMassiveOCR(): void {
     const ids = Array.from(this.finalSelectionSelectedIds);
-    const candidates = this.finalSelectionFiltered.filter(c => ids.includes(c.id));
+    const candidates = this.finalSelectionFiltered.filter((c) => ids.includes(c.id));
     this.openMassiveOCR(candidates, 'Consultation massive — Sélection finale');
   }
 
@@ -5762,20 +6216,22 @@ export class DashboardCommissionComponent implements OnInit {
 
   toggleAllSelectionMembre(checked: boolean): void {
     if (checked) {
-      this.finalSelectionFiltered.forEach(c => this.membreSelectionSelectedIds.add(c.id));
+      this.finalSelectionFiltered.forEach((c) => this.membreSelectionSelectedIds.add(c.id));
     } else {
       this.membreSelectionSelectedIds.clear();
     }
   }
 
   isAllSelectionMembreSelected(): boolean {
-    return this.finalSelectionFiltered.length > 0 &&
-      this.finalSelectionFiltered.every(c => this.membreSelectionSelectedIds.has(c.id));
+    return (
+      this.finalSelectionFiltered.length > 0 &&
+      this.finalSelectionFiltered.every((c) => this.membreSelectionSelectedIds.has(c.id))
+    );
   }
 
   openMassiveOCRMembre(): void {
     const ids = Array.from(this.membreSelectionSelectedIds);
-    const candidates = this.finalSelectionFiltered.filter(c => ids.includes(c.id));
+    const candidates = this.finalSelectionFiltered.filter((c) => ids.includes(c.id));
     this.openMassiveOCR(candidates, 'Consultation massive — Sélection (Membre)');
   }
 
@@ -5786,8 +6242,8 @@ export class DashboardCommissionComponent implements OnInit {
   validateAllSelectionMembre(): void {
     const ids = Array.from(this.membreSelectionSelectedIds);
     if (!ids.length) return;
-    ids.forEach(id => {
-      const c = this.finalSelectionFiltered.find(x => x.id === id);
+    ids.forEach((id) => {
+      const c = this.finalSelectionFiltered.find((x) => x.id === id);
       if (c) c.statut = 'lp';
     });
     this.toastService.show(`${ids.length} candidat(s) validé(s)`, 'success');
@@ -6475,6 +6931,11 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getDisplayedResponsableSpecialite(): string {
+    const responsableParcours = this.getResponsableParcoursLabel();
+    if (responsableParcours) {
+      return responsableParcours;
+    }
+
     // Show the active commission's master name (not all masters concatenated)
     if (this.activeCommissionId && this.availableCommissions.length > 0) {
       const activeComm = this.availableCommissions.find((c) => c.id === this.activeCommissionId);
@@ -6494,6 +6955,25 @@ export class DashboardCommissionComponent implements OnInit {
     }
     // Fallback to user profile specialite
     return String(this.currentUser?.specialite || '').trim();
+  }
+
+  private getResponsableParcoursLabel(): string {
+    const email = String(this.currentUser?.email || '').trim().toLowerCase();
+    if (this.isResponsable && email.endsWith('@isimm.tn')) {
+      return "Master Génie Logiciel et Systèmes d'Information";
+    }
+
+    const profileLabel = this.getUserMasterOrSpecialiteLabel();
+    if (
+      this.isResponsable &&
+      /g[ée]nie logiciel|genie logiciel|syst[èe]mes d'information|systemes d'information|mpgl/i.test(
+        profileLabel,
+      )
+    ) {
+      return "Master Génie Logiciel et Systèmes d'Information";
+    }
+
+    return '';
   }
 
   getSpecialitesFiltrees(): Specialite[] {
@@ -6990,8 +7470,15 @@ export class DashboardCommissionComponent implements OnInit {
           }
         }
 
-        const specFilter = (this.filtres.specialite || this.filtreSpecialiteCandidature || '').trim();
-        if (specFilter && (candidature.specialite || '').toLowerCase() !== specFilter.toLowerCase()) {
+        const specFilter = (
+          this.filtres.specialite ||
+          this.filtreSpecialiteCandidature ||
+          ''
+        ).trim();
+        if (
+          specFilter &&
+          (candidature.specialite || '').toLowerCase() !== specFilter.toLowerCase()
+        ) {
           return false;
         }
 
@@ -7184,7 +7671,7 @@ export class DashboardCommissionComponent implements OnInit {
     if (checked && !this.membreAvisSelectedIds.includes(id)) {
       this.membreAvisSelectedIds.push(id);
     } else if (!checked) {
-      this.membreAvisSelectedIds = this.membreAvisSelectedIds.filter(x => x !== id);
+      this.membreAvisSelectedIds = this.membreAvisSelectedIds.filter((x) => x !== id);
     }
   }
 
@@ -7195,7 +7682,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   toggleSelectAllMembreAvis(checked: boolean): void {
     if (checked) {
-      this.membreAvisSelectedIds = this.getPreselectionMembreFiltered().map(c => c.id);
+      this.membreAvisSelectedIds = this.getPreselectionMembreFiltered().map((c) => c.id);
     } else {
       this.clearMembreAvisSelection();
     }
@@ -7206,14 +7693,16 @@ export class DashboardCommissionComponent implements OnInit {
   }
 
   getPreselectionMembreFiltered(): Candidature[] {
-    return this.candidaturesFiltrees.filter(c => {
+    return this.candidaturesFiltrees.filter((c) => {
       if (c.statut !== 'preselectionne') return false;
       const search = (this.prsMembreSearch || '').toLowerCase();
-      const matchSearch = !search ||
+      const matchSearch =
+        !search ||
         (c.candidat_nom || '').toLowerCase().includes(search) ||
         String(c.id).includes(search);
       const matchSpec = !this.prsMembreSpecFilter || c.specialite === this.prsMembreSpecFilter;
-      const matchType = !this.prsMembreTypeFilter ||
+      const matchType =
+        !this.prsMembreTypeFilter ||
         (this.prsMembreTypeFilter === 'interne' && (c as any).type_candidat === 'interne') ||
         (this.prsMembreTypeFilter === 'externe' && (c as any).type_candidat === 'externe');
       const matchMin = this.prsMembreScoreMin == null || (c.score || 0) >= this.prsMembreScoreMin;
@@ -7378,18 +7867,15 @@ export class DashboardCommissionComponent implements OnInit {
 
     let argument = '';
     if (!favorable) {
-      argument = (window.prompt(
-        'Avis défavorable : merci de saisir un argument (obligatoire).',
-        '',
-      ) || '').trim();
+      argument = (
+        window.prompt('Avis défavorable : merci de saisir un argument (obligatoire).', '') || ''
+      ).trim();
       if (!argument) {
         this.toastService.show('Argument obligatoire pour un avis défavorable.', 'warning');
         return;
       }
     } else {
-      argument = (window.prompt(
-        'Commentaire (optionnel) :', '',
-      ) || '').trim();
+      argument = (window.prompt('Commentaire (optionnel) :', '') || '').trim();
     }
 
     // Détermine la commission active (utilisée pour cibler l'avis)
@@ -7407,7 +7893,10 @@ export class DashboardCommissionComponent implements OnInit {
         next: (res: any) => {
           this.avisMembreLoading = false;
           const label = favorable ? 'Favorable' : 'Défavorable';
-          this.toastService.show(`✅ Avis ${label} enregistré pour ${cand.candidat_nom}`, 'success');
+          this.toastService.show(
+            `✅ Avis ${label} enregistré pour ${cand.candidat_nom}`,
+            'success',
+          );
           // Recharger les avis localement pour cohérence
           this.loadAvisForCandidature(cand.id);
           this.fermerDossierOCR();
@@ -7433,8 +7922,7 @@ export class DashboardCommissionComponent implements OnInit {
     if (!id) return { choix: 'en_attente', commentaire: '', date: '' };
     const votes = this.candidatureVotes[id] || [];
     const vote = votes.find(
-      (v: any) =>
-        (v.membreEmail || '').toLowerCase() === (membreEmail || '').toLowerCase(),
+      (v: any) => (v.membreEmail || '').toLowerCase() === (membreEmail || '').toLowerCase(),
     );
     if (!vote) return { choix: 'en_attente', commentaire: '', date: '' };
     return {
@@ -8541,9 +9029,7 @@ export class DashboardCommissionComponent implements OnInit {
       const eligibles = (this.candidaturesResponsable || []).filter((c) =>
         ['selectionne', 'preselectionne', 'inscrit'].includes(c.statut),
       );
-      const sorted = [...eligibles].sort(
-        (a, b) => Number(b.score || 0) - Number(a.score || 0),
-      );
+      const sorted = [...eligibles].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
       this.finalSelectionCandidates = sorted.map((c, idx) => ({
         id: Number(c.id),
         rang: idx + 1,
@@ -8554,7 +9040,9 @@ export class DashboardCommissionComponent implements OnInit {
         interne: !this.isExternalCandidate(c),
         presel: 'oui' as FinalSelectionPresel,
         statut:
-          c.statut === 'selectionne' || c.statut === 'inscrit' ? 'lp' : '' as FinalSelectionDecision,
+          c.statut === 'selectionne' || c.statut === 'inscrit'
+            ? 'lp'
+            : ('' as FinalSelectionDecision),
         obs: '',
       }));
       this.updateFinalSelectionFiltered();
@@ -9290,7 +9778,9 @@ export class DashboardCommissionComponent implements OnInit {
       })
       .subscribe({
         next: (response) => {
-          const list: any[] = Array.isArray(response) ? response : (response?.membres || response?.members || []);
+          const list: any[] = Array.isArray(response)
+            ? response
+            : response?.membres || response?.members || [];
           this.membres = list.map((m: any) => ({
             id: m.id,
             nom: m.last_name || m.nom || '',
@@ -10385,12 +10875,7 @@ export class DashboardCommissionComponent implements OnInit {
       return;
     }
 
-    this.exportRows(
-      rows,
-      format as ExportFormat,
-      'inscriptions-finales',
-      'Inscriptions finales',
-    );
+    this.exportRows(rows, format as ExportFormat, 'inscriptions-finales', 'Inscriptions finales');
   }
 
   exportRows(
@@ -10610,4 +11095,5 @@ export class DashboardCommissionComponent implements OnInit {
         },
       });
   }
+
 }

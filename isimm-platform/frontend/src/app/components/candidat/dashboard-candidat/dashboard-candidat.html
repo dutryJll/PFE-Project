@@ -1729,26 +1729,26 @@
           </div>
         </div>
 
-        <!-- Workflow stepper -->
+        <!-- Workflow stepper (reflète statut_inscription) -->
         <div class="insc-workflow-stepper">
-          <div class="insc-step insc-step--done">
+          <div class="insc-step" [ngClass]="getInscriptionStepClass(1)">
             <div class="insc-step-circle"><i class="fas fa-star"></i></div>
             <div class="insc-step-label">Sélectionné</div>
           </div>
-          <div class="insc-step-connector insc-step-connector--done"></div>
-          <div class="insc-step insc-step--active">
+          <div class="insc-step-connector" [ngClass]="getInscriptionConnectorClass(1)"></div>
+          <div class="insc-step" [ngClass]="getInscriptionStepClass(2)">
             <div class="insc-step-circle"><i class="fas fa-pen-to-square"></i></div>
             <div class="insc-step-label">Inscription en ligne</div>
           </div>
-          <div class="insc-step-connector"></div>
-          <div class="insc-step">
-            <div class="insc-step-circle"><i class="fas fa-credit-card"></i></div>
-            <div class="insc-step-label">Paiement</div>
+          <div class="insc-step-connector" [ngClass]="getInscriptionConnectorClass(2)"></div>
+          <div class="insc-step" [ngClass]="getInscriptionStepClass(3)">
+            <div class="insc-step-circle"><i class="fas fa-hourglass-half"></i></div>
+            <div class="insc-step-label">En attente</div>
           </div>
-          <div class="insc-step-connector"></div>
-          <div class="insc-step">
+          <div class="insc-step-connector" [ngClass]="getInscriptionConnectorClass(3)"></div>
+          <div class="insc-step" [ngClass]="getInscriptionStepClass(4)">
             <div class="insc-step-circle"><i class="fas fa-circle-check"></i></div>
-            <div class="insc-step-label">Confirmé</div>
+            <div class="insc-step-label">Inscrit confirmé</div>
           </div>
         </div>
 
@@ -1757,8 +1757,9 @@
           <div class="inscription-banner-text">
             <h3>Félicitations — Vous avez été sélectionné !</h3>
             <p>
-              Procédez à votre inscription sur la plateforme officielle, puis saisissez votre
-              numéro d'inscription et déposez votre justificatif de paiement.
+              Procédez à votre inscription sur la plateforme universitaire officielle, puis
+              saisissez votre numéro d'inscription ci-dessous. Le responsable confirmera votre
+              inscription après vérification de la liste officielle.
             </p>
           </div>
           <div class="inscription-banner-actions">
@@ -2311,7 +2312,7 @@
           <div class="kpi-card">
             <small>Meilleur score</small>
             <strong>{{
-              historiqueBestScore !== null ? historiqueBestScore + ' / 20' : '-'
+              historiqueBestScore !== null ? historiqueBestScore + ' pts' : '-'
             }}</strong>
           </div>
           <div class="kpi-card">
@@ -2457,6 +2458,49 @@
             <p>Aucune réclamation pour le moment.</p>
           </div>
         </ng-template>
+      </div>
+
+      <!-- MOD v5 §C — Dialog inline « Nouvelle réclamation » (même page, sans redirection) -->
+      <div class="recl-modal-overlay" *ngIf="showModalReclamation" (click)="fermerModalReclamation()">
+        <div class="recl-modal" (click)="$event.stopPropagation()">
+          <div class="recl-modal-header">
+            <h3><i class="fas fa-exclamation-circle"></i> Nouvelle réclamation</h3>
+            <button type="button" class="recl-modal-close" (click)="fermerModalReclamation()" aria-label="Fermer">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="recl-modal-body">
+            <div class="recl-fg">
+              <label>Master concerné <span class="req">*</span></label>
+              <select [(ngModel)]="nouvelleReclamation.master_id" [ngModelOptions]="{ standalone: true }">
+                <option value="">— Sélectionner —</option>
+                <option *ngFor="let c of mesCandidatures" [value]="c.master_id">{{ c.master_nom }}</option>
+              </select>
+            </div>
+            <div class="recl-fg">
+              <label>Objet de la réclamation <span class="req">*</span></label>
+              <select [(ngModel)]="nouvelleReclamation.objet" [ngModelOptions]="{ standalone: true }">
+                <option value="">— Sélectionner —</option>
+                <option value="score">Score incorrect</option>
+                <option value="statut">Statut non mis à jour</option>
+                <option value="dossier">Problème de dossier</option>
+                <option value="paiement">Problème de paiement</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+            <div class="recl-fg">
+              <label>Motif / Description <span class="req">*</span></label>
+              <textarea [(ngModel)]="nouvelleReclamation.motif" [ngModelOptions]="{ standalone: true }"
+                rows="4" placeholder="Décrivez votre réclamation en détail…"></textarea>
+            </div>
+          </div>
+          <div class="recl-modal-footer">
+            <button type="button" class="recl-btn-cancel" (click)="fermerModalReclamation()">Annuler</button>
+            <button type="button" class="recl-btn-submit" (click)="soumettreReclamation()">
+              <i class="fas fa-paper-plane"></i> Soumettre
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3571,19 +3615,52 @@
               </table>
             </div>
 
-            <!-- Champs complémentaires -->
-            <div class="wz-form-row">
-              <div class="wz-field" *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()">
-                <label
-                  ><i class="fas fa-users"></i> Nature de candidature
-                  <span class="req">*</span></label
+            <!-- ════════════════════════════════════════════════════════ -->
+            <!--  MOD 1 — Cascade Université / Établissement              -->
+            <!--  Remplace les radios "Étudiant ISIMM / Externe"          -->
+            <!-- ════════════════════════════════════════════════════════ -->
+            <div class="wz-form-row" *ngIf="isWizardMrglOffer() || isWizardMrmiOffer()">
+              <div class="wz-field">
+                <label>
+                  <i class="fas fa-university"></i> Université
+                  <span class="req">*</span>
+                </label>
+                <select
+                  [(ngModel)]="wizardData.universite"
+                  (ngModelChange)="onWizardUniversiteChange()"
+                  name="wzUniversite"
                 >
-                <select [(ngModel)]="wizardData.natureCandidature" name="wzNatureCand">
-                  <option value="">— Sélectionner —</option>
-                  <option value="Étudiant ISIMM">Étudiant ISIMM</option>
-                  <option value="Étudiant Externe">Étudiant Externe</option>
+                  <option value="">— Sélectionner une université —</option>
+                  <option *ngFor="let uni of UNIVERSITIES_LIST" [value]="uni">{{ uni }}</option>
                 </select>
               </div>
+              <div class="wz-field">
+                <label>
+                  <i class="fas fa-school"></i> Établissement
+                  <span class="req">*</span>
+                </label>
+                <select
+                  [(ngModel)]="wizardData.etablissement"
+                  (ngModelChange)="onWizardEtablissementChange()"
+                  name="wzEtablissement"
+                  [disabled]="!wizardData.universite"
+                >
+                  <option value="" *ngIf="!wizardData.universite">
+                    — Choisir d'abord une université —
+                  </option>
+                  <option value="" *ngIf="wizardData.universite">— Sélectionner —</option>
+                  <option
+                    *ngFor="let etab of getWizardEtablissements()"
+                    [value]="etab"
+                  >
+                    {{ etab }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Champs complémentaires -->
+            <div class="wz-form-row">
               <div class="wz-field">
                 <label
                   ><i class="fas fa-redo-alt"></i> Nb années redoublement
@@ -3611,18 +3688,10 @@
               </div>
             </div>
 
-            <div class="wz-form-row" *ngIf="wizardData.natureCandidature === 'Étudiant Externe'">
+            <!-- Spécialité (visible si non-ISIMM) -->
+            <div class="wz-form-row" *ngIf="wizardData.universite && !wizardData.isISIMM">
               <div class="wz-field">
-                <label><i class="fas fa-university"></i> Établissement externe</label>
-                <input
-                  type="text"
-                  [(ngModel)]="wizardData.etablissementExterne"
-                  name="wzEtabExt"
-                  placeholder="Nom de l'établissement"
-                />
-              </div>
-              <div class="wz-field">
-                <label><i class="fas fa-book"></i> Spécialité externe</label>
+                <label><i class="fas fa-book"></i> Spécialité d'origine</label>
                 <input
                   type="text"
                   [(ngModel)]="wizardData.specialiteExterne"
@@ -3963,7 +4032,7 @@
           <div class="rc-grid-3">
             <div class="rc-cell rc-highlight-cell">
               <div class="rc-cell-lbl">Score obtenu</div>
-              <div class="rc-cell-val rc-score">{{ selectedCandidatureForEdit.score != null ? selectedCandidatureForEdit.score + ' / 20' : '—' }}</div>
+              <div class="rc-cell-val rc-score">{{ selectedCandidatureForEdit.score != null ? selectedCandidatureForEdit.score + ' pts' : '—' }}</div>
             </div>
             <div class="rc-cell">
               <div class="rc-cell-lbl">Classement</div>

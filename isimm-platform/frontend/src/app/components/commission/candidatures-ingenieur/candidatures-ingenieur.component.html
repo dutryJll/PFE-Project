@@ -190,7 +190,7 @@
                         getSpecialiteBadgeLabel(candidat.specialite)
                       }}</span>
                     </td>
-                    <td class="col-score score-cell">{{ candidat.score | number: '1.1-1' }}</td>
+                    <td class="col-score score-cell">{{ candidat.score | number: '1.2-2' }}</td>
                     <td class="col-statut">
                       <span [ngClass]="getStatutBadgeClass(candidat.statut)">{{
                         candidat.statut
@@ -403,7 +403,7 @@
                 <span>Spécialité</span><strong>{{ current.specialite }}</strong>
               </div>
               <div class="consultation-line">
-                <span>Score</span><strong>{{ current.score }}/20</strong>
+                <span>Score</span><strong>{{ current.score }} pts</strong>
               </div>
               <div class="consultation-line">
                 <span>État dossier</span><strong>{{ current.etat_dossier }}</strong>

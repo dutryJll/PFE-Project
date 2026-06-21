@@ -21,21 +21,50 @@
         </span>
       </div>
       <p class="sidebar-user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</p>
-      <p class="user-role">{{ isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master' }}</p>
+      <p class="user-role">
+        {{ isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master' }}
+      </p>
       <div class="user-role-master" *ngIf="isResponsable">
-        SPÉCIALITÉ : {{ getDisplayedResponsableSpecialite() || 'Non renseignée' }}
+        PARCOURS : {{ getDisplayedResponsableSpecialite() || 'Non renseignée' }}
       </div>
+      <!-- ✅ MULTI-COMMISSION: dropdown (membre + responsable) -->
       <div class="commission-block" *ngIf="!isResponsable">
         <div class="commission-eyebrow">
           <i class="fas fa-filter"></i>
           Commission active
         </div>
-        <div *ngIf="!commissionsLoading && availableCommissions.length === 0" class="commission-empty-notice">
+        <!-- Chargement -->
+        <div *ngIf="commissionsLoading" class="commission-loading-notice">
+          <i class="fas fa-spinner fa-spin"></i>
+          Chargement des commissions...
+        </div>
+
+        <!-- Cas 0 : aucune commission -->
+        <div
+          *ngIf="!commissionsLoading && availableCommissions.length === 0"
+          class="commission-empty-notice"
+        >
           <i class="fas fa-info-circle"></i>
           Aucune commission assignée
         </div>
+
+        <!-- Cas 1 : une seule commission (affichage nom + spécialité) -->
         <div
-          *ngIf="availableCommissions.length > 0"
+          *ngIf="!commissionsLoading && availableCommissions.length === 1"
+          class="commission-single"
+        >
+          <span class="status-dot"></span>
+          <span class="commission-single-text">
+            <strong>{{ availableCommissions[0].nom }}</strong>
+            <small *ngIf="availableCommissions[0].master_nom">
+              {{ availableCommissions[0].master_nom }}
+            </small>
+          </span>
+        </div>
+
+        <!-- Cas >1 : sélecteur de commission -->
+        <div
+          *ngIf="!commissionsLoading && availableCommissions.length > 1"
           class="select-wrap"
           [class.select-wrap-disabled]="commissionsLoading"
         >
@@ -733,9 +762,15 @@
 
         <!-- Role section label -->
         <div class="notif-role-bar">
-          <span class="notif-role-chip" [class.notif-role-resp]="isResponsable" [class.notif-role-membre]="!isResponsable">
+          <span
+            class="notif-role-chip"
+            [class.notif-role-resp]="isResponsable"
+            [class.notif-role-membre]="!isResponsable"
+          >
             <i class="fas" [class.fa-user-tie]="isResponsable" [class.fa-user]="!isResponsable"></i>
-            {{ 'Notifications ' + (isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master') }}
+            {{
+              'Notifications ' + (isEngineerScope() ? 'Commission Ingénieur' : 'Commission Master')
+            }}
           </span>
         </div>
 
@@ -1388,10 +1423,7 @@
                   [(ngModel)]="nouvelleOffreParcoursCode"
                   (ngModelChange)="onNouvelleOffreParcoursChange()"
                 >
-                  <option
-                    *ngFor="let p of nouvelleOffreParcoursOptions()"
-                    [value]="p.code"
-                  >
+                  <option *ngFor="let p of nouvelleOffreParcoursOptions()" [value]="p.code">
                     {{ p.label }}
                   </option>
                 </select>
@@ -1409,23 +1441,14 @@
                   </button>
                 </label>
                 <select class="ofr-finput" disabled>
-                  <option
-                    *ngFor="let s of nouvelleOffreSpecialitesDemandees"
-                    [value]="s"
-                  >
+                  <option *ngFor="let s of nouvelleOffreSpecialitesDemandees" [value]="s">
                     {{ s }}
                   </option>
-                  <option
-                    *ngIf="nouvelleOffreSpecialitesDemandees.length === 0"
-                    value=""
-                  >
+                  <option *ngIf="nouvelleOffreSpecialitesDemandees.length === 0" value="">
                     Aucune spécialité — cliquez sur Éditer
                   </option>
                 </select>
-                <div
-                  *ngIf="nouvelleOffreShowSpecialitesEditor"
-                  class="specialites-editor-panel"
-                >
+                <div *ngIf="nouvelleOffreShowSpecialitesEditor" class="specialites-editor-panel">
                   <div class="specialites-editor-list">
                     <div
                       *ngFor="let s of nouvelleOffreSpecialitesDemandees; let i = index"
@@ -1534,139 +1557,112 @@
           <!-- Panel 2: Critères d'évaluation -->
           <div class="ofr-panel" *ngIf="nouvelleOffreStep === 2">
             <div class="criteres-intro">
-              <strong>Critères d'évaluation</strong>
+              <strong>Critères d'évaluation &amp; coefficients</strong>
               <p>
-                Définissez les critères numériques (codes utilisés dans la formule), puis composez
-                la formule de calcul du score. Cette formule sera appliquée automatiquement à
-                chaque préinscription.
+                Sélectionnez les critères pris en compte pour cette offre et attribuez à chacun un
+                coefficient. Le coefficient est réservé à l'Espace Responsable — il n'est
+                <strong>jamais affiché au candidat</strong>. Le système l'applique automatiquement au
+                calcul du score (valeur × coefficient).
               </p>
             </div>
-            <div class="criteres-list">
-              <div *ngFor="let c of nouvelleOffreScoreCriteres; let ci = index" class="critere-card">
-                <div class="critere-card-head">
-                  <div class="critere-head-field">
-                    <label class="flbl-sm">Code</label>
-                    <input type="text" class="ofr-qt-input critere-code-input" [(ngModel)]="c.code" placeholder="Ex: M.G" />
-                  </div>
-                  <div class="critere-head-field critere-head-grow">
-                    <label class="flbl-sm">Nom du critère</label>
-                    <input type="text" class="ofr-qt-input" [(ngModel)]="c.label" placeholder="Ex: Moyenne Générale" />
-                  </div>
-                  <div class="critere-head-field">
-                    <label class="flbl-sm">Mode de calcul</label>
-                    <select
-                      class="ofr-qt-input critere-mode-select"
-                      [(ngModel)]="c.mode"
-                      (ngModelChange)="onNouvelleOffreCritereModeChange(c)"
-                    >
-                      <option value="palier">Palier</option>
-                      <option value="formule">Formule</option>
-                      <option value="fixe">Fixe</option>
-                    </select>
-                  </div>
-                  <button class="critere-del-btn" type="button" (click)="supprimerNouvelleOffreCritereScore(ci)">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
 
-                <div *ngIf="c.description" class="critere-desc">
-                  <i class="fas fa-info-circle"></i> {{ c.description }}
-                </div>
-
-                <div *ngIf="c.mode === 'palier'" class="critere-body">
-                  <div class="critere-body-label">Barème par palier</div>
-                  <table class="paliers-table">
-                    <thead>
-                      <tr>
-                        <th>Condition</th>
-                        <th style="width:100px">Points</th>
-                        <th style="width:40px"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let p of c.paliers; let pi = index">
-                        <td><input type="text" class="ofr-qt-input" [(ngModel)]="p.condition" placeholder="Ex: 0 redoublement" /></td>
-                        <td><input type="number" step="0.5" class="ofr-qt-input" [(ngModel)]="p.points" /></td>
-                        <td>
-                          <button class="palier-del-btn" type="button" (click)="supprimerNouvelleOffrePalier(c, pi)">
-                            <i class="fas fa-times"></i>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr *ngIf="!c.paliers || c.paliers.length === 0">
-                        <td colspan="3" style="text-align:center;color:#94A3B8;font-style:italic;padding:8px">
-                          Aucun palier — ajoutez-en un ci-dessous.
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <button type="button" class="ofr-btn-add-quota palier-add-btn" (click)="ajouterNouvelleOffrePalier(c)">
-                    <i class="fas fa-plus"></i> Ajouter un palier
-                  </button>
-                </div>
-
-                <div *ngIf="c.mode === 'formule'" class="critere-body">
-                  <div class="critere-body-label">Formule pondérée (variables : l1, l2, l3, bac, math_bac)</div>
-                  <input type="text" class="ofr-finput" [(ngModel)]="c.formuleCalc" placeholder="Ex: 2*bac + 1.5*l1 + 1*l2 + 0.5*l3" />
-                </div>
-
-                <div *ngIf="c.mode === 'fixe'" class="critere-body">
-                  <div class="critere-body-label">Valeur fixe</div>
-                  <input type="number" step="0.5" class="ofr-qt-input" [(ngModel)]="c.valeurFixe" style="width:120px" />
-                </div>
-              </div>
-
-              <div *ngIf="nouvelleOffreScoreCriteres.length === 0" class="criteres-empty">
-                Aucun critère défini — cliquez sur « Ajouter un critère ».
-              </div>
+            <div class="criteres-coef-wrap">
+              <table class="criteres-coef-table">
+                <thead>
+                  <tr>
+                    <th style="width: 32%">Critère</th>
+                    <th style="width: 14%"><i class="fas fa-lock"></i> Coefficient</th>
+                    <th style="width: 22%">Valeur / Seuil</th>
+                    <th style="width: 14%">Code</th>
+                    <th style="width: 18%">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of nouvelleOffreCriteres; let ci = index">
+                    <td>
+                      <select
+                        class="ofr-qt-input"
+                        [(ngModel)]="c.code"
+                        (ngModelChange)="onNouvelleOffreCritereCodeChange(c)"
+                      >
+                        <option value="">— Sélectionner —</option>
+                        <option *ngFor="let opt of CRITERIA_OPTIONS" [value]="opt.code">
+                          {{ opt.label }}
+                        </option>
+                      </select>
+                      <div *ngIf="critereDejaSelectionne(c.code)" class="critere-dup-warn">
+                        <i class="fas fa-exclamation-triangle"></i> Critère déjà ajouté
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.5"
+                        class="ofr-qt-input critere-coef-input"
+                        [(ngModel)]="c.coefficient"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="ofr-qt-input"
+                        [(ngModel)]="c.valeur"
+                        placeholder="ex : sur 20, 5/3/0 pts"
+                      />
+                    </td>
+                    <td><code class="critere-code-chip">{{ c.code || '—' }}</code></td>
+                    <td>
+                      <div class="critere-act-group">
+                        <button
+                          type="button"
+                          class="critere-edit-btn"
+                          (click)="modifierNouvelleOffreCritere(c)"
+                          title="Modifier coefficient / valeur"
+                        >
+                          <i class="fas fa-pen"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="critere-del-btn"
+                          (click)="supprimerNouvelleOffreCritere(ci)"
+                          title="Supprimer"
+                        >
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="nouvelleOffreCriteres.length === 0">
+                    <td colspan="5" class="criteres-empty-cell">
+                      Aucun critère configuré — cliquez sur « Ajouter un critère ».
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+
             <div style="margin-top: 10px">
               <button
                 class="ofr-btn-add-quota"
                 type="button"
-                (click)="ajouterNouvelleOffreCritereScore()"
+                (click)="ajouterNouvelleOffreCritere()"
               >
                 <i class="fas fa-plus"></i> Ajouter un critère
               </button>
             </div>
+
+            <!-- Aperçu temps réel de la formule du score (coefficients inclus) -->
             <div class="ofr-fg-full" style="margin-top: 14px">
-              <label class="ofr-flbl">Formule de calcul du score</label>
-              <input
-                type="text"
-                class="ofr-finput"
-                [(ngModel)]="nouvelleOffreScoreFormule"
-                placeholder="Ex: M.G + B.N.R + B.S.P"
-              />
-              <div class="formule-help">
-                Codes disponibles (cliquez pour insérer) :
-                <span
-                  *ngFor="let c of nouvelleOffreScoreCriteres"
-                  class="formule-code-chip clickable"
-                  (click)="insererCodeDansFormuleModal(c.code)"
-                  title="Insérer dans la formule"
-                >
-                  {{ c.code }}
-                </span>
-                <span
-                  *ngIf="nouvelleOffreScoreCriteres.length === 0"
-                  style="color: #94A3B8; font-style: italic"
-                >
-                  Aucun (ajoutez un critère)
-                </span>
+              <label class="ofr-flbl">Aperçu de la formule du score</label>
+              <div class="formule-result formule-ok">
+                <i class="fas fa-calculator"></i>
+                <strong>{{ nouvelleOffreFormulePreview() }}</strong>
               </div>
-              <div
-                class="formule-result"
-                [class.formule-ok]="evaluerNouvelleOffreScoreFormule().ok"
-                [class.formule-err]="!evaluerNouvelleOffreScoreFormule().ok"
-              >
-                <ng-container *ngIf="evaluerNouvelleOffreScoreFormule().ok">
-                  <i class="fas fa-check-circle"></i> Formule valide — score avec valeurs par
-                  défaut : <strong>{{ evaluerNouvelleOffreScoreFormule().value }}</strong>
-                </ng-container>
-                <ng-container *ngIf="!evaluerNouvelleOffreScoreFormule().ok">
-                  <i class="fas fa-exclamation-triangle"></i>
-                  {{ evaluerNouvelleOffreScoreFormule().error }}
-                </ng-container>
+              <div class="critere-lock-note">
+                <i class="fas fa-lock"></i> Coefficients visibles uniquement par le Responsable —
+                jamais affichés au candidat.
               </div>
             </div>
           </div>
@@ -1781,15 +1777,9 @@
                       />
                     </td>
                     <td>
-                      <select
-                        class="ofr-qt-input"
-                        [(ngModel)]="q.diplome"
-                      >
+                      <select class="ofr-qt-input" [(ngModel)]="q.diplome">
                         <option value="">— Choisir une spécialité demandée —</option>
-                        <option
-                          *ngFor="let s of nouvelleOffreSpecialitesDemandees"
-                          [value]="s"
-                        >
+                        <option *ngFor="let s of nouvelleOffreSpecialitesDemandees" [value]="s">
                           {{ s }}
                         </option>
                       </select>
@@ -1848,6 +1838,7 @@
                 class="ofr-btn-primary"
                 type="button"
                 *ngIf="nouvelleOffreStep < 4"
+                [disabled]="nouvelleOffreStep === 2 && !nouvelleOffreCriteresValides()"
                 (click)="nextStepNouvelleOffre()"
               >
                 Suivant <i class="fas fa-chevron-right"></i>
@@ -1979,7 +1970,7 @@
           </p>
         </div>
         <div
-          *ngIf="!offresPreinscription.length"
+          *ngIf="!offresPreinscriptionFiltrees.length"
           style="text-align: center; padding: 48px; color: #94a3b8; font-size: 14px"
         >
           <i
@@ -1996,7 +1987,7 @@
           "
         >
           <div
-            *ngFor="let offre of offresPreinscription"
+            *ngFor="let offre of offresPreinscriptionFiltrees"
             style="
               border: 1px solid #e2e8f0;
               border-radius: 12px;
@@ -2261,7 +2252,7 @@
                 </td>
                 <td>
                   <div class="cm-score-wrap">
-                    <span class="cm-score-val">{{ candidature.score | number: '1.1-1' }}</span>
+                    <span class="cm-score-val">{{ candidature.score | number: '1.2-2' }}</span>
                     <div class="cm-score-bar-bg">
                       <div
                         class="cm-score-bar-fill"
@@ -2308,7 +2299,8 @@
                   <div class="cm-empty-state">
                     <i class="fas fa-inbox"></i>
                     <p *ngIf="candidaturesResponsable.length === 0">
-                      Aucune candidature reçue pour le moment. Votre espace est prêt et sera mis à jour dès la réception de candidatures.
+                      Aucune candidature reçue pour le moment. Votre espace est prêt et sera mis à
+                      jour dès la réception de candidatures.
                     </p>
                     <p *ngIf="candidaturesResponsable.length > 0">
                       Aucune candidature ne correspond aux filtres appliqués.
@@ -2364,7 +2356,12 @@
                   (click)="exporterOcrLot('excel')"
                   title="Télécharger le rapport au format Excel"
                 >
-                  <i class="fas" [ngClass]="ocrLotExportLoading === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+                  <i
+                    class="fas"
+                    [ngClass]="
+                      ocrLotExportLoading === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'
+                    "
+                  ></i>
                   {{ ocrLotExportLoading === 'excel' ? 'Génération...' : 'Exporter Excel' }}
                 </button>
                 <button
@@ -2374,7 +2371,10 @@
                   (click)="exporterOcrLot('pdf')"
                   title="Télécharger le rapport au format PDF"
                 >
-                  <i class="fas" [ngClass]="ocrLotExportLoading === 'pdf' ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+                  <i
+                    class="fas"
+                    [ngClass]="ocrLotExportLoading === 'pdf' ? 'fa-spinner fa-spin' : 'fa-file-pdf'"
+                  ></i>
                   {{ ocrLotExportLoading === 'pdf' ? 'Génération...' : 'Exporter PDF' }}
                 </button>
                 <button class="ocr-lot-close" (click)="fermerOcrLotResultats()">
@@ -2389,15 +2389,15 @@
                   <span>Total</span>
                 </div>
                 <div class="ocr-lot-stat ocr-lot-stat-ok">
-                  <strong>{{ ocrLotResultats.analysees }}</strong>
+                  <strong>{{ ocrLotResultats.nb_analysees }}</strong>
                   <span>Analysées</span>
                 </div>
                 <div class="ocr-lot-stat ocr-lot-stat-fraud">
-                  <strong>{{ ocrLotResultats.fraudes_detectees }}</strong>
+                  <strong>{{ ocrLotResultats.nb_anomalies }}</strong>
                   <span>Anomalies</span>
                 </div>
                 <div class="ocr-lot-stat ocr-lot-stat-err">
-                  <strong>{{ ocrLotResultats.erreurs }}</strong>
+                  <strong>{{ ocrLotResultats.nb_erreurs }}</strong>
                   <span>Erreurs</span>
                 </div>
               </div>
@@ -2414,7 +2414,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let r of ocrLotResultats.resultats" [class.ocr-lot-row-fraud]="r.statut === 'anomalie'">
+                  <tr
+                    *ngFor="let r of ocrLotResultats.resultats"
+                    [class.ocr-lot-row-fraud]="r.statut === 'anomalie'"
+                  >
                     <td>{{ r.candidat_nom || '—' }}</td>
                     <td>{{ r.numero || '—' }}</td>
                     <td>{{ r.score_declare != null ? r.score_declare : '—' }}</td>
@@ -2424,13 +2427,19 @@
                     </td>
                     <td>{{ r.moteur || '—' }}</td>
                     <td>
-                      <span class="ocr-lot-badge"
+                      <span
+                        class="ocr-lot-badge"
                         [class.ocr-lot-bg-fraud]="r.statut === 'anomalie'"
                         [class.ocr-lot-bg-ok]="r.success && r.statut === 'ok'"
-                        [class.ocr-lot-bg-err]="!r.success">
+                        [class.ocr-lot-bg-err]="!r.success"
+                      >
                         <ng-container *ngIf="!r.success">❌ Erreur</ng-container>
-                        <ng-container *ngIf="r.success && r.statut === 'anomalie'">⚠️ Anomalie</ng-container>
-                        <ng-container *ngIf="r.success && r.statut === 'ok'">✓ Cohérent</ng-container>
+                        <ng-container *ngIf="r.success && r.statut === 'anomalie'"
+                          >⚠️ Anomalie</ng-container
+                        >
+                        <ng-container *ngIf="r.success && r.statut === 'ok'"
+                          >✓ Cohérent</ng-container
+                        >
                       </span>
                     </td>
                   </tr>
@@ -3058,7 +3067,11 @@
         <!-- ════════════════════════════════════════════════════════ -->
         <!-- MODAL DÉCISION FINALE — 2 boutons : Sélectionner / Rejeter -->
         <!-- ════════════════════════════════════════════════════════ -->
-        <div class="final-decision-backdrop" *ngIf="showFinalDecisionModal" (click)="closeFinalDecisionModal()">
+        <div
+          class="final-decision-backdrop"
+          *ngIf="showFinalDecisionModal"
+          (click)="closeFinalDecisionModal()"
+        >
           <div class="final-decision-modal" (click)="$event.stopPropagation()">
             <div class="final-decision-head">
               <h3>Décision Finale</h3>
@@ -3068,7 +3081,8 @@
             </div>
             <div class="final-decision-body">
               <p class="final-decision-text">
-                Choisissez l'action à appliquer à <strong>tous les candidats présélectionnés</strong> :
+                Choisissez l'action à appliquer à
+                <strong>tous les candidats présélectionnés</strong> :
               </p>
               <div class="final-decision-buttons">
                 <button
@@ -3100,8 +3114,7 @@
           </div>
         </div>
 
-        <div class="prs-title-row-spacer" style="display:none">
-        </div>
+        <div class="prs-title-row-spacer" style="display: none"></div>
 
         <!-- Stats grid -->
         <div class="prs-stats-grid">
@@ -3223,13 +3236,23 @@
                       <span *ngIf="getAvisMembrePourCandidature(membre.email).commentaire">
                         {{ getAvisMembrePourCandidature(membre.email).commentaire }}
                       </span>
-                      <span class="prs-avis-muted" *ngIf="!getAvisMembrePourCandidature(membre.email).commentaire">—</span>
+                      <span
+                        class="prs-avis-muted"
+                        *ngIf="!getAvisMembrePourCandidature(membre.email).commentaire"
+                        >—</span
+                      >
                     </td>
                     <td>
                       <span *ngIf="getAvisMembrePourCandidature(membre.email).date">
-                        {{ getAvisMembrePourCandidature(membre.email).date | date:'dd/MM/yyyy HH:mm' }}
+                        {{
+                          getAvisMembrePourCandidature(membre.email).date | date: 'dd/MM/yyyy HH:mm'
+                        }}
                       </span>
-                      <span class="prs-avis-muted" *ngIf="!getAvisMembrePourCandidature(membre.email).date">—</span>
+                      <span
+                        class="prs-avis-muted"
+                        *ngIf="!getAvisMembrePourCandidature(membre.email).date"
+                        >—</span
+                      >
                     </td>
                   </tr>
                 </ng-container>
@@ -3518,7 +3541,11 @@
                   </td>
                   <td>
                     <div (click)="$event.stopPropagation()">
-                      <button class="prs-kebab-btn" type="button" (click)="togglePrsKebab(c.id, $event)">
+                      <button
+                        class="prs-kebab-btn"
+                        type="button"
+                        (click)="togglePrsKebab(c.id, $event)"
+                      >
                         <i class="fas fa-ellipsis-v"></i>
                       </button>
                       <!-- Menu en position FIXED, coordonnées calculées au click -->
@@ -3527,7 +3554,7 @@
                         *ngIf="prsKebabOpenId === c.id"
                         [ngStyle]="{
                           'top.px': prsKebabPos.top,
-                          'left.px': prsKebabPos.left
+                          'left.px': prsKebabPos.left,
                         }"
                       >
                         <li>
@@ -3633,7 +3660,12 @@
       </div>
 
       <!-- Modal Voir Avis / Décision (responsable only) -->
-      <div class="prs-modal-overlay" *ngIf="isResponsable" [class.open]="showModalAvis" (click)="fermerModalAvis()">
+      <div
+        class="prs-modal-overlay"
+        *ngIf="isResponsable"
+        [class.open]="showModalAvis"
+        (click)="fermerModalAvis()"
+      >
         <div class="prs-modal-avis" (click)="$event.stopPropagation()">
           <div class="prs-ma-header">
             <div class="prs-ma-title">
@@ -3672,9 +3704,22 @@
                 [class.prs-vote-def]="v.recommandation === 'defavorable'"
                 [class.prs-vote-res]="v.recommandation === 'reserve'"
               >
-                <span class="prs-vote-membre"><i class="fas fa-user-tie"></i> {{ v.membreNom }}</span>
-                <span class="prs-vote-badge" [class.prs-vbadge-fav]="v.recommandation === 'favorable'" [class.prs-vbadge-def]="v.recommandation === 'defavorable'" [class.prs-vbadge-res]="v.recommandation === 'reserve'">
-                  {{ v.recommandation === 'favorable' ? 'Favorable' : v.recommandation === 'defavorable' ? 'Défavorable' : 'Réservé' }}
+                <span class="prs-vote-membre"
+                  ><i class="fas fa-user-tie"></i> {{ v.membreNom }}</span
+                >
+                <span
+                  class="prs-vote-badge"
+                  [class.prs-vbadge-fav]="v.recommandation === 'favorable'"
+                  [class.prs-vbadge-def]="v.recommandation === 'defavorable'"
+                  [class.prs-vbadge-res]="v.recommandation === 'reserve'"
+                >
+                  {{
+                    v.recommandation === 'favorable'
+                      ? 'Favorable'
+                      : v.recommandation === 'defavorable'
+                        ? 'Défavorable'
+                        : 'Réservé'
+                  }}
                 </span>
                 <span *ngIf="v.commentaire" class="prs-vote-comment">{{ v.commentaire }}</span>
               </div>
@@ -3983,7 +4028,12 @@
       </div>
 
       <!-- Avis modal (membre view only) -->
-      <div class="prs-modal-overlay" *ngIf="!isResponsable" [class.open]="showModalAvis" (click)="fermerModalAvis()">
+      <div
+        class="prs-modal-overlay"
+        *ngIf="!isResponsable"
+        [class.open]="showModalAvis"
+        (click)="fermerModalAvis()"
+      >
         <div class="prs-modal-avis" (click)="$event.stopPropagation()">
           <div class="prs-ma-header">
             <div class="prs-ma-title">
@@ -4020,9 +4070,22 @@
                 [class.prs-vote-def]="v.recommandation === 'defavorable'"
                 [class.prs-vote-res]="v.recommandation === 'reserve'"
               >
-                <span class="prs-vote-membre"><i class="fas fa-user-tie"></i> {{ v.membreNom }}</span>
-                <span class="prs-vote-badge" [class.prs-vbadge-fav]="v.recommandation === 'favorable'" [class.prs-vbadge-def]="v.recommandation === 'defavorable'" [class.prs-vbadge-res]="v.recommandation === 'reserve'">
-                  {{ v.recommandation === 'favorable' ? 'Favorable' : v.recommandation === 'defavorable' ? 'Défavorable' : 'Réservé' }}
+                <span class="prs-vote-membre"
+                  ><i class="fas fa-user-tie"></i> {{ v.membreNom }}</span
+                >
+                <span
+                  class="prs-vote-badge"
+                  [class.prs-vbadge-fav]="v.recommandation === 'favorable'"
+                  [class.prs-vbadge-def]="v.recommandation === 'defavorable'"
+                  [class.prs-vbadge-res]="v.recommandation === 'reserve'"
+                >
+                  {{
+                    v.recommandation === 'favorable'
+                      ? 'Favorable'
+                      : v.recommandation === 'defavorable'
+                        ? 'Défavorable'
+                        : 'Réservé'
+                  }}
                 </span>
                 <span *ngIf="v.commentaire" class="prs-vote-comment">{{ v.commentaire }}</span>
               </div>
@@ -5172,20 +5235,26 @@
                     </select>
                   </td>
                   <td>
-                    <div style="position:relative" (click)="$event.stopPropagation()">
+                    <div style="position: relative" (click)="$event.stopPropagation()">
                       <button class="prs-kebab-btn" type="button" (click)="toggleSelKebab(c.id)">
                         <i class="fas fa-ellipsis-v"></i>
                       </button>
                       <ul class="prs-kebab-menu" *ngIf="selKebabOpenId === c.id">
                         <li>
-                          <button type="button" class="prs-kebab-item"
-                            (click)="ouvrirDossierOCRById(c.id); toggleSelKebab(0)">
+                          <button
+                            type="button"
+                            class="prs-kebab-item"
+                            (click)="ouvrirDossierOCRById(c.id); toggleSelKebab(0)"
+                          >
                             <i class="fas fa-file-alt"></i> Consulter dossier
                           </button>
                         </li>
                         <li>
-                          <button type="button" class="prs-kebab-item"
-                            (click)="ouvrirModalAvis($any(c)); toggleSelKebab(0)">
+                          <button
+                            type="button"
+                            class="prs-kebab-item"
+                            (click)="ouvrirModalAvis($any(c)); toggleSelKebab(0)"
+                          >
                             <i class="fas fa-eye"></i> Voir avis
                           </button>
                         </li>
@@ -7065,7 +7134,7 @@
                 {{ c.annee_universitaire || getCurrentAcademicYear() }}
               </div>
             </div>
-            <div class="score-pill">Score : {{ c.score || '-' }} / 20</div>
+            <div class="score-pill">Score : {{ c.score || '-' }} pts</div>
           </div>
 
           <div>
@@ -7372,7 +7441,7 @@
             <div class="presel-info-row">
               <div class="presel-info-cell">
                 <div class="presel-lbl">Score</div>
-                <div class="presel-val green">{{ c.score }} / 20</div>
+                <div class="presel-val green">{{ c.score }} pts</div>
               </div>
               <div class="presel-info-cell">
                 <div class="presel-lbl">Classement</div>
@@ -7533,7 +7602,7 @@
           <div class="ocr-topbar-info" *ngIf="dossierOCRCandidature">
             <span class="ocr-candidate-name">{{ dossierOCRCandidature.candidat_nom }}</span>
             <span class="ocr-score-pill"
-              >{{ dossierOCRCandidature.score | number: '1.1-1' }} / 20</span
+              >{{ dossierOCRCandidature.score | number: '1.2-2' }} pts</span
             >
           </div>
           <div class="ocr-topbar-actions">
@@ -7606,19 +7675,18 @@
         <div class="ocr-body" *ngIf="dossierOCRCandidature">
           <!-- Documents tab -->
           <div *ngIf="dossierOCRActiveTab === 'documents'">
-
             <!-- ════════════════════════════════════════════════════════ -->
-            <!-- 🟣 CARD OCR RÉEL — pdf2image + PaddleOCR                -->
+            <!-- 🟣 CARD OCR RÉEL -->
             <!-- ════════════════════════════════════════════════════════ -->
             <div class="ocr-real-card">
               <div class="ocr-real-head">
                 <h4>
                   <i class="fas fa-file-pdf"></i>
-                  OCR — Relevé de Notes (pdf2image + PaddleOCR)
+                  OCR — Relevé de Notes
                 </h4>
                 <p>
-                  Upload le PDF candidat → extraction automatique de la moyenne,
-                  détection des écarts vs score déclaré.
+                  Analyse OCR réelle du relevé avec extraction de la moyenne et contrôle de
+                  cohérence.
                 </p>
               </div>
 
@@ -7645,8 +7713,13 @@
                   [disabled]="ocrModalLoading"
                   (click)="lancerOcrReel()"
                 >
-                  <i class="fas" [ngClass]="ocrModalLoading ? 'fa-spinner fa-spin' : 'fa-magic-wand-sparkles'"></i>
-                  <span>{{ ocrModalLoading ? 'OCR en cours...' : 'Uploader / Traiter le PDF' }}</span>
+                  <i
+                    class="fas"
+                    [ngClass]="ocrModalLoading ? 'fa-spinner fa-spin' : 'fa-magic-wand-sparkles'"
+                  ></i>
+                  <span>{{
+                    ocrModalLoading ? 'OCR en cours...' : 'Uploader / Traiter le PDF'
+                  }}</span>
                 </button>
 
                 <button
@@ -7665,22 +7738,34 @@
                 <div class="ocr-real-grid">
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Score extrait</span>
-                    <strong>{{ ocrModalResult.score_extrait != null ? ocrModalResult.score_extrait : '—' }}</strong>
+                    <strong>{{
+                      ocrModalResult.score_extrait != null ? ocrModalResult.score_extrait : '—'
+                    }}</strong>
                   </div>
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Score déclaré</span>
-                    <strong>{{ ocrModalResult.score_declare != null ? ocrModalResult.score_declare : '—' }}</strong>
+                    <strong>{{
+                      ocrModalResult.score_declare != null ? ocrModalResult.score_declare : '—'
+                    }}</strong>
                   </div>
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Écart Δ</span>
-                    <strong [class.ocr-delta-bad]="ocrModalResult?.alerte">
-                      {{ ocrModalResult?.ecart != null ? ocrModalResult?.ecart : '—' }}
+                    <strong [class.ocr-delta-bad]="ocrModalResult.alerte">
+                      {{ ocrModalResult.ecart != null ? ocrModalResult.ecart : '—' }}
                     </strong>
                   </div>
                   <div class="ocr-real-stat">
                     <span class="ocr-real-lbl">Confiance</span>
-                    <strong [ngClass]="(ocrModalResult?.confiance || 0) >= 85 ? 'ocr-conf-high' : (ocrModalResult?.confiance || 0) >= 70 ? 'ocr-conf-medium' : 'ocr-conf-low'">
-                      {{ ocrModalResult?.confiance || 0 }}%
+                    <strong
+                      [ngClass]="
+                        (ocrModalResult.confiance || 0) >= 85
+                          ? 'ocr-conf-high'
+                          : (ocrModalResult.confiance || 0) >= 70
+                            ? 'ocr-conf-medium'
+                            : 'ocr-conf-low'
+                      "
+                    >
+                      {{ ocrModalResult.confiance || 0 }}%
                     </strong>
                   </div>
                   <div class="ocr-real-stat">
@@ -7694,11 +7779,28 @@
                   <strong>Écart anormal détecté</strong> — Vérification manuelle recommandée.
                 </div>
 
-                <div class="ocr-real-anomalies" *ngIf="ocrModalResult.anomalies && ocrModalResult.anomalies.length">
+                <!-- ✅ Détail des notes extraites (L1/L2/L3 + M.G/B.N.R/B.S.P) -->
+                <div class="ocr-detail-notes" *ngIf="ocrModalResult.detail_notes as detail">
+                  <div class="detail-title">📋 Notes extraites du relevé</div>
+                  <table class="detail-table">
+                    <tr><td>Moyenne L1</td><td>{{ detail.l1 || '—' }}</td></tr>
+                    <tr><td>Moyenne L2</td><td>{{ detail.l2 || '—' }}</td></tr>
+                    <tr><td>Moyenne L3</td><td>{{ detail.l3 || '—' }}</td></tr>
+                    <tr class="highlight"><td>M.G calculée</td><td>{{ detail.mg || '—' }}</td></tr>
+                    <tr><td>B.N.R ({{ detail.redoublements }} redoub.)</td><td>{{ detail.bnr }}</td></tr>
+                    <tr><td>B.S.P ({{ detail.sessions }} session)</td><td>{{ detail.bsp }}</td></tr>
+                    <tr class="total"><td>SCORE recalculé</td><td>{{ detail.score_recalcule || '—' }}</td></tr>
+                  </table>
+                </div>
+
+                <div
+                  class="ocr-real-anomalies"
+                  *ngIf="ocrModalResult.anomalies && ocrModalResult.anomalies.length"
+                >
                   <h5>Anomalies</h5>
                   <ul>
                     <li *ngFor="let a of ocrModalResult.anomalies">
-                      <strong>{{ a.type }}</strong> — {{ a.message }}
+                      {{ a }}
                     </li>
                   </ul>
                 </div>
@@ -7717,11 +7819,11 @@
               <div class="pdf-officiel-head">
                 <h4>
                   <i class="fas fa-shield-halved"></i>
-                  Document Officiel ISIMM (PDF + QR Code)
+                  Document Officiel ISIMM (PDF)
                 </h4>
                 <p>
-                  PDF généré avec QR code de sécurité pour vérification d'authenticité.
-                  Statut courant :
+                  PDF généré avec QR code de sécurité pour vérification d'authenticité. Statut
+                  courant :
                   <strong>{{ statutLabelDisplay(dossierOCRCandidature.statut) }}</strong>
                 </p>
               </div>
@@ -7733,8 +7835,13 @@
                   [disabled]="pdfOfficielLoading"
                   (click)="genererPdfOfficielModal()"
                 >
-                  <i class="fas" [ngClass]="pdfOfficielLoading ? 'fa-spinner fa-spin' : 'fa-file-shield'"></i>
-                  <span>{{ pdfOfficielLoading ? 'Génération...' : 'Générer le Document Officiel' }}</span>
+                  <i
+                    class="fas"
+                    [ngClass]="pdfOfficielLoading ? 'fa-spinner fa-spin' : 'fa-file-shield'"
+                  ></i>
+                  <span>{{
+                    pdfOfficielLoading ? 'Génération...' : 'Générer le Document Officiel'
+                  }}</span>
                 </button>
 
                 <button
@@ -7761,10 +7868,7 @@
               </div>
 
               <div class="pdf-officiel-preview" *ngIf="pdfOfficielBlobUrl">
-                <iframe
-                  [src]="pdfOfficielBlobUrl"
-                  title="Document officiel ISIMM"
-                ></iframe>
+                <iframe [src]="pdfOfficielBlobUrl" title="Document officiel ISIMM"></iframe>
               </div>
             </div>
 
@@ -7774,7 +7878,11 @@
             <!-- ════════════════════════════════════════════════════════ -->
             <div
               class="docs-not-available-yet"
-              *ngIf="(dossierOCRCandidature?.statut === 'sous_examen' || dossierOCRCandidature?.statut === 'soumis') && fichiersDeposes.length === 0"
+              *ngIf="
+                (dossierOCRCandidature?.statut === 'sous_examen' ||
+                  dossierOCRCandidature?.statut === 'soumis') &&
+                fichiersDeposes.length === 0
+              "
             >
               <div class="docs-info-icon"><i class="fas fa-clock"></i></div>
               <div>
@@ -7798,8 +7906,14 @@
               <div class="real-file-item" *ngFor="let f of fichiersDeposes">
                 <div class="real-file-icon">
                   <i class="fas fa-file-pdf" *ngIf="f.extension === 'pdf'"></i>
-                  <i class="fas fa-file-image" *ngIf="f.extension === 'jpg' || f.extension === 'jpeg' || f.extension === 'png'"></i>
-                  <i class="fas fa-file" *ngIf="!['pdf','jpg','jpeg','png'].includes(f.extension)"></i>
+                  <i
+                    class="fas fa-file-image"
+                    *ngIf="f.extension === 'jpg' || f.extension === 'jpeg' || f.extension === 'png'"
+                  ></i>
+                  <i
+                    class="fas fa-file"
+                    *ngIf="!['pdf', 'jpg', 'jpeg', 'png'].includes(f.extension)"
+                  ></i>
                 </div>
                 <div class="real-file-info">
                   <strong>{{ f.type_document }}</strong>
@@ -7824,7 +7938,6 @@
                 </div>
               </div>
             </div>
-
           </div>
 
           <!-- Historique tab -->
@@ -7894,11 +8007,7 @@
             >
               Suivant →
             </button>
-            <button
-              type="button"
-              class="cm-ocr-close-btn"
-              (click)="fermerConsultationMassive()"
-            >
+            <button type="button" class="cm-ocr-close-btn" (click)="fermerConsultationMassive()">
               ✕
             </button>
           </div>
@@ -7912,14 +8021,31 @@
               <span class="cm-ocr-list-title">Candidats</span>
               <span class="cm-ocr-list-count">{{ consultationMassiveCandidates.length }}</span>
             </div>
-            <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f4;">
-              <div style="display: flex; align-items: center; gap: 6px; background: #f4f7fb; border: 1px solid #e2e8f4; border-radius: 8px; padding: 6px 10px;">
-                <i class="fas fa-search" style="font-size: 11px; color: #94a3b8;"></i>
+            <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f4">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  background: #f4f7fb;
+                  border: 1px solid #e2e8f4;
+                  border-radius: 8px;
+                  padding: 6px 10px;
+                "
+              >
+                <i class="fas fa-search" style="font-size: 11px; color: #94a3b8"></i>
                 <input
                   type="text"
                   placeholder="Rechercher..."
                   [(ngModel)]="consultationMassiveSearch"
-                  style="border: none; background: transparent; font-family: inherit; font-size: 12px; outline: none; width: 100%;"
+                  style="
+                    border: none;
+                    background: transparent;
+                    font-family: inherit;
+                    font-size: 12px;
+                    outline: none;
+                    width: 100%;
+                  "
                   class="ng-untouched ng-pristine ng-valid"
                 />
               </div>
@@ -7929,13 +8055,17 @@
                 *ngFor="let c of consultationMassiveFiltered; let idx = index"
                 class="cm-ocr-list-item"
                 [class.active]="c === consultationMassiveCurrent"
-                (click)="consultationMassiveSelectCandidat(consultationMassiveCandidates.indexOf(c))"
+                (click)="
+                  consultationMassiveSelectCandidat(consultationMassiveCandidates.indexOf(c))
+                "
               >
-                <div class="cm-ocr-item-rank">#{{ consultationMassiveCandidates.indexOf(c) + 1 }}</div>
+                <div class="cm-ocr-item-rank">
+                  #{{ consultationMassiveCandidates.indexOf(c) + 1 }}
+                </div>
                 <div class="cm-ocr-item-name">{{ c.candidat_nom }}</div>
                 <div class="cm-ocr-item-ref">{{ c.numero }}</div>
                 <div class="cm-ocr-item-meta">
-                  <span class="cm-ocr-item-score">{{ c.score | number: '1.1-1' }} pts</span>
+                  <span class="cm-ocr-item-score">{{ c.score | number: '1.2-2' }} pts</span>
                 </div>
               </div>
             </div>
@@ -7944,24 +8074,36 @@
           <!-- Right panel: dossier detail -->
           <div class="cm-ocr-detail-panel">
             <div *ngIf="consultationMassiveCurrent" class="cm-ocr-detail-topbar">
-              <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px">
                 <div class="cm-ocr-detail-avatar">
                   {{ (consultationMassiveCurrent.candidat_nom || '?')[0].toUpperCase() }}
-                  {{ (consultationMassiveCurrent.candidat_nom || '?').split(' ')[1]?.[0]?.toUpperCase() || '' }}
+                  {{
+                    (consultationMassiveCurrent.candidat_nom || '?')
+                      .split(' ')[1]?.[0]
+                      ?.toUpperCase() || ''
+                  }}
                 </div>
                 <div>
-                  <div class="cm-ocr-detail-name">{{ consultationMassiveCurrent.candidat_nom }}</div>
+                  <div class="cm-ocr-detail-name">
+                    {{ consultationMassiveCurrent.candidat_nom }}
+                  </div>
                   <div class="cm-ocr-detail-ref">{{ consultationMassiveCurrent.numero }}</div>
                   <div class="cm-ocr-detail-meta">Génie Logiciel · Session 2025/2026</div>
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px">
                 <div class="cm-ocr-score-pill">
-                  <span class="cm-ocr-score-val">{{ consultationMassiveCurrent.score | number: '1.1-1' }}</span>
+                  <span class="cm-ocr-score-val">{{
+                    consultationMassiveCurrent.score | number: '1.2-2'
+                  }}</span>
                   <span class="cm-ocr-score-lbl">Score</span>
                 </div>
-                <button type="button" class="cm-ocr-nav-btn" style="background: #f4f7fb; color: #0f1f3d; border: 1px solid #e2e8f4;">
-                  <i class="fas fa-file-alt" style="font-size: 11px;"></i> Voir dossier
+                <button
+                  type="button"
+                  class="cm-ocr-nav-btn"
+                  style="background: #f4f7fb; color: #0f1f3d; border: 1px solid #e2e8f4"
+                >
+                  <i class="fas fa-file-alt" style="font-size: 11px"></i> Voir dossier
                 </button>
               </div>
             </div>
@@ -7971,33 +8113,60 @@
                 <div class="cm-ocr-info-card">
                   <div class="cm-ocr-info-title">Informations</div>
                   <div class="cm-ocr-info-row">
-                    <i class="fas fa-envelope" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <i
+                      class="fas fa-envelope"
+                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
+                    ></i>
                     <span>{{ consultationMassiveCurrent.candidat_email || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i class="fas fa-graduation-cap" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <i
+                      class="fas fa-graduation-cap"
+                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
+                    ></i>
                     <span>{{ consultationMassiveCurrent.master_nom || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i class="fas fa-tag" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
+                    <i
+                      class="fas fa-tag"
+                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
+                    ></i>
                     <span>{{ consultationMassiveCurrent.specialite || '—' }}</span>
                   </div>
                   <div class="cm-ocr-info-row">
-                    <i class="fas fa-calendar" style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px;"></i>
-                    <span>Soumis le {{ consultationMassiveCurrent.date_soumission ? (consultationMassiveCurrent.date_soumission | date: 'dd/MM/yyyy') : '—' }}</span>
+                    <i
+                      class="fas fa-calendar"
+                      style="font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-top: 1px"
+                    ></i>
+                    <span
+                      >Soumis le
+                      {{
+                        consultationMassiveCurrent.date_soumission
+                          ? (consultationMassiveCurrent.date_soumission | date: 'dd/MM/yyyy')
+                          : '—'
+                      }}</span
+                    >
                   </div>
                 </div>
                 <div class="cm-ocr-info-card">
                   <div class="cm-ocr-info-title">Statut dossier</div>
-                  <div style="margin-top: 6px;">
-                    <span class="prs-badge" [ngClass]="'prs-badge-' + (consultationMassiveCurrent.statut || 'soumis')" style="font-size: 12px; padding: 4px 10px;">
+                  <div style="margin-top: 6px">
+                    <span
+                      class="prs-badge"
+                      [ngClass]="'prs-badge-' + (consultationMassiveCurrent.statut || 'soumis')"
+                      style="font-size: 12px; padding: 4px 10px"
+                    >
                       {{ getStatusDisplayLabel(consultationMassiveCurrent.statut) }}
                     </span>
                   </div>
                 </div>
                 <div class="cm-ocr-decision-card">
                   <div class="cm-ocr-info-title">Décision commission</div>
-                  <textarea rows="3" placeholder="Commentaire..." class="cm-ocr-comment ng-untouched ng-pristine ng-valid"></textarea>
+                  <textarea
+                    rows="3"
+                    placeholder="Commentaire..."
+                    class="cm-ocr-comment ng-untouched ng-pristine ng-valid"
+                  ></textarea>
                   <div class="cm-ocr-decision-btns">
                     <button
                       type="button"
@@ -8022,25 +8191,64 @@
               <div class="cm-ocr-docs">
                 <div class="cm-ocr-docs-hdr">
                   <div class="cm-ocr-docs-title">Documents du dossier</div>
-                  <button type="button" class="cm-ocr-btn-ocr-all" (click)="lancerConsultationMassiveOCR()">
-                    <i class="fas fa-robot" style="font-size: 11px;"></i> Examiner tous par OCR
+                  <button
+                    type="button"
+                    class="cm-ocr-btn-ocr-all"
+                    (click)="lancerConsultationMassiveOCR()"
+                  >
+                    <i class="fas fa-robot" style="font-size: 11px"></i> Examiner tous par OCR
                   </button>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; text-align: center;">
-                  <i class="fas fa-folder-open" style="font-size: 32px; color: #94a3b8; margin-bottom: 12px;"></i>
-                  <div style="font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px;">
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 40px 20px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    border: 1px dashed #cbd5e1;
+                    text-align: center;
+                  "
+                >
+                  <i
+                    class="fas fa-folder-open"
+                    style="font-size: 32px; color: #94a3b8; margin-bottom: 12px"
+                  ></i>
+                  <div
+                    style="font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px"
+                  >
                     Documents du dossier
                   </div>
-                  <div style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
-                    Cliquez sur "Voir dossier" pour accéder aux pièces justificatives et lancer l'analyse OCR.
+                  <div style="font-size: 12px; color: #94a3b8; margin-bottom: 16px">
+                    Cliquez sur "Voir dossier" pour accéder aux pièces justificatives et lancer
+                    l'analyse OCR.
                   </div>
                   <button type="button" class="cm-ocr-btn-ocr-all">
-                    <i class="fas fa-file-alt" style="font-size: 11px;"></i> Ouvrir le dossier complet
+                    <i class="fas fa-file-alt" style="font-size: 11px"></i> Ouvrir le dossier
+                    complet
                   </button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f0f9ff; border: 1px dashed #bfdbfe; border-radius: 8px; color: #1e40af; font-size: 12px; margin-top: 12px;">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 12px;
+                    background: #f0f9ff;
+                    border: 1px dashed #bfdbfe;
+                    border-radius: 8px;
+                    color: #1e40af;
+                    font-size: 12px;
+                    margin-top: 12px;
+                  "
+                >
                   <i class="fas fa-info-circle"></i>
-                  <span>Aucune analyse OCR effectuée — ouvrez le dossier pour analyser les documents</span>
+                  <span
+                    >Aucune analyse OCR effectuée — ouvrez le dossier pour analyser les
+                    documents</span
+                  >
                 </div>
               </div>
             </div>
@@ -8050,20 +8258,39 @@
         <!-- Footer -->
         <div class="cm-ocr-footer">
           <div class="cm-ocr-footer-info">
-            <i class="fas fa-info-circle" style="color: #64748b;"></i>
+            <i class="fas fa-info-circle" style="color: #64748b"></i>
             Mode consultation — modifications enregistrées automatiquement
           </div>
           <div class="cm-ocr-footer-right">
             <button
               type="button"
-              style="padding: 8px 16px; background: transparent; border: 1px solid #e2e8f4; border-radius: 8px; font-family: inherit; font-size: 13px; color: #64748b; cursor: pointer;"
+              style="
+                padding: 8px 16px;
+                background: transparent;
+                border: 1px solid #e2e8f4;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: 13px;
+                color: #64748b;
+                cursor: pointer;
+              "
               (click)="fermerConsultationMassive()"
             >
               Fermer
             </button>
             <button
               type="button"
-              style="padding: 8px 20px; background: #185fa5; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 500; color: #fff; cursor: pointer;"
+              style="
+                padding: 8px 20px;
+                background: #185fa5;
+                border: none;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: 13px;
+                font-weight: 500;
+                color: #fff;
+                cursor: pointer;
+              "
               (click)="consultationMassiveSuivant()"
             >
               Enregistrer &amp; Suivant →
@@ -8072,6 +8299,5 @@
         </div>
       </div>
     </div>
-
   </main>
 </div>

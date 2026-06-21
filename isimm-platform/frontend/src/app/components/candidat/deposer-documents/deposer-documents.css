@@ -126,6 +126,74 @@
   background: linear-gradient(135deg, #23bf8a, #0ea072);
 }
 
+.upload-dossier__icon--formulaire {
+  background: linear-gradient(135deg, #185fa5, #0f1f3d);
+}
+
+.upload-dossier__icon--attestation {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.upload-dossier__icon--cv {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+/* ── Badges obligatoire / optionnel ── */
+.upload-dossier__badge-req,
+.upload-dossier__badge-opt {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.upload-dossier__badge-req {
+  background: #eff6ff;
+  color: #185fa5;
+}
+
+.upload-dossier__badge-opt {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* ── PARTIE B : message d'erreur de validation ── */
+.upload-dossier__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.upload-dossier__error i {
+  font-size: 0.95rem;
+}
+
+/* ── Icône fichier PDF (aperçu non-image) ── */
+.upload-dossier__file-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
 .upload-dossier__meta {
   flex: 1;
 }
