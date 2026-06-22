@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SpecialitesService } from '../../../services/specialites.service';
 import { CommissionStateService } from '../../../services/commission-state.service';
+import { CandidatureService } from '../../../services/candidature.service';
 
 interface InscriptionRecord {
   id: number;
@@ -35,6 +36,7 @@ export class ConsulterInscriptions implements OnInit {
   constructor(
     private specialitesService: SpecialitesService,
     private commissionStateService: CommissionStateService,
+    private candidatureService: CandidatureService,
   ) {}
 
   ngOnInit(): void {
@@ -43,12 +45,41 @@ export class ConsulterInscriptions implements OnInit {
       this.applyFilters();
     });
 
+    // Données réelles (candidats ayant saisi leur n° d'inscription). Fallback mock
+    // uniquement si l'API échoue ou ne renvoie encore aucune saisie.
     this.inscriptions = this.buildMockInscriptions();
+    this.loadInscriptionsReelles();
     this.specialitesService.getSpecialitesData().subscribe(() => {
       this.availableSpecialites = this.specialitesService.getAllSpecialties();
       this.applyFilters();
     });
     this.applyFilters();
+  }
+
+  private loadInscriptionsReelles(): void {
+    this.candidatureService.getInscriptionsSaisies().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.inscriptions) ? res.inscriptions : [];
+        if (list.length) {
+          this.inscriptions = list.map((r: any) => ({
+            id: r.id,
+            candidat: r.candidat,
+            email: r.email,
+            specialite: r.specialite,
+            commissionCategory: r.commissionCategory,
+            statut: r.statut,
+            paiement: r.paiement,
+            dateDepot: r.dateDepot,
+            matricule: r.matricule,
+          }));
+          this.applyFilters();
+        }
+        // sinon: on garde le mock déjà chargé (page non vide en démo)
+      },
+      error: () => {
+        // on garde le mock en cas d'erreur API
+      },
+    });
   }
 
   private buildMockInscriptions(): InscriptionRecord[] {

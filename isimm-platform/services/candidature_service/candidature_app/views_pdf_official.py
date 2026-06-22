@@ -209,8 +209,24 @@ def generer_pdf_officiel(request):
     if etape in ('INGENIEUR',):
         qs = qs.filter(type_concours='ingenieur')
 
+    # Sous-listes de la phase Sélection : liste principale (admis) vs liste d'attente.
+    # Le workflow `generer_liste_manuelle` met les admis en statut 'selectionne' et
+    # la liste d'attente en statut 'en_attente'.
+    liste = request.query_params.get('liste', '').strip().lower()
+    titre_override = None
+
     if etape_query == 'PRESELECTION':
         qs = qs.filter(statut__in=statuts_presel)
+    elif liste == 'admis':
+        qs = qs.filter(statut__in=['selectionne', 'inscrit'])
+        titre_override = (
+            f'Liste Principale (Admis) — {{master}} | Année universitaire : {annee}'
+        )
+    elif liste == 'attente':
+        qs = qs.filter(statut__in=['en_attente'])
+        titre_override = (
+            f"Liste d'Attente — {{master}} | Année universitaire : {annee}"
+        )
     else:
         qs = qs.filter(statut__in=statuts_selection)
 
@@ -265,6 +281,9 @@ def generer_pdf_officiel(request):
     logo_path = _get_logo_path()
     date_sel = date.today().strftime('%d/%m/%Y')
 
+    if titre_override:
+        titre_override = titre_override.replace('{master}', master_nom)
+
     try:
         generator = ISIMMPDFGenerator()
         pdf_buffer = generator.generer(
@@ -277,6 +296,7 @@ def generer_pdf_officiel(request):
             qr_url=qr_url,
             logo_path=logo_path,
             date_selection=date_sel,
+            titre_override=titre_override,
         )
     except ImportError as e:
         return Response(
@@ -292,8 +312,9 @@ def generer_pdf_officiel(request):
     # ── Nom du fichier ────────────────────────────────────────────────────────
     etape_labels = {'PRESELECTION': 'Preselection', 'SELECTION': 'Selection', 'MASTER': 'Master', 'INGENIEUR': 'Ingenieur'}
     etape_label = etape_labels.get(etape, etape.capitalize())
+    liste_label = {'admis': '_Liste_Admis', 'attente': '_Liste_Attente'}.get(liste, '')
     spec_label = f'_{specialite_filter.replace(" ", "_")}' if specialite_filter else ''
-    filename = f'ISIMM_{etape_label}{spec_label}_{annee.replace("/", "-")}.pdf'
+    filename = f'ISIMM_{etape_label}{liste_label}{spec_label}_{annee.replace("/", "-")}.pdf'
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'

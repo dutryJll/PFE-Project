@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from candidature_app.models import Candidature
 from django.utils import timezone
+from django.db.models import Q
 import openpyxl
 from django.core.exceptions import ValidationError
 import logging
@@ -283,3 +284,74 @@ def comparer_inscrits_admis(request):
         'nb_non_inscrits': len(non_inscrits),
         'non_inscrits': non_inscrits,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def liste_inscriptions_saisies(request):
+    """
+    Liste, pour l'espace responsable, les candidats ayant SAISI leur numéro
+    d'inscription universitaire (en attente de vérification ou déjà inscrits).
+    Alimente la page « Inscriptions » côté responsable avec des données RÉELLES
+    (remplace l'ancien mock du composant consulter-inscriptions).
+
+    Query params (optionnels):
+        - master_id : limiter à un master
+    """
+    role = getattr(request.user, 'role', None)
+    if role not in ('admin', 'responsable_commission', 'commission', 'responsable_master'):
+        return Response({'error': 'Permission refusee'}, status=status.HTTP_403_FORBIDDEN)
+
+    qs = (
+        Candidature.objects
+        .select_related('candidat', 'master')
+        .filter(numero_inscription__isnull=False)
+        .exclude(numero_inscription='')
+        .order_by('-date_saisie_inscription', '-id')
+    )
+
+    master_id = request.query_params.get('master_id')
+    if master_id and str(master_id).isdigit():
+        qs = qs.filter(master_id=int(master_id))
+
+    def _categorie(master):
+        label = (
+            (getattr(master, 'nom', '') or '') + ' ' + (getattr(master, 'specialite', '') or '')
+        ).lower()
+        if 'ingenieur' in label or 'ingénieur' in label or 'cycle' in label:
+            return 'ingenieur'
+        if 'data' in label or 'science' in label or 'donnees' in label or 'données' in label:
+            return 'master-ds'
+        return 'master-gl'
+
+    statut_map = {
+        'inscrit': 'Validée',
+        'en_attente_verification': 'En attente',
+        'rejete': 'Rejetée',
+        'rejetee': 'Rejetée',
+    }
+
+    rows = []
+    for c in qs:
+        cand = c.candidat
+        si = (getattr(c, 'statut_inscription', '') or '').lower()
+        nom_complet = (cand.get_full_name() if cand else '') or getattr(c, 'candidat_nom', '') or '—'
+        rows.append({
+            'id': c.id,
+            'candidat': nom_complet.strip() or '—',
+            'email': (getattr(cand, 'email', '') if cand else '') or '',
+            'specialite': (
+                (getattr(c.master, 'specialite', '') or getattr(c.master, 'nom', ''))
+                if c.master else ''
+            ),
+            'commissionCategory': _categorie(c.master),
+            'statut': statut_map.get(si, 'En attente'),
+            'paiement': 'Payé' if si == 'inscrit' else 'En attente',
+            'dateDepot': (
+                c.date_saisie_inscription.strftime('%Y-%m-%d')
+                if getattr(c, 'date_saisie_inscription', None) else ''
+            ),
+            'matricule': str(getattr(c, 'numero_inscription', '') or ''),
+        })
+
+    return Response({'success': True, 'count': len(rows), 'inscriptions': rows})

@@ -5319,6 +5319,20 @@
               <i class="fas fa-file-pdf" style="color: #a32d2d"></i> Format PDF officiel ISIMM (GFH
               FOR 09)
             </div>
+            <div
+              class="prs-float-dd-item"
+              (click)="genererPDFOfficielISIMM('SELECTION', 'admis'); selGenerateListOpen = false"
+            >
+              <i class="fas fa-file-pdf" style="color: #185fa5"></i> PDF — Liste des admis (en-tête
+              ISIMM)
+            </div>
+            <div
+              class="prs-float-dd-item"
+              (click)="genererPDFOfficielISIMM('SELECTION', 'attente'); selGenerateListOpen = false"
+            >
+              <i class="fas fa-file-pdf" style="color: #f59e0b"></i> PDF — Liste d'attente (en-tête
+              ISIMM)
+            </div>
           </div>
         </div>
         <button class="prs-float-close" type="button" (click)="finalSelectionSelectedIds.clear()">

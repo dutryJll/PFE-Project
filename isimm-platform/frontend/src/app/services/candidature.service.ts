@@ -687,6 +687,15 @@ export class CandidatureService {
     );
   }
 
+  // Liste réelle des inscriptions saisies par les candidats (espace responsable)
+  getInscriptionsSaisies(masterId?: number): Observable<any> {
+    const query = masterId ? `?master_id=${masterId}` : '';
+    return this.http.get(
+      `${this.apiUrl}/inscriptions-saisies/${query}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   // ──────────────────────────────────────────────────────────────────────
   // MULTI-COMMISSION SUPPORT
   // ──────────────────────────────────────────────────────────────────────

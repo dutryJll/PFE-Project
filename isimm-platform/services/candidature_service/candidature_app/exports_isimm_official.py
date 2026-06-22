@@ -44,6 +44,29 @@ else:
     NAVY = BLUE = BLUE_LT = GREEN = MUTED = BORDER = BG = WHITE = BLACK = None
 
 
+def _spec_group_key(s: str) -> str:
+    """
+    Clé de regroupement d'une spécialité, insensible aux accents, apostrophes,
+    casse et espaces, et ignorant les mots d'une seule lettre (« d' », « l' »…).
+
+    Objectif : fusionner les variantes orthographiques d'une même spécialité
+    pour ne pas éclater la liste en sections d'un seul candidat. Exemple :
+      « Génie Logiciel et Systèmes' Information »
+      « Génie Logiciel et Systèmes d'Information »
+    → même clé « genie logiciel et systemes information ».
+    """
+    if not s:
+        return ''
+    import unicodedata as _ud
+    norm = _ud.normalize('NFD', s)
+    norm = ''.join(ch for ch in norm if _ud.category(ch) != 'Mn')  # retire les accents
+    norm = norm.lower()
+    for ch in ("'", '’', '`', '´', '"', '-', '/', ',', '.', ';', ':'):
+        norm = norm.replace(ch, ' ')
+    tokens = [t for t in norm.split() if len(t) > 1]  # retire « d », « l »…
+    return ' '.join(tokens)
+
+
 def _mask_cin(cin: str) -> str:
     """Masque partiellement le CIN/Passeport pour RGPD (affiche les 3 derniers chiffres)."""
     if not cin:
@@ -311,6 +334,7 @@ class ISIMMPDFGenerator:
         qr_url: str = '',
         logo_path: str = None,
         date_selection: str = None,
+        titre_override: str = None,
     ) -> BytesIO:
         """
         Génère le PDF officiel et retourne un BytesIO.
@@ -337,7 +361,7 @@ class ISIMMPDFGenerator:
             bottomMargin=2 * cm,
         )
 
-        titre_doc = self._get_titre_doc(etape, master_nom, specialite_filter, annee)
+        titre_doc = titre_override or self._get_titre_doc(etape, master_nom, specialite_filter, annee)
         elements = []
 
         # ── En-tête officielle ────────────────────────────────────────────────
@@ -371,26 +395,42 @@ class ISIMMPDFGenerator:
                 (internes, 'ISIMM'),
                 (externes, 'Hors ISIMM'),
             ]:
-                # Grouper par spécialité_candidat
-                specs: dict = {}
+                if not spec_group:
+                    continue
+
+                # Grouper par spécialité NORMALISÉE : fusionne les variantes
+                # orthographiques (accents/apostrophes) d'une même spécialité, afin
+                # d'éviter des sections d'un seul candidat dues à de simples fautes
+                # de frappe dans les données.
+                groups: dict = {}
                 for c in spec_group:
-                    sp = c.get('specialite_candidat') or 'Spécialité non renseignée'
-                    specs.setdefault(sp, []).append(c)
+                    raw = (c.get('specialite_candidat') or 'Spécialité non renseignée').strip()
+                    key = _spec_group_key(raw)
+                    grp = groups.setdefault(key, {'label': raw, 'cands': []})
+                    grp['cands'].append(c)
+                    # Conserver le libellé le plus complet comme titre de section.
+                    if len(raw) > len(grp['label']):
+                        grp['label'] = raw
 
-                for sp_name, cands in specs.items():
-                    if section_num > 1:
-                        elements.append(PageBreak())
-                        # Réafficher l'entête après saut de page
-                        elements.append(_build_header_table(
-                            styles, logo_path=logo_path,
-                            qr_url=qr_url, ref_doc='GFH FOR 09', version='v1'
-                        ))
-                        elements.append(Spacer(1, 4 * mm))
+                # Afficher d'abord les sections les plus fournies (la liste
+                # principale apparaît en tête, plus seulement « Ahmed »).
+                ordered_groups = sorted(
+                    groups.values(), key=lambda g: len(g['cands']), reverse=True
+                )
 
-                    section_label = f'{label_prefix} : {sp_name}'
-                    elements += _build_section_header(styles, section_num, section_label)
-                    sorted_cands = sorted(cands, key=lambda c: float(c.get('score') or 0), reverse=True)
-                    elements.append(_build_candidates_table(sorted_cands))
+                for grp in ordered_groups:
+                    section_label = f"{label_prefix} : {grp['label']}"
+                    sorted_cands = sorted(
+                        grp['cands'], key=lambda c: float(c.get('score') or 0), reverse=True
+                    )
+                    # On NE force PLUS un saut de page par section : plusieurs petites
+                    # sections peuvent partager une même page (avant, chaque section
+                    # occupait une page entière → des pages « Ahmed seul »). KeepTogether
+                    # empêche seulement qu'une section soit coupée en deux.
+                    block = _build_section_header(styles, section_num, section_label)
+                    block.append(_build_candidates_table(sorted_cands))
+                    elements.append(KeepTogether(block))
+                    elements.append(Spacer(1, 5 * mm))
                     section_num += 1
 
         # ── Remarques importantes ─────────────────────────────────────────────

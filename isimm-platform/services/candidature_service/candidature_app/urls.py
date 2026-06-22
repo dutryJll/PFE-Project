@@ -132,6 +132,8 @@ urlpatterns = router.urls + [
     path('verifier-excel-inscriptions/', views_inscription_online.verifier_excel_inscriptions, name='verifier_excel_inscriptions'),
     # v7 §6.5 — Comparer la liste des inscrits importée aux admis → « admis non inscrits »
     path('comparer-inscrits-admis/', views_inscription_online.comparer_inscrits_admis, name='comparer_inscrits_admis'),
+    # Liste réelle des inscriptions saisies par les candidats (espace responsable)
+    path('inscriptions-saisies/', views_inscription_online.liste_inscriptions_saisies, name='liste_inscriptions_saisies'),
 
     # ── Commission membre ────────────────────────────────────────────────────
     path('commissions/mes-commissions-membre/', views_commission_membre.mes_commissions_membre, name='mes_commissions_membre'),

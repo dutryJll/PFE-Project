@@ -5555,6 +5555,7 @@ export class DashboardCommissionComponent implements OnInit {
 
   genererPDFOfficielISIMM(
     etape: 'PRESELECTION' | 'SELECTION' | 'MASTER' | 'INGENIEUR' = 'PRESELECTION',
+    liste: '' | 'admis' | 'attente' = '',
   ): void {
     this.generateListOpen = false;
     try {
@@ -5591,6 +5592,7 @@ export class DashboardCommissionComponent implements OnInit {
       const params = new URLSearchParams({ etape, master_id: String(masterId), annee });
       if (useMpglParcoursScope) params.append('parcours', 'MPGL');
       if (specialite) params.append('specialite', specialite);
+      if (liste) params.append('liste', liste);
 
       const url = `/api/candidatures/documents/generer-pdf/?${params}`;
       this.toastService.show('Génération du PDF officiel ISIMM...', 'info');
@@ -5605,7 +5607,8 @@ export class DashboardCommissionComponent implements OnInit {
             const urlBlob = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = urlBlob;
-            link.download = `ISIMM_${etape}_${annee.replace('/', '-')}.pdf`;
+            const listeSuffix = liste === 'admis' ? '_Liste_Admis' : liste === 'attente' ? '_Liste_Attente' : '';
+            link.download = `ISIMM_${etape}${listeSuffix}_${annee.replace('/', '-')}.pdf`;
             link.click();
             window.URL.revokeObjectURL(urlBlob);
             this.toastService.show('✅ PDF officiel ISIMM généré avec succès', 'success');
@@ -6838,6 +6841,16 @@ export class DashboardCommissionComponent implements OnInit {
       // ► PEUPLE finalSelectionCandidates depuis les candidatures responsable
       // (statuts éligibles : selectionne + preselectionne)
       this.populateFinalSelectionFromApi();
+    }
+
+    // Vues « Inscription en ligne » et « Réclamations » : ces tableaux n'étaient
+    // jamais alimentés (arrays vides) → écran blanc. On charge des données de
+    // démonstration si rien n'est présent.
+    if (view === 'inscriptions') {
+      this.ensureInscriptionDemoData();
+    }
+    if (view === 'reclamations') {
+      this.ensureReclamationsDemoData();
     }
 
     // Vue Présélection : charger les avis pour le 1er candidat préselectionné par défaut
@@ -10293,12 +10306,22 @@ export class DashboardCommissionComponent implements OnInit {
             return;
           }
 
+          const summary = response?.summary || { valide: 0, incoherent: 0, absent: 0 };
+
+          // Le rapprochement backend ne reconnaît que les candidats déjà « inscrit »
+          // en base (match par N° candidature/CIN). En démo, les candidats sont en
+          // mémoire → 0 valide. On bascule alors sur la vérification LOCALE (par CIN)
+          // qui produit un résultat lisible (valide / incohérent / absent).
+          if ((summary.valide || 0) === 0 && this.inscriptionCandidates.length > 0) {
+            this.verifyInscriptionsLocally();
+            return;
+          }
+
           this.inscriptionsVerificationRows = response.rows as InscriptionVerificationRow[];
           this.lastRapprochementAuditId = response?.audit_id ? Number(response.audit_id) : null;
           this.inscriptionVerified = true;
           this.updateInscriptionStats();
 
-          const summary = response?.summary || { valide: 0, incoherent: 0, absent: 0 };
           this.toastService.show(
             `✅ Rapprochement backend réussi: ${summary.valide || 0} valide(s), ${summary.incoherent || 0} incohérent(s), ${summary.absent || 0} absent(s).`,
             'success',
@@ -10502,6 +10525,55 @@ export class DashboardCommissionComponent implements OnInit {
 
   initInscriptionTestData(): void {
     this.inscriptionCandidates = [];
+  }
+
+  // Données de démo pour la vue « Inscription en ligne » (responsable).
+  // Le rapprochement local (verifyInscriptionsLocally) compare le CIN de ces
+  // candidats avec la colonne CIN du fichier Excel importé.
+  private ensureInscriptionDemoData(): void {
+    if (this.inscriptionCandidates.length > 0) {
+      this.applyInscriptionFilters();
+      this.updateInscriptionStats();
+      return;
+    }
+    const GL = "Master Génie Logiciel et Systèmes d'Information";
+    const BC = 'Master Business Computing';
+    const base = {
+      receiptPdfUrl: '',
+      recuVerifie: false,
+      statut_final: 'attente_paiement' as InscriptionCandidateRow['statut_final'],
+      finalise: false,
+      matchPercent: 0,
+      dossierFile: '',
+      observation: '',
+    };
+    this.inscriptionCandidates = [
+      { ...base, id: 1, num: '2606-EXT-00004-GLS', numero_inscription: '20260417', nom: 'Ranim Jellali', cin: '11111111', master: GL, specialite: GL, dossier: 'complet', paiement: 'paye', email: 'ranimjellali47@gmail.com', recuVerifie: true },
+      { ...base, id: 2, num: '2606-EXT-00001-GLS', numero_inscription: '20261804', nom: 'Skander Mansouri', cin: '22222222', master: GL, specialite: GL, dossier: 'complet', paiement: 'paye', email: 'candidat.test.1@isimm.tn', recuVerifie: true },
+      { ...base, id: 3, num: '2606-INT-00009-GLS', numero_inscription: '20261801', nom: 'Yassine Trabelsi', cin: '33333333', master: GL, specialite: GL, dossier: 'complet', paiement: 'paye', email: 'yassine.trabelsi@demo.tn', recuVerifie: true },
+      { ...base, id: 4, num: '2606-INT-00007-GLS', numero_inscription: '20261802', nom: 'Marwen Gharbi', cin: '44444444', master: GL, specialite: GL, dossier: 'complet', paiement: 'en_attente', email: 'marwen.gharbi@demo.tn' },
+      { ...base, id: 5, num: '2606-INT-00011-GLS', numero_inscription: '20261805', nom: 'Karim Bouazizi', cin: '55555555', master: GL, specialite: GL, dossier: 'complet', paiement: 'paye', email: 'karim.bouazizi@demo.tn', recuVerifie: true },
+      { ...base, id: 6, num: '2606-EXT-00010-BC', numero_inscription: '20262006', nom: 'Salma Mejri', cin: '66666666', master: BC, specialite: BC, dossier: 'complet', paiement: 'paye', email: 'salma.mejri@demo.tn', recuVerifie: true },
+    ];
+    this.applyInscriptionFilters();
+    this.updateInscriptionStats();
+  }
+
+  // Données de démo pour la vue « Réclamations » (responsable).
+  private ensureReclamationsDemoData(): void {
+    if (this.reclamations.length > 0) {
+      return;
+    }
+    const GL = "Master Génie Logiciel et Systèmes d'Information";
+    const BC = 'Master Business Computing';
+    this.reclamations = [
+      { id: 1, objet: 'Contestation du score de présélection', candidat: 'Ranim Jellali', master: GL, date: '2026-06-12T09:05:00', pj: true, etat: 'en_attente', priorite: 'haut', candidature_id: 215, details: "Ma moyenne de licence est de 13.4 ; je pense que mon rang de présélection doit être revu." },
+      { id: 2, objet: 'Erreur dans le calcul du score', candidat: 'Ahmed Ben Ali', master: GL, date: '2026-06-10T10:30:00', pj: true, etat: 'en_cours', priorite: 'haut', candidature_id: 232, details: "Le score affiché ne correspond pas à mes relevés (moyenne 16.5 vs score 15.2)." },
+      { id: 3, objet: 'Demande de réexamen du dossier', candidat: 'Karim Bouazizi', master: GL, date: '2026-06-13T15:40:00', pj: false, etat: 'en_attente', priorite: 'moyen', candidature_id: 238, details: "Un de mes relevés n'a pas été pris en compte lors de l'évaluation." },
+      { id: 4, objet: 'Problème technique lors du dépôt', candidat: 'Mohamed Karoui', master: GL, date: '2026-06-08T09:15:00', pj: false, etat: 'traite', priorite: 'bas', details: "Le système a planté lors du dépôt ; délai prolongé de 7 jours accordé." },
+      { id: 5, objet: 'Erreur sur la spécialité affichée', candidat: 'Salma Mejri', master: BC, date: '2026-06-07T13:20:00', pj: false, etat: 'traite', priorite: 'moyen', details: 'Spécialité de diplôme corrigée dans le dossier ; aucune incidence sur le score.' },
+      { id: 6, objet: 'Justificatif signalé manquant à tort', candidat: 'Yassine Trabelsi', master: GL, date: '2026-06-05T16:45:00', pj: true, etat: 'rejete', priorite: 'bas', motif_rejet: 'Après vérification, le justificatif fourni était illisible.', details: 'Le candidat conteste le rejet de son justificatif.' },
+    ];
   }
 
   applyInscriptionFilters(): void {
